@@ -1,0 +1,132 @@
+use std::{io::Result, slice::Iter};
+use crate::{meta_data::convert_soul_error::convert_soul_error::new_soul_error, tokenizer::{file_line::FileLine, token::Token}};
+
+const QOUTE: &str = "\"";
+const IN_STR_QOUTE: &str = "\\\"";
+
+struct FormatSpan {
+    pub line_index: usize,
+    pub start: usize,
+    pub end: usize,
+}
+
+pub fn format_str_file(source_file: Vec<FileLine>) -> Result<Vec<FileLine>> {
+    let num_qouts = numberof_qoutes(&source_file);
+    let mut raw_format_strs = Vec::with_capacity(num_qouts/2);
+
+    let qoute_iter = indexesof_qoutes(&source_file);
+    for (i, (qoute_indexes, line)) in qoute_iter.enumerate() {
+        raw_format_strs = get_format_str(&line, i, &qoute_indexes, raw_format_strs)?;
+    }
+
+    let mut new_source_file = source_file.clone();
+    for span in &raw_format_strs {
+        let line = &mut new_source_file[span.line_index];
+        line.text = f_str_to_soul_formatter(&line, &span); 
+    }
+
+    Ok(new_source_file)
+}
+
+pub fn format_str_line(line: FileLine, line_index: usize) -> Result<FileLine> {
+    let num_qouts = numberof_qoutes_line(&line);
+    let mut raw_format_strs = Vec::with_capacity(num_qouts/2);
+
+    let qoute_iter = indexesof_qoutes_line(&line);
+    raw_format_strs = get_format_str(&line, line_index, &qoute_iter, raw_format_strs)?;
+
+    let mut new_line = line.clone();
+    for span in &raw_format_strs {
+        new_line.text = f_str_to_soul_formatter(&line, &span); 
+    }
+
+    Ok(new_line)
+}
+
+fn f_str_to_soul_formatter(line: &FileLine, span: &FormatSpan) -> String {
+    const SOUL_FORMATTER_FUNCTION_NAME: &str = "__soul_format_string__(";
+
+    let mut buffer = String::with_capacity(line.text.len() + SOUL_FORMATTER_FUNCTION_NAME.len());
+
+	// Append everything before the 'f' character in 'f"..."'
+    buffer.insert_str(0, &line.text[..span.start-1]);
+    buffer.insert_str(buffer.len(), SOUL_FORMATTER_FUNCTION_NAME);
+
+    for ch in line.text[span.start..span.end+1].chars() {
+        match ch {
+            '{' => buffer.push_str("\", "),
+            '}' => buffer.push_str(", \""),
+            _ => buffer.push(ch),
+        }
+    }
+    buffer.push(')');
+    buffer.push_str(&line.text[span.end+1..]);
+
+    buffer
+} 
+
+fn get_format_str(line: &FileLine, line_index: usize, _qoute_indexes: &Vec<usize>, mut raw_format_strs: Vec<FormatSpan>) -> Result<Vec<FormatSpan>> {
+    let mut qoute_indexes = _qoute_indexes.iter();
+    let mut chars = line.text.chars();
+
+    while let Some(index) = qoute_indexes.next() {
+        if *index == 0 {
+            continue;
+        }
+
+        if chars.nth(index - 1) != Some('f') {
+            continue;
+        }
+
+        let end = get_end_of_string(&line, *index, &mut qoute_indexes)?;
+        raw_format_strs.push(FormatSpan{line_index, start: *index, end});
+    }
+
+    Ok(raw_format_strs)
+}
+
+fn get_end_of_string(line: &FileLine, index: usize, qoute_indexes: &mut Iter<usize>) -> Result<usize> {
+    if let Some(_index) = qoute_indexes.next() {
+        Ok(*_index)
+    }
+    else {
+        Err(new_soul_error( 
+            &Token{text: String::new(), line_number: line.line_number as usize, line_offset: index}, 
+            format!("string has no end (probably missing a '{}')", QOUTE).as_str()
+        ))
+    }
+}
+
+pub fn indexesof_qoutes_line<'a>(line: &'a FileLine) -> Vec<usize> {
+    line.text.replace(IN_STR_QOUTE, "##")
+             .match_indices(QOUTE)
+             .map(|(start, _)| start)
+             .collect()
+}
+
+pub fn indexesof_qoutes<'a>(source_file: &'a Vec<FileLine>) -> impl Iterator<Item = (Vec<usize>, FileLine)> {
+    source_file.iter()
+               .map(|line| FileLine{text:line.text.replace(IN_STR_QOUTE, "##"), line_number:line.line_number})
+               .map(|line| (line.text.match_indices(QOUTE).map(|(start, _)| start).collect::<Vec<usize>>(), line))
+}
+
+pub fn numberof_qoutes_line(line: &FileLine) -> usize {
+    let num_all_qoutes: usize = line.text.matches(QOUTE).count();
+    let num_in_str_qoutes: usize = line.text.matches(IN_STR_QOUTE).count();
+
+    num_all_qoutes - num_in_str_qoutes
+}
+
+pub fn numberof_qoutes(source_file: &Vec<FileLine>) -> usize {
+    let num_all_qoutes: usize = 
+        source_file.iter()
+                   .map(|line| line.text.matches(QOUTE).count())
+                   .sum();
+
+    let num_in_str_qoutes: usize = 
+        source_file.iter()
+                   .map(|line| line.text.matches(IN_STR_QOUTE).count())
+                   .sum();
+
+    num_all_qoutes - num_in_str_qoutes
+}

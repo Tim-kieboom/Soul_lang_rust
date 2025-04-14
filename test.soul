@@ -1,0 +1,3 @@
+main(str[] args) int {
+    println(f"hello {1} world");
+}
