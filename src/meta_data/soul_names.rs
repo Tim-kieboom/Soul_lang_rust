@@ -18,6 +18,8 @@ impl<'a> SoulNames<'a> {
         let type_modifiers = HashMap::from([
             (TypeModifiers::Literal, "Literal"),
             (TypeModifiers::Constent, "const"),
+            (TypeModifiers::Volatile, "volatile"),
+            (TypeModifiers::Static, "static"),
         ]);
 
         let internal_types = HashMap::from([
@@ -94,7 +96,9 @@ macro_rules! impl_soul_name_enum {
 #[derive(PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TypeModifiers{
     Literal,
-    Constent
+    Constent,
+    Volatile,
+    Static
 }
 impl_soul_name_enum!(TypeModifiers, type_modifiers);
 

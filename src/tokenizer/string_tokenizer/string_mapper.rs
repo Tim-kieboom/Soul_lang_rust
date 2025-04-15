@@ -1,7 +1,8 @@
 use std::io::Result;
 use super::format_stringer::{indexesof_qoutes, indexesof_qoutes_line};
-use crate::{meta_data::{key_tokens::{InternalType, TypeModifiers}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, type_meta_data::{CStrPair, CStringStore, TypeMetaData}}, tokenizer::file_line::FileLine};
+use crate::{meta_data::{soul_names::{InternalType, TypeModifiers}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}}, tokenizer::file_line::FileLine};
 
+#[allow(dead_code)]
 pub fn rawstr_to_litstr_file(source_file: Vec<FileLine>, meta_data: &mut MetaData) -> Result<Vec<FileLine>> {
     let mut new_source_file = Vec::with_capacity(source_file.len());
 
@@ -13,6 +14,8 @@ pub fn rawstr_to_litstr_file(source_file: Vec<FileLine>, meta_data: &mut MetaDat
     
     Ok(new_source_file)
 }
+
+#[allow(dead_code)]
 pub fn rawstr_to_litstr_line(line: FileLine, meta_data: &mut MetaData) -> Result<FileLine> {
     let mut new_line = line.clone();
 

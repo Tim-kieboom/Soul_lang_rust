@@ -1,4 +1,4 @@
-use crate::{meta_data::{self, meta_data::MetaData}, tokenizer::{file_line, tokenizer::{tokenize_file, tokenize_line}}};
+use crate::{meta_data::meta_data::MetaData, tokenizer::tokenizer::{tokenize_file, tokenize_line}};
 
 use super::file_line::FileLine;
 

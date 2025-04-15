@@ -9,6 +9,8 @@ pub struct CStringStore {
     from_c_str_map: HashMap<String, Arc<CStrPair>>,
     from_name_map: HashMap<String, Arc<CStrPair>>,
 }
+
+#[allow(dead_code)]
 impl CStringStore {
 
     pub fn new() -> Self {

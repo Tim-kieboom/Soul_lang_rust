@@ -13,6 +13,7 @@ pub struct TokenIterator {
     tokens: Vec<Token>,
 }
 
+#[allow(dead_code)]
 impl TokenIterator {
 
     pub fn new(tokens: Vec<Token>) -> Self {

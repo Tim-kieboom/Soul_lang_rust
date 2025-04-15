@@ -25,6 +25,51 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Throw_result executable feature",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin",
+                    "Soul_lang_rust",
+                    "--package",
+                    "Soul_lang_rust",
+                    "--features",
+                    "throw_result"
+                ],
+                "filter": {
+                    "name": "Soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "program": "${workspaceFolder}/target/debug/Soul_lang_rust",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "stopOnEntry": false,
+            "sourceLanguages": ["rust"]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release executable 'Soul_lang_rust'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--bin=Soul_lang_rust",
+                    "--package=Soul_lang_rust"
+                ],
+                "filter": {
+                    "name": "Soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in executable 'Soul_lang_rust'",
             "cargo": {
                 "args": [

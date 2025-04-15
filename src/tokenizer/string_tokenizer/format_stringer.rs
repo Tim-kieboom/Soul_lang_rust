@@ -1,4 +1,4 @@
-use std::{io::Result, slice::Iter};
+use std::{io::{Error, Result}, slice::Iter};
 use crate::{meta_data::convert_soul_error::convert_soul_error::new_soul_error, tokenizer::{file_line::FileLine, token::Token}};
 
 const QOUTE: &str = "\"";
@@ -10,6 +10,7 @@ struct FormatSpan {
     pub end: usize,
 }
 
+#[allow(dead_code)]
 pub fn format_str_file(source_file: Vec<FileLine>) -> Result<Vec<FileLine>> {
     let num_qouts = numberof_qoutes(&source_file);
     let mut raw_format_strs = Vec::with_capacity(num_qouts/2);
@@ -22,12 +23,13 @@ pub fn format_str_file(source_file: Vec<FileLine>) -> Result<Vec<FileLine>> {
     let mut new_source_file = source_file.clone();
     for span in &raw_format_strs {
         let line = &mut new_source_file[span.line_index];
-        line.text = f_str_to_soul_formatter(&line, &span); 
+        line.text = f_str_to_soul_formatter(&line, &span)?; 
     }
 
     Ok(new_source_file)
 }
 
+#[allow(dead_code)]
 pub fn format_str_line(line: FileLine, line_index: usize) -> Result<FileLine> {
     let num_qouts = numberof_qoutes_line(&line);
     let mut raw_format_strs = Vec::with_capacity(num_qouts/2);
@@ -37,13 +39,13 @@ pub fn format_str_line(line: FileLine, line_index: usize) -> Result<FileLine> {
 
     let mut new_line = line.clone();
     for span in &raw_format_strs {
-        new_line.text = f_str_to_soul_formatter(&line, &span); 
+        new_line.text = f_str_to_soul_formatter(&line, &span)?; 
     }
 
     Ok(new_line)
 }
 
-fn f_str_to_soul_formatter(line: &FileLine, span: &FormatSpan) -> String {
+fn f_str_to_soul_formatter(line: &FileLine, span: &FormatSpan) -> Result<String> {
     const SOUL_FORMATTER_FUNCTION_NAME: &str = "__soul_format_string__(";
 
     let mut buffer = String::with_capacity(line.text.len() + SOUL_FORMATTER_FUNCTION_NAME.len());
@@ -52,17 +54,28 @@ fn f_str_to_soul_formatter(line: &FileLine, span: &FormatSpan) -> String {
     buffer.insert_str(0, &line.text[..span.start-1]);
     buffer.insert_str(buffer.len(), SOUL_FORMATTER_FUNCTION_NAME);
 
+    
+    let mut i = span.start;
+    let mut start_bracket = 0;
     for ch in line.text[span.start..span.end+1].chars() {
         match ch {
-            '{' => buffer.push_str("\", "),
-            '}' => buffer.push_str(", \""),
+            '{' => {
+                buffer.push_str("\", ");
+                start_bracket = i;
+            },
+            '}' => {
+                buffer.push_str(", \"");
+                validate_format_argument(line, start_bracket, i)?;
+            },
             _ => buffer.push(ch),
         }
+
+        i += 1;
     }
     buffer.push(')');
     buffer.push_str(&line.text[span.end+1..]);
 
-    buffer
+    Ok(buffer)
 } 
 
 fn get_format_str(line: &FileLine, line_index: usize, _qoute_indexes: &Vec<usize>, mut raw_format_strs: Vec<FormatSpan>) -> Result<Vec<FormatSpan>> {
@@ -95,6 +108,27 @@ fn get_end_of_string(line: &FileLine, index: usize, qoute_indexes: &mut Iter<usi
             format!("string has no end (probably missing a '{}')", QOUTE).as_str()
         ))
     }
+}
+
+fn validate_format_argument(line: &FileLine, start_bracket: usize, i: usize) -> Result<()> {
+    let format_arg = &line.text[start_bracket+1..i].trim();
+    match format_arg.chars().nth(0) {
+        Some(char) => {if char == '"' {return Err(err_string_in_format_arg(line, start_bracket))}},
+        None => return Err(err_emty_format_arg(line, start_bracket)),
+    }
+
+    Ok(())
+}
+
+fn err_emty_format_arg(line: &FileLine, offset: usize) -> Error {
+    let err_token = Token{text: String::new(), line_number: line.line_number as usize, line_offset: offset};
+    new_soul_error(&err_token, "in format_string (so 'f\"...\"') format argument is empty")
+}
+
+
+fn err_string_in_format_arg(line: &FileLine, offset: usize) -> Error {
+    let err_token = Token{text: String::new(), line_number: line.line_number as usize, line_offset: offset};
+    new_soul_error(&err_token, "in format_string (so 'f\"...\"') can not contain a string literal as an argument")
 }
 
 pub fn indexesof_qoutes_line<'a>(line: &'a FileLine) -> Vec<usize> {

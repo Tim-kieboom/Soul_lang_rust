@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::{meta_data::{self, key_tokens::SoulNames, meta_data::MetaData}, tokenizer::file_line::FileLine};
+use crate::{meta_data::meta_data::MetaData, tokenizer::file_line::FileLine};
 
 use super::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
 

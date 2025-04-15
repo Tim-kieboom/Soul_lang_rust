@@ -1,9 +1,7 @@
-use std::path::PathBuf;
 use super::token::Token;
-use std::collections::HashMap;
 use std::io::{BufRead, Result};
 use super::file_line::FileLine;
-use crate::meta_data::key_tokens::SoulNames;
+use crate::meta_data::soul_names::SoulNames;
 use crate::meta_data::meta_data::MetaData;
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
 use crate::tokenizer::comment_remover::comment_remover::remove_comment_line;
@@ -18,6 +16,7 @@ pub struct FileLineResult {
     pub estimated_token_count: u64
 }
 
+#[allow(dead_code)]
 pub fn read_as_file_lines(path: &str, meta_data: &MetaData) -> Result<FileLineResult> {
     use std::fs::File;
     use std::io::BufReader;
@@ -38,10 +37,7 @@ pub fn read_as_file_lines(path: &str, meta_data: &MetaData) -> Result<FileLineRe
     Ok(result)
 }
 
-fn get_token_count(str: &str, strings: &Vec<&str>) -> u64 {
-    strings.iter().filter(|s| *s == &str ).count() as u64
-}
-
+#[allow(dead_code)]
 pub fn tokenize_file(source_file: Vec<FileLine>, estimated_token_count: u64, meta_data: &mut MetaData) -> Result<Vec<Token>> {
     if source_file.is_empty() {
         return Ok(Vec::new());
@@ -61,6 +57,7 @@ pub fn tokenize_file(source_file: Vec<FileLine>, estimated_token_count: u64, met
     Ok(tokens)
 }
 
+#[allow(dead_code)]
 pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commned: &mut bool, meta_data: &mut MetaData) -> Result<Vec<Token>> {
     if line.text.is_empty() {
         return Ok(Vec::new());
@@ -76,6 +73,10 @@ pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commned: &
     get_tokens(new_line, &mut tokens, meta_data)?;
 
     Ok(tokens)
+}
+
+fn get_token_count(str: &str, strings: &Vec<&str>) -> u64 {
+    strings.iter().filter(|s| *s == &str ).count() as u64
 }
 
 fn get_tokens(line: FileLine, tokens: &mut Vec<Token>, meta_data: &mut MetaData) -> Result<()> {
@@ -158,7 +159,32 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>, meta_data: &mut MetaData)
     Ok(())
 }
 
-trait SplitOn {fn split_on(&self, delims: &Vec<&str>) -> Vec<&str>;}
+pub trait SplitOn {fn split_on(&self, delims: &Vec<&str>) -> Vec<&str>;}
+impl SplitOn for &str {
+    fn split_on(&self, delims: &Vec<&str>) -> Vec<&str> {
+        let regex = SoulNames::str_vec_to_regex(&delims);
+        
+        let mut result = Vec::new();
+        let mut last_end = 0;
+
+        for find in regex.find_iter(self) {
+            if find.start() > last_end {
+                result.push(&self[last_end..find.start()]);
+            }
+
+            result.push(&find.as_str());
+            last_end = find.end();
+        }
+
+        if last_end < self.len() {
+            result.push(&self[last_end..]);
+        }
+
+        result
+    }
+}
+
+
 impl SplitOn for String {
     fn split_on(&self, delims: &Vec<&str>) -> Vec<&str> {
         let regex = SoulNames::str_vec_to_regex(&delims);

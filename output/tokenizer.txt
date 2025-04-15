@@ -1,0 +1,4 @@
+main ( str [] args ) int { 
+ println ( __Soul_c_str_0__ ) ; 
+ println ( __soul_format_string__ ( __Soul_c_str_1__ , , __Soul_c_str_2__ ) ) ; 
+ } 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{key_tokens::{SoulNameEnum, SoulNames}, scope_and_var::{scope::{Scope, ScopeId}, var_info::{self, VarInfo}}, type_meta_data::TypeMetaData};
+use super::{soul_names::{SoulNameEnum, SoulNames}, scope_and_var::{scope::{Scope, ScopeId}, var_info::{self, VarInfo}}, type_meta_data::TypeMetaData};
 
 pub struct MetaData<'a> {
     pub soul_names: SoulNames<'a>,

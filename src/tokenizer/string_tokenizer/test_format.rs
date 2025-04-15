@@ -70,3 +70,12 @@ fn does_format_str_line_work() {
         "--------expected--------\n{}\n--------got--------\n {}", SHOULD_BE_FILE, file_result
     )
 }
+
+#[test] 
+fn formatter_does_not_allow_string_literals_as_format_argument() {
+    const FILE: &str = "main int() { println(f\"{\"hello\"} world\") }";
+
+    let result = format_str_file(str_to_file_lines(FILE));
+    
+    assert!(result.is_err(), "test should have thrown error");
+}
