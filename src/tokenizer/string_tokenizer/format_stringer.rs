@@ -57,15 +57,18 @@ fn f_str_to_soul_formatter(line: &FileLine, span: &FormatSpan) -> Result<String>
     
     let mut i = span.start;
     let mut start_bracket = 0;
+    let mut current_open_bracket = false;
     for ch in line.text[span.start..span.end+1].chars() {
         match ch {
             '{' => {
                 buffer.push_str("\", ");
                 start_bracket = i;
+                current_open_bracket = true;
             },
             '}' => {
                 buffer.push_str(", \"");
                 validate_format_argument(line, start_bracket, i)?;
+                current_open_bracket = false;
             },
             _ => buffer.push(ch),
         }
@@ -74,6 +77,10 @@ fn f_str_to_soul_formatter(line: &FileLine, span: &FormatSpan) -> Result<String>
     }
     buffer.push(')');
     buffer.push_str(&line.text[span.end+1..]);
+
+    if current_open_bracket {
+        return Err(new_soul_error(&Token{text: buffer, line_number: line.line_number.max(0) as usize, line_offset: i}, "string formatter opens a bracket with out cloding it (add '}' somewhere in f\"...\")"))
+    } 
 
     Ok(buffer)
 } 

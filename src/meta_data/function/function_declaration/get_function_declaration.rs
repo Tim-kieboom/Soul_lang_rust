@@ -1,0 +1,224 @@
+use std::{collections::{BTreeMap, HashMap}, fmt::Arguments, io::{Error, Result}};
+
+use once_cell::sync::Lazy;
+
+use super::function_declaration::FunctionDeclaration;
+use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::{get_arguments, FunctionArguments}}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}, type_meta_data::TypeMetaData}, tokenizer::token::TokenIterator};
+
+static STR_ARRAY_TYPE_STRING: Lazy<String> = Lazy::new(||
+    SoulType::from(
+            SOUL_NAMES.get_name(NamesInternalType::String).to_string(), 
+            vec![TypeWrappers::Array],
+            TypeModifiers::Const,
+            vec![],
+    ).to_string()
+);
+
+pub fn get_function_declaration(
+    iter: &mut TokenIterator,
+    meta_data: &mut MetaData,
+    context: &mut CurrentContext,
+) -> Result<FunctionDeclaration> {
+    let begin_index = iter.current_index();
+
+    match _get_function_declaration(iter, meta_data, context) {
+        Ok(val) => Ok(val),
+        Err(err) => {
+            iter.go_to_index(begin_index); 
+            return Err(err);
+        },
+    }
+}
+
+fn _get_function_declaration(
+    iter: &mut TokenIterator,
+    meta_data: &mut MetaData,
+    context: &mut CurrentContext,
+) -> Result<FunctionDeclaration> {
+    let mut function = FunctionDeclaration::new(
+        String::new(), 
+        None, 
+        Vec::new(),
+        true,
+        meta_data.get_next_function_id(),
+    );
+
+    loop {
+        if iter.next().is_none() {
+            return Err(err_get_function_out_of_bounds(iter));
+        }
+
+        let modifier = FunctionModifiers::from_str(&iter.current().text);
+        if modifier.contains(FunctionModifiers::Default) {
+            iter.next_multiple(-1);
+            break;
+        }
+
+        function.modifiers |= modifier;
+    }
+
+    function.name = iter.current().text.clone();
+    if let Err(err) = check_name(&function.name) {
+        return Err(new_soul_error(iter.current(), err.as_str()));
+    }
+
+    let mut is_ctor = false;
+    if let Some(in_class) = &context.in_class {
+
+        if function.name == "ctor" || function.name == "Ctor" {
+            is_ctor = true;
+        }
+
+        function.name = format!("{}#{}", in_class.name, function.name);
+    }
+
+    if iter.next().is_none() {
+        return Err(err_get_function_out_of_bounds(iter));
+    }
+
+    if iter.current().text == "<" {
+        return Err(new_soul_error(iter.current(), "generics not yet implemented"));
+        todo!();
+    }
+
+    if iter.current().text != "(" {
+        return Err(new_soul_error(iter.current(), format!("function delcaration: '{}' missing '('", function.name).as_str())); 
+    }
+
+    let old_index = iter.current_index();
+    let arguments = get_arguments(iter, meta_data, context, function.modifiers, &function.name)
+        .map_err(|err| new_soul_error(&iter[old_index], format!("while trying to get function declaration: '{}'\n{}", function.name, err.to_string()).as_str()))?;
+
+    if arguments.args.is_empty() && arguments.options.is_empty() {
+        if iter.next().is_none() {
+            return Err(err_get_function_out_of_bounds(iter));
+        }
+    }
+
+    if context.rulesets.contains(RuleSet::Const | RuleSet::Literal) {
+        
+    }
+
+    function.args = arguments.args.clone();
+    function.optionals = arguments.options.clone().into_iter()
+        .map(|arg| (arg.name.clone(), arg))
+        .collect::<BTreeMap<String, ArgumentInfo>>();
+
+    if iter.next().is_none() {
+        return Err(err_get_function_out_of_bounds(iter));
+    }
+
+    if !is_ctor {
+        function.return_type = get_return_type(iter, meta_data, context);
+    }
+    else {
+        function.return_type = Some(context.in_class.clone().unwrap().name);
+    }
+
+    if function.name == "main" {
+
+        if let Some(type_name) = &function.return_type {
+            if type_name != SOUL_NAMES.get_name(NamesInternalType::Int) {
+                return Err(new_soul_error(
+                    iter.current(), 
+                    format!("function: 'main' can only be on type or type: '{}'", SOUL_NAMES.get_name(NamesInternalType::Int)).as_str()
+                ));
+            }
+        } 
+    }
+
+    let possible_function_id = meta_data.try_get_function(
+        &function.name, 
+        iter, 
+        context, 
+        &arguments.args, 
+        &arguments.options,
+    ).ok();
+
+    if let Some(function_id) = possible_function_id {
+
+        if let Some(func_ref) = meta_data.function_store.from_id.get_mut(&function_id) {
+            
+            if !func_ref.is_forward_declared {
+                return Err(new_soul_error(
+                    iter.current(), 
+                    format!(
+                        "function with these arguments already exists, name '{}', args: '{}'\n", 
+                        function.name, 
+                        ArgumentInfo::to_string_slice(&function.args)
+                    ).as_str()
+                ));
+            }
+
+            func_ref.is_forward_declared = false;
+        }
+    }
+    else {
+        let old_index = iter.current_index(); 
+        meta_data.add_function(iter, context, function.clone())
+            .map_err(|err| new_soul_error(&iter[old_index], format!("while trying to get function\n{}", err.to_string()).as_str()))?;
+    }
+
+    if function.name == "main" {
+
+        if !function.optionals.is_empty() {
+            return Err(new_soul_error(iter.current(), "function 'main' only allows 'main()' and 'main(str[])' as arguments (optionals not allowed remove '= ...')"));
+        }
+
+        if function.args.is_empty() {
+            return Ok(function);
+        }
+        else if function.args.len() > 1 {
+            return Err(new_soul_error(iter.current(), "function 'main' only allows 'main()' and 'main(str[])' as arguments"));
+        }
+        
+        if function.args[0].value_type != STR_ARRAY_TYPE_STRING.as_str() {
+            return Err(new_soul_error(iter.current(), "function 'main' only allows 'main()' and 'main(str[])' as arguments"));
+        }
+    }
+
+    if let Some(function_overloads) = meta_data.function_store.from_name(&function.name) {
+
+        if function_overloads.first().is_some_and(|func| func.return_type != function.return_type) {
+            return Err(new_soul_error(iter.current(), format!("function of same name: '{}' with diffrent returnType already exist you can not overload return types", function.name).as_str()))
+        }
+    }
+
+    Ok(function)
+}
+
+fn check_if_args_are_const(iter: &TokenIterator, arguments: &FunctionArguments, ruleset: &RuleSet) -> Result<()> {
+    for arg in &arguments.args {
+
+        if arg.is_mutable {
+            return Err(new_soul_error(
+                iter.current(), 
+                format!("argument: '{}' is mutable but RuleSet: '{}' does not allow mutable arguments", arg.name, ruleset.to_string()).as_str()
+            ));
+        }
+    }
+
+    for arg in &arguments.options {
+
+        if arg.is_mutable {
+            return Err(new_soul_error(
+                iter.current(), 
+                format!("optional argument: '{}' is mutable but RuleSet: '{}' does not allow mutable arguments", arg.name, ruleset.to_string()).as_str()
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn get_return_type(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Option<String> {
+    SoulType::from_iterator(iter, &meta_data.type_meta_data, &context.current_generics)
+        .ok()
+        .map(|return_type| return_type.to_string())
+}
+
+fn err_get_function_out_of_bounds(iter: &TokenIterator) -> Error {
+    new_soul_error(iter.current(), "unexped end while trying to get function declaration")
+}
+
+

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use super::var_info::VarInfo;
 
@@ -41,5 +41,22 @@ impl Scope {
 
     pub fn id(&self) -> &ScopeId {
         &self.id
+    }
+
+    pub fn try_get_variable<'a>(&'a self, var_name: &String, scopes: &'a HashMap<ScopeId, Scope>) -> Option<&'a VarInfo> {
+        if let Some(var) = self.vars.get(var_name) {
+            return Some(var);
+        }
+
+        let mut current_scope = self;
+        while let Some(parent) = current_scope.parent {
+            current_scope = scopes.get(&parent)?;
+            
+            if let Some(var) = current_scope.vars.get(var_name) {
+                return Some(var);
+            }
+        }
+
+        None
     }
 }

@@ -1,12 +1,12 @@
 use crate::abstract_styntax_tree::abstract_styntax_tree::IExpression;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GenericValidater {
-    pub possible_condition: Option<IExpression>,
+    pub possible_condition: IExpression,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Generic {
     pub type_name: String,
-    pub validater: GenericValidater,
+    pub validater: Option<GenericValidater>,
 }

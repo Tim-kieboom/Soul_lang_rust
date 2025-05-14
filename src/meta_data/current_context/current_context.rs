@@ -5,11 +5,21 @@ use super::{member_info::MemberInfo, rulesets::RuleSet};
 
 #[derive(Debug, Clone)]
 pub struct CurrentContext {
-    rulesets: RuleSet,
-    current_scope: ScopeId,
+    pub rulesets: RuleSet,
+    pub current_scope_id: ScopeId,
     // this_ptr: Option<VarInfo>,
-    in_class: Option<ClassInfo>,
-    current_generics: BTreeMap<String, Generic>,
+    pub in_class: Option<ClassInfo>,
+    pub current_generics: BTreeMap<String, Generic>,
 }
 
+impl CurrentContext {
+    pub fn new(current_scope_id: ScopeId) -> Self {
+        CurrentContext { 
+            rulesets: RuleSet::Default, 
+            current_scope_id, 
+            in_class: None, 
+            current_generics: BTreeMap::new(),
+        }
+    }
+}
 

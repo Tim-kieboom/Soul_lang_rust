@@ -2,7 +2,7 @@ pub mod format_stringer;
 pub mod string_mapper;
 
 #[cfg(test)]
-mod test_format;
+mod format_tests;
 
 #[cfg(test)]
-mod test_string_mapper;
+mod string_mapper_tests;

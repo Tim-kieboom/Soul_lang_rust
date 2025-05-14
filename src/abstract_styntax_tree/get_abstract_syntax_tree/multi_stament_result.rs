@@ -1,5 +1,6 @@
 use crate::abstract_styntax_tree::abstract_styntax_tree::IStatment;
 
+#[derive(Debug)]
 pub struct MultiStamentResult<T> {
     pub before: Option<Vec<IStatment>>,
     pub value: T,
@@ -11,7 +12,7 @@ impl<T> MultiStamentResult<T> {
         MultiStamentResult { before: None, value, after: None }
     }
 
-    pub fn add_result<K>(&mut self, other: &mut MultiStamentResult<K>) {
+    pub fn add_result<K>(&mut self, other: &MultiStamentResult<K>) {
         if let Some(other) = &other.before {
             self.before.get_or_insert_with(Vec::new)
                        .extend_from_slice(&other);

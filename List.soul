@@ -1,0 +1,159 @@
+interface IList<T> typeof Iter<T>() {
+    Ctor::[](T[] init)
+
+    Push(T@ element)
+    Push(T[] elements)
+    Push(T[]@ elements)
+    Pop() T
+
+    this::[](int index) T
+    this::[](int begin, int end) Span<T>
+    const @this::[](int begin, int end) T[]@
+}
+
+class List<T> typeof {
+    T[]* buffer = T[]*([])
+    usize len = 0
+
+    const Ctor::[](T[] init) { 
+        buffer = T[]*(init)
+        len = init.Len()
+    }
+
+    IsEmpty() bool {
+        return len == 0
+    }
+
+    #[inline]
+    Resize(usize additional, T default) {
+        len += additional
+        *buffer += [len => default]
+    }
+
+    #[inline]
+    Reserve(usize additional, T default) {
+        len += additional
+        *buffer += [len => default]
+    }
+
+    #[inline]
+    Reserve(usize additional) {
+        // unsafe is to be able to copy without default T
+        len += additional
+        *buffer = unsafe{ copy[len] *buffer }
+    }
+
+    #[inline]
+    Shrink(usize amount) {
+        assert_bigger(len, amount+1)
+
+        // unsafe is to be able to copy without default T
+        *buffer = unsafe{ copy[len-amount] *buffer }
+    }
+
+    const Len() usize {
+        return len
+    }
+
+    const Cap() usize {
+        return buffer.Len()
+    }
+
+    const At(int index) Op<T&> {
+        return buffer.At(index)
+    }
+
+    const At(int index) Op<T&> {
+        return buffer.At(index)
+    }
+
+    #[inline]
+    Push(T@ element) {
+        if len+1 > buffer.Len() {
+            Reserve(buffer.Len()+1)
+        }
+
+        buffer[len++] = element
+    }
+
+    #[inline]
+    Push(Iter<T>() elements) 
+    {
+        Push(elements.Iter())
+    }
+
+    #[inline]
+    Push(IPullable<T>() elements) {
+        if len+elements.Len() > buffer.Len() {
+            Reserve(elements.Len()+1)
+        }
+
+        buffer[len..] = elements
+    }
+
+    const Pop() Op<T> {
+        return if IsEmpty(): Empty
+               else:         Value(copy buffer[--len])
+    }
+
+    this::[](int index) T {
+        return buffer[index]
+    }
+
+    const @this::[](int begin, int end) T[]@ {
+        return buffer[begin:end]
+    }
+
+    this::[](int begin, int end) Span<T> {
+        return mut buffer[begin:end]
+    }
+
+    this::+=(Iter<T>() other) {
+        Push(other)
+    }
+
+    this::+(Iter<T>() other) List<T> 
+    {
+        new := copy this
+        new.Push(other)
+        return new
+    }
+
+    Iter() IPullable<T> {
+        buffer[0..len].Iter()
+    }
+}
+
+Test ListAssert() {
+    list := List<int>[]
+    listArrayCtor := List<int>[1, 2, 3, 4, 5]
+    assert(list.IsEmpty())
+    assert_equal(list.Len(), 0)
+    assert_equal(list.Cap(), 0)
+
+    list.Push(1)
+    assert(!list.IsEmpty())
+    assert_equal(list.Len(), 1)
+    assert_equal(list.Cap(), 1)
+
+    list.Push({2, 3})
+    assert_equal(list.Len(), 3)
+    assert_equal(list.Cap(), 5)
+
+    list.Reserve(10, 0);
+    list2 := List<List<int>>()[12 => [1, 2]]
+
+    list += [2 => 2]
+    list += list2
+    cpyList = list + [1, 2, 3, 4]
+
+    array := copy[10] int[]
+
+}
+
+
+
+
+
+
+

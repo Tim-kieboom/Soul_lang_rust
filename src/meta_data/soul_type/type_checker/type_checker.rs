@@ -1,4 +1,5 @@
-use crate::meta_data::soul_type::primitive_types::PrimitiveType;
+use std::{collections::BTreeMap, io::{Error, Result}};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{generic::Generic, primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::{Token, TokenIterator}};
 
 pub fn get_primitive_type_from_literal(literal: &str) -> PrimitiveType {
     if literal.is_empty() {
@@ -22,23 +23,218 @@ pub fn get_primitive_type_from_literal(literal: &str) -> PrimitiveType {
     }
 }
 
-fn get_number_from_literal(s: &str) -> PrimitiveType {
-    if s.len() > 2 && (&s[..2] == "0x" || &s[..2] == "0b") {
-        
-        if s[2..].parse::<u64>().is_err() {
-            return PrimitiveType::Invalid;
-        }
 
-        let mut num_bytes = s[2..].len();
-        if &s[..2] == "0b" {
+
+pub fn check_convert_to_ref(
+    iter: &TokenIterator, 
+    first_expression: &IExpression, 
+    ref_wrap: &TypeWrappers, 
+    token: &Token,
+    meta_data: &MetaData, 
+    generics: &BTreeMap<String, Generic>,
+) -> Result<()> {
+    let mut expression_stack = Vec::with_capacity(2);
+    expression_stack.push(first_expression);
+
+    assert!(ref_wrap.is_any_ref(), "Internal error: in check_convert_to_ref() ref_wrap is not ref");
+
+    while let Some(expression) = expression_stack.pop() {
+
+        match expression {
+            IExpression::BinairyExpression { left: _, operator_type: _, right: _, type_name } => {
+                if ref_wrap == &TypeWrappers::ConstRef {
+                    continue;
+                }
+
+                if is_type_name_literal(type_name, token, meta_data, generics)? {
+                    return Err(err_literal_mut_refs(iter, format!("{:?}", expression).as_str()))
+                }
+            },
+            IExpression::Literal { value, type_name: _ } => {
+                if ref_wrap == &TypeWrappers::ConstRef {
+                    continue;
+                }
+                
+                return Err(err_literal_mut_refs(&iter, &value));
+            },
+            IExpression::IVariable { this } => {
+                if ref_wrap == &TypeWrappers::ConstRef {
+                    continue;
+                }
+
+                if is_ivariable_literal(this, token, meta_data, generics)? {
+                    return Err(err_literal_mut_refs(iter, format!("{:?}", this).as_str()))
+                }
+            },
+            IExpression::Increment { variable: _, is_before: _, amount: _ } => {
+                return Err(new_soul_error(token, "you can not refrence an increment expression"));
+            },
+
+            IExpression::ConstRef { expression } => expression_stack.push(&expression),
+            IExpression::MutRef { expression } => expression_stack.push(&expression),
+            IExpression::DeRef { expression } => expression_stack.push(&expression),
+            IExpression::EmptyExpression() => (),
+        };
+    }
+
+    Ok(())
+}
+
+pub fn is_expression_literal(
+    first_expression: &IExpression, 
+    token: &Token, 
+    meta_data: &MetaData, 
+    generics: &BTreeMap<String, Generic>,
+) -> Result<bool> {
+    let mut expression_stack = Vec::with_capacity(2);
+    expression_stack.push(first_expression);
+
+    while let Some(expression) = expression_stack.pop() {
+
+        match expression {
+            IExpression::BinairyExpression { left: _, operator_type: _, right: _, type_name } => {
+                return is_type_name_literal(type_name, token, meta_data, generics);
+            },
+            IExpression::Literal { value: _, type_name } => {
+                return is_type_name_literal(type_name, token, meta_data, generics);
+            },
+            IExpression::EmptyExpression() => {
+                return Ok(true);
+            },
+            IExpression::IVariable { this } => {
+                return is_ivariable_literal(this, token, meta_data, generics);
+            },
+            IExpression::Increment { variable, is_before: _, amount: _ } => {
+                return is_ivariable_literal(variable, token, meta_data, generics);
+            },
+
+            IExpression::ConstRef { expression } => expression_stack.push(&expression),
+            IExpression::MutRef { expression } => expression_stack.push(&expression),
+            IExpression::DeRef { expression } => expression_stack.push(&expression),
+        };
+    }
+
+    Err(new_soul_error(token, "Internal error: could not find type from expression in is_expression_literal()"))
+}
+
+pub fn is_ivariable_literal(
+    var: &IVariable, 
+    token: &Token, 
+    meta_data: &MetaData, 
+    generics: &BTreeMap<String, Generic>,
+) -> Result<bool> {
+    match var {
+        IVariable::Variable{ name: _, type_name } => return is_type_name_literal(&type_name, token, meta_data, generics),
+        IVariable::MemberExpression{ parent, expression: _ } => {
+
+            if let IVariable::Variable{ name: _, type_name } = &**parent {
+                return is_type_name_literal(&type_name, token, meta_data, generics);
+            }
+            else {
+                return Err(new_soul_error(token, format!("").as_str()));
+            }
+        },
+    }
+}
+
+pub fn is_type_name_literal(
+    type_name: &str, 
+    token: &Token, 
+    meta_data: &MetaData, 
+    generics: &BTreeMap<String, Generic>,
+) -> Result<bool> {
+    let soul_type = SoulType::from_stringed_type(&type_name, token, &meta_data.type_meta_data, generics)?;
+    
+    Ok(soul_type.is_literal())
+}
+
+pub fn duck_type_equals(
+    a: &SoulType,
+    b: &SoulType,
+    type_meta_data: &TypeMetaData,
+) -> bool {
+    a.to_primitive_type(type_meta_data).to_duck_type() == b.to_primitive_type(type_meta_data).to_duck_type()
+}
+
+fn err_literal_mut_refs(iter: &TokenIterator, value: &str)-> Error {
+    new_soul_error(
+        iter.current(), 
+        format!(
+            "while trying to get ref expression '{}{}'\nis a literal type so can not be mutRef'ed (remove '{}' use '{}' instead)", 
+            SOUL_NAMES.get_name(NamesTypeWrapper::MutRef), 
+            value, 
+            SOUL_NAMES.get_name(NamesTypeWrapper::MutRef), 
+            SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef)
+        ).as_str(),
+    )
+}
+
+fn get_number_from_literal(s: &str) -> PrimitiveType {
+    const BINARY: u32 = 2;
+    const HEXIDECIMAL: u32 = 16;
+
+    if s.is_empty() {
+        return PrimitiveType::Invalid;
+    }
+
+    // handle negative binary/hex like -0b00000001
+    let num_minus;
+    if s.chars().nth(0).unwrap() == '-' {
+        num_minus = 1;
+    }
+    else {
+        num_minus = 0;
+    }
+
+    if s.len() > 2 && (&s[num_minus..2+num_minus] == "0x" || &s[num_minus..2+num_minus] == "0b") {
+
+        let mut num_bytes = s[2+num_minus..].len();
+        if &s[num_minus..2+num_minus] == "0b" {
             num_bytes /= 8;
+
+            if u64::from_str_radix(&s[2+num_minus..], BINARY).is_err() {
+                return PrimitiveType::Invalid;
+            }
+        }
+        else {
+            if u64::from_str_radix(&s[2+num_minus..], HEXIDECIMAL).is_err() {
+                return PrimitiveType::Invalid;
+            }
         }
 
         return match num_bytes {
-            var if var <= 1 => PrimitiveType::U8,
-            var if var <= 2 => PrimitiveType::U16,
-            var if var <= 4 => PrimitiveType::U32,
-            var if var <= 8 => PrimitiveType::U64,
+            var if var <= 1 => {
+                if num_minus == 0 {
+                    PrimitiveType::U8
+                }
+                else {
+                    PrimitiveType::I8
+                }
+            },
+            var if var <= 2 => {
+                if num_minus == 0 {
+                    PrimitiveType::U16
+                }
+                else {
+                    PrimitiveType::I16
+                }
+            },
+            var if var <= 4 => {
+                if num_minus == 0 {
+                    PrimitiveType::U32
+                }
+                else {
+                    PrimitiveType::I32
+                }
+            },
+            var if var <= 8 => {
+                if num_minus == 0 {
+                    PrimitiveType::U64
+                }
+                else {
+                    PrimitiveType::I64
+                }
+            },
             _ => PrimitiveType::Invalid,
         }
     }
@@ -53,3 +249,11 @@ fn get_number_from_literal(s: &str) -> PrimitiveType {
 
     PrimitiveType::Invalid
 }
+
+
+
+
+
+
+
+

@@ -1,6 +1,6 @@
 use std::io::Result;
 use super::format_stringer::{indexesof_qoutes, indexesof_qoutes_line};
-use crate::{meta_data::{soul_names::{InternalType, TypeModifiers}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}}, tokenizer::file_line::FileLine};
+use crate::{meta_data::{meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::file_line::FileLine};
 
 #[allow(dead_code)]
 pub fn rawstr_to_litstr_file(source_file: Vec<FileLine>, meta_data: &mut MetaData) -> Result<Vec<FileLine>> {
@@ -25,8 +25,8 @@ pub fn rawstr_to_litstr_line(line: FileLine, meta_data: &mut MetaData) -> Result
 }
 
 fn rawstr_to_litstr(line: &mut FileLine, meta_data: &mut MetaData, indexes: &Vec<usize>) {
-    let soul_literal_name = meta_data.get_soul_name(TypeModifiers::Literal);
-    let soul_string_name = meta_data.get_soul_name(InternalType::String);
+    let soul_literal_name = SOUL_NAMES.get_name(NamesTypeModifiers::Literal);
+    let soul_string_name = SOUL_NAMES.get_name(NamesInternalType::String);
 
     let literal_string_type_name = format!("{soul_literal_name} {soul_string_name}");
 
@@ -43,7 +43,7 @@ fn rawstr_to_litstr(line: &mut FileLine, meta_data: &mut MetaData, indexes: &Vec
             let str_name = format!("__Soul_c_str_{}__", meta_data.type_meta_data.c_str_store.len());
             meta_data.type_meta_data.c_str_store.add(c_str, str_name.clone());
             let mut var = VarInfo::new(str_name, literal_string_type_name.clone());
-            var.set_var_flag(VarFlags::IsAssigned);
+            var.add_var_flag(VarFlags::IsAssigned);
             meta_data.add_to_global_scope(var);
         }
 

@@ -5,4 +5,4 @@ mod string_tokenizer;
 pub mod file_line;
 
 #[cfg(test)]
-mod test;
+mod tokenize_tests;

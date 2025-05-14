@@ -1,9 +1,10 @@
 use super::token::Token;
 use std::io::{BufRead, Result};
 use super::file_line::FileLine;
-use crate::meta_data::soul_names::SoulNames;
+use crate::meta_data::soul_names::{SoulNames, SOUL_NAMES};
 use crate::meta_data::meta_data::MetaData;
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
+use crate::meta_data::type_meta_data::TypeMetaData;
 use crate::tokenizer::comment_remover::comment_remover::remove_comment_line;
 use super::comment_remover::comment_remover::remove_comment_file;
 use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
@@ -17,10 +18,10 @@ pub struct FileLineResult {
 }
 
 #[allow(dead_code)]
-pub fn read_as_file_lines(path: &str, meta_data: &MetaData) -> Result<FileLineResult> {
+pub fn read_as_file_lines(path: &str) -> Result<FileLineResult> {
     use std::fs::File;
     use std::io::BufReader;
-    let parse_tokens = &meta_data.soul_names.parse_tokens;
+    let parse_tokens = &SOUL_NAMES.parse_tokens;
 
     let file = File::open(path)?;
     let reader = BufReader::new(file);
@@ -51,14 +52,14 @@ pub fn tokenize_file(source_file: Vec<FileLine>, estimated_token_count: u64, met
     let new_source_file = rawstr_to_litstr_file(formated_str_file, meta_data)?;
 
     for line in new_source_file {
-        get_tokens(line, &mut tokens, meta_data)?;
+        get_tokens(line, &mut tokens)?;
     }
 
     Ok(tokens)
 }
 
 #[allow(dead_code)]
-pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commned: &mut bool, meta_data: &mut MetaData) -> Result<Vec<Token>> {
+pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commend: &mut bool, meta_data: &mut MetaData) -> Result<Vec<Token>> {
     if line.text.is_empty() {
         return Ok(Vec::new());
     }
@@ -66,11 +67,11 @@ pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commned: &
     let num_spaces = line.text.matches(" ").count();
     let mut tokens = Vec::with_capacity(num_spaces+1);
 
-    let comment_less_line = remove_comment_line(line, in_multi_line_commned);
+    let comment_less_line = remove_comment_line(line, in_multi_line_commend);
     let formated_str_line = format_str_line(comment_less_line, line_index)?; 
     let new_line = rawstr_to_litstr_line(formated_str_line, meta_data)?;
 
-    get_tokens(new_line, &mut tokens, meta_data)?;
+    get_tokens(new_line, &mut tokens)?;
 
     Ok(tokens)
 }
@@ -79,8 +80,8 @@ fn get_token_count(str: &str, strings: &Vec<&str>) -> u64 {
     strings.iter().filter(|s| *s == &str ).count() as u64
 }
 
-fn get_tokens(line: FileLine, tokens: &mut Vec<Token>, meta_data: &mut MetaData) -> Result<()> {
-    let parse_tokens = &meta_data.soul_names.parse_tokens;
+fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
+    let parse_tokens = &SOUL_NAMES.parse_tokens;
 
     let splits = line.text.split_on(parse_tokens);
 
@@ -212,3 +213,7 @@ impl SplitOn for String {
 fn needs_to_dot_tokenize(text: &str) -> bool {
     text.contains(".") && get_primitive_type_from_literal(text) == PrimitiveType::Invalid
 }
+
+
+
+

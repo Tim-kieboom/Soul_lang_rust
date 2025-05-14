@@ -77,5 +77,12 @@ fn formatter_does_not_allow_string_literals_as_format_argument() {
 
     let result = format_str_file(str_to_file_lines(FILE));
     
-    assert!(result.is_err(), "test should have thrown error");
+    assert!(result.is_err(), "test should have thrown error (so allowes c_strings as arg in f_string) ok: {:#?}", result.unwrap());
 }
+
+
+
+
+
+
+

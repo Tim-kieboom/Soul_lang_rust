@@ -1,6 +1,8 @@
 use core::fmt;
 use std::ops::Index;
 
+use itertools::Itertools;
+
 #[derive(Debug, Clone)]
 pub struct Token {
     pub text: String,
@@ -9,7 +11,7 @@ pub struct Token {
 }
 
 pub struct TokenIterator {
-    index: usize,
+    index: i64,
     tokens: Vec<Token>,
 }
 
@@ -24,12 +26,18 @@ impl TokenIterator {
         }
     }
 
+    pub fn get_tokens_text(&self) -> Vec<&str> {
+        self.tokens.iter()
+                   .map(|token| token.text.as_str())
+                   .collect::<Vec<&str>>()
+    }
+
     pub fn current(&self) -> &Token {
-        &self.tokens[self.index]
+        &self.tokens[self.index.max(0) as usize]
     }
 
     pub fn current_index(&self) -> usize {
-        self.index
+        self.index.max(0) as usize
     }
 
     pub fn next(&mut self) -> Option<&Token> {
@@ -44,18 +52,23 @@ impl TokenIterator {
         if index >= self.tokens.len() {
             None
         } else {
-            self.index = index;
-            Some(&self.tokens[self.index])
+            self.index = index as i64;
+            Some(&self.tokens[self.index as usize])
         }
     }
 
     pub fn next_multiple(&mut self, steps: i64) -> Option<&Token> {
         let next_index = self.index as i64 + steps;
-        if next_index as usize >= self.tokens.len() || next_index < 0 {
+        if next_index < 0 {
+            self.index = next_index;
             None
-        } else {
-            self.index = next_index as usize;
-            Some(&self.tokens[self.index])
+        }
+        else if next_index as usize >= self.tokens.len(){
+            None
+        } 
+        else {
+            self.index = next_index;
+            Some(&self.tokens[self.index as usize])
         }
     }
 

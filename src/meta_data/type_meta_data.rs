@@ -1,60 +1,46 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, result};
 
-pub struct CStrPair {
-    pub name: String,
-    pub c_str: String,
-}
-
-pub struct CStringStore {
-    from_c_str_map: HashMap<String, Arc<CStrPair>>,
-    from_name_map: HashMap<String, Arc<CStrPair>>,
-}
-
-#[allow(dead_code)]
-impl CStringStore {
-
-    pub fn new() -> Self {
-        CStringStore{ 
-            from_c_str_map: HashMap::new(), 
-            from_name_map: HashMap::new(),
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.from_c_str_map.len()
-    }
-
-    pub fn add(&mut self, c_str: String, str_name: String) {
-        let value = Arc::new(CStrPair{name: str_name.clone(), c_str: c_str.clone()});
-        self.from_c_str_map.insert(c_str, value.clone());
-        self.from_name_map.insert(str_name, value);
-    }
-
-    pub fn from_c_str(&self, c_str: &str) -> Option<&Arc<CStrPair>> {
-        self.from_c_str_map.get(c_str)
-    }
-
-    pub fn from_name(&self, str_name: &str) -> Option<&Arc<CStrPair>> {
-        self.from_name_map.get(str_name)
-    }
-
-    pub fn from_c_str_map(&self) -> &HashMap<String, Arc<CStrPair>> {
-        &self.from_c_str_map
-    }
-
-    pub fn from_name_map(&self) -> &HashMap<String, Arc<CStrPair>> {
-        &self.from_name_map
-    }
-}
+use super::{c_string_store::CStringStore, class_info::class_info::ClassInfo, type_store::{TypeID, TypeStore}};
 
 pub struct TypeMetaData {
     pub c_str_store: CStringStore,
+    pub class_store: HashMap<String, ClassInfo>,
+    pub type_store: TypeStore,
 }
 
 impl TypeMetaData {
     pub fn new() -> Self {
         TypeMetaData{ 
             c_str_store: CStringStore::new(),
+            class_store: HashMap::new(),
+            type_store: TypeStore::new(),
         }
     }
+
+    pub fn add_type(&mut self, new_type: String) -> result::Result<TypeID, String> {
+        self.type_store.add_type(new_type, None)
+    }
+
+    pub fn add_typedef(&mut self, new_type: String, from_type: String) -> result::Result<TypeID, String> {
+        self.type_store.add_type(new_type, Some(from_type))
+    }
+
+    pub fn get_type_id(&self, str: &String) -> Option<TypeID> {
+        self.type_store.to_id.get(str).cloned()
+    }
+
+    pub fn convert_typedef_to_original(&self, id: &TypeID) -> Option<&String> {
+        self.type_store.convert_typedef_to_original(id)
+    }
 }
+
+
+
+
+
+
+
+
+
+
+   

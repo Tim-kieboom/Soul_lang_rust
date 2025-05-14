@@ -3,7 +3,7 @@ use crate::tokenizer::token::Token;
 
 #[cfg(feature = "throw_result")]
 pub fn throw_result() {
-    panic!("");
+    panic!("at {}:{}; !!error!! {}", token.line_number, token.line_offset, msg);
 } 
 #[cfg(not(feature = "throw_result"))]
 pub fn throw_result() {}

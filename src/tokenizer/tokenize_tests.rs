@@ -47,6 +47,65 @@ fn str_to_file_lines(text: &str) -> Vec<FileLine> {
 }
 
 #[test]
+fn test_multi_char_symbools_take_priority_over_single_once() {
+	const INPUT: &[&str] = &[
+			"int var1 = 1",
+			"var2 := 1",
+			"var3 := var++",
+			"var3 = var--",
+			"var3 = --var",
+			"var3 = ++var",
+			"cond := var3 == var1",
+			"cond = var3 < var1",
+			"cond = var3 > var1",
+			"cond = var3 <= var1",
+			"cond = var3 >= var1",
+			"cond = var3 != var1",
+	];
+	const SHOULD_BE_TOKENS: &[&[&str]] = &[
+	/*0 */	&["int", "var1", "=", "1", "\n"],
+	/*1 */	&["var2", ":=", "1", "\n"],
+	/*2 */	&["var3", ":=", "var", "++", "\n"],
+	/*3 */	&["var3", "=", "var", "--", "\n"],
+	/*4 */	&["var3", "=", "--", "var", "\n"],
+	/*5 */	&["var3", "=", "++", "var", "\n"],
+	/*6 */	&["cond", ":=", "var3", "==", "var1", "\n"],
+	/*7 */	&["cond", "=", "var3", "<", "var1", "\n"],
+	/*8 */	&["cond", "=", "var3", ">", "var1", "\n"],
+	/*9*/	&["cond", "=", "var3", "<=", "var1", "\n"],
+	/*10*/	&["cond", "=", "var3", ">=", "var1", "\n"],
+	/*11*/	&["cond", "=", "var3", "!=", "var1", "\n"],
+    ];
+
+    let mut meta_data = MetaData::new();
+
+    let source_file = str_to_file_lines(&INPUT.join("\n"));
+
+    assert_eq!(source_file.len(), SHOULD_BE_TOKENS.len(), "len(source_file)[{}] != len(should_be_tokens)[{}]", source_file.len(), SHOULD_BE_TOKENS.len());
+
+	let mut in_multi_line = false;
+    let mut multi_tokens = Vec::new();
+    for (i, line) in source_file.iter().enumerate() {
+
+        let result = tokenize_line(line.clone(), i, &mut in_multi_line, &mut meta_data);
+        assert!(result.is_ok(), "err: {}", result.unwrap_err());
+        let mut tokens = result.unwrap();
+        if in_multi_line {
+            tokens.clear();
+        } 
+
+        multi_tokens.extend(tokens.clone());
+
+        let should_bo_tokens_line = &SHOULD_BE_TOKENS[i];
+        assert_eq!(should_bo_tokens_line.len(), tokens.len(), "line[{}]: len(tokens)[{}] != len(should_be_tokens)[{}], tokens: {:#?}", i, tokens.len(), should_bo_tokens_line.len(), tokens);
+
+        for (j, token) in tokens.iter().enumerate() {
+            assert_eq!(should_bo_tokens_line[j], token.text, "line[{}]: token is '{}' shuould be '{}'", i, should_bo_tokens_line[j], token.text);
+        }
+    }
+}
+
+#[test]
 fn test_tokenize_line() {
     let should_be_tokens = vec![
     	/*0*/  vec![],

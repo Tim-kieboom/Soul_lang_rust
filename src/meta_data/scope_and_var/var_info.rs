@@ -8,6 +8,7 @@ pub enum VarFlags {
     IsBorrowchecked = 4,
 }
 
+#[derive(Debug, Clone)]
 pub struct VarInfo {
     pub name: String,
     pub type_name: String,
@@ -20,7 +21,7 @@ impl VarInfo {
         VarInfo {name, type_name, var_flags: 0}
     }
 
-    pub fn set_var_flag(&mut self, flag: VarFlags) {
+    pub fn add_var_flag(&mut self, flag: VarFlags) {
         self.var_flags |= flag as u16
     }
 

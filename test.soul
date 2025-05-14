@@ -1,4 +1,7 @@
 main(str[] args) int {
-    println("hello world");
-    println(f"{ } world");
+    Debug_Assert(false, "")
+    println("hello world")
+    println(f"{Sum(1, 2)} world")
 }
+
+
