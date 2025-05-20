@@ -102,7 +102,7 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
 
             if *text == "\\" {
                 if i != splits.len() -1 {
-                    return Err(new_soul_error(&token, "'\\' con only be placed at the end of a line"));
+                    return Err(new_soul_error(&token, "'\\' can only be placed at the end of a line"));
                 }
 
                 last_is_forward_slash = true;
@@ -114,12 +114,10 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
             continue;
         }
 
-        let num_dots = text.matches('.').count();
-        let dot_splits = text.split(".");
-        let dot_splits_len = text.len() - num_dots;
-        for (j, split) in dot_splits.enumerate() {
-            
-            if split.is_empty() || split == " " {
+        let dot_splits: Vec<&str> = text.split('.').collect();
+        let num_splits = dot_splits.len();
+        for (j, split) in dot_splits.iter().enumerate() {
+            if split.is_empty() || *split == " " {
                 continue;
             }
 
@@ -130,20 +128,16 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
             };
 
             tokens.push(token);
-            line_offset += dot_splits_len;
-            if *text == "\\" {   
-                let err_token = Token{
-                    text: split.to_string(), 
-                    line_number: line.line_number as usize, 
+            line_offset += split.len();
+
+            if j != num_splits - 1 {
+                let dot_token = Token {
+                    text: ".".to_string(),
+                    line_number: line.line_number as usize,
                     line_offset,
                 };
-                
-                if i != splits.len()-1 && j != dot_splits_len -1 {
-                    return Err(new_soul_error(&err_token, "'\\' con only be placed at the end of a line"));
-                }
-
-                last_is_forward_slash = true;
-                break;
+                tokens.push(dot_token);
+                line_offset += 1;
             }
         }
     } 

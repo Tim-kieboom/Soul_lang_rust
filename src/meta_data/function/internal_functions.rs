@@ -19,9 +19,9 @@ pub static FIRST_FUNCTION_ID: Lazy<FunctionID> = Lazy::new(|| {
 pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
     let mut current_id = 0u32;
 
-    let mut functions = vec![
+    let mut functions =  vec![
         FunctionDeclaration{
-            name: "print".to_string(), 
+            name: "Print".to_string(), 
             return_type: None,
             args: vec![
                 ArgumentInfo::new_argument(
@@ -38,7 +38,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             is_forward_declared: false,
         },
         FunctionDeclaration{
-            name: "println".to_string(), 
+            name: "Println".to_string(), 
             return_type: None,
             args: vec![
                 ArgumentInfo::new_argument(
@@ -55,7 +55,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             is_forward_declared: false,
         },
         FunctionDeclaration{
-            name: "println".to_string(), 
+            name: "Println".to_string(), 
             return_type: None,
             args: vec![],
             optionals: BTreeMap::new(),
@@ -84,7 +84,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             is_forward_declared: false,
         },
         FunctionDeclaration{
-            name: "panic".to_string(), 
+            name: "Panic".to_string(), 
             return_type: None,
             args: vec![
                 ArgumentInfo::new_argument(
@@ -101,7 +101,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             is_forward_declared: false,
         },
         FunctionDeclaration{
-            name: "panic".to_string(), 
+            name: "Panic".to_string(), 
             return_type: None,
             args: vec![],
             optionals: BTreeMap::new(),

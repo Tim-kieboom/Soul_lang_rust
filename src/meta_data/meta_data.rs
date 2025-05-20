@@ -1,15 +1,42 @@
 use bitflags::bitflags;
-use std::{collections::HashMap, io::Result};
+use itertools::Itertools;
+use std::{cmp::Ordering, collections::HashMap, io::Result, result, sync::{Arc, Mutex}};
 use crate::tokenizer::token::TokenIterator;
 
-use super::{class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::{FIRST_FUNCTION_ID, INTERNAL_FUNCTIONS}}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
+use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::{FIRST_FUNCTION_ID, INTERNAL_FUNCTIONS}}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
-    pub struct IsFunctionResult: u8 {
-        const None = 0b0000_0000;
+    pub struct _IsFunctionResult: u8 {
+        const Empty = 0;
         const IsFunction = 0b0000_0001; 
         const IsMethode = 0b0000_0010; 
+    }
+}
+
+pub struct IsFunctionResult<'a> {
+    pub funcs: Vec<&'a FunctionDeclaration>, 
+    state: _IsFunctionResult,
+}
+impl<'a> IsFunctionResult<'a> {
+    pub fn new(funcs: Vec<&'a FunctionDeclaration>, state: _IsFunctionResult) -> Self {
+        IsFunctionResult { funcs, state }
+    }
+    
+    pub fn is_none(&self) -> bool {
+        !self.state.contains(_IsFunctionResult::IsFunction | _IsFunctionResult::IsMethode)
+    }
+
+    pub fn is_some(&self) -> bool {
+        self.state.contains(_IsFunctionResult::IsFunction | _IsFunctionResult::IsMethode)
+    }
+    
+    pub fn is_function(&self) -> bool {
+        self.state.contains(_IsFunctionResult::IsFunction)
+    }
+
+    pub fn is_methode(&self) -> bool {
+        self.state.contains(_IsFunctionResult::IsMethode)
     }
 }
 
@@ -44,6 +71,7 @@ pub struct MetaData {
     pub type_meta_data: TypeMetaData,
     pub scope_store: HashMap<ScopeId, Scope>,
     pub function_store: FunctionStore,
+    pub borrow_checker: Arc<Mutex<BorrowChecker>>,
     next_function_id: FunctionID,
 }
 
@@ -53,10 +81,14 @@ impl MetaData {
     pub const GLOBAL_SCOPE_ID: ScopeId = ScopeId(0);
 
     pub fn new() -> Self {
+        let borrow_checker = Arc::new(Mutex::new(BorrowChecker::new()));
+        borrow_checker.lock().unwrap().open_scope(&MetaData::GLOBAL_SCOPE_ID);
+
         let mut this = MetaData {  
             type_meta_data: TypeMetaData::new(), 
-            scope_store: new_scope_store(),
+            scope_store: new_scope_store(&borrow_checker),
             function_store: FunctionStore::new(),
+            borrow_checker: borrow_checker,
             next_function_id: FunctionID(0),
         };
 
@@ -87,15 +119,15 @@ impl MetaData {
     }
 
     pub fn add_to_global_scope(&mut self, var_info: VarInfo) {
-        self.scope_store.get_mut(&GLOBAL_SCOPE_ID)
-                        .unwrap()
-                        .vars.insert(var_info.name.clone(), var_info);
+        self.add_to_scope(var_info, &GLOBAL_SCOPE_ID);
     }
 
     pub fn add_to_scope(&mut self, var_info: VarInfo, id: &ScopeId) {
         self.scope_store.get_mut(id)
                         .unwrap()
                         .vars.insert(var_info.name.clone(), var_info);
+        
+        // self.borrow_checker.lock().unwrap().de
     }
 
     pub fn try_get_variable(&self, var_name: &String, scope_id: &ScopeId) -> Option<&VarInfo> {
@@ -111,7 +143,7 @@ impl MetaData {
     pub fn try_get_function(
         &self, 
         name: &str,
-        iter: &mut TokenIterator, 
+        iter: &TokenIterator, 
         context: &CurrentContext, 
         args: &Vec<ArgumentInfo>, 
         optionals: &Vec<ArgumentInfo>,
@@ -123,7 +155,7 @@ impl MetaData {
     fn internal_try_get_function(
         &self, 
         name: &str,
-        iter: &mut TokenIterator, 
+        iter: &TokenIterator, 
         context: &CurrentContext, 
         args: &Vec<ArgumentInfo>, 
         optionals: &Vec<ArgumentInfo>,
@@ -131,29 +163,32 @@ impl MetaData {
         let overloaded_functions = self.function_store.from_name(name)
             .ok_or(new_soul_error(iter.current(), format!("function: '{}' is not found", name).as_str()))?;
         
-        for function in overloaded_functions {
-            let are_compatible = function.are_arguments_compatible(iter, &args, &optionals, &self.type_meta_data, &context.current_generics);
-            if are_compatible {
+        for function in overloaded_functions.iter() {
+            let comparable = function.are_arguments_compatible(iter, &args, &optionals, &self.type_meta_data, &context.current_generics);
+            if comparable {
                 return Ok(function.id);
             }
         }
 
-        Err(new_soul_error(
+        return Err(new_soul_error(
             iter.current(), 
             format!("function: '{}' not found with given arguments", name).as_str()
-        ))
+        ));
     }
 
-    pub fn is_function(&self, name: &str, context: &CurrentContext) -> IsFunctionResult {
-        if context.in_class.is_some() && self.is_methode(name, &context.in_class.as_ref().unwrap()) {
-            return IsFunctionResult::IsFunction | IsFunctionResult::IsMethode;
+    pub fn is_function<'a>(&'a self, name: &str, context: &CurrentContext) -> IsFunctionResult<'a> {
+        if let Some(in_class) = &context.in_class {
+            
+            if let Some(funcs) = self.function_store.from_name(&get_methode_map_entry(name, &in_class.name)){
+                return IsFunctionResult::new(funcs, _IsFunctionResult::IsFunction | _IsFunctionResult::IsMethode);
+            }
         }
 
-        if self.function_store.from_name(name).is_some() {
-            return IsFunctionResult::IsFunction;
+        if let Some(funcs) = self.function_store.from_name(name) {
+            return IsFunctionResult::new(funcs, _IsFunctionResult::IsFunction);
         }
         else {
-            return IsFunctionResult::None;
+            return IsFunctionResult::new(Vec::new(), _IsFunctionResult::Empty);
         }
     }
 
@@ -161,19 +196,21 @@ impl MetaData {
         self.function_store.from_name(&get_methode_map_entry(name, &this_class.name)).is_some()
     }
 
-    pub fn new_scope(&mut self, parent_id: ScopeId) -> Option<ScopeId> {
-        let parent = self.scope_store.get(&parent_id)?;
-        let child = Scope::new_child(&parent);
+    pub fn new_scope(&mut self, parent_id: ScopeId) -> result::Result<ScopeId, String> {
+        let parent = self.scope_store.get(&parent_id)
+            .ok_or("Internal Error: can not get parent scope from scope_store")?;
+        let child = Scope::new_child(Arc::clone(&self.borrow_checker), &parent);
         let child_id = *child.id();
         self.scope_store.insert(child_id, child);
+        self.borrow_checker.lock().unwrap().open_scope(&child_id)?;
 
-        Some(child_id)
+        Ok(child_id)
     }
 }
 
-fn new_scope_store() -> HashMap<ScopeId, Scope> {
+fn new_scope_store(borrow_checker: &Arc<Mutex<BorrowChecker>>) -> HashMap<ScopeId, Scope> {
     let mut map = HashMap::new();
-    let global_scope = Scope::new_global();
+    let global_scope = Scope::new_global(Arc::clone(borrow_checker));
     map.insert(*global_scope.id(), global_scope);
     map
 }
@@ -181,9 +218,5 @@ fn new_scope_store() -> HashMap<ScopeId, Scope> {
 fn get_methode_map_entry(func_name: &str, this_class: &str) -> String {
     format!("{}#{}", this_class, func_name)
 }
-
-
-
-
 
 

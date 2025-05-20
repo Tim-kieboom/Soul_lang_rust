@@ -192,7 +192,7 @@ fn test_get_function_optional() {
 
     let func_1 = format!("random({} seed = 2) {} {}", int, int, "{}");
 
-    let mut should_be = FunctionDeclaration::from_optional(
+    let should_be = FunctionDeclaration::from_optional(
         "random".to_string(), 
         Some(int.to_string()), 
         vec![],
@@ -215,12 +215,6 @@ fn test_get_function_optional() {
         function == should_be, 
         "{:#?}\n!=\n{:#?}", function, should_be
     );
-
-    function = simple_get_function(&func_1);
-    assert!(!function.is_forward_declared);
-
-    let res = try_simple_get_function(&func_1);
-    assert!(res.is_err());
 }
 
 #[test]

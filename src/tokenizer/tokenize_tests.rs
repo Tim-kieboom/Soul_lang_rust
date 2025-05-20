@@ -129,7 +129,7 @@ fn test_tokenize_line() {
 		/*18*/ vec![],
 		/*19*/ vec![],
 		/*20*/ vec!["print", "(", "__Soul_c_str_0__", ")", "\n"],
-		/*21*/ vec!["string", ":=", "{", "__Soul_c_str_1__", ",", "__Soul_c_str_2__", ",", "__Soul_c_str_3__", ",", "__Soul_c_str_4__", ",", "__Soul_c_str_5__", ",", "__Soul_c_str_6__", "}", "\n"],
+		/*21*/ vec!["string", ":=", "{", "__Soul_c_str_6__", ",", "__Soul_c_str_5__", ",", "__Soul_c_str_4__", ",", "__Soul_c_str_3__", ",", "__Soul_c_str_2__", ",", "__Soul_c_str_1__", "}", "\n"],
 		/*22*/ vec!["i32", "result", ":=", "sum", "(", "1", ",", "2", ")", "\n"],
 		/*23*/ vec!["result", "+=", "1", ";", "result", "-=", "-", "1", ";", "\n"],
 		/*24*/ vec!["result", "="],
@@ -184,7 +184,7 @@ fn test_tokenize_file() {
 		"main", "(", ")", "\n",
 		"{", "\n",
 		"print", "(", "__Soul_c_str_0__", ")", "\n",
-		"string", ":=", "{", "__Soul_c_str_1__", ",", "__Soul_c_str_2__", ",", "__Soul_c_str_3__", ",", "__Soul_c_str_4__", ",", "__Soul_c_str_5__", ",", "__Soul_c_str_6__", "}", "\n",
+		"string", ":=", "{", "__Soul_c_str_6__", ",", "__Soul_c_str_5__", ",", "__Soul_c_str_4__", ",", "__Soul_c_str_3__", ",", "__Soul_c_str_2__", ",", "__Soul_c_str_1__", "}", "\n",
 		"i32", "result", ":=", "sum", "(", "1", ",", "2", ")", "\n",
 		"result", "+=", "1", ";", "result", "-=", "-", "1", ";", "\n",
 		"result", "=",
@@ -209,9 +209,90 @@ fn test_tokenize_file() {
 	assert!(result_tokens.is_ok(), "err: {:#?}", result_tokens.unwrap_err());
 	let tokens = result_tokens.unwrap();
 
+	println!("{:?}", tokens.iter().map(|token| &token.text).collect::<Vec<_>>());
+
     assert_eq!(tokens.len(), should_be_tokens.len());
 
 	for (i, token) in tokens.iter().enumerate() {
 		assert_eq!(token.text, should_be_tokens[i]);
 	}
 }
+
+#[test]
+fn test_tokenize_backslash() {
+	const BACKSLASH: &str = "int a = 1;\\\nPrintln(1)";
+	let should_be_tokens = vec!["int", "a", "=", "1", ";", "Println", "(", "1", ")", "\n"];
+
+    let mut meta_data = MetaData::new();
+    let source_file = str_to_file_lines(BACKSLASH);
+
+	let est_token_size: usize = source_file.iter()
+		.map(|line| line.text.matches(" ").count())
+		.sum();
+
+	let result_tokens = tokenize_file(source_file, est_token_size as u64, &mut meta_data);
+	assert!(result_tokens.is_ok(), "err: {:#?}", result_tokens.unwrap_err());
+	let tokens = result_tokens.unwrap();
+
+    assert_eq!(
+		tokens.len(), should_be_tokens.len(), 
+		"\nshould be: {:?}\ngot:       {:?}", should_be_tokens, tokens.iter().map(|token| &token.text).collect::<Vec<_>>(),
+	);
+
+	for (i, token) in tokens.iter().enumerate() {
+		assert_eq!(
+			token.text, should_be_tokens[i], 
+			"\nshould be: {:?}\ngot:       {:?}", should_be_tokens, tokens.iter().map(|token| &token.text).collect::<Vec<_>>(),
+		);
+	}
+
+	const BAD_BACKSLASH: &str = "int \\a = 1";
+	meta_data = MetaData::new();
+    let source_file = str_to_file_lines(BAD_BACKSLASH);
+
+	let result_tokens = tokenize_file(source_file, 10, &mut meta_data);
+	assert!(result_tokens.is_err());
+	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:3; !!error!! '\\' can only be placed at the end of a line");
+
+	const BAD_BACKSLASH_DOT: &str = "if 1 == a\\.Len() {}";
+	meta_data = MetaData::new();
+    let source_file = str_to_file_lines(BAD_BACKSLASH_DOT);
+
+	let result_tokens = tokenize_file(source_file, 10, &mut meta_data);
+	assert!(result_tokens.is_err());
+	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:6; !!error!! '\\' can only be placed at the end of a line");
+}
+
+#[test]
+fn test_tokenize_methode() {
+	const METHODE: &str = "Assert(args.Len() == 1)";
+	let should_be_tokens = vec!["Assert", "(", "args", ".", "Len", "(", ")", "==", "1", ")", "\n"];
+
+    let mut meta_data = MetaData::new();
+    let source_file = str_to_file_lines(METHODE);
+
+	let est_token_size: usize = source_file.iter()
+		.map(|line| line.text.matches(" ").count())
+		.sum();
+
+	let result_tokens = tokenize_file(source_file, est_token_size as u64, &mut meta_data);
+	assert!(result_tokens.is_ok(), "err: {:#?}", result_tokens.unwrap_err());
+	let tokens = result_tokens.unwrap();
+
+    assert_eq!(
+		tokens.len(), should_be_tokens.len(), 
+		"\nshould be: {:?}\ngot:       {:?}", should_be_tokens, tokens.iter().map(|token| &token.text).collect::<Vec<_>>(),
+	);
+
+	for (i, token) in tokens.iter().enumerate() {
+		assert_eq!(
+			token.text, should_be_tokens[i], 
+			"\nshould be: {:?}\ngot:       {:?}", should_be_tokens, tokens.iter().map(|token| &token.text).collect::<Vec<_>>(),
+		);
+	}
+}
+
+
+
+
+

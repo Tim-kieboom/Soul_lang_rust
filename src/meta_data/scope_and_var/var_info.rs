@@ -1,43 +1,51 @@
-use std::collections::HashMap;
+use bitflags::bitflags;
 
-#[repr(u16)]
-pub enum VarFlags {
-    None = 0,
-    IsAssigned = 1,
-    IsLiteral = 2,
-    IsBorrowchecked = 4,
+bitflags! {
+    #[derive(Debug, Clone)]
+    pub struct VarFlags: u8 {
+        const Empty = 0;
+        const None = 0b0000_0001;
+        const IsAssigned = 0b0000_0010;
+        const IsLiteral = 0b0000_0100;
+        const IsBorrowchecked = 0b0000_1000;
+    }
 }
+
 
 #[derive(Debug, Clone)]
 pub struct VarInfo {
     pub name: String,
     pub type_name: String,
-    var_flags: u16,
+    var_flags: VarFlags,
     // pub methodes: HashMap<String, NotYetImpl>,
 }
 
 impl VarInfo {
     pub fn new(name: String, type_name: String) -> Self {
-        VarInfo {name, type_name, var_flags: 0}
+        VarInfo {name, type_name, var_flags: VarFlags::Empty}
+    }
+
+    pub fn with_var_flag(name: String, type_name: String, flag: VarFlags) -> Self {
+        VarInfo {name, type_name, var_flags: flag}
     }
 
     pub fn add_var_flag(&mut self, flag: VarFlags) {
-        self.var_flags |= flag as u16
+        self.var_flags.insert(flag);
     }
 
-    pub fn clear_var_flag(&mut self, flag: VarFlags) {
-        self.var_flags &= !(flag as u16); 
+    pub fn remove_var_flag(&mut self, flag: VarFlags) {
+        self.var_flags.remove(flag); 
     }
 
     pub fn is_assigned(&self) -> bool {
-        self.var_flags & VarFlags::IsAssigned as u16 == 1
+        self.var_flags.contains(VarFlags::IsAssigned)
     }
 
     pub fn is_literal(&self) -> bool {
-        self.var_flags & VarFlags::IsLiteral as u16 == 1
+        self.var_flags.contains(VarFlags::IsLiteral)
     }
 
     pub fn is_borrow_checked(&self) -> bool {
-        self.var_flags & VarFlags::IsBorrowchecked as u16 == 1
+        self.var_flags.contains(VarFlags::IsBorrowchecked)
     }
 }

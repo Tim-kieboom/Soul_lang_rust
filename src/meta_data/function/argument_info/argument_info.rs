@@ -50,6 +50,17 @@ impl ArgumentInfo {
         }
     }
 
+    pub const fn new_empty() -> Self {
+        ArgumentInfo { 
+            name: String::new(), 
+            value_type: String::new(), 
+            default_value: None, 
+            is_mutable: false, 
+            arg_position: 0, 
+            can_be_multiple: false, 
+        }
+    }
+
     pub fn is_optional(&self) -> bool {
         self.default_value.is_some()
     }

@@ -55,25 +55,12 @@ impl StoreArgInfo {
         self.arg_info.soul_type.clear();
     }
     
-    pub fn get_argument_info(&mut self, iter: &TokenIterator, function_modifiers: &FunctionModifiers) -> Result<ArgumentInfo> {
-        if function_modifiers.contains(FunctionModifiers::Literal | FunctionModifiers::Const) {
-
-            if self.arg_info.is_mutable {
-                return Err(
-                    new_soul_error(
-                        iter.current(), 
-                        format!(" '{}' and '{}' function don't allow 'mut' arguments", FunctionModifiers::Literal.to_str(), FunctionModifiers::Const.to_str()).as_str()
-                    )
-                );
-            }
-
-            if self.arg_info.soul_type.is_mut_ref() {
-                return Err(
-                    new_soul_error(
-                        iter.current(), 
-                        format!(" '{}' and '{}' function don't allow mut ref arguments", FunctionModifiers::Literal.to_str(), FunctionModifiers::Const.to_str()).as_str()
-                    )
-                );
+    pub fn get_argument_info(&mut self, iter: &TokenIterator, function_modifiers: &Option<FunctionModifiers>) -> Result<ArgumentInfo> {
+        
+        if let Some(modifiers) = function_modifiers {
+            
+            if modifiers.contains(FunctionModifiers::Literal | FunctionModifiers::Const) {
+                check_for_mutable_arg(iter, &self.arg_info)?;
             }
         }
 
@@ -106,7 +93,7 @@ pub fn get_arguments(
     iter: &mut TokenIterator,
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
-    function_modifiers: FunctionModifiers,
+    function_modifiers: Option<FunctionModifiers>,
     function_name: &str,
 ) -> Result<FunctionArguments> {
     let next_token = iter.peek()
@@ -218,6 +205,28 @@ pub fn get_arguments(
     }
 
     Err(err_arguments_out_of_bounds(iter, function_name))
+}
+
+fn check_for_mutable_arg(iter: &TokenIterator, arg_info: &ArgInfo) -> Result<()> {
+    if arg_info.is_mutable {
+        return Err(
+            new_soul_error(
+                iter.current(), 
+                format!(" '{}' and '{}' function don't allow 'mut' arguments", FunctionModifiers::Literal.to_str(), FunctionModifiers::Const.to_str()).as_str()
+            )
+        );
+    }
+
+    if arg_info.soul_type.is_mut_ref() {
+        return Err(
+            new_soul_error(
+                iter.current(), 
+                format!(" '{}' and '{}' function don't allow mut ref arguments", FunctionModifiers::Literal.to_str(), FunctionModifiers::Const.to_str()).as_str()
+            )
+        );
+    }
+
+    Ok(())
 }
 
 fn err_wrong_default_type(

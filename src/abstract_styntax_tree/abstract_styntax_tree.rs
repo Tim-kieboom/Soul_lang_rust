@@ -1,13 +1,15 @@
-use super::operator_type::OperatorType;
-use crate::meta_data::current_context::current_context::CurrentContext;
+use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use super::operator_type::OperatorType;
+use crate::meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration}};
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum IVariable {
     Variable{name: String, type_name: String},
     MemberExpression{parent: /*shouldBe_Variable*/Box<IVariable>, expression: Box<IExpression>},
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum IExpression {
     IVariable{this: IVariable},
     BinairyExpression{left: Box<IExpression>, operator_type: OperatorType, right: Box<IExpression>, type_name: String},
@@ -16,11 +18,11 @@ pub enum IExpression {
     MutRef{expression: Box<IExpression>},
     DeRef{expression: Box<IExpression>},
     Increment{variable: IVariable, is_before: bool, amount: i8},
-    // FunctionCall{name: String, return_type: String, args: Vec<Expression>, func_info: u8, generic_defines: BTreeMap<u8, u8>},
+    FunctionCall{args: Vec<IExpression>, generic_defines: BTreeMap<String, String>, function_info: FunctionDeclaration},
     EmptyExpression(),
 } 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum IStatment {
     Assignment{variable: IVariable, assign: Box<IExpression>},
     Initialize{variable: IVariable, assignment: /*shouldBe_Assignment*/Option<Box<IStatment>>},
@@ -125,6 +127,12 @@ impl IExpression {
     pub fn new_deref(expression: IExpression) -> Self {
         IExpression::DeRef { expression: Box::new(expression) }
     }
+
+    #[allow(dead_code)]
+    pub fn new_funtion_call(function_info: FunctionDeclaration, args: Vec<IExpression>, generic_defines: BTreeMap<String, String>) -> Self {
+        IExpression::FunctionCall { args, generic_defines, function_info }
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             IExpression::IVariable { this } => this.to_string(),
@@ -135,6 +143,7 @@ impl IExpression {
             IExpression::DeRef { expression } => format!("Deref({})", expression.to_string()),
             IExpression::Increment { variable, is_before, amount } => format!("Increment({}, isBefore: {}, amount: {})", variable.to_string(), *is_before, *amount),
             IExpression::EmptyExpression() => "EmptyExpression()".to_string(),
+            IExpression::FunctionCall { args, generic_defines, function_info } => format!("FunctionCall(info: {:?}, args: {:?}, generics: {:?})", function_info, args, generic_defines),
         }
     }
 }

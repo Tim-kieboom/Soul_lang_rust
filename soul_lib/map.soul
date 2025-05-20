@@ -19,7 +19,7 @@ class HashMap<K><V> typeof IMap<K>V()
 where 
     K: this::Hash
 {
-    Literal DEFAULT_SIZE = usize(1500)
+    Literal usize DEFAULT_SIZE = 1500
 
     struct KeyValue(K key, V value)
     type Bucket typeof List<KeyValue>()
@@ -27,19 +27,19 @@ where
     Bucket[] buckets = []
 
     const Ctor() { 
-        buckets = [for DEFAULT_SIZE => []] 
+        buckets = [DEFAULT_SIZE => []] 
     }
 
     const Ctor(usize initialSize) {
-        assert_bigger(initialSize, 0, "initialSize for HashMap needs to be bigger then 0")
-        buckets = [for initialSize => []]
+        Assert_Bigger(initialSize, 0, "initialSize for HashMap needs to be bigger then 0")
+        buckets = [initialSize => []]
     }
 
     Ctor<T>(T[] inserts)
     where 
         T: typeof[IPullable<KeyValue>() | KeyValue[] | Bucket]
     {
-        buckets = [for DEFAULT_SIZE => Bucket[]] 
+        buckets = [DEFAULT_SIZE => Bucket[]] 
 
         for kv in inserts {
             Insert(@kv.key, kv.value)
@@ -50,8 +50,8 @@ where
     where 
         T: typeof[IPullable<KeyValue>() | KeyValue[] | Bucket]
     {
-        assert_bigger(initialSize, 0, "initialSize for HashMap needs to be bigger then 0")
-        buckets = [for initialSize => Bucket[]] 
+        Assert_Bigger(initialSize, 0, "initialSize for HashMap needs to be bigger then 0")
+        buckets = [initialSize => Bucket[]] 
 
         for kv in inserts {
             Insert(@kv.key, kv.value)
@@ -111,11 +111,11 @@ where
 
     Pull() Op<Output> {
         entry := pass buckets.At(outerIndex)
-        for buckets.len()+1 {
+        for buckets.Len()+1 {
 
             if entry.At(innerIndex) typeof Value(kv) {
-                innerIndex++;
-                return Value(kv);
+                innerIndex++
+                return Value(kv)
             }
 
             entry = pass buckets.At(outerIndex)
@@ -126,7 +126,7 @@ where
             }
         }
 
-        panic("HashMap_Iter Pull loop out of bounds")
+        Panic("HashMap_Iter Pull loop out of bounds")
     }
 }
 

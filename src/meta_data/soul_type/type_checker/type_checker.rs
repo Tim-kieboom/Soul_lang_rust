@@ -1,5 +1,5 @@
 use std::{collections::BTreeMap, io::{Error, Result}};
-use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{generic::Generic, primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::{Token, TokenIterator}};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{generic::Generic, primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::{Token, TokenIterator}};
 
 pub fn get_primitive_type_from_literal(literal: &str) -> PrimitiveType {
     if literal.is_empty() {
@@ -41,35 +41,48 @@ pub fn check_convert_to_ref(
     while let Some(expression) = expression_stack.pop() {
 
         match expression {
-            IExpression::BinairyExpression { left: _, operator_type: _, right: _, type_name } => {
-                if ref_wrap == &TypeWrappers::ConstRef {
-                    continue;
-                }
+            IExpression::BinairyExpression { type_name, .. } => {
+                    if ref_wrap == &TypeWrappers::ConstRef {
+                        continue;
+                    }
 
-                if is_type_name_literal(type_name, token, meta_data, generics)? {
-                    return Err(err_literal_mut_refs(iter, format!("{:?}", expression).as_str()))
-                }
-            },
+                    if is_type_name_literal(type_name, token, meta_data, generics)? {
+                        return Err(err_literal_mut_refs(iter, format!("{:?}", expression).as_str()))
+                    }
+                },
             IExpression::Literal { value, type_name: _ } => {
-                if ref_wrap == &TypeWrappers::ConstRef {
-                    continue;
-                }
-                
-                return Err(err_literal_mut_refs(&iter, &value));
-            },
+                    if ref_wrap == &TypeWrappers::ConstRef {
+                        continue;
+                    }
+            
+                    return Err(err_literal_mut_refs(&iter, &value));
+                },
             IExpression::IVariable { this } => {
-                if ref_wrap == &TypeWrappers::ConstRef {
-                    continue;
-                }
+                    if ref_wrap == &TypeWrappers::ConstRef {
+                        continue;
+                    }
 
-                if is_ivariable_literal(this, token, meta_data, generics)? {
-                    return Err(err_literal_mut_refs(iter, format!("{:?}", this).as_str()))
-                }
-            },
-            IExpression::Increment { variable: _, is_before: _, amount: _ } => {
-                return Err(new_soul_error(token, "you can not refrence an increment expression"));
-            },
+                    if is_ivariable_literal(this, token, meta_data, generics)? {
+                        return Err(err_literal_mut_refs(iter, format!("{:?}", this).as_str()))
+                    }
+                },
+            IExpression::Increment { .. } => {
+                    return Err(new_soul_error(token, "you can not refrence an increment expression"));
+                },
+            IExpression::FunctionCall { function_info, .. } => {
+                    if let Some(return_type) = &function_info.return_type {
+                        if ref_wrap == &TypeWrappers::ConstRef {
+                            continue;
+                        }
 
+                        if is_type_name_literal(&return_type, token, meta_data, generics)? {
+                            return Err(err_literal_mut_refs(iter, format!("{:?}", expression).as_str()))
+                        }
+                    }
+                    else {
+                        return Err(new_soul_error(iter.current(), "can not ref functionCall with no return type"));
+                    }                    
+                },
             IExpression::ConstRef { expression } => expression_stack.push(&expression),
             IExpression::MutRef { expression } => expression_stack.push(&expression),
             IExpression::DeRef { expression } => expression_stack.push(&expression),
@@ -92,22 +105,24 @@ pub fn is_expression_literal(
     while let Some(expression) = expression_stack.pop() {
 
         match expression {
-            IExpression::BinairyExpression { left: _, operator_type: _, right: _, type_name } => {
-                return is_type_name_literal(type_name, token, meta_data, generics);
-            },
-            IExpression::Literal { value: _, type_name } => {
-                return is_type_name_literal(type_name, token, meta_data, generics);
-            },
+            IExpression::BinairyExpression { type_name, .. } => {
+                    return is_type_name_literal(type_name, token, meta_data, generics);
+                },
+            IExpression::Literal { type_name, .. } => {
+                    return is_type_name_literal(type_name, token, meta_data, generics);
+                },
             IExpression::EmptyExpression() => {
-                return Ok(true);
-            },
+                    return Ok(true);
+                },
             IExpression::IVariable { this } => {
-                return is_ivariable_literal(this, token, meta_data, generics);
-            },
-            IExpression::Increment { variable, is_before: _, amount: _ } => {
-                return is_ivariable_literal(variable, token, meta_data, generics);
-            },
-
+                    return is_ivariable_literal(this, token, meta_data, generics);
+                },
+            IExpression::Increment { variable, .. } => {
+                    return is_ivariable_literal(variable, token, meta_data, generics);
+                },
+            IExpression::FunctionCall { function_info, .. } => {
+                    return Ok(function_info.modifiers.contains(FunctionModifiers::Literal))
+                },
             IExpression::ConstRef { expression } => expression_stack.push(&expression),
             IExpression::MutRef { expression } => expression_stack.push(&expression),
             IExpression::DeRef { expression } => expression_stack.push(&expression),

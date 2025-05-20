@@ -86,7 +86,7 @@ fn _get_function_declaration(
     }
 
     let old_index = iter.current_index();
-    let arguments = get_arguments(iter, meta_data, context, function.modifiers, &function.name)
+    let arguments = get_arguments(iter, meta_data, context, Some(function.modifiers), &function.name)
         .map_err(|err| new_soul_error(&iter[old_index], format!("while trying to get function declaration: '{}'\n{}", function.name, err.to_string()).as_str()))?;
 
     if arguments.args.is_empty() && arguments.options.is_empty() {

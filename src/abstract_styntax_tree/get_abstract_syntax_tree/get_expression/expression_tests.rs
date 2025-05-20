@@ -919,7 +919,7 @@ fn test_get_expression_lit_array() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_literal_expression(expr_result, "[__Soul_c_str_0__,__Soul_c_str_1__]", &lit_str_array_type);
     
-    todo!("[(1, 2), (1, 2)] impl tuple array\n [6 => 0] impl init arrays");
+    todo!("\n\t[(1, 2), (1, 2)] impl tuple array\n\t[6 => 0] impl init arrays");
 }
 
 

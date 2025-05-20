@@ -39,6 +39,7 @@ fn run_compiler(input_path: &str, run_options: RunOptions) -> Result<()> {
 }
 
 fn main() {
+
     let run_option = RunOptions { show_outputs: ShowOutputs::SHOW_ALL, is_garbage_collected: false, is_compiled: true };
 
     if run_option.is_compiled {

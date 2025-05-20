@@ -203,7 +203,7 @@ fn convert_expression(
             stacks.type_stack.push(literal_type);
             stacks.node_stack.push(IExpression::Literal{value: literal_value, type_name: literal_type_string});
         }
-        else if meta_data.is_function(&iter.current().text, context) != IsFunctionResult::None {
+        else if meta_data.is_function(&iter.current().text, context).is_none() {
             todo!();
         }
         else if iter.current().text == "\n" {

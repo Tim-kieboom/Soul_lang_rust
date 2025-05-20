@@ -1,0 +1,23 @@
+import "Marco"
+
+Marco Assert(Macro.BinExpr condition) {
+    Literal_Assert(
+        condition typeof bool, 
+        f"Assert condition is not of type bool at:\n\tFile: {Current.file}\n\tfunction: {Current.function}\n\tline: {Currrent.line}",
+    )
+
+    if !condition {
+        Panic(f"Assertion '{condition.AsLiteralStr()}' failed:\n\tFile: {Current.file}\n\tfunction: {Current.function}\n\tline: {Currrent.line}")
+    }
+}
+
+Marco Debug_Assert(Macro.BinExpr condition) {
+    Literal_Assert(
+        condition typeof bool, 
+        f"Assert condition is not of type bool at:\n\tFile: {Current.file}\n\tfunction: {Current.function}\n\tline: {Currrent.line}",
+    )
+    
+#if DEBUG
+    Assert(condition)
+#endif
+}

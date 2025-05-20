@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{collections::{BTreeMap, HashMap}, sync::{Arc, Mutex}};
+use crate::meta_data::borrow_checker::borrow_checker::BorrowChecker;
 
 use super::var_info::VarInfo;
 
@@ -12,7 +13,7 @@ impl ScopeId {
 
 pub struct Scope {
     id: ScopeId,
-    // borrow_checker: &'a BorrowChecker,
+    borrow_checker: Arc<Mutex<BorrowChecker>>,
 
     pub parent: Option<ScopeId>,
     last_child_id: ScopeId,
@@ -20,8 +21,9 @@ pub struct Scope {
 } 
 
 impl Scope {
-    pub fn new_global() -> Self {
+    pub fn new_global(borrow_checker: Arc<Mutex<BorrowChecker>>) -> Self {
         Scope { 
+            borrow_checker,
             id: ScopeId(0), 
             parent: None, 
             last_child_id: ScopeId(0),
@@ -29,9 +31,10 @@ impl Scope {
         }
     }
 
-    pub fn new_child(parent: &Scope) -> Self {
+    pub fn new_child(borrow_checker: Arc<Mutex<BorrowChecker>>, parent: &Scope) -> Self {
         let child_id = parent.last_child_id.increment();
         Scope { 
+            borrow_checker,
             id: child_id, 
             parent: Some(parent.id), 
             last_child_id: child_id,
@@ -43,7 +46,7 @@ impl Scope {
         &self.id
     }
 
-    pub fn try_get_variable<'a>(&'a self, var_name: &String, scopes: &'a HashMap<ScopeId, Scope>) -> Option<&'a VarInfo> {
+    pub fn try_get_variable<'b>(&'b self, var_name: &String, scopes: &'b HashMap<ScopeId, Scope>) -> Option<&'b VarInfo> {
         if let Some(var) = self.vars.get(var_name) {
             return Some(var);
         }
@@ -60,3 +63,18 @@ impl Scope {
         None
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,6 +1,6 @@
 use crate::abstract_styntax_tree::abstract_styntax_tree::IStatment;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct MultiStamentResult<T> {
     pub before: Option<Vec<IStatment>>,
     pub value: T,

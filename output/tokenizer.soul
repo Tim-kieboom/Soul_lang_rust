@@ -1,4 +1,104 @@
-main ( str [] args ) int { 
- println ( __Soul_c_str_0__ ) 
- println ( __soul_format_string__ ( __Soul_c_str_1__ , Sum ( 1 , 2 ) , __Soul_c_str_2__ ) ) 
+interface IMap < K > < V > { 
+ type KeyValue 
+ Insert ( K @ key , V value ) 
+ 
+ Get ( K key ) Op < V @ > 
+ GetMut ( K key ) Op < V & > 
+ Get ( V key ) Op < K @ > 
+ GetMut ( V key ) Op < K & > 
+ Keys ( ) IPullable < K > 
+ Values ( ) IPullable < V > 
+ this : : As < KeyValue @ > ( ) 
+ Iter ( ) IPullableMut < KeyValue > ( ) 
+ } 
+ class HashMap < K > < V > typeof IMap < K > V ( ) 
+ where 
+ K : this : : Hash 
+ { 
+ Literal usize DEFAULT_SIZE = 1500 
+ struct KeyValue ( K key , V value ) 
+ type Bucket typeof List < KeyValue > ( ) 
+ Bucket [] buckets = [] 
+ const Ctor ( ) { 
+ buckets = [ DEFAULT_SIZE = > [] ] 
+ } 
+ const Ctor ( usize initialSize ) { 
+ Assert_Bigger ( initialSize , 0 , __Soul_c_str_0__ ) 
+ buckets = [ initialSize = > [] ] 
+ } 
+ Ctor < T > ( T [] inserts ) 
+ where 
+ T : typeof [ IPullable < KeyValue > ( ) | KeyValue [] | Bucket ] 
+ { 
+ buckets = [ DEFAULT_SIZE = > Bucket [] ] 
+ for kv in inserts { 
+ Insert ( @ kv key , kv value ) 
+ } 
+ } 
+ Ctor < T > ( usize initialSize , T [] inserts ) 
+ where 
+ T : typeof [ IPullable < KeyValue > ( ) | KeyValue [] | Bucket ] 
+ { 
+ Assert_Bigger ( initialSize , 0 , __Soul_c_str_0__ ) 
+ buckets = [ initialSize = > Bucket [] ] 
+ for kv in inserts { 
+ Insert ( @ kv key , kv value ) 
+ } 
+ } 
+ Insert ( K @ key , V value ) { 
+ entry := & buckets [ getIndex ( key ) ] 
+ 
+ if entry First ( node = > node key == key ) typeof Value ( node ) { 
+ node value = value 
+ return 
+ } 
+ newNode := KeyValue ( key : copy key , value : value ) 
+ buckets [ index ] Push ( newNode ) 
+ } 
+ @ Get ( K @ key ) KeyValue @ { 
+ entry := & buckets [ getIndex ( key ) ] 
+ return entry @ First ( node = > node key == key ) except ( ) 
+ } 
+ Keys ( ) IPullable < K > { 
+ return Iter ( ) Flatten ( ) Select ( kv = > kv key ) 
+ } 
+ Values ( ) IPullable < V > { 
+ return Iter ( ) Flatten ( ) Select ( kv = > kv value ) 
+ } 
+ this : : As < KeyValue @ [] > ( ) { 
+ return @ Iter ( ) To ( ) 
+ } 
+ Iter ( ) IPullable < KeyValue > ( ) { 
+ return HashMap_Iter < K , V > ( buckets ) 
+ } 
+ const getIndex ( K @ key ) usize { 
+ return usize ( key Hash ( ) ) % buckets Len ( ) 
+ } 
+ } 
+ class HashMap_Iter < K , V > typeof IPullable < Output > ( ) 
+ where 
+ K : this : : Hash 
+ { 
+ type Output typeof HashMap < K > V : : KeyValue ( ) 
+ 
+ Bucket [] buckets 
+ usize outerIndex = 0 
+ usize innerIndex = 0 
+ Ctor ( this buckets ) { } 
+ Pull ( ) Op < Output > { 
+ entry := pass buckets At ( outerIndex ) 
+ for buckets Len ( ) + 1 { 
+ if entry At ( innerIndex ) typeof Value ( kv ) { 
+ innerIndex ++ ; 
+ return Value ( kv ) ; 
+ } 
+ entry = pass buckets At ( outerIndex ) 
+ innerIndex = 0 
+ match entry At ( innerIndex ) { 
+ Value ( val ) = > return Value ( val ) , 
+ Empty ( ) = > if ++ outerIndex > buckets Len ( ) : return Empty ( ) 
+ } 
+ } 
+ Panic ( __Soul_c_str_1__ ) 
+ } 
  } 
