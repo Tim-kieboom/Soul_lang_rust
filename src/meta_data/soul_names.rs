@@ -309,23 +309,45 @@ pub enum NamesInternalType {
 }
 impl_soul_name_enum!(NamesInternalType, internal_types);
 
+/// ORDER OF THIS FIRST FEW IN ARRAY MATTERS (should be untypedInt, untypedUint, untypedFl, int, uint, fl, ...)
 pub const NAMES_INTERNAL_TYPE_NUMBER: [NamesInternalType; 15] = [
     NamesInternalType::UntypedInt,
+    NamesInternalType::UntypedUint,
+    NamesInternalType::UntypedFloat,
+    
     NamesInternalType::Int,
+    NamesInternalType::Uint,
+    NamesInternalType::Float32,
+    
     NamesInternalType::Int8,
     NamesInternalType::Int16,
     NamesInternalType::Int32,
     NamesInternalType::Int64,
 
-    NamesInternalType::UntypedUint,
-    NamesInternalType::Uint,
     NamesInternalType::Uint8,
     NamesInternalType::Uint16,
     NamesInternalType::Uint32,
     NamesInternalType::Uint64,
 
-    NamesInternalType::UntypedFloat,
+    NamesInternalType::Float64,
+];
+
+/// ORDER OF FIRST FEW IN THIS ARRAY MATTERS (should be int, uint, fl, ...)
+pub const NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED: [NamesInternalType; 12] = [
+    NamesInternalType::Int,
+    NamesInternalType::Uint,
     NamesInternalType::Float32,
+
+    NamesInternalType::Int8,
+    NamesInternalType::Int16,
+    NamesInternalType::Int32,
+    NamesInternalType::Int64,
+
+    NamesInternalType::Uint8,
+    NamesInternalType::Uint16,
+    NamesInternalType::Uint32,
+    NamesInternalType::Uint64,
+
     NamesInternalType::Float64,
 ];
 

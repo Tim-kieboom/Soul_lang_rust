@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io::Result};
 
-use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, soul_names::{NamesTypeModifiers, SOUL_NAMES}, soul_type::{generic::{self, Generic}, soul_type::SoulType}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentGenerics, function::function_declaration::function_declaration::FunctionDeclaration, soul_names::{NamesTypeModifiers, SOUL_NAMES}, soul_type::{generic::{self, Generic}, soul_type::SoulType}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::TokenIterator};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArgumentInfo {
@@ -70,7 +70,8 @@ impl ArgumentInfo {
         iter: &TokenIterator,
         other: &ArgumentInfo,
         type_meta_data: &TypeMetaData,
-        generics: &BTreeMap<String, Generic>,
+        generics: &mut CurrentGenerics,
+        function: &FunctionDeclaration,
     ) -> Result<()> {
         
         if self.is_optional() != other.is_optional() {
@@ -79,19 +80,24 @@ impl ArgumentInfo {
                 format!("argument not compatible because: arg: '{}' and arg: '{}' one is optional and the other is not", self.to_string(), other.to_string()).as_str()
             ));
         }
-        
+
         let other_type = SoulType::from_stringed_type(
             &other.value_type, 
             iter.current(), 
             type_meta_data, 
             generics,
-        )?;
+        )
+            .inspect_err(|err| panic!("Internal Error while trying to run are_compatible other_type from string failed err: {}", err.to_string()))
+            .unwrap();
+        
         let self_type = SoulType::from_stringed_type(
             &self.value_type, 
             iter.current(), 
             type_meta_data, 
             generics,
-        )?;
+        )
+            .inspect_err(|err| panic!("Internal Error while trying to run are_compatible self_type from string failed err: {}", err.to_string()))
+            .unwrap();
 
         if !other_type.is_convertable(&self_type, iter.current(), type_meta_data, generics) {
             return Err(new_soul_error(

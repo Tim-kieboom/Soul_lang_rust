@@ -1,4 +1,4 @@
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{self, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{self, argument_info::{argument_info::ArgumentInfo, get_arguments::FunctionArguments}, function_declaration::function_declaration::FunctionDeclaration}, meta_data::MetaData}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{self, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{self, argument_info::{argument_info::ArgumentInfo, get_arguments::FunctionArguments}, function_declaration::function_declaration::FunctionDeclaration}, meta_data::MetaData, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 use std::{collections::BTreeMap, io::{Error, Result}};
 
 struct Arguments {
@@ -24,6 +24,10 @@ pub fn get_function_call(
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
 ) -> Result<MultiStamentResult<IExpression>> {
+    fn pass_err(err: Error, function_name: &str, iter: &TokenIterator) -> Error {
+        new_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'\n{}", function_name, err.to_string()).as_str())
+    }
+    
     let mut statment_result = MultiStamentResult::new(IExpression::EmptyExpression());
     if iter.current().text == "main" {
         return Err(new_soul_error(iter.current(), "can not call 'main' function"));
@@ -40,11 +44,14 @@ pub fn get_function_call(
         return Err(new_soul_error(iter.current(), "unexpected end while parsing FunctionCall"));
     }
 
+    let generic_defines = get_generics(iter, meta_data, context)
+        .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
+
     let arguments = get_arguments(iter, meta_data, context)
-        .map_err(|err| pass_err(iter, &iter[function_name_index].text, err))?;
+        .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
     
-    let function_id = meta_data.try_get_function(&iter[function_name_index].text, iter, context, &arguments.args, &arguments.optionals,)
-        .map_err(|err| pass_err(iter, &iter[function_name_index].text, err))?;
+    let function_id = meta_data.try_get_function(&iter[function_name_index].text, iter, context, &arguments.args, &arguments.optionals, generic_defines)
+        .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
     
     let function = meta_data.function_store.from_id.get(&function_id)
         .expect("Internal Error function id is not in function_store");
@@ -55,7 +62,59 @@ pub fn get_function_call(
     Ok(statment_result)   
 }
 
-fn get_arguments(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<Arguments> {
+fn get_generics(
+    iter: &mut TokenIterator,
+    meta_data: &mut MetaData,
+    context: &mut CurrentContext,
+) -> Result<Vec<String>> {
+
+    let mut generic_defines = Vec::new();
+    if iter.current().text == "<" {  
+        if iter.next().is_none() {
+            return Err(new_soul_error(iter.current(), "unexpected end while parsing FunctionCall"));
+        }
+
+        loop {
+            let begin_i = iter.current_index();
+            SoulType::from_iterator(iter, &meta_data.type_meta_data, &context.current_generics)
+                .map_err(|err| new_soul_error(&iter[begin_i], format!("while trying to get generics\n{}", err.to_string()).as_str()))?;
+
+            generic_defines.push(iter.current().text.clone());
+            
+            if iter.next().is_none() {
+                return Err(new_soul_error(iter.current(), "unexpected end while parsing FunctionCall"));
+            }
+
+            if iter.current().text != "," {
+                break;
+            } 
+
+            if iter.next().is_none() {
+                return Err(new_soul_error(iter.current(), "unexpected end while parsing FunctionCall"));
+            }
+        }
+
+
+        if iter.current().text != ">" {
+            return Err(new_soul_error(
+                iter.current(), 
+                format!("while trying to get generics, generics should en with '>' but ends on '{}'", iter.current().text).as_str())
+            );
+        }
+    
+        if iter.next().is_none() {
+            return Err(new_soul_error(iter.current(), "unexpected end while parsing FunctionCall"));
+        }
+    }
+
+    Ok(generic_defines)
+}
+
+fn get_arguments(
+    iter: &mut TokenIterator, 
+    meta_data: &mut MetaData, 
+    context: &mut CurrentContext, 
+) -> Result<Arguments> {
     
     if iter.current().text != "(" {
         return Err(new_soul_error(iter.current(), "function call should start with ')'"));
@@ -92,8 +151,14 @@ fn get_arguments(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &m
             }
         }
 
-        let expr_result = get_expression(iter, meta_data, context, &None, &vec![",", ")"])?;
+        let begin_i = iter.current_index();
+        let expr_result = get_expression(iter, meta_data, context, &None, &vec![",", ")"])
+            .map_err(|err| new_soul_error(&iter[begin_i], format!("at argument number: {}\n{}", arg.arg_position+1, err.to_string()).as_str()))?;
+
         let (is_type, expression) = (expr_result.is_type, expr_result.result);
+        if is_type.is_empty() {
+            return Err(new_soul_error(iter.current(), format!("argument number: {}, '{}' is of type 'none', you can not have a 'none' type in an argument", arg.arg_position+1, expression.value.to_string()).as_str()));
+        }
 
         let is_optional = !arg.name.is_empty();
 
@@ -128,7 +193,7 @@ fn err_func_call_out_of_bounds(iter: &TokenIterator) -> Error {
 }
 
 fn get_argument_expression(arguments: Arguments, function: &FunctionDeclaration) -> Vec<IExpression> {
-    let mut expressions = vec![IExpression::EmptyExpression(); function.args.len() + function.optionals.len()];
+    let mut expressions = vec![IExpression::EmptyExpression(); arguments.args.len() + function.optionals.len()];
 
     for (_, arg) in &function.optionals {
         expressions[arg.arg_position as usize] = arg.default_value.clone().unwrap();
@@ -151,13 +216,6 @@ fn get_argument_expression(arguments: Arguments, function: &FunctionDeclaration)
     }
 
     expressions
-}
-
-fn pass_err<E>(iter: &TokenIterator, function_name: &str, err: E) -> Error
-where 
-    E: ToString
-{
-    new_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'\n{}", function_name, err.to_string()).as_str())
 }
 
 

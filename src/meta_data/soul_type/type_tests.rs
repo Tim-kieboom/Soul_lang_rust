@@ -21,15 +21,15 @@ fn simple_from_iterator(line: &str) -> SoulType {
 }
 
 fn try_simple_from_stringed_type(line: &str) -> Result<SoulType> {
-        let mut meta_data = MetaData::new();
-    let context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    let mut meta_data = MetaData::new();
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
     let mut in_multi_line_commend = false;
     let tokens = tokenize_line(FileLine{text: line.to_string(), line_number: 0}, 0, &mut in_multi_line_commend, &mut meta_data)?;
 
     let iter = TokenIterator::new(tokens);
 
-    SoulType::from_stringed_type(line, iter.current(), &meta_data.type_meta_data, &context.current_generics)
+    SoulType::from_stringed_type(line, iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
 }
 
 fn simple_from_stringed_type(line: &str) -> SoulType { 

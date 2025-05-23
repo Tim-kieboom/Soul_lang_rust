@@ -69,6 +69,15 @@ pub enum  DuckType {
     Object = 5,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+#[repr(i8)]
+pub enum NumberCategory {
+    Invalid,
+    Interger,
+    UnsignedInterger,
+    FloatingPoint
+}
+
 impl PrimitiveType {
     pub fn from_str(str: &str, type_meta_data: &TypeMetaData) -> Self {
         
@@ -134,6 +143,30 @@ impl PrimitiveType {
             PrimitiveType::UntypedFloat => true,
             _ => false,
         }
+    }
+
+    pub fn to_number_category(&self) -> NumberCategory {
+        match self {
+            PrimitiveType::UntypedInt |
+            PrimitiveType::Int |
+            PrimitiveType::I8 |
+            PrimitiveType::I16 |
+            PrimitiveType::I32 |
+            PrimitiveType::I64 => NumberCategory::Interger,
+
+            PrimitiveType::UntypedUint |
+            PrimitiveType::Uint |
+            PrimitiveType::U8 |
+            PrimitiveType::U16 |
+            PrimitiveType::U32 |
+            PrimitiveType::U64 => NumberCategory::UnsignedInterger,
+
+            PrimitiveType::UntypedFloat |
+            PrimitiveType::F32 |
+            PrimitiveType::F64 => NumberCategory::FloatingPoint,
+
+            _ => NumberCategory::Invalid
+        }   
     }
 
     pub fn to_duck_type(&self) -> DuckType {

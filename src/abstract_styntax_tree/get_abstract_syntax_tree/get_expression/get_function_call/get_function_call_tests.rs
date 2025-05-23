@@ -147,38 +147,100 @@ fn test_get_function_call_overload() {
 }
 
 #[test]
-fn test_get_function_call_internal() {
-    let i32 = SOUL_NAMES.get_name(NamesInternalType::Int32);
+fn test_get_function_call_function_in_function() {
+    let int = SOUL_NAMES.get_name(NamesInternalType::Int);
     let untyped_int = SOUL_NAMES.get_name(NamesInternalType::UntypedInt);
-    let untyped_float = SOUL_NAMES.get_name(NamesInternalType::UntypedFloat);
-    
     let literal = SOUL_NAMES.get_name(NamesTypeModifiers::Literal);
-    let const_ = SOUL_NAMES.get_name(NamesTypeModifiers::Constent);
-    
-    let lit_untyped_int = format!("{} {}", literal, untyped_int);
 
-    let mut meta_data = MetaData::new();
-    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
-    
-    const CALL1: &str = "u8(1);";
+    let lit_untyped_int = format!("{} {}", literal, untyped_int);
 
     let mut internal_functions: HashMap<&String, Vec<&FunctionDeclaration>> = HashMap::new();
     for func in INTERNAL_FUNCTIONS.iter() {
         internal_functions.entry(&func.name).or_default().push(func);
     }
 
-    let u8_func = (**internal_functions
-        .get(&"u8".to_string())
-        .expect("u8 not found").iter()
-        .filter(|func| func.args.first().is_some_and(|arg| arg.value_type == untyped_float))
+    let int_int_func = (**internal_functions
+        .get(&"int".to_string())
+        .expect("int not found").iter()
+        .filter(|func| func.args.first().is_some_and(|arg| arg.value_type == int))
         .collect::<Vec<_>>()
         .first()
-        .expect("u8(untypedInt) not found")).clone();
+        .expect("int(int) not found")).clone();
+
+
+
+    let mut meta_data = MetaData::new();
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    
+    let func_declr = format!("ParseIntToString({} num) {}", int, "{}");
+    let parse_int_func = store_function(&func_declr, &mut meta_data, &mut context);
+
+    let func_call = "ParseIntToString(int(1))";
+    let function = simple_get_function_call(func_call, &mut meta_data, &mut context);
+
+    let should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            parse_int_func, 
+            vec![
+                IExpression::new_funtion_call(
+                    int_int_func, 
+                    vec![IExpression::new_literal("1", &lit_untyped_int)], 
+                    BTreeMap::new()
+                ),
+            ], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+}
+
+#[test]
+fn test_get_function_call_internal_function() {
+    let untyped_int = SOUL_NAMES.get_name(NamesInternalType::UntypedInt);
+    let untyped_float = SOUL_NAMES.get_name(NamesInternalType::UntypedFloat);
+    let int = SOUL_NAMES.get_name(NamesInternalType::Int);
+    let f32 = SOUL_NAMES.get_name(NamesInternalType::Float32);
+    
+    let literal = SOUL_NAMES.get_name(NamesTypeModifiers::Literal);
+    
+    let lit_untyped_int = format!("{} {}", literal, untyped_int);
+    let lit_untyped_float = format!("{} {}", literal, untyped_float);
+
+    let mut meta_data = MetaData::new();
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    
+
+    let mut internal_functions: HashMap<&String, Vec<&FunctionDeclaration>> = HashMap::new();
+    for func in INTERNAL_FUNCTIONS.iter() {
+        internal_functions.entry(&func.name).or_default().push(func);
+    }
+
+    let u8_int_func = (**internal_functions
+        .get(&"u8".to_string())
+        .expect("u8 not found").iter()
+        .filter(|func| func.args.first().is_some_and(|arg| arg.value_type == int))
+        .collect::<Vec<_>>()
+        .first()
+        .expect("u8(int) not found")).clone();
+
+    let u8_f32_func = (**internal_functions
+        .get(&"u8".to_string())
+        .expect("u8 not found").iter()
+        .filter(|func| func.args.first().is_some_and(|arg| arg.value_type == f32))
+        .collect::<Vec<_>>()
+        .first()
+        .expect("u8(f32) not found")).clone();
+
+    const CALL1: &str = "u8(1);";
 
     let mut function = simple_get_function_call(CALL1, &mut meta_data, &mut context);
     let mut should_be = MultiStamentResult::new(
         IExpression::new_funtion_call(
-            u8_func, 
+            u8_int_func, 
             vec![
                 IExpression::new_literal("1", &lit_untyped_int)            
             ], 
@@ -191,7 +253,123 @@ fn test_get_function_call_internal() {
         "{:#?}\n!=\n{:#?}", function, should_be 
     );
 
+    const CALL2: &str = "u8(1.0);";
+
+    function = simple_get_function_call(CALL2, &mut meta_data, &mut context);
+    should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            u8_f32_func, 
+            vec![
+                IExpression::new_literal("1.0", &lit_untyped_float)            
+            ], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+
 }
+
+
+#[test]
+fn test_get_function_call_generic_no_validater() {
+    let untyped_int = SOUL_NAMES.get_name(NamesInternalType::UntypedInt);
+    let bool = SOUL_NAMES.get_name(NamesInternalType::Boolean);
+    
+    let literal = SOUL_NAMES.get_name(NamesTypeModifiers::Literal);
+    
+    let lit_untyped_int = format!("{} {}", literal, untyped_int);
+    let lit_bool = format!("{} {}", literal, bool);
+
+    let mut meta_data = MetaData::new();
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    
+
+    let mut internal_functions: HashMap<&String, Vec<&FunctionDeclaration>> = HashMap::new();
+    for func in INTERNAL_FUNCTIONS.iter() {
+        internal_functions.entry(&func.name).or_default().push(func);
+    }
+
+    let print_func = (**internal_functions
+        .get(&"Print".to_string())
+        .expect("Print not found")
+        .first()
+        .expect("Print(any) not found")).clone();
+
+    const FUNC_CALL1: &str = "Print<int>(1);";
+    let function = simple_get_function_call(FUNC_CALL1, &mut meta_data, &mut context);
+    let should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            print_func.clone(), 
+            vec![IExpression::new_literal("1", &lit_untyped_int)], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+
+    const FUNC_CALL2: &str = "Print(1);";
+    let function = simple_get_function_call(FUNC_CALL2, &mut meta_data, &mut context);
+    let should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            print_func.clone(), 
+            vec![IExpression::new_literal("1", &lit_untyped_int)], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+
+    let str_format = (**internal_functions
+        .get(&"__Soul_format_string__".to_string())
+        .expect("__Soul_format_string__ not found")
+        .first()
+        .expect("__Soul_format_string__(any...) not found")).clone();
+
+    const FUNC_CALL3: &str = "__Soul_format_string__(1);";
+    let function = simple_get_function_call(FUNC_CALL3, &mut meta_data, &mut context);
+    let should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            str_format.clone(), 
+            vec![IExpression::new_literal("1", &lit_untyped_int)], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+
+    const FUNC_CALL4: &str = "__Soul_format_string__(1, true);";
+    let function = simple_get_function_call(FUNC_CALL4, &mut meta_data, &mut context);
+    let should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            str_format.clone(), 
+            vec![IExpression::new_literal("1", &lit_untyped_int), IExpression::new_literal("true", &lit_bool)], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+}
+
+
+
+
+
 
 
 

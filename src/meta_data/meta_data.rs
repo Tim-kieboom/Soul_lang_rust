@@ -1,9 +1,9 @@
 use bitflags::bitflags;
 use itertools::Itertools;
-use std::{cmp::Ordering, collections::HashMap, io::Result, result, sync::{Arc, Mutex}};
+use std::{cmp::Ordering, collections::{BTreeMap, BTreeSet, HashMap, HashSet}, io::Result, ops::{Index, IndexMut}, result, sync::{Arc, Mutex}};
 use crate::tokenizer::token::TokenIterator;
 
-use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::{FIRST_FUNCTION_ID, INTERNAL_FUNCTIONS}}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
+use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::{CurrentContext, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::{FIRST_FUNCTION_ID, INTERNAL_FUNCTIONS}}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, soul_type::generic::Generic, type_meta_data::TypeMetaData};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
@@ -100,10 +100,10 @@ impl MetaData {
         this
     }
 
-    pub fn add_function(&mut self, iter: &mut TokenIterator, context: &CurrentContext, func: FunctionDeclaration) -> Result<FunctionID> {
+    pub fn add_function(&mut self, iter: &mut TokenIterator, context: &mut CurrentContext, func: FunctionDeclaration) -> Result<FunctionID> {
 
         let optionals: Vec<ArgumentInfo> = func.optionals.values().cloned().collect();
-        if let Ok(_) = self.try_get_function(&func.name, iter, context, &func.args, &optionals) {
+        if let Ok(_) = self.try_get_function(&func.name, iter, context, &func.args, &optionals, Vec::new()) {
             return Err(new_soul_error(iter.current(), format!("function: '{}' with current arguments already exists", func.name).as_str()));
         }
 
@@ -144,27 +144,48 @@ impl MetaData {
         &self, 
         name: &str,
         iter: &TokenIterator, 
-        context: &CurrentContext, 
+        context: &mut CurrentContext, 
         args: &Vec<ArgumentInfo>, 
         optionals: &Vec<ArgumentInfo>,
+        generic_defined: Vec<String>,
     ) -> Result<FunctionID> 
     {
-        return self.internal_try_get_function(name, iter, context, args, optionals);
+        return self.internal_try_get_function(name, iter, context, args, optionals, generic_defined);
     }
 
-    fn internal_try_get_function(
+    fn internal_try_get_function<'a>(
         &self, 
         name: &str,
         iter: &TokenIterator, 
-        context: &CurrentContext, 
+        context: &mut CurrentContext, 
         args: &Vec<ArgumentInfo>, 
         optionals: &Vec<ArgumentInfo>,
-    ) -> Result<FunctionID> {
+        generic_defined: Vec<String>
+    ) -> Result<FunctionID> {        
         let overloaded_functions = self.function_store.from_name(name)
             .ok_or(new_soul_error(iter.current(), format!("function: '{}' is not found", name).as_str()))?;
+
+        if name == "__Soul_format_string__" {
+            return Ok(overloaded_functions[0].id);
+        }
         
-        for function in overloaded_functions.iter() {
-            let comparable = function.are_arguments_compatible(iter, &args, &optionals, &self.type_meta_data, &context.current_generics);
+        for function in overloaded_functions {
+
+            let mut function_call_generics = BTreeMap::<String, DefinedGenric>::new();
+            for (i, (name, generic)) in function.generics.iter().enumerate() {
+                if i+1 > generic_defined.len() {
+                    break;
+                }
+                
+                function_call_generics.insert(
+                    name.clone(), 
+                    DefinedGenric{define_type: generic_defined[i].clone(), generic: generic.clone()}
+                );
+            }
+
+            context.current_generics.function_call_defined_generics = Some(function_call_generics);
+
+            let comparable = function.are_arguments_compatible(iter, &args, &optionals, &self.type_meta_data, &mut context.current_generics);
             if comparable {
                 return Ok(function.id);
             }

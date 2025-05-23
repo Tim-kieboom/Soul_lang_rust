@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io::Result};
 use super::{function_declaration::FunctionDeclaration, get_function_declaration::get_function_declaration};
-use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, internal_functions::FIRST_FUNCTION_ID}, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{class_info::access_level::AccesLevel, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, internal_functions::FIRST_FUNCTION_ID}, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 
 fn try_data_simple_get_function(line: &str, meta_data: &mut MetaData) -> Result<(Result<FunctionDeclaration>, (TokenIterator, CurrentContext))> {
@@ -225,7 +225,7 @@ fn test_get_function_store_in_meta_data() {
    
     let old_funcs_len = meta_data.function_store.from_id.len();
     let old_funcs_ids_len = meta_data.function_store.to_id.len();
-    let (result, (mut iter, context)) = try_data_simple_get_function(FUNC, &mut meta_data)
+    let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
@@ -237,14 +237,14 @@ fn test_get_function_store_in_meta_data() {
         .unwrap();
 
     let optionals = function.optionals.values().cloned().collect::<Vec<_>>();
-    meta_data.try_get_function(&function.name, &mut iter, &context, &function.args, &optionals)
+    meta_data.try_get_function(&function.name, &mut iter, &mut context, &function.args, &optionals, Vec::new())
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
 //----------------------------
 
     const FUNC_SUM: &str = "sum(int a, int b) {}";
-    let (result, (mut iter, context)) = try_data_simple_get_function(FUNC_SUM, &mut meta_data)
+    let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC_SUM, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
@@ -256,14 +256,14 @@ fn test_get_function_store_in_meta_data() {
         .unwrap();
 
     let optionals = function.optionals.values().cloned().collect::<Vec<_>>();
-    meta_data.try_get_function(&function.name, &mut iter, &context, &function.args, &optionals)
+    meta_data.try_get_function(&function.name, &mut iter, &mut context, &function.args, &optionals, Vec::new())
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
 //----------------------------
 
     const FUNC_ARG: &str = "func(int a) {}";
-    let (result, (mut iter, context)) = try_data_simple_get_function(FUNC_ARG, &mut meta_data)
+    let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC_ARG, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
@@ -275,14 +275,14 @@ fn test_get_function_store_in_meta_data() {
         .unwrap();
 
     let optionals = function.optionals.values().cloned().collect::<Vec<_>>();
-    meta_data.try_get_function(&function.name, &mut iter, &context, &function.args, &optionals)
+    meta_data.try_get_function(&function.name, &mut iter, &mut context, &function.args, &optionals, Vec::new())
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
 //----------------------------
 
     const FUNC_OPTIONAL: &str = "func(int b = 1) {}";
-    let (result, (mut iter, context)) = try_data_simple_get_function(FUNC_OPTIONAL, &mut meta_data)
+    let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC_OPTIONAL, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
@@ -294,7 +294,7 @@ fn test_get_function_store_in_meta_data() {
         .unwrap();
 
     let optionals = function.optionals.values().cloned().collect::<Vec<_>>();
-    meta_data.try_get_function(&function.name, &mut iter, &context, &function.args, &optionals)
+    meta_data.try_get_function(&function.name, &mut iter, &mut context, &function.args, &optionals, Vec::new())
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 }
@@ -307,7 +307,7 @@ fn test_get_function_forward_declaring() {
    
     let old_funcs_len = meta_data.function_store.from_id.len();
     let old_funcs_ids_len = meta_data.function_store.to_id.len();
-    let (result, (mut iter, context)) = try_data_simple_get_function(FUNC, &mut meta_data)
+    let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
@@ -319,13 +319,13 @@ fn test_get_function_forward_declaring() {
         .unwrap();
 
     let optionals = function.optionals.values().cloned().collect::<Vec<_>>();
-    meta_data.try_get_function(&function.name, &mut iter, &context, &function.args, &optionals)
+    meta_data.try_get_function(&function.name, &mut iter, &mut context, &function.args, &optionals, Vec::new())
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
 //----------------------------
 
-    let (result, (mut iter, context)) = try_data_simple_get_function(FUNC, &mut meta_data)
+    let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
@@ -337,7 +337,7 @@ fn test_get_function_forward_declaring() {
         .unwrap();
 
     let optionals = function.optionals.values().cloned().collect::<Vec<_>>();
-    meta_data.try_get_function(&function.name, &mut iter, &context, &function.args, &optionals)
+    meta_data.try_get_function(&function.name, &mut iter, &mut context, &function.args, &optionals, Vec::new())
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
@@ -351,6 +351,18 @@ fn test_get_function_forward_declaring() {
     assert_eq!(result.unwrap_err().to_string(), "at 0:6; !!error!! function with these arguments already exists, name 'func', args: '<empty>'\n");
 }
 
+#[test]
+fn test_get_function_public_and_private() {
+    const PRIVATE: &str = "private() {}";
+
+    let mut function = simple_get_function(PRIVATE);
+    assert_eq!(function.access_level, AccesLevel::Private);
+    
+    const PUBLIC: &str = "Public() {}";
+
+    function = simple_get_function(PUBLIC);
+    assert_eq!(function.access_level, AccesLevel::Public);
+}
 
 
 

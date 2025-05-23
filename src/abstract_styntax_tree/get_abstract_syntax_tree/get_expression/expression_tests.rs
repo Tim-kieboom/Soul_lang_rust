@@ -1,7 +1,7 @@
-use std::io::Result;
+use std::{collections::{BTreeMap, HashMap}, io::Result};
 use itertools::assert_equal;
 
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult, operator_type::{self, OperatorType}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult, operator_type::{self, OperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 use super::get_expression::{get_expression, GetExpressionResult};
 
@@ -13,34 +13,34 @@ fn get_iter(line: &str, meta_data: &mut MetaData) -> Result<TokenIterator> {
     Ok(TokenIterator::new(tokens))
 }
 
-fn simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>, meta_data: &mut MetaData, context: &CurrentContext) -> GetExpressionResult {
+fn simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>, meta_data: &mut MetaData, context: &mut CurrentContext) -> GetExpressionResult {
     let mut iter = get_iter(line, meta_data).unwrap();
 
     let end_tokens = vec![";"];
-    get_expression(&mut iter, meta_data, &context, &should_be_type, &end_tokens)
+    get_expression(&mut iter, meta_data, context, &should_be_type, &end_tokens)
         .inspect_err(|msg| panic!("{:#?}", msg))
         .unwrap()
 }
-fn try_simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>, meta_data: &mut MetaData, context: &CurrentContext) -> Result<GetExpressionResult> {
+fn try_simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<GetExpressionResult> {
     let mut iter = get_iter(line, meta_data).unwrap();
 
     let end_tokens = vec![";"];
-    get_expression(&mut iter, meta_data, &context, &should_be_type, &end_tokens)
+    get_expression(&mut iter, meta_data, context, &should_be_type, &end_tokens)
 }
 
 fn simple_get_expression(line: &str, should_be_type: Option<&SoulType>) -> GetExpressionResult {
     let mut meta_data = MetaData::new();
-    let context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
 
-    try_simple_get_expression_metadata(line, should_be_type, &mut meta_data, &context)
+    try_simple_get_expression_metadata(line, should_be_type, &mut meta_data, &mut context)
         .inspect_err(|msg| panic!("{:#?}", msg))
         .unwrap()
 }
 fn try_simple_get_expression(line: &str, should_be_type: Option<&SoulType>) -> Result<GetExpressionResult> {
     let mut meta_data = MetaData::new();
-    let context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
 
-    try_simple_get_expression_metadata(line, should_be_type, &mut meta_data, &context)
+    try_simple_get_expression_metadata(line, should_be_type, &mut meta_data, &mut context)
 }
 
 fn check_literal_expression(expr_result: GetExpressionResult, lit_value: &str, is_type: &SoulType) {
@@ -343,9 +343,9 @@ fn test_get_expression_lit_bracked_as_end_token() {
     let mut meta_data = MetaData::new();
     
     let mut iter = get_iter(LIT_INT, &mut meta_data).unwrap();
-    let context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &context, &None, &vec![")"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, &vec![")"]).unwrap();
 
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_literal_expression(expr_result, "1", &lit_untyped_int_type);
@@ -369,7 +369,7 @@ fn test_get_expression_variable() {
 
     let mut iter = get_iter(GLOBAL_VAR, &mut meta_data).unwrap();
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &context, &None, &vec![";"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, &vec![";"]).unwrap();
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, &global_var.name, &global_var.type_name);
 
@@ -380,7 +380,7 @@ fn test_get_expression_variable() {
     const SCOPE_VAR: &str = "scope1;";
     iter = get_iter(SCOPE_VAR, &mut meta_data).unwrap();
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &context, &None, &vec![";"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, &vec![";"]).unwrap();
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, &scope_var.name, &scope_var.type_name);
 }
@@ -638,7 +638,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
 
 
     let mut meta_data = MetaData::new();
-    let context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
 
     let mut global_var = VarInfo::new("var1".to_string(), SOUL_NAMES.get_name(NamesInternalType::Int).to_string());
     global_var.add_var_flag(VarFlags::IsAssigned);
@@ -646,7 +646,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
     meta_data.add_to_global_scope(global_var);
 
     const BINARY_BRACKETS_VAR: &str = "(var1 + 2) * 3;";
-    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR, None, &mut meta_data, &context);
+    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
@@ -662,7 +662,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
 
     const BINARY_BRACKETS_VAR_INCR: &str = "(var1++ + 2) * 3;";
 
-    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR_INCR, None, &mut meta_data, &context);
+    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR_INCR, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
@@ -678,7 +678,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
 
     const BINARY_BRACKETS_VAR_INCR2: &str = "(++var1 + 2) * 3;";
 
-    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR_INCR2, None, &mut meta_data, &context);
+    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR_INCR2, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
@@ -694,7 +694,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
 
     const BINARY_BRACKETS_BOOL: &str = "1 < 2 != true;";
 
-    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_BOOL, None, &mut meta_data, &context);
+    expr_result = simple_get_expression_metadata(BINARY_BRACKETS_BOOL, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
@@ -778,18 +778,18 @@ fn test_get_expression_ref_variable() {
     global_var.add_var_flag(VarFlags::IsAssigned);
     
     let mut meta_data = MetaData::new();
-    let context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     meta_data.add_to_global_scope(global_var.clone());
 
     
     const VAR_MUT_REF: &str = "&var;";
-    let expr_result = simple_get_expression_metadata(VAR_MUT_REF, None, &mut meta_data, &context);
+    let expr_result = simple_get_expression_metadata(VAR_MUT_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_mutref(
         IExpression::new_variable("var", &int_string)
     ));
 
     const VAR_MUT_REF_REF: &str = "&&var;";
-    let expr_result = simple_get_expression_metadata(VAR_MUT_REF_REF, None, &mut meta_data, &context);
+    let expr_result = simple_get_expression_metadata(VAR_MUT_REF_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_mutref(
         IExpression::new_mutref(
             IExpression::new_variable("var", &int_string),
@@ -797,13 +797,13 @@ fn test_get_expression_ref_variable() {
     ));
 
     const VAR_CONST_REF: &str = "@var;";
-    let expr_result = simple_get_expression_metadata(VAR_CONST_REF, None, &mut meta_data, &context);
+    let expr_result = simple_get_expression_metadata(VAR_CONST_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_variable("var", &int_string)
     ));
 
     const VAR_CONST_REF_REF: &str = "@@var;";
-    let expr_result = simple_get_expression_metadata(VAR_CONST_REF_REF, None, &mut meta_data, &context);
+    let expr_result = simple_get_expression_metadata(VAR_CONST_REF_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_constref(
             IExpression::new_variable("var", &int_string)
@@ -813,12 +813,98 @@ fn test_get_expression_ref_variable() {
 
 #[test]
 fn test_get_expression_function_call() {
-    todo!();
+    let mut internal_functions: HashMap<&String, Vec<&FunctionDeclaration>> = HashMap::new();
+    for func in INTERNAL_FUNCTIONS.iter() {
+        internal_functions.entry(&func.name).or_default().push(func);
+    }
+    
+    let u8 = SOUL_NAMES.get_name(NamesInternalType::Uint8);
+    let int = SOUL_NAMES.get_name(NamesInternalType::Int);
+    let untyped_int = SOUL_NAMES.get_name(NamesInternalType::UntypedInt);
+    let literal = SOUL_NAMES.get_name(NamesTypeModifiers::Literal);
+
+    let lit_untyped_int = format!("{} {}", literal, untyped_int);
+
+    let u8_int_func = (**internal_functions
+        .get(&"u8".to_string())
+        .expect("u8 not found").iter()
+        .filter(|func| func.args.first().is_some_and(|arg| arg.value_type == int))
+        .collect::<Vec<_>>()
+        .first()
+        .expect("u8(int) not found")).clone();
+
+    const INTERNAL_U8: &str = "u8(1);"; 
+    let mut expr_result = simple_get_expression(INTERNAL_U8, None);
+    assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
+        u8_int_func.clone(),
+        vec![IExpression::new_literal("1", &lit_untyped_int)], 
+        BTreeMap::new(), 
+    ));
+
+    const DOUBLE_INTERNAL_U8: &str = "u8(u8(1));"; 
+    expr_result = simple_get_expression(DOUBLE_INTERNAL_U8, None);
+    assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
+        u8_int_func.clone(),
+        vec![
+            IExpression::new_funtion_call(
+                u8_int_func.clone(), 
+                vec![IExpression::new_literal("1", &lit_untyped_int)], 
+                BTreeMap::new()
+            )
+        ], 
+        BTreeMap::new(), 
+    ));
+
+    const BIN_INTERNAL_U8: &str = "u8(1) + u8(2);"; 
+    expr_result = simple_get_expression(BIN_INTERNAL_U8, None);
+
+    assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
+        IExpression::new_funtion_call(
+            u8_int_func.clone(),
+            vec![IExpression::new_literal("1", &lit_untyped_int)], 
+            BTreeMap::new(), 
+        ),
+        OperatorType::Add, 
+        IExpression::new_funtion_call(
+            u8_int_func.clone(),
+            vec![IExpression::new_literal("2", &lit_untyped_int)], 
+            BTreeMap::new(), 
+        ),
+        u8,
+    ));
+
 }
 
 #[test]
-fn test_get_expression_binary_expression_single_function() {
-    todo!();
+fn test_get_expression_binary_expression_no_return_type() {
+    let mut internal_functions: HashMap<&String, Vec<&FunctionDeclaration>> = HashMap::new();
+    for func in INTERNAL_FUNCTIONS.iter() {
+        internal_functions.entry(&func.name).or_default().push(func);
+    }
+    
+    let println_func = internal_functions.get(&"Println".to_string())
+        .unwrap()
+        .iter()
+        .find(|func| func.args.is_empty())
+        .unwrap();
+
+    const PRINTLN: &str = "Println();";
+    let expr_result = simple_get_expression(PRINTLN, None);
+    assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
+        (*println_func).clone(),
+        vec![], 
+        BTreeMap::new(), 
+    ));
+
+    const PRINTLN_BIN: &str = "Println() + 1;";
+    let mut res = try_simple_get_expression(PRINTLN_BIN, None);
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().to_string(), "at 1:11; !!error!! binairy expression: 'Literal(1, type: Literal untypedInt) + Println()' lefts type is 'none' which is not a valid type for binairy expressions");
+
+    const PRINTLN_INNER: &str = "Println(Print(1))";
+    res = try_simple_get_expression(PRINTLN_INNER, None);
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().to_string(), "at 1:11; !!error!! binairy expression: 'Literal(1, type: Literal untypedInt) + Println()' lefts type is 'none' which is not a valid type for binairy expressions");
 }
 
 #[test]

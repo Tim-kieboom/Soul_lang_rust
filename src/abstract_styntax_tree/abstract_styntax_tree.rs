@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::operator_type::OperatorType;
-use crate::meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration}};
+use crate::meta_data::{current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}, soul_type::generic::Generic};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IVariable {
@@ -138,12 +138,48 @@ impl IExpression {
             IExpression::IVariable { this } => this.to_string(),
             IExpression::BinairyExpression { left, operator_type, right, type_name } => format!("BinaryExpression({} {} {}, type: {})", left.to_string(), operator_type.to_str(), right.to_string(), type_name),
             IExpression::Literal { value, type_name } => format!("Literal({}, type: {})", value, type_name),
-            IExpression::ConstRef { expression } => format!("ConstRef({})", expression.to_string()),
-            IExpression::MutRef { expression } => format!("MutRef({})", expression.to_string()),
-            IExpression::DeRef { expression } => format!("Deref({})", expression.to_string()),
-            IExpression::Increment { variable, is_before, amount } => format!("Increment({}, isBefore: {}, amount: {})", variable.to_string(), *is_before, *amount),
+            IExpression::ConstRef { expression } => format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef), expression.to_string()),
+            IExpression::MutRef { expression } => format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::MutRef), expression.to_string()),
+            IExpression::DeRef { expression } => format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::Pointer), expression.to_string()),
+            IExpression::Increment { variable, is_before, amount } => {
+                let symbool; 
+                if *amount < 0 {
+                    symbool = SOUL_NAMES.get_name(NamesOperator::Decrement);
+                }
+                else {
+                    symbool = SOUL_NAMES.get_name(NamesOperator::Increment);
+                };
+                
+                if *is_before {
+                    format!("{}{}", symbool, variable.to_string())
+                }
+                else {
+                    format!("{}{}", variable.to_string(), symbool)
+                }
+            },
             IExpression::EmptyExpression() => "EmptyExpression()".to_string(),
-            IExpression::FunctionCall { args, generic_defines, function_info } => format!("FunctionCall(info: {:?}, args: {:?}, generics: {:?})", function_info, args, generic_defines),
+            IExpression::FunctionCall { args, generic_defines, function_info } => {
+                let mut string_builder = String::new();
+                string_builder.push_str(&function_info.name);
+
+                if !generic_defines.is_empty() {
+                    string_builder.push('<');
+
+                    for (i, (_template_name, type_str)) in generic_defines.iter().enumerate() {
+                        string_builder.push_str(&type_str);
+                        if i != generic_defines.len() - 1 {
+                            string_builder.push_str(", ");
+                        }
+                    }
+                    string_builder.push('>');
+                }
+                string_builder.push('(');
+                for arg in args {
+                    string_builder.push_str(&arg.to_string());
+                }
+                string_builder.push(')');
+                string_builder
+            }
         }
     }
 }

@@ -158,7 +158,7 @@ pub fn get_arguments(
 
             let default_value_i = iter.current_index();
             let should_be_type = Some(&store_arg_info.arg_info.soul_type);
-            let expression = get_expression(iter, meta_data, &context, &should_be_type, &vec![",", ")"])
+            let expression = get_expression(iter, meta_data, context, &should_be_type, &vec![",", ")"])
                 .map_err(|err| pass_err(
                     iter, 
                     function_name, 
@@ -171,7 +171,7 @@ pub fn get_arguments(
             iter.next_multiple(-1);
 
             let arg_type = &store_arg_info.arg_info.soul_type;
-            if !expression.is_type.is_convertable(arg_type, iter.current(), &meta_data.type_meta_data, &context.current_generics) {
+            if !expression.is_type.is_convertable(arg_type, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
 
                 let mut string_builder = String::new();
                 for i in default_value_i..iter.current_index() {
@@ -186,6 +186,10 @@ pub fn get_arguments(
 
         }
         else if let Ok(arg_type) = type_result {
+            if arg_type.to_primitive_type(&meta_data.type_meta_data).is_untyped_type() {
+                return Err(new_soul_error(iter.current(), "argument type can not be untyped"));
+            }
+
             store_arg_info.arg_info.soul_type = arg_type;
         }
         else if iter.current().text == "this" {

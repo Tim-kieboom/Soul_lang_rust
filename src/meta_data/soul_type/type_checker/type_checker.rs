@@ -1,5 +1,5 @@
 use std::{collections::BTreeMap, io::{Error, Result}};
-use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{generic::Generic, primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::{Token, TokenIterator}};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentGenerics, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{generic::Generic, primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::{Token, TokenIterator}};
 
 pub fn get_primitive_type_from_literal(literal: &str) -> PrimitiveType {
     if literal.is_empty() {
@@ -31,7 +31,7 @@ pub fn check_convert_to_ref(
     ref_wrap: &TypeWrappers, 
     token: &Token,
     meta_data: &MetaData, 
-    generics: &BTreeMap<String, Generic>,
+    generics: &mut CurrentGenerics,
 ) -> Result<()> {
     let mut expression_stack = Vec::with_capacity(2);
     expression_stack.push(first_expression);
@@ -97,7 +97,7 @@ pub fn is_expression_literal(
     first_expression: &IExpression, 
     token: &Token, 
     meta_data: &MetaData, 
-    generics: &BTreeMap<String, Generic>,
+    generics: &mut CurrentGenerics,
 ) -> Result<bool> {
     let mut expression_stack = Vec::with_capacity(2);
     expression_stack.push(first_expression);
@@ -136,7 +136,7 @@ pub fn is_ivariable_literal(
     var: &IVariable, 
     token: &Token, 
     meta_data: &MetaData, 
-    generics: &BTreeMap<String, Generic>,
+    generics: &mut CurrentGenerics,
 ) -> Result<bool> {
     match var {
         IVariable::Variable{ name: _, type_name } => return is_type_name_literal(&type_name, token, meta_data, generics),
@@ -156,7 +156,7 @@ pub fn is_type_name_literal(
     type_name: &str, 
     token: &Token, 
     meta_data: &MetaData, 
-    generics: &BTreeMap<String, Generic>,
+    generics: &mut CurrentGenerics,
 ) -> Result<bool> {
     let soul_type = SoulType::from_stringed_type(&type_name, token, &meta_data.type_meta_data, generics)?;
     

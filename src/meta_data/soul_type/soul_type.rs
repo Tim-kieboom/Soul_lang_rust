@@ -1,7 +1,9 @@
 use std::fmt::format;
 use std::{io::Result, result};
-use super::primitive_types::DuckType;
+use super::generic;
+use super::primitive_types::{DuckType, NumberCategory};
 use crate::meta_data;
+use crate::meta_data::current_context::current_context::{CurrentGenerics, DefinedGenric};
 use crate::tokenizer::tokenizer::SplitOn;
 use std::collections::{BTreeMap, HashMap};
 use crate::meta_data::type_meta_data::TypeMetaData;
@@ -89,7 +91,17 @@ impl SoulType {
         self.name = name;
     }
 
-    pub fn convert_typedef_to_original(&self, token: &Token, type_meta_data: &TypeMetaData, generics: &BTreeMap<String, Generic>) -> Option<SoulType> {
+    pub fn convert_typedef_to_original(&self, token: &Token, type_meta_data: &TypeMetaData, generics: &mut CurrentGenerics) -> Option<SoulType> {
+
+        if generics.scope_generics.contains_key(&self.name) {
+            return Some(self.clone());
+        } 
+        else if generics.function_call_defined_generics.as_ref().is_some_and(|store| store.contains_key(&self.name)) {
+            let define = generics.function_call_defined_generics.as_ref().unwrap().get(&self.name).unwrap();   
+            return SoulType::from_stringed_type(&define.define_type.clone(), token, type_meta_data, generics)
+                .ok();
+        }
+        
         let id = type_meta_data.type_store.to_id.get(&self.name)?;
         let possible_typedef = type_meta_data.type_store.typedef_store.get(id);
         
@@ -106,27 +118,31 @@ impl SoulType {
         }
     }
 
-    pub fn is_convertable(&self, to_type_: &SoulType, token: &Token, type_meta_data: &TypeMetaData, generics: &BTreeMap<String, Generic>) -> bool {
+    pub fn is_convertable(&self, to_type_: &SoulType, token: &Token, type_meta_data: &TypeMetaData, generics: &mut CurrentGenerics) -> bool {
         let possible_from = self.convert_typedef_to_original(token, type_meta_data, generics);
         let possible_to = to_type_.convert_typedef_to_original(token, type_meta_data, generics);
 
         if possible_from.is_none() || possible_to.is_none() {
             return false;
         }
-
         let from_type = possible_from.unwrap();
         let to_type = possible_to.unwrap();
-        if from_type == to_type {
-            return true;
+
+        if let Some(generic) = generics.scope_generics.get(&self.name) {
+            // if any of T
+            if generic.validater.is_none() {
+                return true;
+            }
+
+            let validater = generic.validater.as_ref().unwrap();
+            todo!("generic validater not yet impl")
         }
-
-        let from_duck_type = from_type.to_primitive_type(type_meta_data).to_duck_type();
-        let to_duck_type = to_type.to_primitive_type(type_meta_data).to_duck_type(); 
-        if from_duck_type != to_duck_type {
-            return false;
+        else {
+            if let Some(is_convertable) = self.is_non_genric_convertable(&from_type, &to_type, type_meta_data) {
+                return is_convertable;
+            }
         }
-
-
+        
         if !self.are_modifiers_covertable(&to_type) {
             return false;
         }
@@ -135,11 +151,44 @@ impl SoulType {
             return false;
         }
 
-        if from_duck_type == DuckType::Object || from_type.is_any_ref() {
+        if from_type.to_primitive_type(type_meta_data) == PrimitiveType::Object || from_type.is_any_ref() {
             return from_type.name == to_type.name
         }
 
         true
+    }
+
+    fn is_non_genric_convertable(&self, from_type: &SoulType, to_type: &SoulType, type_meta_data: &TypeMetaData) -> Option<bool> {
+         if from_type == to_type {
+            return Some(true);
+        }
+
+        let from_prim_type = from_type.to_primitive_type(type_meta_data);
+        let to_prim_type = to_type.to_primitive_type(type_meta_data); 
+        if from_prim_type.is_untyped_type() {
+            match from_prim_type {
+                PrimitiveType::UntypedInt => {
+                    if to_prim_type.to_duck_type() != DuckType::Number {
+                        return Some(false);
+                    }
+                },
+                PrimitiveType::UntypedUint => {
+                    let to_number_category = to_prim_type.to_number_category();
+                    if to_number_category != NumberCategory::UnsignedInterger {
+                        return Some(false);
+                    }
+                },
+                PrimitiveType::UntypedFloat => {
+                    let to_number_category = to_prim_type.to_number_category();
+                    if to_number_category != NumberCategory::FloatingPoint {
+                        return Some(false);
+                    }
+                },
+                _ => (),
+            }
+        }
+
+        None
     }
 
     pub fn are_modifiers_covertable(&self, to_type: &SoulType) -> bool {
@@ -211,7 +260,7 @@ impl SoulType {
     pub fn from_literal<'a>(
         iter: &mut TokenIterator, 
         type_meta_data: &TypeMetaData, 
-        generics: &BTreeMap<String, Generic>,
+        generics: &mut CurrentGenerics,
         should_be_type: Option<&SoulType>,
         is_literal: &mut bool,
     ) -> Result<(SoulType, String)> {
@@ -308,7 +357,7 @@ impl SoulType {
     pub fn from_iterator<'a>(
         iter: &mut TokenIterator, 
         type_meta_data: &TypeMetaData, 
-        generics: &BTreeMap<String, Generic>,
+        generics: &CurrentGenerics,
     ) -> Result<SoulType> {
         let begin_index = iter.current_index();
 
@@ -320,13 +369,13 @@ impl SoulType {
         result
     }
 
-    pub fn from_stringed_type<'a>(
+    pub fn get_unchecked_from_stringed_type(
         str: &str, 
         token: &Token, 
         type_meta_data: &TypeMetaData, 
-        generics: &BTreeMap<String, Generic>,
+        generics: &mut CurrentGenerics,
     ) -> Result<SoulType> {
-        let tokens = get_type_tokens(str, token);
+         let tokens = get_type_tokens(str, token);
 
         let mut soul_type = SoulType::new(String::new());
 
@@ -350,14 +399,9 @@ impl SoulType {
             }
         }
 
-        let is_type = type_meta_data.type_store.to_id.contains_key(&iter.current().text);
-        let is_template = generics.contains_key(&iter.current().text);
+        let type_name = &iter.current().text;
 
-        if !is_type && !is_template {
-            return Err(new_soul_error(token, format!("'{}' is not reconized type", iter.current().text).as_str()));
-        }
-
-        soul_type.set_name(iter.current().text.clone());
+        soul_type.set_name(type_name.clone());
 
         if iter.peek().is_some_and(|token| token.text == "<") {
             if let None = iter.next() {
@@ -384,8 +428,97 @@ impl SoulType {
             }
         }
         
-        while let Some(token) = iter.next() {
+        while iter.next().is_some() {
             let wrap = TypeWrappers::from_str(&token.text);
+            if wrap == TypeWrappers::Invalid {
+                return Ok(soul_type);
+            }
+
+            if let Err(msg) = soul_type.add_wrapper(wrap) {
+                return Err(new_soul_error(iter.current(), msg.as_str()));
+            }
+        }
+
+        Ok(soul_type)
+    }
+
+    pub fn from_stringed_type<'a>(
+        str: &str, 
+        token: &Token, 
+        type_meta_data: &TypeMetaData, 
+        generics: &mut CurrentGenerics,
+    ) -> Result<SoulType> {
+        SoulType::internal_from_stringed_type(str, token, type_meta_data, generics)
+    }
+
+    fn internal_from_stringed_type<'a>(
+        str: &str, 
+        token: &Token, 
+        type_meta_data: &TypeMetaData, 
+        generics: &mut CurrentGenerics,
+    ) -> Result<SoulType> {
+        let tokens = get_type_tokens(str, token);
+
+        let mut soul_type = SoulType::new(String::new());
+
+        if tokens.is_empty() {
+            return Err(new_soul_error(token, format!("type '{}' is not valid", str).as_str()));
+        }
+
+        let mut iter = TokenIterator::new(tokens);
+
+        loop {
+            let modifier = TypeModifiers::from_str(&iter.current().text);
+            if modifier == TypeModifiers::Default {
+                break;
+            }
+
+            soul_type.add_modifier(modifier)
+                .map_err(|msg| new_soul_error(iter.current(), format!("while trying to get type\n{}", msg).as_str()))?;
+
+            if let None = iter.next() {
+                return Err(new_soul_error(token, "unexpected end while trying to get Type"));
+            }
+        }
+
+        let type_name = &iter.current().text;
+
+        let is_type = type_meta_data.type_store.to_id.contains_key(type_name);
+        let is_template = generics.scope_generics.contains_key(type_name) || generics.function_call_defined_generics.as_ref().is_some_and(|store| store.contains_key(&iter.current().text));
+
+        if !is_type && !is_template {
+            return Err(new_soul_error(token, format!("'{}' is not reconized type", type_name).as_str()));
+        }
+
+        soul_type.set_name(type_name.clone());
+
+        if iter.peek().is_some_and(|token| token.text == "<") {
+            if let None = iter.next() {
+                return Err(new_soul_error(token, "unexpected end while parsing type"));
+            }
+
+            loop {
+                let current_type = SoulType::from_iterator(&mut iter, type_meta_data, generics)?;
+                soul_type.generic_defines.push(current_type);
+
+                if let None = iter.next() {
+                    return Err(new_soul_error(token, "unexpected end while parsing type"));
+                }
+
+                if iter.current().text == ">" {
+                    break;
+                }
+                else if iter.current().text == "," {
+                    continue;
+                }
+                else {
+                    return Err(new_soul_error(iter.current(), format!("'{}' is invalid in generic ctor", iter.current().text).as_str()));
+                }
+            }
+        }
+        
+        while iter.next().is_some() {
+            let wrap = TypeWrappers::from_str(&iter.current().text);
             if wrap == TypeWrappers::Invalid {
                 return Ok(soul_type);
             }
@@ -519,7 +652,7 @@ fn get_literal_array(
     iter: &mut TokenIterator, 
     should_be_type: Option<&SoulType>,
     type_meta_data: &TypeMetaData, 
-    generics: &BTreeMap<String, Generic>,
+    generics: &mut CurrentGenerics,
     is_literal: &mut bool,
 ) -> Result<(SoulType, bool)> { 
     const ARRAY_START: &str = "[";
@@ -643,7 +776,7 @@ fn get_element_type_string(array_type: &SoulType) -> String {
 fn get_from_iterator(
     iter: &mut TokenIterator, 
     type_meta_data: &TypeMetaData, 
-    generics: &BTreeMap<String, Generic>,
+    generics: &CurrentGenerics,
 ) -> Result<SoulType> { 
     let mut soul_type = SoulType::new(String::new());
 
@@ -661,9 +794,13 @@ fn get_from_iterator(
         }
     }
 
-    if let None = type_meta_data.get_type_id(&iter.current().text) {
-        return Err(new_soul_error(&iter.current(), format!("'{}' is not reconized type", iter.current().text).as_str()));
+    if !generics.scope_generics.contains_key(&iter.current().text) {
+
+        if let None = type_meta_data.get_type_id(&iter.current().text) {
+            return Err(new_soul_error(&iter.current(), format!("'{}' is not reconized type", iter.current().text).as_str()));
+        }
     }
+
 
     soul_type.set_name(iter.current().text.clone());
 
@@ -704,7 +841,7 @@ fn get_from_iterator(
 fn get_defined_generic<'a>(
     iter: &mut TokenIterator, 
     type_meta_data: &TypeMetaData, 
-    generics: &BTreeMap<String, Generic>, 
+    generics: &CurrentGenerics, 
     soul_type: &mut SoulType,
 ) -> Result<Vec<SoulType>> {
     let mut generics_defs = Vec::new();

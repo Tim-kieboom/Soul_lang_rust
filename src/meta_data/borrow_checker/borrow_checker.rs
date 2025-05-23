@@ -4,7 +4,6 @@ use crate::meta_data::{borrow_checker::borrow_var::BorrowVar, scope_and_var::sco
 pub type BorrowResult<T> = std::result::Result<T, String>;
 
 pub type DeleteList = Vec<String>;
-type VarStore = HashMap<String, VarId>;
 
 pub struct BorrowId<'a>(pub &'a str, pub &'a ScopeId);
 pub trait BorrowCheckedTrait {

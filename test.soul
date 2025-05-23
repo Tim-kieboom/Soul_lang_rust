@@ -1,4 +1,4 @@
 main() {
-    Println("hello world")
+    Println<str>("hello world")
 }
 

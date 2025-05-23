@@ -7,8 +7,6 @@ fn add_scope(checker: &mut BorrowChecker, id: u64) -> ScopeId {
         .unwrap();
 
     scope
-    /*
-    */
 }
 
 #[test]

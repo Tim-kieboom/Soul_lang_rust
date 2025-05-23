@@ -2,7 +2,7 @@ use std::{collections::{BTreeMap, HashMap}, fmt::Arguments, io::{Error, Result}}
 
 use once_cell::sync::Lazy;
 
-use super::function_declaration::FunctionDeclaration;
+use super::function_declaration::{get_func_names_access_level, FunctionDeclaration};
 use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::{get_arguments, FunctionArguments}}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}, type_meta_data::TypeMetaData}, tokenizer::token::TokenIterator};
 
 static STR_ARRAY_TYPE_STRING: Lazy<String> = Lazy::new(||
@@ -58,6 +58,7 @@ fn _get_function_declaration(
     }
 
     function.name = iter.current().text.clone();
+    function.access_level = get_func_names_access_level(&function.name);
     if let Err(err) = check_name(&function.name) {
         return Err(new_soul_error(iter.current(), err.as_str()));
     }
@@ -133,6 +134,7 @@ fn _get_function_declaration(
         context, 
         &arguments.args, 
         &arguments.options,
+        Vec::new(),
     ).ok();
 
     if let Some(function_id) = possible_function_id {

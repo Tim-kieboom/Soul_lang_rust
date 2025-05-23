@@ -1,7 +1,29 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::meta_data::{class_info::class_info::ClassInfo, scope_and_var::scope::ScopeId, soul_type::generic::Generic};
-use super::{member_info::MemberInfo, rulesets::RuleSet};
+use super::rulesets::RuleSet;
+
+#[derive(Debug, Clone)]
+pub struct DefinedGenric {
+    pub define_type: String,
+    pub generic: Generic,
+}
+
+#[derive(Debug, Clone)]
+pub struct CurrentGenerics {
+    pub scope_generics: BTreeMap<String, Generic>,
+    pub function_call_defined_generics: Option<BTreeMap<String, DefinedGenric>>,
+}
+
+impl CurrentGenerics {
+    pub fn new() -> Self {
+        CurrentGenerics { scope_generics: BTreeMap::new(), function_call_defined_generics: None }
+    }
+
+    pub fn is_function_call_defined_generic(&mut self, name: &String) -> bool { 
+        self.function_call_defined_generics.as_ref().is_some_and(|generics| generics.contains_key(name))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct CurrentContext {
@@ -9,7 +31,7 @@ pub struct CurrentContext {
     pub current_scope_id: ScopeId,
     // this_ptr: Option<VarInfo>,
     pub in_class: Option<ClassInfo>,
-    pub current_generics: BTreeMap<String, Generic>,
+    pub current_generics: CurrentGenerics,
 }
 
 impl CurrentContext {
@@ -18,7 +40,7 @@ impl CurrentContext {
             rulesets: RuleSet::Default, 
             current_scope_id, 
             in_class: None, 
-            current_generics: BTreeMap::new(),
+            current_generics: CurrentGenerics::new(),
         }
     }
 }
