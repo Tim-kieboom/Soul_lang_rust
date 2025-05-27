@@ -1,5 +1,3 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-
 use super::file_line::FileLine;
 use crate::{meta_data::meta_data::MetaData, tokenizer::tokenizer::{tokenize_file, tokenize_line}};
 

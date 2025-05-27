@@ -10,12 +10,10 @@ use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
 use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
 use crate::meta_data::soul_type::type_checker::type_checker::get_primitive_type_from_literal;
 use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
-lazy_static! {
-    static ref SPLIT_REGEX: Regex = SoulNames::str_vec_to_regex(&SOUL_NAMES.parse_tokens);
-}
+static SPLIT_REGEX: Lazy<Regex> = Lazy::new(||SoulNames::str_vec_to_regex(&SOUL_NAMES.parse_tokens));
 
 pub struct FileLineResult {
     pub source_file: Vec<FileLine>, 
@@ -81,10 +79,9 @@ pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commend: &
 }
 
 fn get_token_count(str: &str, strings: &Vec<&str>) -> u64 {
-    // Estimate based on string length and average token size
     let whitespace_count = str.chars().filter(|c| c.is_whitespace()).count();
     let non_whitespace = str.len() - whitespace_count;
-    // Assume average token length of 4 characters plus some overhead for special tokens
+
     (non_whitespace / 4 + whitespace_count / 2 + strings.len() / 10) as u64
 }
 
@@ -161,7 +158,7 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
 pub trait SplitOn {fn split_on(&self, delims: &Vec<&str>) -> Vec<&str>;}
 impl SplitOn for &str {
     fn split_on(&self, _delims: &Vec<&str>) -> Vec<&str> {
-        let mut result = Vec::with_capacity(self.len() / 4); // Estimate average token length of 4
+        let mut result = Vec::with_capacity(self.len() / 4);
         let mut last_end = 0;
 
         for find in SPLIT_REGEX.find_iter(self) {

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use Soul_lang_rust::{meta_data::meta_data::MetaData, tokenizer::{file_line::FileLine, tokenizer::tokenize_file}};
+use soul_lang_rust::{meta_data::meta_data::MetaData, tokenizer::{file_line::FileLine, tokenizer::tokenize_file}};
 
 const TEST_FILE: &str = r#"
 

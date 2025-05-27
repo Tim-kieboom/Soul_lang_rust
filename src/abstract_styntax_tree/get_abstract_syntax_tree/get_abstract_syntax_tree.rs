@@ -41,8 +41,28 @@ pub fn get_abstract_syntax_tree_file(iter: &mut TokenIterator, meta_data: &mut M
 }
 
 #[allow(dead_code)]
-pub fn add_to_abstract_syntax_tree_line(_tree: &mut AbstractSyntaxTree, _iter: &mut TokenIterator, _meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
-    todo!();
+pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData, open_bracket_stack: &mut usize) -> Result<()> {
+    
+    loop {
+
+        let multi_statment = get_statment(iter, meta_data, context, open_bracket_stack)?;
+        tree.main_nodes.extend(multi_statment.before.into_iter().flatten());
+        tree.main_nodes.push(multi_statment.value);
+        tree.main_nodes.extend(multi_statment.after.into_iter().flatten());
+
+        if iter.current().text == "\n" {
+
+            if iter.next().is_none() {
+                break;
+            }
+        }
+
+        if iter.next().is_none() {
+            break;
+        }
+    }
+    
+    Ok(())
 }
 
 fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<bool> {

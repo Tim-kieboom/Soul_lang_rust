@@ -1,39 +1,45 @@
-extern crate Soul_lang_rust;
+extern crate soul_lang_rust;
 
 use std::path::Path;
-use std::io::Result;
+use std::io::{self, Result, Write};
 use itertools::Itertools;
+use soul_lang_rust::abstract_styntax_tree::abstract_styntax_tree::AbstractSyntaxTree;
+use soul_lang_rust::meta_data::current_context::current_context::CurrentContext;
+use soul_lang_rust::tokenizer::file_line::FileLine;
 use std::fs::{self, write};
 use std::{env::args, time::Instant};
-use Soul_lang_rust::meta_data::meta_data::MetaData;
-use Soul_lang_rust::tokenizer::token::TokenIterator;
-use Soul_lang_rust::run_options::show_times::ShowTimes;
-use Soul_lang_rust::run_options::run_options::RunOptions;
-use Soul_lang_rust::run_options::show_output::ShowOutputs;
-use Soul_lang_rust::tokenizer::tokenizer::{read_as_file_lines, tokenize_file};
-use Soul_lang_rust::abstract_styntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree_file;
+use soul_lang_rust::meta_data::meta_data::MetaData;
+use soul_lang_rust::tokenizer::token::TokenIterator;
+use soul_lang_rust::run_options::show_times::ShowTimes;
+use soul_lang_rust::run_options::run_options::RunOptions;
+use soul_lang_rust::run_options::show_output::ShowOutputs;
+use soul_lang_rust::tokenizer::tokenizer::{read_as_file_lines, tokenize_file, tokenize_line};
+use soul_lang_rust::abstract_styntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree::{get_abstract_syntax_tree_file, get_abstract_syntax_tree_line};
 
 fn main() {
-
     let start = Instant::now();
 
-    //soul run test.soul -showOutput=SHOW_ALL -showTime=SHOW_ALL
     let run_option = match RunOptions::new(args()) {
         Ok(val) => val,
         Err(err) => {eprintln!("{err}"); return;},
     };
 
-    if run_option.is_compiled {
-        if let Err(err) = run_compiler(run_option) {
-            eprintln!("{err}");
-        }
-    }
-    else {
-        todo!("run interpreter");
+    let is_compiled = run_option.is_compiled;
+    let result = if is_compiled {
+        run_compiler(run_option)
+    } else {
+        run_interpreter(run_option)
+    };
+    
+    let duration = start.elapsed();
+
+    if let Err(err) = result {
+        eprintln!("{err}");
     }
 
-    let duration = start.elapsed();
-    println!("Elapsed time: {:.2?}", duration);
+    if is_compiled {
+        println!("Elapsed time: {:.2?}", duration);
+    }
 }
 
 fn run_compiler(run_options: RunOptions) -> Result<()> {
@@ -91,6 +97,57 @@ fn run_compiler(run_options: RunOptions) -> Result<()> {
     Ok(())
 }
 
+fn run_interpreter(run_options: RunOptions) -> Result<()> {
+    let mut line_index = 1;
+    let mut in_multi_line_commend = false;
+    let mut open_bracket_stack = 0;
+    
+    let mut meta_data = MetaData::new();
+    let mut tree = AbstractSyntaxTree::new();
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+
+    loop {
+        let mut input = String::new();
+        
+        for _ in 0..open_bracket_stack+1 {
+            print!(">> ");
+        }
+
+        io::stdout().flush().unwrap();
+        match io::stdin().read_line(&mut input) {
+            Ok(_) => (),
+            Err(err) => {println!("Could not get Input, error: {}", err.to_string()); continue;},
+        }
+
+        //remove "\r\n"
+        input.pop(); 
+        input.pop();
+        
+        if input == "exit()" {
+            break Ok(());
+        }
+
+        let line = FileLine{text: input.clone(), line_number: line_index};
+        let tokens = tokenize_line(line, line_index as usize, &mut in_multi_line_commend, &mut meta_data)?;
+        line_index += 1;
+
+        if run_options.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {       
+            println!("{:?}", tokens.iter().map(|token| &token.text).collect::<Vec<_>>());
+        }
+
+        if in_multi_line_commend {
+            continue;
+        }
+
+        let mut iter = TokenIterator::new(tokens);
+
+        get_abstract_syntax_tree_line(&mut tree, &mut iter, &mut context, &mut meta_data, &mut open_bracket_stack)?;
+
+        if run_options.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {       
+            println!("{}", tree.main_nodes.iter().map(|node| node.to_string(true)).join("\n"));
+        }
+    }
+}
 
 
 
