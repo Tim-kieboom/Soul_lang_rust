@@ -1,7 +1,5 @@
 use core::fmt;
-use std::fmt::Display;
 use bitflags::bitflags;
-use serde::Serializer;
 
 bitflags! {
     #[derive(Clone, PartialEq)]

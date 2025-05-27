@@ -1,4 +1,4 @@
-use std::{collections::{BTreeMap, HashMap}, fmt::format};
+use std::collections::{BTreeMap, HashMap};
 use crate::meta_data::scope_and_var::scope::ScopeId;
 
 use super::borrow_checker::BorrowResult;
@@ -42,10 +42,6 @@ impl VarIdStore {
 
     pub fn get(&self, key: &str) -> Option<&VarId> {
         self.store.get(key)
-    }
-
-    pub fn get_mut(&mut self, key: &str) -> Option<&mut VarId> {
-        self.store.get_mut(key)
     }
 
     pub fn consume_store(self) -> BTreeMap<String, VarId> {
@@ -92,10 +88,6 @@ impl BorrowVarStore {
     
     pub fn get_scope(&self, id: &ScopeId) -> Option<&VarIdStore> {
         self.scope_store.get(id)
-    }
-
-    pub fn get_scope_mut(&mut self, id: &ScopeId) -> Option<&mut VarIdStore> {
-        self.scope_store.get_mut(id)
     }
 
     pub fn get_var(&self, id: &VarId) -> Option<&BorrowVar> {

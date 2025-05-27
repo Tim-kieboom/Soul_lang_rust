@@ -1,5 +1,5 @@
 use std::io::{Error, Result};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::get_expression::get_expression::get_expression}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::get_expression::get_expression::get_expression}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::check_name, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 use super::argument_info::ArgumentInfo;
 
 pub struct FunctionArguments {
@@ -193,8 +193,7 @@ pub fn get_arguments(
             store_arg_info.arg_info.soul_type = arg_type;
         }
         else if iter.current().text == "this" {
-            return Err(new_soul_error(iter.current(), "'this.' not yet implemented in get_arguments"));
-            todo!()
+            todo!("'this.' not yet implemented in get_arguments")
         }
         else {
             if store_arg_info.arg_info.soul_type.is_empty() {

@@ -1,7 +1,6 @@
 use std::{collections::{BTreeMap, HashMap}, io::Result};
-use itertools::assert_equal;
 
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult, operator_type::{self, OperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, operator_type::{OperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 use super::get_expression::{get_expression, GetExpressionResult};
 
@@ -56,13 +55,13 @@ fn check_literal_expression(expr_result: GetExpressionResult, lit_value: &str, i
 
 fn check_variable_expression(expr_result: GetExpressionResult, variable_name: &str, is_type: &str) {
     if let IExpression::IVariable{this} = expr_result.result.value {
-        if let IVariable::Variable {name, type_name} = this {
-            assert_eq!(name, variable_name);
-            assert_eq!(type_name, is_type.to_string());
-            assert_eq!(expr_result.is_type.to_string(), is_type.to_string());
-        }
-        else {
-            assert!(false, "expr_result.result.value.this should return 'Variable': {:#?}", this)
+        match this {
+            IVariable::Variable {name, type_name} => {
+                assert_eq!(name, variable_name);
+                assert_eq!(type_name, is_type.to_string());
+                assert_eq!(expr_result.is_type.to_string(), is_type.to_string());
+            }
+            // _ => assert!(false, "expr_result.result.value.this should return 'Variable': {:#?}", this),
         }
     }
     else {
@@ -1000,8 +999,8 @@ fn test_get_expression_lit_array() {
 
 #[test]
 fn test_get_expression_lit_tuple() {
-    const LIT_TUPLE_STR_INT: &str = "(\"key\", 1)";
-    const LIT_TUPLE_INT_FLOAT: &str = "(1, 1.1)";
+    // const LIT_TUPLE_STR_INT: &str = "(\"key\", 1)";
+    // const LIT_TUPLE_INT_FLOAT: &str = "(1, 1.1)";
     
     todo!();
 }

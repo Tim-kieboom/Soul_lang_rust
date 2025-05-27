@@ -1,6 +1,6 @@
-use std::io::{Error, Result};
+use std::io::Result;
 use super::format_stringer::{indexesof_qoutes, indexesof_qoutes_line};
-use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::Token}};
+use crate::{meta_data::{meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::file_line::FileLine};
 
 #[allow(dead_code)]
 pub fn rawstr_to_litstr_file(source_file: Vec<FileLine>, meta_data: &mut MetaData) -> Result<Vec<FileLine>> {

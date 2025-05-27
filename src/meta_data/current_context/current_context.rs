@@ -42,10 +42,6 @@ impl CurrentContext {
             current_generics: CurrentGenerics::new(),
         }
     }
-
-    pub fn is_in_global_scope(&self) -> bool {
-        self.current_scope_id == MetaData::GLOBAL_SCOPE_ID
-    }
 }
 
 

@@ -1,4 +1,4 @@
-use std::{env::args, time::Instant};
+use std::time::Instant;
 use std::fs::write;
 use std::io::Result;
 use bitflags::bitflags;

@@ -1,19 +1,15 @@
-use std::fmt::format;
-use std::io::Error;
 use std::{io::Result, result};
-use super::generic;
 use super::primitive_types::{DuckType, NumberCategory};
-use crate::meta_data;
-use crate::meta_data::current_context::current_context::{CurrentGenerics, DefinedGenric};
+use crate::meta_data::current_context::current_context::CurrentGenerics;
 use crate::tokenizer::tokenizer::SplitOn;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use crate::meta_data::type_meta_data::TypeMetaData;
 use crate::tokenizer::token::{Token, TokenIterator};
 use crate::meta_data::class_info::class_info::ClassInfo;
 use crate::meta_data::soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES};
 use super::type_checker::type_checker::get_primitive_type_from_literal;
 use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
-use super::{generic::Generic, primitive_types::PrimitiveType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers};
+use super::{primitive_types::PrimitiveType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers};
 
 
 #[derive(Debug, Clone, PartialEq)]

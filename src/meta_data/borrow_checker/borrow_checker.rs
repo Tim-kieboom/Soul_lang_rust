@@ -6,17 +6,9 @@ pub type BorrowResult<T> = std::result::Result<T, String>;
 pub type DeleteList = Vec<String>;
 
 pub struct BorrowId<'a>(pub &'a str, pub &'a ScopeId);
-impl<'a> BorrowId<'a> {
-    pub fn new(name: &'a str, scope_id: &'a ScopeId) -> Self {
-        Self {
-            0: name,
-            1: scope_id,
-        }
-    }
-            
-}
 
 
+#[allow(dead_code)]
 pub trait BorrowCheckedTrait {
     /// Registers a new owner (variable) in the borrow checker.
     ///

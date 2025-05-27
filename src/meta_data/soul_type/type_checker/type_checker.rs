@@ -1,5 +1,5 @@
-use std::{collections::BTreeMap, io::{Error, Result}};
-use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentGenerics, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{generic::Generic, primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::{Token, TokenIterator}};
+use std::io::{Error, Result};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentGenerics, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::{TypeMetaData}}, tokenizer::token::{Token, TokenIterator}};
 
 pub fn get_primitive_type_from_literal(literal: &str) -> PrimitiveType {
     if literal.is_empty() {
@@ -140,15 +140,15 @@ pub fn is_ivariable_literal(
 ) -> Result<bool> {
     match var {
         IVariable::Variable{ name: _, type_name } => return is_type_name_literal(&type_name, token, meta_data, generics),
-        IVariable::MemberExpression{ parent, .. } => {
+        // IVariable::MemberExpression{ parent, .. } => {
 
-            if let IVariable::Variable{ name: _, type_name } = &**parent {
-                return is_type_name_literal(&type_name, token, meta_data, generics);
-            }
-            else {
-                return Err(new_soul_error(token, format!("").as_str()));
-            }
-        },
+        //     if let IVariable::Variable{ name: _, type_name } = &**parent {
+        //         return is_type_name_literal(&type_name, token, meta_data, generics);
+        //     }
+        //     else {
+        //         return Err(new_soul_error(token, format!("").as_str()));
+        //     }
+        // },
     }
 }
 

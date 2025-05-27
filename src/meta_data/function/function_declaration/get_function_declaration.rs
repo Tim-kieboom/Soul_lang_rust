@@ -1,9 +1,9 @@
-use std::{collections::{BTreeMap, HashMap}, fmt::Arguments, io::{Error, Result}};
+use std::{collections::BTreeMap, io::{Error, Result}};
 
 use once_cell::sync::Lazy;
 
 use super::function_declaration::{get_func_names_access_level, FunctionDeclaration};
-use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::{get_arguments, FunctionArguments}}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}, type_meta_data::TypeMetaData}, tokenizer::token::TokenIterator};
+use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::{get_arguments, FunctionArguments}}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::token::TokenIterator};
 
 static STR_ARRAY_TYPE_STRING: Lazy<String> = Lazy::new(||
     SoulType::from(
@@ -77,8 +77,7 @@ fn internal_function_declaration(
     }
 
     if iter.current().text == "<" {
-        return Err(new_soul_error(iter.current(), "generics not yet implemented"));
-        todo!();
+        todo!("generics not yet implemented");
     }
 
     if iter.current().text != "(" {
@@ -186,30 +185,6 @@ fn internal_function_declaration(
     }
 
     Ok(function)
-}
-
-fn check_if_args_are_const(iter: &TokenIterator, arguments: &FunctionArguments, ruleset: &RuleSet) -> Result<()> {
-    for arg in &arguments.args {
-
-        if arg.is_mutable {
-            return Err(new_soul_error(
-                iter.current(), 
-                format!("argument: '{}' is mutable but RuleSet: '{:?}' does not allow mutable arguments", arg.name, ruleset).as_str()
-            ));
-        }
-    }
-
-    for arg in &arguments.options {
-
-        if arg.is_mutable {
-            return Err(new_soul_error(
-                iter.current(), 
-                format!("optional argument: '{}' is mutable but RuleSet: '{:?}' does not allow mutable arguments", arg.name, ruleset).as_str()
-            ));
-        }
-    }
-
-    Ok(())
 }
 
 fn get_return_type(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Option<String> {

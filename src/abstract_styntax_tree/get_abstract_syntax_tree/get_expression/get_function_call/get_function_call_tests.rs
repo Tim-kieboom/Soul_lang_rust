@@ -1,7 +1,5 @@
-use itertools::Itertools;
-
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, debug_println, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration}, internal_functions::INTERNAL_FUNCTIONS}, meta_data::{self, MetaData}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
-use std::{collections::{BTreeMap, HashMap}, io::Result, ops::Deref};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration}, internal_functions::INTERNAL_FUNCTIONS}, meta_data::{MetaData}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use std::{collections::{BTreeMap, HashMap}, io::Result};
 
 use super::get_function_call::get_function_call;
 
@@ -129,8 +127,8 @@ fn test_get_function_call_overload() {
 
     const CALL1: &str = "over(1);";
 
-    let mut function = simple_get_function_call(CALL1, &mut meta_data, &mut context);
-    let mut should_be = MultiStamentResult::new(
+    let function = simple_get_function_call(CALL1, &mut meta_data, &mut context);
+    let should_be = MultiStamentResult::new(
         IExpression::new_funtion_call(
             over_func1, 
             vec![

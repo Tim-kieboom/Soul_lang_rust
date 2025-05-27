@@ -10,8 +10,7 @@ fn try_simple_initialize(line: &str) -> Result<MultiStamentResult<IStatment>> {
     let tokens = tokenize_line(FileLine{text: line.to_string(), line_number: 0}, 0, &mut dummy, &mut meta_data)?;
     let mut iter = TokenIterator::new(tokens);
 
-    let mut dummy = 0;
-    get_initialize(&mut iter, &mut meta_data, &mut context, &mut dummy)
+    get_initialize(&mut iter, &mut meta_data, &mut context)
 }
 
 fn simple_initialize(line: &str) -> MultiStamentResult<IStatment> {

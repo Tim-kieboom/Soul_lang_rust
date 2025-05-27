@@ -458,7 +458,8 @@ fn get_binairy_expression(
 
         let mut bool_type = SoulType::new(SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string());
         if is_expression_literal(&right, iter.current(), meta_data, &mut context.current_generics)? {
-            bool_type.add_modifier(TypeModifiers::Literal);
+            bool_type.add_modifier(TypeModifiers::Literal)
+                .map_err(|msg| new_soul_error(iter.current(), format!("{}", msg).as_str()))?;
         }
 
         let type_name = bool_type.to_string();
@@ -517,7 +518,8 @@ fn get_binary_type(left_type: SoulType, operator_type: &OperatorType, right_type
     if operator_type.is_boolean_operator() {
         binary_type = SoulType::new(SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string());
         if right_type.is_literal() && left_type.is_literal() {
-            binary_type.add_modifier(TypeModifiers::Literal);
+            binary_type.add_modifier(TypeModifiers::Literal)
+                .expect("Internal error could not add Literal to type");
         }
     }
     else if is_left_untyped || is_right_untyped {
@@ -528,7 +530,8 @@ fn get_binary_type(left_type: SoulType, operator_type: &OperatorType, right_type
     }
     
     if is_right_literal && is_left_literal {
-        binary_type.add_modifier(TypeModifiers::Literal);
+        binary_type.add_modifier(TypeModifiers::Literal)
+            .expect("Internal error could not add Literal to type");
     }
     else {
         binary_type.remove_modifier(TypeModifiers::Literal);
@@ -581,8 +584,7 @@ fn check_if_types_in_binary_compatible(
     let is_right_class = right_type.is_class(&meta_data.type_meta_data.class_store);
     let is_left_class = left_type.is_class(&meta_data.type_meta_data.class_store);
     if is_right_class || is_left_class {
-        todo!();
-        return Ok(());
+        todo!("impl check_if_types_in_binary_compatible for classes");
     }
 
     if right_type.is_untyped_type(&meta_data.type_meta_data) || 

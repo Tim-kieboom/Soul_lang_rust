@@ -1,4 +1,4 @@
-use crate::meta_data::{meta_data::MetaData, soul_names::{NamesInternalType, SOUL_NAMES}, type_meta_data::TypeMetaData};
+use crate::meta_data::{soul_names::{NamesInternalType, SOUL_NAMES}, type_meta_data::TypeMetaData};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(i8)]

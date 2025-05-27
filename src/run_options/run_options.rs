@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::format;
 use std::result;
 use std::env::Args;
 use itertools::Itertools;
@@ -65,7 +64,7 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
 
 impl RunOptions {
     pub fn new(_args: Args) -> result::Result<Self, String> {
-        let mut options = Self{ file_path: String::new(), is_compiled: false, show_outputs: ShowOutputs::SHOW_NONE, is_garbage_collected: false};
+        let options = Self{ file_path: String::new(), is_compiled: false, show_outputs: ShowOutputs::SHOW_NONE, is_garbage_collected: false};
         
         let args = _args.collect::<Vec<_>>();
         if args.len() == 1 {

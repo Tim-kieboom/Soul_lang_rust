@@ -166,35 +166,6 @@ impl OperatorType {
             OperatorType::LogicalAnd => true,
         }
     }
-
-    pub fn is_calculus_operator(&self) -> bool {
-        match self {
-            OperatorType::Invalid |
-            OperatorType::Add |
-            OperatorType::Sub |
-            OperatorType::Mul |
-            OperatorType::Div |
-            OperatorType::Modulo |
-            OperatorType::Pow |
-            OperatorType::Root |
-            OperatorType::Log |
-            OperatorType::BitWiseOr |
-            OperatorType::BitWiseAnd |
-            OperatorType::Increment |
-            OperatorType::Decrement |
-            OperatorType::BitWiseXor => true,
-
-            OperatorType::Not |
-            OperatorType::Equals |
-            OperatorType::NotEquals |
-            OperatorType::IsSmaller |
-            OperatorType::IsSmallerEquals |
-            OperatorType::IsBigger |
-            OperatorType::IsBiggerEquals |
-            OperatorType::LogicalOr |
-            OperatorType::LogicalAnd => false,
-        }
-    }
 }
 
 pub static ALL_OPERATORS: Lazy<Vec<OperatorType>> = Lazy::new(||
@@ -203,10 +174,6 @@ pub static ALL_OPERATORS: Lazy<Vec<OperatorType>> = Lazy::new(||
 
 pub static BOOLEAN_OPERATOR: Lazy<Vec<OperatorType>> = Lazy::new(||
     enum_iterator::all::<OperatorType>().filter(|op| op.is_boolean_operator()).collect()
-);
-
-pub static CALCULUS_OPERATOR: Lazy<Vec<OperatorType>> = Lazy::new(||
-    enum_iterator::all::<OperatorType>().filter(|op| op.is_calculus_operator()).collect()
 );
 
 

@@ -1,14 +1,14 @@
-use std::{collections::BTreeMap, fmt::format};
+use std::collections::BTreeMap;
 
 use itertools::Itertools;
 
 use super::operator_type::OperatorType;
-use crate::meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}, soul_type::generic::Generic};
+use crate::meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IVariable {
     Variable{name: String, type_name: String},
-    MemberExpression{parent: /*shouldBe_Variable*/Box<IVariable>, name: String, type_name: String},
+    // MemberExpression{parent: /*shouldBe_Variable*/Box<IVariable>, name: String, type_name: String},
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,12 +33,6 @@ pub enum IStatment {
     FunctionBody{func_info: FunctionDeclaration, body: Box<BodyNode>},
     FunctionCall{this: /*shouldBe_FunctionCall*/Box<IExpression>},
     Scope{body: Box<BodyNode>},
-} 
-
-#[derive(Debug, Clone)]
-pub enum ISyntaxNode {
-    Statment{this: IStatment},
-    Expression{this: IExpression},
 } 
 
 #[derive(Debug, Clone, PartialEq)] 
@@ -146,7 +140,7 @@ impl IVariable {
     pub fn to_string(&self) -> String {
         match self {
             IVariable::Variable { name, type_name } => format!("Variable({} {})", type_name, name),
-            IVariable::MemberExpression { parent, name, type_name } => format!("Variable(parent: {}, {} {})", parent.to_string(), type_name, name),
+            // IVariable::MemberExpression { parent, name, type_name } => format!("Variable(parent: {}, {} {})", parent.to_string(), type_name, name),
         }
     }
     
@@ -161,14 +155,14 @@ impl IVariable {
     pub fn get_name(&self) -> &String {
         match self {
             IVariable::Variable { name, .. } => name,
-            IVariable::MemberExpression { name, .. } => name,
+            // IVariable::MemberExpression { name, .. } => name,
         }
     }
 
     pub fn get_type_name(&self) -> &String {
         match self {
             IVariable::Variable { type_name, .. } => type_name,
-            IVariable::MemberExpression { type_name, .. } => type_name,
+            // IVariable::MemberExpression { type_name, .. } => type_name,
         }
     }
 }

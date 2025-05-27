@@ -1,5 +1,5 @@
 use std::io::Result;
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::OperatorType}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::OperatorType}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::VarFlags, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
 
 pub struct AssignmentResult {
     pub assignment: MultiStamentResult<IStatment>,
@@ -12,9 +12,9 @@ pub fn get_assignment(
     context: &mut CurrentContext,
     i_variable: IVariable,
 ) -> Result<AssignmentResult> {
-    if matches!(i_variable, IVariable::MemberExpression { .. }) {
-        todo!("member not yet impl")
-    }
+    // if matches!(i_variable, IVariable::MemberExpression { .. }) {
+    //     todo!("member not yet impl")
+    // }
 
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
 
@@ -123,8 +123,8 @@ fn is_symbool_allowed(
     const ALLOWED_POINTER_SYMBOOLS: [&str; 2] = ["=", "."];
 
     const ALLOWED_CONST_ARRAY_SYMBOOLS: [&str; 3] = ["[", "=", "."];
-    const ALLOWED_REF_SYMBOOLS: [&str; 2] = ["=", "."];
-    const ALLOWED_MUT_REF_SYMBOOLS: [&str; 2] = ["=", "."];
+    // const ALLOWED_REF_SYMBOOLS: [&str; 2] = ["=", "."];
+    // const ALLOWED_MUT_REF_SYMBOOLS: [&str; 2] = ["=", "."];
     const ALLOWED_CONST_SYMBOOLS: [&str; 2] = ["=", "."];
 
     // !!!!! this is temp should add operator system

@@ -1,7 +1,7 @@
-use std::{collections::{BTreeMap, HashSet}, io::Result};
+use std::collections::BTreeMap;
 use itertools::Itertools;
 
-use crate::{meta_data::{class_info::access_level::{self, AccesLevel}, current_context::current_context::{CurrentGenerics, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_modifiers::FunctionModifiers}, soul_type::{generic::Generic, soul_type::SoulType}, type_meta_data::{self, TypeMetaData}}, tokenizer::token::TokenIterator};
+use crate::{meta_data::{class_info::access_level::{AccesLevel}, current_context::current_context::{CurrentGenerics, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_modifiers::FunctionModifiers}, soul_type::{generic::Generic, soul_type::SoulType}, type_meta_data::{TypeMetaData}}, tokenizer::token::TokenIterator};
 
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -116,7 +116,7 @@ impl FunctionDeclaration {
             let arg = &self.args[other_i];
 
             self.check_for_implicate_generic(arg, iter, other_arg, type_meta_data, generics);
-            if let Err(_) = arg.are_compatible(iter, other_arg, type_meta_data, generics, self) {
+            if let Err(_) = arg.are_compatible(iter, other_arg, type_meta_data, generics) {
                 return false;
             }
         } 
@@ -125,7 +125,7 @@ impl FunctionDeclaration {
             match self.optionals.get(&other_arg.name) {
                 Some(arg) => {
                     self.check_for_implicate_generic(arg, iter, other_arg, type_meta_data, generics);
-                    if let Err(_) = arg.are_compatible(iter, other_arg, type_meta_data, generics, self) {
+                    if let Err(_) = arg.are_compatible(iter, other_arg, type_meta_data, generics) {
                         return false;
                     }
                 },

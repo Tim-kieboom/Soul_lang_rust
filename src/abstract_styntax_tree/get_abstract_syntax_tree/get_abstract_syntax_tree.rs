@@ -41,7 +41,7 @@ pub fn get_abstract_syntax_tree_file(iter: &mut TokenIterator, meta_data: &mut M
 }
 
 #[allow(dead_code)]
-pub fn add_to_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut TokenIterator, meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
+pub fn add_to_abstract_syntax_tree_line(_tree: &mut AbstractSyntaxTree, _iter: &mut TokenIterator, _meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
     todo!();
 }
 
@@ -54,10 +54,9 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
         }
     }
 
-    let mut open_bracket_stack = 0;
     let result = add_function_declaration(iter, meta_data, context);
     if result.is_err() {
-        let initialize = get_initialize(iter, meta_data, context, &mut open_bracket_stack)?;
+        let initialize = get_initialize(iter, meta_data, context)?;
         if let IStatment::Initialize { variable, assignment } = initialize.value {
             if assignment.is_none() {
                 return Err(new_soul_error(iter.current(), format!("global variable: '{}' HAS TO BE assigned", variable.get_name()).as_str()));

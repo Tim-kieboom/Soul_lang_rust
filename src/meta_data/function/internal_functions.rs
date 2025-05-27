@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
-use std::collections::{BTreeMap, HashMap};
-use crate::{abstract_styntax_tree::operator_type::ALL_OPERATORS, meta_data::{class_info::access_level::AccesLevel, soul_names::{NamesInternalType, NamesTypeWrapper, NAMES_INTERNAL_TYPE_NUMBER, NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED, SOUL_NAMES}, soul_type::generic::{Generic, GenericValidater}}};
+use std::collections::BTreeMap;
+use crate::meta_data::{class_info::access_level::AccesLevel, soul_names::{NamesInternalType, NamesTypeWrapper, NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED, SOUL_NAMES}, soul_type::generic::Generic};
 
 use super::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, function_modifiers::FunctionModifiers};
 

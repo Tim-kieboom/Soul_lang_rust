@@ -1,9 +1,8 @@
 use bitflags::bitflags;
-use itertools::Itertools;
-use std::{cmp::Ordering, collections::{BTreeMap, BTreeSet, HashMap, HashSet}, io::Result, ops::{Index, IndexMut}, result, sync::{Arc, Mutex}};
+use std::{collections::{BTreeMap, HashMap}, io::Result, result, sync::{Arc, Mutex}};
 use crate::tokenizer::token::TokenIterator;
 
-use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::{CurrentContext, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::{FIRST_FUNCTION_ID, INTERNAL_FUNCTIONS}}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, soul_type::generic::Generic, type_meta_data::TypeMetaData};
+use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::{CurrentContext, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::INTERNAL_FUNCTIONS}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
@@ -82,7 +81,7 @@ impl MetaData {
 
     pub fn new() -> Self {
         let borrow_checker = Arc::new(Mutex::new(BorrowChecker::new()));
-        borrow_checker.lock().unwrap().open_scope(&MetaData::GLOBAL_SCOPE_ID);
+        borrow_checker.lock().unwrap().open_scope(&MetaData::GLOBAL_SCOPE_ID).unwrap();
 
         let mut this = MetaData {  
             type_meta_data: TypeMetaData::new(), 

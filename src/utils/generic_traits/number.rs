@@ -13,6 +13,7 @@ macro_rules! numeric_types {
 /// base trait for numeric types, 
 /// this is a trait derived from num_traits::Num with some added basic trait aften used for numeric types
 /// (you also have to_f64() to cast number to f64 if not impl trait is needed)
+#[allow(dead_code)]
 pub trait Number<T: PartialOrd>:
     Num + 
     Copy + 
@@ -34,7 +35,7 @@ macro_rules! number_impl {
 }
 numeric_types!(number_impl);
 
-
+#[allow(dead_code)]
 pub trait Tof64 {
     fn to_f64(&self) -> f64;
 }
@@ -51,7 +52,7 @@ macro_rules! Tof64_impl {
 }
 numeric_types!(Tof64_impl);
 
-
+#[allow(dead_code)]
 pub trait MinMax<T: PartialOrd> {
     fn min(&self, other: T) -> T;
     fn max(&self, other: T) -> T;
@@ -79,6 +80,7 @@ macro_rules! minmax_impl {
 }
 numeric_types!(minmax_impl);
 
+#[allow(dead_code)]
 trait ConstSizeOf {
     fn size_of() -> usize;
 }

@@ -1,12 +1,12 @@
 use std::io::Result;
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::check_name, soul_type::{primitive_types::{NumberCategory, PrimitiveType}, soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::check_name, soul_type::{primitive_types::{NumberCategory, PrimitiveType}, soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
 use super::get_assignmet::{get_assignment, AssignmentResult};
 
-pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, open_bracket_stack: &mut usize) -> Result<MultiStamentResult<IStatment>> {
+pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let begin_i = iter.current_index();
 
-    let result = internal_get_initialize(iter, meta_data, context, open_bracket_stack);
+    let result = internal_get_initialize(iter, meta_data, context);
     if result.is_err() {
         iter.go_to_index(begin_i);
     }
@@ -14,7 +14,7 @@ pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, contex
     result
 }
 
-fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, open_bracket_stack: &mut usize)  -> Result<MultiStamentResult<IStatment>> {
+fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext)  -> Result<MultiStamentResult<IStatment>> {
     
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
 

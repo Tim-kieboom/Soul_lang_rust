@@ -53,7 +53,7 @@ pub fn get_statment(iter: &mut TokenIterator, meta_data: &mut MetaData, context:
         }
 
         if symbool == "=" {
-            return get_initialize(iter, meta_data, context, open_bracket_stack);
+            return get_initialize(iter, meta_data, context);
         }
     }
 
@@ -62,7 +62,7 @@ pub fn get_statment(iter: &mut TokenIterator, meta_data: &mut MetaData, context:
         .ok_or(err_out_of_bounds(iter))?;
         
     match next.text.as_str() {
-        ":=" => return get_initialize(iter, meta_data, context, open_bracket_stack),
+        ":=" => return get_initialize(iter, meta_data, context),
         "(" => {
             if func_call_or_declaration(iter, meta_data, context)? == FUNCTION_CALL {
                 return get_statment_function_call(iter, meta_data, context);

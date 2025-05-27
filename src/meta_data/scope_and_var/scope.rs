@@ -13,8 +13,6 @@ impl ScopeId {
 
 pub struct Scope {
     id: ScopeId,
-    borrow_checker: Arc<Mutex<BorrowChecker>>,
-
     pub parent: Option<ScopeId>,
     last_child_id: ScopeId,
     pub vars: BTreeMap<String, VarInfo>,
@@ -23,7 +21,6 @@ pub struct Scope {
 impl Scope {
     pub fn new_global(borrow_checker: Arc<Mutex<BorrowChecker>>) -> Self {
         Scope { 
-            borrow_checker,
             id: ScopeId(0), 
             parent: None, 
             last_child_id: ScopeId(0),
@@ -34,7 +31,6 @@ impl Scope {
     pub fn new_child(borrow_checker: Arc<Mutex<BorrowChecker>>, parent: &Scope) -> Self {
         let child_id = parent.last_child_id.increment();
         Scope { 
-            borrow_checker,
             id: child_id, 
             parent: Some(parent.id), 
             last_child_id: child_id,

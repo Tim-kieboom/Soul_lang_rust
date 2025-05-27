@@ -1,7 +1,6 @@
 use core::fmt;
 use std::ops::Index;
 
-use itertools::Itertools;
 
 #[derive(Debug, Clone)]
 pub struct Token {
