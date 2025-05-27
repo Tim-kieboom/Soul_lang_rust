@@ -1,4 +1,5 @@
-use crate::{bitflags, meta_data::soul_names::{NamesTypeModifiers, SOUL_NAMES}};
+use crate::{meta_data::soul_names::{NamesTypeModifiers, SOUL_NAMES}};
+use bitflags::bitflags;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

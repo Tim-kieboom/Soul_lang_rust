@@ -1,6 +1,6 @@
 use super::rulesets::RuleSet;
 use std::collections::BTreeMap;
-use crate::meta_data::{class_info::class_info::ClassInfo, meta_data::MetaData, scope_and_var::scope::ScopeId, soul_type::generic::Generic};
+use crate::meta_data::{class_info::class_info::ClassInfo, scope_and_var::scope::ScopeId, soul_type::generic::Generic};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DefinedGenric {

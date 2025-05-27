@@ -1,4 +1,4 @@
-FunctionBody(main() int {
+FunctionBody(main( str[] args) int {
 
 	Initialize(
 		Assignment(

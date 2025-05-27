@@ -1,6 +1,7 @@
-use crate::{meta_data::meta_data::MetaData, tokenizer::tokenizer::{tokenize_file, tokenize_line}};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use super::file_line::FileLine;
+use crate::{meta_data::meta_data::MetaData, tokenizer::tokenizer::{tokenize_file, tokenize_line}};
 
 const TEST_FILE: &str = r#"
 
@@ -291,7 +292,6 @@ fn test_tokenize_methode() {
 		);
 	}
 }
-
 
 
 

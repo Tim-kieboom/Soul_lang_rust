@@ -10,6 +10,12 @@ use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
 use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
 use crate::meta_data::soul_type::type_checker::type_checker::get_primitive_type_from_literal;
 use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
+use lazy_static::lazy_static;
+use regex::Regex;
+
+lazy_static! {
+    static ref SPLIT_REGEX: Regex = SoulNames::str_vec_to_regex(&SOUL_NAMES.parse_tokens);
+}
 
 pub struct FileLineResult {
     pub source_file: Vec<FileLine>, 
@@ -17,6 +23,7 @@ pub struct FileLineResult {
 }
 
 pub fn read_as_file_lines(path: &str) -> Result<FileLineResult> {
+    
     use std::fs::File;
     use std::io::BufReader;
     let parse_tokens = &SOUL_NAMES.parse_tokens;
@@ -74,39 +81,43 @@ pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commend: &
 }
 
 fn get_token_count(str: &str, strings: &Vec<&str>) -> u64 {
-    strings.iter().filter(|s| *s == &str ).count() as u64
+    // Estimate based on string length and average token size
+    let whitespace_count = str.chars().filter(|c| c.is_whitespace()).count();
+    let non_whitespace = str.len() - whitespace_count;
+    // Assume average token length of 4 characters plus some overhead for special tokens
+    (non_whitespace / 4 + whitespace_count / 2 + strings.len() / 10) as u64
 }
 
 fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
-    let parse_tokens = &SOUL_NAMES.parse_tokens;
-
-    let splits = line.text.split_on(parse_tokens);
-
+    let splits = line.text.split_on(&SOUL_NAMES.parse_tokens);
     let mut line_offset = 0;
     let mut last_is_forward_slash = false;
 
     for (i, text) in splits.iter().enumerate() {
         if text.is_empty() || *text == " " || *text == "\t" {
+            line_offset += text.len();
             continue;
         }
 
         if !needs_to_dot_tokenize(text) {
-            let token = Token{
-                text: text.to_string(), 
-                line_number: line.line_number as usize, 
-                line_offset,
-            };
-
             if *text == "\\" {
                 if i != splits.len() -1 {
-                    return Err(new_soul_error(&token, "'\\' can only be placed at the end of a line"));
+                    return Err(new_soul_error(&Token{
+                        text: text.to_string(), 
+                        line_number: line.line_number as usize, 
+                        line_offset,
+                    }, "'\\' can only be placed at the end of a line"));
                 }
 
                 last_is_forward_slash = true;
                 break;
             }
 
-            tokens.push(token);
+            tokens.push(Token{
+                text: (*text).to_string(), 
+                line_number: line.line_number as usize, 
+                line_offset,
+            });
             line_offset += text.len();
             continue;
         }
@@ -118,34 +129,30 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
                 continue;
             }
 
-            let token = Token{
-                text: split.to_string(), 
+            tokens.push(Token{
+                text: (*split).to_string(), 
                 line_number: line.line_number as usize, 
                 line_offset,
-            };
-
-            tokens.push(token);
+            });
             line_offset += split.len();
 
             if j != num_splits - 1 {
-                let dot_token = Token {
+                tokens.push(Token {
                     text: ".".to_string(),
                     line_number: line.line_number as usize,
                     line_offset,
-                };
-                tokens.push(dot_token);
+                });
                 line_offset += 1;
             }
         }
     } 
 
-    if tokens.len() > 0 && !last_is_forward_slash {
-        let token = Token{
+    if !tokens.is_empty() && !last_is_forward_slash {
+        tokens.push(Token{
             text: "\n".to_string(), 
             line_number: line.line_number as usize, 
             line_offset,
-        };
-        tokens.push(token);
+        });
     }
 
     Ok(())
@@ -153,18 +160,16 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
 
 pub trait SplitOn {fn split_on(&self, delims: &Vec<&str>) -> Vec<&str>;}
 impl SplitOn for &str {
-    fn split_on(&self, delims: &Vec<&str>) -> Vec<&str> {
-        let regex = SoulNames::str_vec_to_regex(&delims);
-        
-        let mut result = Vec::new();
+    fn split_on(&self, _delims: &Vec<&str>) -> Vec<&str> {
+        let mut result = Vec::with_capacity(self.len() / 4); // Estimate average token length of 4
         let mut last_end = 0;
 
-        for find in regex.find_iter(self) {
+        for find in SPLIT_REGEX.find_iter(self) {
             if find.start() > last_end {
                 result.push(&self[last_end..find.start()]);
             }
 
-            result.push(&find.as_str());
+            result.push(find.as_str());
             last_end = find.end();
         }
 
@@ -176,20 +181,17 @@ impl SplitOn for &str {
     }
 }
 
-
 impl SplitOn for String {
-    fn split_on(&self, delims: &Vec<&str>) -> Vec<&str> {
-        let regex = SoulNames::str_vec_to_regex(&delims);
-        
-        let mut result = Vec::new();
+    fn split_on(&self, _delims: &Vec<&str>) -> Vec<&str> {
+        let mut result = Vec::with_capacity(self.len() / 4);
         let mut last_end = 0;
 
-        for find in regex.find_iter(self) {
+        for find in SPLIT_REGEX.find_iter(self) {
             if find.start() > last_end {
                 result.push(&self[last_end..find.start()]);
             }
 
-            result.push(&find.as_str());
+            result.push(find.as_str());
             last_end = find.end();
         }
 

@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, io::{Error, Result}};
 use once_cell::sync::Lazy;
 
 use super::function_declaration::{get_func_names_access_level, FunctionDeclaration};
-use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::{get_arguments, FunctionArguments}}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::token::TokenIterator};
+use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::get_arguments}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::token::TokenIterator};
 
 static STR_ARRAY_TYPE_STRING: Lazy<String> = Lazy::new(||
     SoulType::from(

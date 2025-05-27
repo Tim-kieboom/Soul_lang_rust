@@ -1,24 +1,15 @@
 use std::collections::HashMap;
 use std::result;
 use std::env::Args;
-use itertools::Itertools;
 use once_cell::sync::Lazy;
 
-use crate::bitflags;
-
-bitflags! {
-    pub struct ShowOutputs: u8 {
-        const SHOW_NONE = 0x0;
-        const SHOW_TOKENIZER = 0b0000_0001;
-        const SHOW_ABSTRACT_SYNTAX_TREE = 0b0000_0010;
-        const SHOW_CPP_CONVERTION = 0b0000_0100;
-        const SHOW_ALL = 0b1111_1111;
-    }
-}
+use super::show_output::ShowOutputs;
+use super::show_times::ShowTimes;
 
 pub struct RunOptions {
     pub file_path: String,
     pub is_compiled: bool,
+    pub show_times: ShowTimes,
     pub show_outputs: ShowOutputs,
     pub is_garbage_collected: bool,
 } 
@@ -55,7 +46,15 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             "-showOutput",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
-                options.is_garbage_collected = true;
+                options.show_outputs = ShowOutputs::from_str(input)?;
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "-showTime",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.show_times = ShowTimes::from_str(input)?;
                 Ok(())
             }) as ArgFunc
         ),
@@ -64,16 +63,64 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
 
 impl RunOptions {
     pub fn new(_args: Args) -> result::Result<Self, String> {
-        let options = Self{ file_path: String::new(), is_compiled: false, show_outputs: ShowOutputs::SHOW_NONE, is_garbage_collected: false};
-        
-        let args = _args.collect::<Vec<_>>();
-        if args.len() == 1 {
-            return Ok(options);
-        }
+        let mut options = Self {
+                file_path: String::new(),
+                is_compiled: true,
+                show_outputs: ShowOutputs::SHOW_NONE,
+                show_times: ShowTimes::SHOW_TOTAL,
+                is_garbage_collected: false,
+            };
 
-        
-        
-        Ok(options)
+            let args = _args.collect::<Vec<_>>();
+            if args.len() < 2 {
+                return Err("Missing command (e.g., 'run' or 'build').".to_string());
+            }
+
+            let run_command = &args[1];
+            let allowed_commands = ["run", "build"]; // Add more as needed
+            if !allowed_commands.contains(&run_command.as_str()) {
+                return Err(format!("Unknown command: '{}'. Allowed commands: {:?}", run_command, allowed_commands));
+            }
+
+            let mut errors = Vec::new();
+            let mut file_path_set = false;
+
+            for arg in &args[2..] {
+                if arg.starts_with('-') {
+                    let key = if let Some(idx) = arg.find('=') {
+                        &arg[..idx]
+                    } 
+                    else {
+                        arg.as_str()
+                    };
+
+                    if let Some(func) = OPTIONS.get(key) {
+                        if let Err(e) = func(arg, &mut options) {
+                            errors.push(e);
+                        }
+                    } 
+                    else {
+                        errors.push(format!("Unknown option: '{}'", key));
+                    }
+                } 
+                else if !file_path_set {
+                    options.file_path = arg.clone();
+                    file_path_set = true;
+                } 
+                else {
+                    errors.push(format!("Unexpected positional argument: '{}'", arg));
+                }
+            }
+
+            if !errors.is_empty() {
+                Err(errors.join("\n"))
+            } 
+            else if options.file_path.is_empty() {
+                Err("Missing file path argument.".to_string())
+            } 
+            else {
+                Ok(options)
+            }
     }
 }
 

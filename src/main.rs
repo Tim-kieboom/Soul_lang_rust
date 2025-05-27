@@ -1,38 +1,26 @@
-use std::time::Instant;
-use std::fs::write;
+extern crate Soul_lang_rust;
+
+use std::path::Path;
 use std::io::Result;
-use bitflags::bitflags;
 use itertools::Itertools;
-use meta_data::meta_data::MetaData;
-use tokenizer::token::TokenIterator;
-use run_options::run_options::{RunOptions, ShowOutputs};
-use tokenizer::tokenizer::{read_as_file_lines, tokenize_file};
-use abstract_styntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree_file;
-
-mod utils;
-mod tokenizer;
-mod meta_data;
-mod run_options;
-mod abstract_styntax_tree;
-
-#[cfg(test)]
-mod compiler_tests;
+use std::fs::{self, write};
+use std::{env::args, time::Instant};
+use Soul_lang_rust::meta_data::meta_data::MetaData;
+use Soul_lang_rust::tokenizer::token::TokenIterator;
+use Soul_lang_rust::run_options::show_times::ShowTimes;
+use Soul_lang_rust::run_options::run_options::RunOptions;
+use Soul_lang_rust::run_options::show_output::ShowOutputs;
+use Soul_lang_rust::tokenizer::tokenizer::{read_as_file_lines, tokenize_file};
+use Soul_lang_rust::abstract_styntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree_file;
 
 fn main() {
 
     let start = Instant::now();
 
-    //soul run test.soul -showOutputs=SHOW_ALL
-    let run_option = 
-    // match RunOptions::new(args()) {
-    //     Ok(val) => val,
-    //     Err(err) => {eprintln!("{err}"); std::process::exit(1);},
-    // };
-    RunOptions { 
-        is_compiled: true,
-        file_path: "test.soul".to_string(),
-        is_garbage_collected: false, 
-        show_outputs: ShowOutputs::SHOW_ALL, 
+    //soul run test.soul -showOutput=SHOW_ALL -showTime=SHOW_ALL
+    let run_option = match RunOptions::new(args()) {
+        Ok(val) => val,
+        Err(err) => {eprintln!("{err}"); return;},
     };
 
     if run_option.is_compiled {
@@ -50,9 +38,16 @@ fn main() {
 
 fn run_compiler(run_options: RunOptions) -> Result<()> {
     let mut meta_data = MetaData::new();
+
+    let start = Instant::now();
     let file = read_as_file_lines(&run_options.file_path)?;
     let tokens = tokenize_file(file.source_file, file.estimated_token_count, &mut meta_data)?;
-   
+    let duration = start.elapsed();
+
+    if run_options.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
+        println!("tokenizer time: {:.2?}", duration);
+    }
+
     if run_options.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {       
         let tokens_string = tokens
             .iter()
@@ -61,46 +56,40 @@ fn run_compiler(run_options: RunOptions) -> Result<()> {
             .join(" ")
             .replace("\n ", "\n");
         
-        write("output/tokenizer.soul", tokens_string)?;
+        let file_path = "output/tokenizer.soul";
+        if let Some(parent) = Path::new(file_path).parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        write(file_path, tokens_string)?;
     }
 
 
+    let start = Instant::now();
     let mut iter = TokenIterator::new(tokens);
     let tree = get_abstract_syntax_tree_file(&mut iter, &mut meta_data)?;
+    let duration = start.elapsed();
+
+    if run_options.show_times.contains(ShowTimes::SHOW_ABSTRACT_SYNTAX_TREE) {
+        println!("abstractSyntaxTree parser time: {:.2?}", duration);
+    }
 
     if run_options.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
         let tree_string = tree.main_nodes
             .iter()
             .map(|node| node.to_string(true))
             .join("\n");
-        
-        write("output/abstractSyntaxTree.soul", tree_string)?;
+
+        let file_path = "output/abstractSyntaxTree.soul";
+        if let Some(parent) = Path::new(file_path).parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        write(file_path, tree_string)?;
     }
 
     Ok(())
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

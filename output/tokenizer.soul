@@ -1,5 +1,5 @@
-main ( ) int { 
-foo := 2 ** 2 
+main ( str [] args ) int { 
+foo := ( 2 ** 2 ) 
 bar := 2 
 Println ( ) 
 } 
