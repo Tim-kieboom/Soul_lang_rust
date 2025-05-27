@@ -62,8 +62,39 @@ impl Scope {
 
         None
     }
-}
 
+    pub fn try_get_variable_mut<'b>(self_id: &ScopeId, var_name: &String, scopes: &'b mut HashMap<ScopeId, Scope>) -> Option<&'b mut VarInfo> {
+            
+        let mut current_id = *self_id;
+
+        loop {
+            let (found, parent) = {
+                let scope = scopes.get(&current_id)?;
+                (scope.vars.contains_key(var_name), scope.parent)
+            };
+
+            if found {
+                return scopes.get_mut(&current_id)?.vars.get_mut(var_name);
+            }
+
+            if let Some(next_parent) = parent {
+                current_id = next_parent;
+            } else {
+                break;
+            }
+        }
+
+        None
+    }
+
+    pub fn try_get_variable_current_scope_only<'b>(&'b self, var_name: &String) -> Option<&'b VarInfo> {
+        if let Some(var) = self.vars.get(var_name) {
+            return Some(var);
+        }
+
+        None
+    }
+}
 
 
 

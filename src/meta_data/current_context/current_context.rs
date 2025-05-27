@@ -1,15 +1,14 @@
-use std::collections::{BTreeMap, BTreeSet};
-
-use crate::meta_data::{class_info::class_info::ClassInfo, scope_and_var::scope::ScopeId, soul_type::generic::Generic};
 use super::rulesets::RuleSet;
+use std::collections::BTreeMap;
+use crate::meta_data::{class_info::class_info::ClassInfo, meta_data::MetaData, scope_and_var::scope::ScopeId, soul_type::generic::Generic};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DefinedGenric {
     pub define_type: String,
     pub generic: Generic,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CurrentGenerics {
     pub scope_generics: BTreeMap<String, Generic>,
     pub function_call_defined_generics: Option<BTreeMap<String, DefinedGenric>>,
@@ -25,7 +24,7 @@ impl CurrentGenerics {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CurrentContext {
     pub rulesets: RuleSet,
     pub current_scope_id: ScopeId,
@@ -43,5 +42,14 @@ impl CurrentContext {
             current_generics: CurrentGenerics::new(),
         }
     }
+
+    pub fn is_in_global_scope(&self) -> bool {
+        self.current_scope_id == MetaData::GLOBAL_SCOPE_ID
+    }
 }
+
+
+
+
+
 

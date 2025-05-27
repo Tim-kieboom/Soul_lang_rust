@@ -1,3 +1,5 @@
-main ( ) { 
- Println ( __Soul_c_str_0__ ) 
- } 
+main ( ) int { 
+foo := 2 ** 2 
+bar := 2 
+Println ( ) 
+} 

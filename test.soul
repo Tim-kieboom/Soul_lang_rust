@@ -1,4 +1,25 @@
-main() {
-    Println<str>("hello world")
+// const number = 1;
+// Literal gravity = 9.81;
+
+// int sum(int b) int {
+// 	return *this + b
+// }
+
+// main() {
+	
+// 	sum(int a, int b) int {
+// 		return a + b
+// 	}
+
+// 	num := sum(1, 2)
+// 	num = 1.sum(2)
+// 	Println("hello world")
+// 	Println(f"1 + 2 = {num}")
+// }
+
+main() int {
+	foo := 2 ** 2
+	bar := 2
+	Println()
 }
 

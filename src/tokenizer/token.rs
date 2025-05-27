@@ -26,6 +26,10 @@ impl TokenIterator {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.tokens.len()
+    }
+
     pub fn get_tokens_text(&self) -> Vec<&str> {
         self.tokens.iter()
                    .map(|token| token.text.as_str())

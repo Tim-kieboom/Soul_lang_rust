@@ -1,4 +1,5 @@
 use std::fmt::format;
+use std::io::Error;
 use std::{io::Result, result};
 use super::generic;
 use super::primitive_types::{DuckType, NumberCategory};
@@ -143,11 +144,11 @@ impl SoulType {
             }
         }
         
-        if !self.are_modifiers_covertable(&to_type) {
+        if !from_type.are_modifiers_covertable(&to_type) {
             return false;
         }
 
-        if !self.are_wrapper_compatible(&to_type) {
+        if !from_type.are_wrapper_compatible(&to_type) {
             return false;
         }
 
@@ -353,6 +354,21 @@ impl SoulType {
         Ok((list_type, string_builder))
     }
 
+    pub fn try_from_iterator<'a>(
+        iter: &mut TokenIterator, 
+        type_meta_data: &TypeMetaData, 
+        generics: &CurrentGenerics,
+        is_wrong_type: &mut bool,
+    ) -> Result<SoulType> {
+        let begin_index = iter.current_index();
+
+        let result = get_from_iterator(iter, type_meta_data, generics, Some(is_wrong_type));
+        if result.is_err() {
+            iter.go_to_index(begin_index);
+        }
+        
+        result
+    }
 
     pub fn from_iterator<'a>(
         iter: &mut TokenIterator, 
@@ -361,7 +377,7 @@ impl SoulType {
     ) -> Result<SoulType> {
         let begin_index = iter.current_index();
 
-        let result = get_from_iterator(iter, type_meta_data, generics);
+        let result = get_from_iterator(iter, type_meta_data, generics, None);
         if result.is_err() {
             iter.go_to_index(begin_index);
         }
@@ -606,6 +622,10 @@ impl SoulType {
         self.modifiers.contains(TypeModifiers::Literal)
     }
 
+    pub fn is_const(&self) -> bool {
+        self.modifiers.contains(TypeModifiers::Const)
+    }
+
     pub fn is_any_ref(&self) -> bool {
         if self.wrappers.is_empty() {
             false
@@ -777,7 +797,9 @@ fn get_from_iterator(
     iter: &mut TokenIterator, 
     type_meta_data: &TypeMetaData, 
     generics: &CurrentGenerics,
+    mut is_wrong_type: Option<&mut bool>
 ) -> Result<SoulType> { 
+    
     let mut soul_type = SoulType::new(String::new());
 
     loop {
@@ -809,7 +831,14 @@ fn get_from_iterator(
             return Err(new_soul_error(iter.current(), "unexpected end while trying to get Type"));
         }
 
-        let generic_defines = get_defined_generic(iter, type_meta_data, &generics, &mut soul_type)?;
+        let generic_defines = get_defined_generic(iter, type_meta_data, &generics, &mut soul_type)
+            .map_err(|err| {
+                if let Some(wrong_type) = &mut is_wrong_type {
+                    **wrong_type = true;
+                } 
+                err
+            })?;
+
         soul_type.generic_defines = generic_defines;
     }
 
@@ -830,6 +859,10 @@ fn get_from_iterator(
         }
 
         if let Err(msg) = soul_type.add_wrapper(wrap) {
+            if let Some(wrong_type) = is_wrong_type {
+                *wrong_type = true;
+            }
+
             return Err(new_soul_error(iter.current(), msg.as_str()));
         }
 

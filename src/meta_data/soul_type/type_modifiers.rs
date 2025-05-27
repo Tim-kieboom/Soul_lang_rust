@@ -13,6 +13,7 @@ bitflags! {
 }
 
 impl TypeModifiers {
+
     pub fn from_str(str: &str) -> TypeModifiers {
         match str {
             val if val == SOUL_NAMES.get_name(NamesTypeModifiers::Constent) => TypeModifiers::Const,
@@ -21,6 +22,10 @@ impl TypeModifiers {
             val if val == SOUL_NAMES.get_name(NamesTypeModifiers::Static) => TypeModifiers::Static,
             _ => TypeModifiers::Default,
         }
+    }
+
+    pub fn is_mutable(&self) -> bool {
+        !(self.contains(TypeModifiers::Const) || self.contains(TypeModifiers::Literal))
     }
 
     pub fn to_str(&self) -> String {

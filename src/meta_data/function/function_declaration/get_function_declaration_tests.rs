@@ -1,5 +1,5 @@
 use std::{collections::BTreeMap, io::Result};
-use super::{function_declaration::FunctionDeclaration, get_function_declaration::get_function_declaration};
+use super::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration};
 use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{class_info::access_level::AccesLevel, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, internal_functions::FIRST_FUNCTION_ID}, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 
@@ -12,7 +12,7 @@ fn try_data_simple_get_function(line: &str, meta_data: &mut MetaData) -> Result<
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     let mut iter = TokenIterator::new(tokens); 
 
-    Ok((get_function_declaration(&mut iter, meta_data, &mut context), (iter, context)))
+    Ok((add_function_declaration(&mut iter, meta_data, &mut context), (iter, context)))
 }
 
 fn try_simple_get_function(line: &str) -> Result<FunctionDeclaration> {

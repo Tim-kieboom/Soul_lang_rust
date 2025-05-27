@@ -3,7 +3,7 @@ use itertools::Itertools;
 use std::{cmp::Ordering, collections::{BTreeMap, BTreeSet, HashMap, HashSet}, io::Result, ops::{Index, IndexMut}, result, sync::{Arc, Mutex}};
 use crate::tokenizer::token::TokenIterator;
 
-use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::{CurrentContext, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::{FIRST_FUNCTION_ID, INTERNAL_FUNCTIONS}}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, soul_type::generic::Generic, type_meta_data::TypeMetaData};
+use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::{CurrentContext, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::{FIRST_FUNCTION_ID, INTERNAL_FUNCTIONS}}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, soul_type::generic::Generic, type_meta_data::TypeMetaData};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
@@ -126,14 +126,18 @@ impl MetaData {
         self.scope_store.get_mut(id)
                         .unwrap()
                         .vars.insert(var_info.name.clone(), var_info);
-        
-        // self.borrow_checker.lock().unwrap().de
     }
 
     pub fn try_get_variable(&self, var_name: &String, scope_id: &ScopeId) -> Option<&VarInfo> {
-        let scope = &self.scope_store.get(&scope_id)?;
+        let scope = self.scope_store.get(&scope_id)?;
 
         scope.try_get_variable(var_name, &self.scope_store)
+    }
+
+    pub fn try_get_variable_mut(&mut self, var_name: &String, scope_id: &ScopeId) -> Option<&mut VarInfo> {
+        self.scope_store.get_mut(&scope_id)?;
+
+        Scope::try_get_variable_mut(scope_id, var_name, &mut self.scope_store)
     }
 
     pub fn is_variable(&self, var_name: &String, scope_id: &ScopeId) -> bool {
@@ -217,7 +221,7 @@ impl MetaData {
         self.function_store.from_name(&get_methode_map_entry(name, &this_class.name)).is_some()
     }
 
-    pub fn new_scope(&mut self, parent_id: ScopeId) -> result::Result<ScopeId, String> {
+    pub fn open_scope(&mut self, parent_id: ScopeId) -> result::Result<ScopeId, String> {
         let parent = self.scope_store.get(&parent_id)
             .ok_or("Internal Error: can not get parent scope from scope_store")?;
         let child = Scope::new_child(Arc::clone(&self.borrow_checker), &parent);
@@ -227,6 +231,12 @@ impl MetaData {
 
         Ok(child_id)
     }
+
+    pub fn close_scope(&mut self, id: &ScopeId) -> result::Result<DeleteList, String> {
+        self.scope_store.remove(id);
+        self.borrow_checker.lock().unwrap().close_scope(id)
+    }
+
 }
 
 fn new_scope_store(borrow_checker: &Arc<Mutex<BorrowChecker>>) -> HashMap<ScopeId, Scope> {
@@ -239,5 +249,3 @@ fn new_scope_store(borrow_checker: &Arc<Mutex<BorrowChecker>>) -> HashMap<ScopeI
 fn get_methode_map_entry(func_name: &str, this_class: &str) -> String {
     format!("{}#{}", this_class, func_name)
 }
-
-

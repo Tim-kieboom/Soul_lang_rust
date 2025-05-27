@@ -1,8 +1,8 @@
 use std::{io::{Error, Result}, slice::Iter};
 use crate::{meta_data::convert_soul_error::convert_soul_error::new_soul_error, tokenizer::{file_line::FileLine, token::Token}};
 
-const QOUTE: &str = "\"";
-const IN_STR_QOUTE: &str = "\\\"";
+const QUOTE: &str = "\"";
+const IN_STR_QUOTE: &str = "\\\"";
 
 struct FormatSpan {
     pub line_index: usize,
@@ -11,22 +11,26 @@ struct FormatSpan {
 }
 
 #[allow(dead_code)]
-pub fn format_str_file(source_file: Vec<FileLine>) -> Result<Vec<FileLine>> {
+pub fn format_str_file<I>(_source_file: I) -> Result<Vec<FileLine>> 
+where
+    I: Iterator<Item = FileLine>
+{
+    let mut source_file = _source_file.collect::<Vec<_>>();
     let num_qouts = numberof_qoutes(&source_file);
     let mut raw_format_strs = Vec::with_capacity(num_qouts/2);
-
+    
     let qoute_iter = indexesof_qoutes(&source_file);
+    
     for (i, (qoute_indexes, line)) in qoute_iter.enumerate() {
         raw_format_strs = get_format_str(&line, i, &qoute_indexes, raw_format_strs)?;
     }
 
-    let mut new_source_file = source_file.clone();
     for span in &raw_format_strs {
-        let line = &mut new_source_file[span.line_index];
+        let line = &mut source_file[span.line_index];
         line.text = f_str_to_soul_formatter(&line, &span)?; 
     }
 
-    Ok(new_source_file)
+    Ok(source_file)
 }
 
 #[allow(dead_code)]
@@ -112,7 +116,7 @@ fn get_end_of_string(line: &FileLine, index: usize, qoute_indexes: &mut Iter<usi
     else {
         Err(new_soul_error( 
             &Token{text: String::new(), line_number: line.line_number as usize, line_offset: index}, 
-            format!("string has no end (probably missing a '{}')", QOUTE).as_str()
+            format!("string has no end (probably missing a '{}')", QUOTE).as_str()
         ))
     }
 }
@@ -139,35 +143,41 @@ fn err_string_in_format_arg(line: &FileLine, offset: usize) -> Error {
 }
 
 pub fn indexesof_qoutes_line<'a>(line: &'a FileLine) -> Vec<usize> {
-    line.text.replace(IN_STR_QOUTE, "##")
-             .match_indices(QOUTE)
+    line.text.replace(IN_STR_QUOTE, "##")
+             .match_indices(QUOTE)
              .map(|(start, _)| start)
              .collect()
 }
 
-pub fn indexesof_qoutes<'a>(source_file: &'a Vec<FileLine>) -> impl Iterator<Item = (Vec<usize>, FileLine)> {
-    source_file.iter()
-               .map(|line| FileLine{text:line.text.replace(IN_STR_QOUTE, "##"), line_number:line.line_number})
-               .map(|line| (line.text.match_indices(QOUTE).map(|(start, _)| start).collect::<Vec<usize>>(), line))
+pub fn indexesof_qoutes(source_file: &Vec<FileLine>) -> impl Iterator<Item = (Vec<usize>, FileLine)>  {
+    source_file.
+        iter()
+        .map(|line| {
+            let new_text = line.text.replace(IN_STR_QUOTE, "##");
+            let new_line = FileLine {
+                text: new_text.clone(),
+                line_number: line.line_number,
+            };
+            let indices = new_text.match_indices(QUOTE).map(|(start, _)| start).collect::<Vec<usize>>();
+            (indices, new_line)
+        })
 }
 
 pub fn numberof_qoutes_line(line: &FileLine) -> usize {
-    let num_all_qoutes: usize = line.text.matches(QOUTE).count();
-    let num_in_str_qoutes: usize = line.text.matches(IN_STR_QOUTE).count();
+    let num_all_qoutes: usize = line.text.matches(QUOTE).count();
+    let num_in_str_qoutes: usize = line.text.matches(IN_STR_QUOTE).count();
 
     num_all_qoutes - num_in_str_qoutes
 }
 
-pub fn numberof_qoutes(source_file: &Vec<FileLine>) -> usize {
-    let num_all_qoutes: usize = 
-        source_file.iter()
-                   .map(|line| line.text.matches(QOUTE).count())
-                   .sum();
-
-    let num_in_str_qoutes: usize = 
-        source_file.iter()
-                   .map(|line| line.text.matches(IN_STR_QOUTE).count())
-                   .sum();
-
-    num_all_qoutes - num_in_str_qoutes
+pub fn numberof_qoutes(source_file: &Vec<FileLine>) -> usize 
+{
+    source_file
+        .iter()
+        .map(|line| {
+            let all_quotes = line.text.matches(QUOTE).count();
+            let in_str_quotes = line.text.matches(IN_STR_QUOTE).count();
+            all_quotes - in_str_quotes
+        })
+        .sum()
 }

@@ -1,22 +1,17 @@
 use super::super::file_line::FileLine;
 
-pub fn remove_comment_file(source_file: Vec<FileLine>) -> Vec<FileLine> {
+pub fn remove_comment_file(source_file: Vec<FileLine>) -> impl Iterator<Item = FileLine> {
     let mut is_multi_line = false;
     let mut in_string = false;
     let mut string_delimiter = char::from_u32(0).unwrap();
 
-    let mut new_source_file = Vec::with_capacity(source_file.len());
-
-    for line in source_file {
-        let str = remove_comment(&line, &mut string_delimiter, &mut in_string, &mut is_multi_line);
-        if str.len() == 0 {
-            continue;
-        }
-
-        new_source_file.push(FileLine {text: str, line_number: line.line_number});
-    }
-
-    new_source_file
+    source_file
+        .into_iter()
+        .map(move |mut line| {
+            line.text = remove_comment(&line, &mut string_delimiter, &mut in_string, &mut is_multi_line); 
+            line
+        })
+        .filter(|line| !line.text.is_empty())
 }
 
 pub fn remove_comment_line(mut line: FileLine, in_multi_line_comment: &mut bool) -> FileLine {

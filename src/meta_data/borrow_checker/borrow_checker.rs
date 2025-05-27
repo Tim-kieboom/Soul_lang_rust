@@ -6,6 +6,17 @@ pub type BorrowResult<T> = std::result::Result<T, String>;
 pub type DeleteList = Vec<String>;
 
 pub struct BorrowId<'a>(pub &'a str, pub &'a ScopeId);
+impl<'a> BorrowId<'a> {
+    pub fn new(name: &'a str, scope_id: &'a ScopeId) -> Self {
+        Self {
+            0: name,
+            1: scope_id,
+        }
+    }
+            
+}
+
+
 pub trait BorrowCheckedTrait {
     /// Registers a new owner (variable) in the borrow checker.
     ///
@@ -196,31 +207,36 @@ impl BorrowCheckedTrait for BorrowChecker {
 
     fn close_scope(&mut self, scope_id: &ScopeId) -> BorrowResult<DeleteList> {
 
-        let mut delete_list = DeleteList::new();
-
         let scope = self.borrow_store.consume_scope(scope_id)?;
 
-        for (name, id) in scope {
-            let parent = self.borrow_store.get_var_mut(&id)
-                .ok_or(format!("Internal Error: var: '{}' not found", name))?
-                .parent.clone();
-
-            let (valid, _, _) = self.invalidate_owner(id);
-
-            if parent.is_none() {
-                if valid {
-                    delete_list.push(name.clone());
-                }
-            } 
-
-            self.borrow_store.remove_var(&id)?;
-        }
-
-        Ok(delete_list)
+        scope.consume_store()
+            .into_iter()
+            .rev()
+            .filter_map(|(name, id)| filter_delete_list(name, id, self) )
+            .collect::<BorrowResult<DeleteList>>()
     }
 
 }
  
+fn filter_delete_list(name: String, id: VarId, this: &mut BorrowChecker) -> Option<Result<String, String>> {
+    let var = match this.borrow_store.get_var_mut(&id) {
+        Some(var) => var,
+        None => return Some(Err(format!("Internal Error: var: '{}' not found", name))),
+    };
+
+    let parent = var.parent.clone();
+    let (valid, _, _) = this.invalidate_owner(id);
+
+    if parent.is_some() || !valid {
+        return None;
+    }
+
+    match this.borrow_store.remove_var(&id) {
+        Ok(_) => Some(Ok(name)),
+        Err(e) => Some(Err(e)),
+    }
+}
+
 impl BorrowChecker {
     
     fn get_var_id(&self, borrow_var: &BorrowId) -> BorrowResult<VarId> {

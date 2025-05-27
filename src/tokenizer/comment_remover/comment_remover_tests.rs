@@ -72,7 +72,7 @@ fn does_remove_comment_file_work() {
     let source_file = str_to_file_lines(TEST_FILE);
     let result = remove_comment_file(source_file);
 
-    let file_result = to_string(result);
+    let file_result = to_string(result.collect::<Vec<_>>());
 
     assert!(
         file_result == SHOULD_BE_RESULT,

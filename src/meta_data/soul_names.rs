@@ -50,6 +50,8 @@ pub struct SoulNames<'a> {
     pub iligal_names: HashSet<&'a str>,
     #[serde(borrow)]
     pub other_keywords_names: HashMap<NamesOtherKeyWords, &'a str>,
+    #[serde(borrow)]
+    pub assign_symbools: HashMap<NamesAssignSymbools, &'a str>,
 }
 
 impl<'a> SoulNames<'a> {
@@ -119,7 +121,18 @@ impl<'a> SoulNames<'a> {
             (NamesOperator::BitWiseAnd, "&"),
             (NamesOperator::BitWiseXor, "^"),
         ]);
-        
+
+        let assign_symbools = HashMap::from([
+            (NamesAssignSymbools::Assign, "="),
+            (NamesAssignSymbools::AddAssign, "+="),
+            (NamesAssignSymbools::MulAssign, "*="),
+            (NamesAssignSymbools::DivAssign, "/="),
+            (NamesAssignSymbools::ModuloAssign, "%="),
+            (NamesAssignSymbools::BitAndAssign, "&="),
+            (NamesAssignSymbools::BitOrAssign, "|="),
+            (NamesAssignSymbools::BotXorAssign, "^="),
+        ]);
+
         let other_keywords_names = HashMap::from([
             (NamesOtherKeyWords::If, "if"),
             (NamesOtherKeyWords::Esle, "else"),
@@ -169,10 +182,11 @@ impl<'a> SoulNames<'a> {
         SoulNames {
             type_wappers,
             parse_tokens, 
+            iligal_names,
             type_modifiers, 
             internal_types,
             operator_names,
-            iligal_names,
+            assign_symbools,
             other_keywords_names,
         }
     }
@@ -262,6 +276,19 @@ pub enum NamesOperator {
     LogicalAnd,
 }
 impl_soul_name_enum!(NamesOperator, operator_names);
+
+#[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
+pub enum NamesAssignSymbools {
+    Assign,
+    AddAssign,
+    MulAssign,
+    DivAssign,
+    ModuloAssign,
+    BitAndAssign,
+    BitOrAssign,
+    BotXorAssign,
+}
+impl_soul_name_enum!(NamesAssignSymbools, assign_symbools);
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NamesTypeWrapper {

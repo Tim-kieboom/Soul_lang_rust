@@ -1,13 +1,11 @@
 use bitflags::bitflags;
-
 bitflags! {
     #[derive(Debug, Clone)]
     pub struct VarFlags: u8 {
         const Empty = 0;
-        const None = 0b0000_0001;
         const IsAssigned = 0b0000_0010;
-        const IsLiteral = 0b0000_0100;
-        const IsBorrowchecked = 0b0000_1000;
+        const IsMutable = 0b0000_0100;
+        const IsLiteral = 0b0000_1000;
     }
 }
 
@@ -41,11 +39,13 @@ impl VarInfo {
         self.var_flags.contains(VarFlags::IsAssigned)
     }
 
+    pub fn is_mutable(&self) -> bool {
+        self.var_flags.contains(VarFlags::IsMutable)
+    }
     pub fn is_literal(&self) -> bool {
         self.var_flags.contains(VarFlags::IsLiteral)
     }
-
-    pub fn is_borrow_checked(&self) -> bool {
-        self.var_flags.contains(VarFlags::IsBorrowchecked)
-    }
 }
+
+
+

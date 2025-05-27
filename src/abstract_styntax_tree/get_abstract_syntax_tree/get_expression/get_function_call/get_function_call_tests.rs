@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, debug_println, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::{function_declaration::FunctionDeclaration, get_function_declaration::get_function_declaration}, internal_functions::INTERNAL_FUNCTIONS}, meta_data::{self, MetaData}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, debug_println, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration}, internal_functions::INTERNAL_FUNCTIONS}, meta_data::{self, MetaData}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 use std::{collections::{BTreeMap, HashMap}, io::Result, ops::Deref};
 
 use super::get_function_call::get_function_call;
@@ -10,7 +10,7 @@ fn try_store_function(line: &str, meta_data: &mut MetaData, context: &mut Curren
     let tokens = tokenize_line(FileLine{text: line.to_string(), line_number: 0}, 0, &mut dummy, meta_data)?;
     let mut iter = TokenIterator::new(tokens);
 
-    let function = get_function_declaration(&mut iter, meta_data, context)?;
+    let function = add_function_declaration(&mut iter, meta_data, context)?;
 
     Ok(function)
 }

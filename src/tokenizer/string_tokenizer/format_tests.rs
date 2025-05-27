@@ -43,7 +43,7 @@ fn to_string(file_lines: Vec<FileLine>) -> String {
 
 #[test]
 fn does_format_str_file_work() {
-    let result = format_str_file(str_to_file_lines(TEST_FILE));
+    let result = format_str_file(str_to_file_lines(TEST_FILE).into_iter());
     assert!(result.is_ok(), "err: {}", result.unwrap_err());
 
     let file_result = to_string(result.unwrap());
@@ -75,7 +75,7 @@ fn does_format_str_line_work() {
 fn formatter_does_not_allow_string_literals_as_format_argument() {
     const FILE: &str = "main int() { println(f\"{\"hello\"} world\") }";
 
-    let result = format_str_file(str_to_file_lines(FILE));
+    let result = format_str_file(str_to_file_lines(FILE).into_iter());
     
     assert!(result.is_err(), "test should have thrown error (so allowes c_strings as arg in f_string) ok: {:#?}", result.unwrap());
 }

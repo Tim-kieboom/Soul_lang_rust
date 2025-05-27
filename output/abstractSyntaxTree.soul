@@ -1,0 +1,14 @@
+FunctionBody(main() int {
+
+	Initialize(
+		Assignment(
+			Variable(int foo) = BinaryExpression(Literal(Literal untypedInt 2) ** Literal(Literal untypedInt 2), type: Literal untypedInt)
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(int bar) = Literal(Literal untypedInt 2)
+		)
+	)
+	FunctionCall(Println())
+})

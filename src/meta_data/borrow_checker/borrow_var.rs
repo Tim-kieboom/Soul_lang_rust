@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::format};
+use std::{collections::{BTreeMap, HashMap}, fmt::format};
 use crate::meta_data::scope_and_var::scope::ScopeId;
 
 use super::borrow_checker::BorrowResult;
@@ -33,7 +33,25 @@ impl BorrowVar {
     }
 }
 
-type VarIdStore = HashMap<String, VarId>;
+#[derive(Debug)]
+pub struct VarIdStore{ store: BTreeMap<String, VarId> }
+impl VarIdStore {
+    pub fn new() -> Self {
+        Self { store: BTreeMap::new() }
+    }
+
+    pub fn get(&self, key: &str) -> Option<&VarId> {
+        self.store.get(key)
+    }
+
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut VarId> {
+        self.store.get_mut(key)
+    }
+
+    pub fn consume_store(self) -> BTreeMap<String, VarId> {
+        self.store
+    }
+}
 
 #[derive(Debug)]
 pub struct BorrowVarStore {
@@ -56,7 +74,7 @@ impl BorrowVarStore {
             return Err(format!("Internal error: borrow_store already has scope: '{}'", id.0));
         }
 
-        self.scope_store.insert(*id, HashMap::new());
+        self.scope_store.insert(*id, VarIdStore::new());
         Ok(())
     }
 
@@ -67,13 +85,17 @@ impl BorrowVarStore {
         let next_id = self.next_var_id;
         self.next_var_id.increment();
 
-        scope.insert(borrow_var.name.clone(), next_id);
+        scope.store.insert(borrow_var.name.clone(), next_id);
         self.vars.insert(next_id, borrow_var);
         Ok(next_id)
     }
     
     pub fn get_scope(&self, id: &ScopeId) -> Option<&VarIdStore> {
         self.scope_store.get(id)
+    }
+
+    pub fn get_scope_mut(&mut self, id: &ScopeId) -> Option<&mut VarIdStore> {
+        self.scope_store.get_mut(id)
     }
 
     pub fn get_var(&self, id: &VarId) -> Option<&BorrowVar> {

@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 
 bitflags! {
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq)]
     pub struct FieldAccess: u8 {
         const EMPTY = 0b0000_0000;
         const PUBLIC_GETTER = 0b0000_0001;
@@ -11,7 +11,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FieldInfo {
     pub name: String,
     pub type_name: String,

@@ -1,9 +1,10 @@
+use core::fmt;
 use std::fmt::Display;
 use bitflags::bitflags;
 use serde::Serializer;
 
 bitflags! {
-    #[derive(Debug, Clone)]
+    #[derive(Clone, PartialEq)]
     pub struct RuleSet: u8  {
         const Default = 0b0000_0000;
         const Const = 0b0000_0001;
@@ -14,27 +15,31 @@ bitflags! {
     } 
 }
 
-impl Display for RuleSet {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // List of all flag names and their corresponding values
-        let flags = [
-            (RuleSet::Const, "Const"),
-            (RuleSet::Literal, "Literal"),
-            (RuleSet::Unsafe, "Unsafe"),
-            (RuleSet::BorrowChecked, "BorrowChecked"),
-            (RuleSet::GarbageCollected, "GarbageCollected"),
-        ];
-
-        // Collect all set flag names
-        let names: Vec<&str> = flags
-            .iter()
-            .filter_map(|(flag, name)| if self.contains(flag.clone()) { Some(*name) } else { None })
-            .collect();
-
-        if names.is_empty() {
-            write!(f, "Default")
-        } else {
-            write!(f, "{}", names.join(" | "))
-        }
+impl RuleSet {
+    pub fn is_mutable(&self) -> bool {
+        !(self.contains(RuleSet::Literal) || self.contains(RuleSet::Const))
     }
 }
+
+
+impl fmt::Debug for RuleSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+
+        let mut flags = vec![];
+        if self.is_empty() {
+            flags.push("Default");
+        } 
+        else {
+            if self.contains(RuleSet::Const)            { flags.push("Const"); }
+            if self.contains(RuleSet::Literal)          { flags.push("Literal"); }
+            if self.contains(RuleSet::Unsafe)           { flags.push("Unsafe"); }
+            if self.contains(RuleSet::BorrowChecked)    { flags.push("BorrowChecked"); }
+            if self.contains(RuleSet::GarbageCollected) { flags.push("GarbageCollected"); }
+        }
+
+        f.debug_tuple("RuleSet")
+            .field(&flags.join(" | "))
+            .finish()
+    }
+}
+

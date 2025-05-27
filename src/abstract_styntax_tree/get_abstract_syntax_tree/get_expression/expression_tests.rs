@@ -374,7 +374,7 @@ fn test_get_expression_variable() {
     check_variable_expression(expr_result, &global_var.name, &global_var.type_name);
 
 
-    context.current_scope_id = meta_data.new_scope(context.current_scope_id).unwrap();
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id).unwrap();
     meta_data.add_to_scope(scope_var.clone(), &context.current_scope_id);
     
     const SCOPE_VAR: &str = "scope1;";
@@ -904,15 +904,7 @@ fn test_get_expression_binary_expression_no_return_type() {
     const PRINTLN_INNER: &str = "Println(Print(1))";
     res = try_simple_get_expression(PRINTLN_INNER, None);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "at 1:11; !!error!! binairy expression: 'Literal(1, type: Literal untypedInt) + Println()' lefts type is 'none' which is not a valid type for binairy expressions");
-}
-
-#[test]
-fn test_get_expression_lit_tuple() {
-    const LIT_TUPLE_STR_INT: &str = "(\"key\", 1)";
-    const LIT_TUPLE_INT_FLOAT: &str = "(1, 1.1)";
-    
-    todo!();
+    assert_eq!(res.unwrap_err().to_string(), "at 1:16; !!error!! while trying to get functionCall of: 'Println'\nat 1:16; !!error!! argument number: 1, 'Print(Literal(1, type: Literal untypedInt))' is of type 'none', you can not have a 'none' type in an argument");
 }
 
 #[test]
@@ -1003,9 +995,25 @@ fn test_get_expression_lit_array() {
     
     expr_result = simple_get_expression(LIT_STR_ARRAY, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[__Soul_c_str_0__,__Soul_c_str_1__]", &lit_str_array_type);
+    check_literal_expression(expr_result, "[__Soul_c_str_1__,__Soul_c_str_0__]", &lit_str_array_type);
+}
+
+#[test]
+fn test_get_expression_lit_tuple() {
+    const LIT_TUPLE_STR_INT: &str = "(\"key\", 1)";
+    const LIT_TUPLE_INT_FLOAT: &str = "(1, 1.1)";
     
-    todo!("\n\t[(1, 2), (1, 2)] impl tuple array\n\t[6 => 0] impl init arrays");
+    todo!();
+}
+
+#[test]
+fn test_get_expression_tuple_array() {
+    todo!("tuple arrays not yet impl [(1, 2), (1, 2)]")
+}
+
+#[test]
+fn test_get_expression_init_array() {
+    todo!("init arrays not yet impl, [5 => 0]")
 }
 
 

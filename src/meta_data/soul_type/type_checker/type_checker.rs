@@ -140,7 +140,7 @@ pub fn is_ivariable_literal(
 ) -> Result<bool> {
     match var {
         IVariable::Variable{ name: _, type_name } => return is_type_name_literal(&type_name, token, meta_data, generics),
-        IVariable::MemberExpression{ parent, expression: _ } => {
+        IVariable::MemberExpression{ parent, .. } => {
 
             if let IVariable::Variable{ name: _, type_name } = &**parent {
                 return is_type_name_literal(&type_name, token, meta_data, generics);

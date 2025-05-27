@@ -14,23 +14,22 @@ static STR_ARRAY_TYPE_STRING: Lazy<String> = Lazy::new(||
     ).to_string()
 );
 
-pub fn get_function_declaration(
+pub fn add_function_declaration(
     iter: &mut TokenIterator,
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
 ) -> Result<FunctionDeclaration> {
     let begin_index = iter.current_index();
 
-    match _get_function_declaration(iter, meta_data, context) {
-        Ok(val) => Ok(val),
-        Err(err) => {
-            iter.go_to_index(begin_index); 
-            return Err(err);
-        },
+    let result = internal_function_declaration(iter, meta_data, context);
+    if result.is_err() {
+        iter.go_to_index(begin_index); 
     }
+
+    result
 }
 
-fn _get_function_declaration(
+fn internal_function_declaration(
     iter: &mut TokenIterator,
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
@@ -97,7 +96,7 @@ fn _get_function_declaration(
     }
 
     if context.rulesets.contains(RuleSet::Const | RuleSet::Literal) {
-        
+        todo!("const/Literal functions")
     }
 
     function.args = arguments.args.clone();
@@ -195,7 +194,7 @@ fn check_if_args_are_const(iter: &TokenIterator, arguments: &FunctionArguments, 
         if arg.is_mutable {
             return Err(new_soul_error(
                 iter.current(), 
-                format!("argument: '{}' is mutable but RuleSet: '{}' does not allow mutable arguments", arg.name, ruleset.to_string()).as_str()
+                format!("argument: '{}' is mutable but RuleSet: '{:?}' does not allow mutable arguments", arg.name, ruleset).as_str()
             ));
         }
     }
@@ -205,7 +204,7 @@ fn check_if_args_are_const(iter: &TokenIterator, arguments: &FunctionArguments, 
         if arg.is_mutable {
             return Err(new_soul_error(
                 iter.current(), 
-                format!("optional argument: '{}' is mutable but RuleSet: '{}' does not allow mutable arguments", arg.name, ruleset.to_string()).as_str()
+                format!("optional argument: '{}' is mutable but RuleSet: '{:?}' does not allow mutable arguments", arg.name, ruleset).as_str()
             ));
         }
     }

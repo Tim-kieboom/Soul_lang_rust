@@ -1,23 +1,21 @@
 use super::token::Token;
 use std::io::{BufRead, Result};
 use super::file_line::FileLine;
-use crate::meta_data::soul_names::{SoulNames, SOUL_NAMES};
 use crate::meta_data::meta_data::MetaData;
+use crate::meta_data::soul_names::{SoulNames, SOUL_NAMES};
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
-use crate::meta_data::type_meta_data::TypeMetaData;
-use crate::tokenizer::comment_remover::comment_remover::remove_comment_line;
 use super::comment_remover::comment_remover::remove_comment_file;
-use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
+use crate::tokenizer::comment_remover::comment_remover::remove_comment_line;
 use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
-use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
+use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
 use crate::meta_data::soul_type::type_checker::type_checker::get_primitive_type_from_literal;
+use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
 
 pub struct FileLineResult {
     pub source_file: Vec<FileLine>, 
     pub estimated_token_count: u64
 }
 
-#[allow(dead_code)]
 pub fn read_as_file_lines(path: &str) -> Result<FileLineResult> {
     use std::fs::File;
     use std::io::BufReader;
@@ -38,7 +36,6 @@ pub fn read_as_file_lines(path: &str) -> Result<FileLineResult> {
     Ok(result)
 }
 
-#[allow(dead_code)]
 pub fn tokenize_file(source_file: Vec<FileLine>, estimated_token_count: u64, meta_data: &mut MetaData) -> Result<Vec<Token>> {
     if source_file.is_empty() {
         return Ok(Vec::new());
