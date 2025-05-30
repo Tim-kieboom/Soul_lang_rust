@@ -95,8 +95,10 @@ impl SoulType {
         } 
         else if generics.function_call_defined_generics.as_ref().is_some_and(|store| store.contains_key(&self.name)) {
             let define = generics.function_call_defined_generics.as_ref().unwrap().get(&self.name).unwrap();   
-            return SoulType::from_stringed_type(&define.define_type.clone(), token, type_meta_data, generics)
-                .ok();
+            let defined_type = SoulType::from_stringed_type(&define.define_type.clone(), token, type_meta_data, generics)
+                .ok()?;
+
+            return defined_type.convert_typedef_to_original(token, type_meta_data, generics);
         }
         
         let id = type_meta_data.type_store.to_id.get(&self.name)?;
@@ -284,7 +286,7 @@ impl SoulType {
         if value_primitive_type != PrimitiveType::Invalid && value_primitive_type != PrimitiveType::Object {
             *is_literal = true;
             let mut soul_type = SoulType::from_modifiers(
-                value_primitive_type.to_str(type_meta_data).unwrap().to_string(), 
+                value_primitive_type.to_str().unwrap().to_string(), 
                 TypeModifiers::Literal,
             );
 
@@ -743,7 +745,7 @@ fn get_literal_array(
         if element_type.to_primitive_type(type_meta_data) == PrimitiveType::UntypedFloat &&
            result_type.to_primitive_type(type_meta_data).is_untyped_type() 
         {
-            result_type.name = PrimitiveType::UntypedFloat.to_str(type_meta_data).expect("Internal error: UntypedFloat.to_str() NotImpl").to_string()
+            result_type.name = PrimitiveType::UntypedFloat.to_str().expect("Internal error: UntypedFloat.to_str() NotImpl").to_string()
         }
 
         if let Err(err) = element_type.add_wrapper(TypeWrappers::Array) {

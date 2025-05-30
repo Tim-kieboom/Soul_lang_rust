@@ -111,7 +111,7 @@ impl PrimitiveType {
         }
     }
 
-    pub fn to_str<'a>(&'a self, type_meta_data: &TypeMetaData) -> Option<&'a str> {
+    pub fn to_str<'a>(&'a self) -> Option<&'a str> {
         match self {
             PrimitiveType::Invalid => Some("<invalid>"),
             PrimitiveType::None => Some(SOUL_NAMES.get_name(NamesInternalType::None)),

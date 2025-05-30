@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 
 #[derive(Debug, Sequence, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i8)]
-pub enum OperatorType {
+pub enum ExprOperatorType {
     Invalid             = -1,
 
     Not                 = 0,
@@ -34,146 +34,146 @@ pub enum OperatorType {
     Decrement           = 21,
 }
 
-impl OperatorType {
+impl ExprOperatorType {
     pub fn from_str(string: &str) -> Self {
         match string {
-            "<invalid>" => OperatorType::Invalid,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Not) => OperatorType::Not,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Equals) => OperatorType::Equals,
-            val if val == SOUL_NAMES.get_name(NamesOperator::NotEquals) => OperatorType::NotEquals,
-            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmaller) => OperatorType::IsSmaller,
-            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals) => OperatorType::IsSmallerEquals,
-            val if val == SOUL_NAMES.get_name(NamesOperator::IsBigger) => OperatorType::IsBigger,
-            val if val == SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals) => OperatorType::IsBiggerEquals,
+            "<invalid>" => ExprOperatorType::Invalid,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Not) => ExprOperatorType::Not,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Equals) => ExprOperatorType::Equals,
+            val if val == SOUL_NAMES.get_name(NamesOperator::NotEquals) => ExprOperatorType::NotEquals,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmaller) => ExprOperatorType::IsSmaller,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals) => ExprOperatorType::IsSmallerEquals,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsBigger) => ExprOperatorType::IsBigger,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals) => ExprOperatorType::IsBiggerEquals,
 
-            val if val == SOUL_NAMES.get_name(NamesOperator::Addition) => OperatorType::Add,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Increment) => OperatorType::Increment,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Decrement) => OperatorType::Decrement,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Subtract) => OperatorType::Sub,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Multiple) => OperatorType::Mul,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Divide) => OperatorType::Div,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Modulo) => OperatorType::Modulo,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Power) => OperatorType::Pow,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Root) => OperatorType::Root,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Logarithm) => OperatorType::Log,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Addition) => ExprOperatorType::Add,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Increment) => ExprOperatorType::Increment,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Decrement) => ExprOperatorType::Decrement,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Subtract) => ExprOperatorType::Sub,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Multiple) => ExprOperatorType::Mul,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Divide) => ExprOperatorType::Div,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Modulo) => ExprOperatorType::Modulo,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Power) => ExprOperatorType::Pow,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Root) => ExprOperatorType::Root,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Logarithm) => ExprOperatorType::Log,
 
-            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseOr) => OperatorType::BitWiseOr,
-            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseAnd) => OperatorType::BitWiseAnd,
-            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseXor) => OperatorType::BitWiseXor,
-            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalOr) => OperatorType::LogicalOr,
-            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => OperatorType::LogicalAnd,
-            _ => OperatorType::Invalid, // Default case for unrecognized strings
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseOr) => ExprOperatorType::BitWiseOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseAnd) => ExprOperatorType::BitWiseAnd,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseXor) => ExprOperatorType::BitWiseXor,
+            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalOr) => ExprOperatorType::LogicalOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => ExprOperatorType::LogicalAnd,
+            _ => ExprOperatorType::Invalid, // Default case for unrecognized strings
         }
     }
 
     pub fn to_str<'a>(&self) -> &'a str {
         match self {
-            OperatorType::Invalid => "<invalid>",
-            OperatorType::Not => SOUL_NAMES.get_name(NamesOperator::Not),
-            OperatorType::Equals => SOUL_NAMES.get_name(NamesOperator::Equals),
-            OperatorType::NotEquals => SOUL_NAMES.get_name(NamesOperator::NotEquals),
-            OperatorType::IsSmaller => SOUL_NAMES.get_name(NamesOperator::IsSmaller),
-            OperatorType::IsSmallerEquals => SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals),
-            OperatorType::IsBigger => SOUL_NAMES.get_name(NamesOperator::IsBigger),
-            OperatorType::IsBiggerEquals => SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals),
+            ExprOperatorType::Invalid => "<invalid>",
+            ExprOperatorType::Not => SOUL_NAMES.get_name(NamesOperator::Not),
+            ExprOperatorType::Equals => SOUL_NAMES.get_name(NamesOperator::Equals),
+            ExprOperatorType::NotEquals => SOUL_NAMES.get_name(NamesOperator::NotEquals),
+            ExprOperatorType::IsSmaller => SOUL_NAMES.get_name(NamesOperator::IsSmaller),
+            ExprOperatorType::IsSmallerEquals => SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals),
+            ExprOperatorType::IsBigger => SOUL_NAMES.get_name(NamesOperator::IsBigger),
+            ExprOperatorType::IsBiggerEquals => SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals),
 
-            OperatorType::Add => SOUL_NAMES.get_name(NamesOperator::Addition),
-            OperatorType::Sub => SOUL_NAMES.get_name(NamesOperator::Subtract),
-            OperatorType::Mul => SOUL_NAMES.get_name(NamesOperator::Multiple),
-            OperatorType::Div => SOUL_NAMES.get_name(NamesOperator::Divide),
-            OperatorType::Modulo => SOUL_NAMES.get_name(NamesOperator::Modulo),
-            OperatorType::Pow => SOUL_NAMES.get_name(NamesOperator::Power),
-            OperatorType::Root => SOUL_NAMES.get_name(NamesOperator::Root),
-            OperatorType::Log => SOUL_NAMES.get_name(NamesOperator::Logarithm),
+            ExprOperatorType::Add => SOUL_NAMES.get_name(NamesOperator::Addition),
+            ExprOperatorType::Sub => SOUL_NAMES.get_name(NamesOperator::Subtract),
+            ExprOperatorType::Mul => SOUL_NAMES.get_name(NamesOperator::Multiple),
+            ExprOperatorType::Div => SOUL_NAMES.get_name(NamesOperator::Divide),
+            ExprOperatorType::Modulo => SOUL_NAMES.get_name(NamesOperator::Modulo),
+            ExprOperatorType::Pow => SOUL_NAMES.get_name(NamesOperator::Power),
+            ExprOperatorType::Root => SOUL_NAMES.get_name(NamesOperator::Root),
+            ExprOperatorType::Log => SOUL_NAMES.get_name(NamesOperator::Logarithm),
 
-            OperatorType::BitWiseOr => SOUL_NAMES.get_name(NamesOperator::BitWiseOr),
-            OperatorType::BitWiseAnd => SOUL_NAMES.get_name(NamesOperator::BitWiseAnd),
-            OperatorType::BitWiseXor => SOUL_NAMES.get_name(NamesOperator::BitWiseXor),
-            OperatorType::LogicalOr => SOUL_NAMES.get_name(NamesOperator::LogicalOr),
-            OperatorType::LogicalAnd => SOUL_NAMES.get_name(NamesOperator::LogicalAnd),
+            ExprOperatorType::BitWiseOr => SOUL_NAMES.get_name(NamesOperator::BitWiseOr),
+            ExprOperatorType::BitWiseAnd => SOUL_NAMES.get_name(NamesOperator::BitWiseAnd),
+            ExprOperatorType::BitWiseXor => SOUL_NAMES.get_name(NamesOperator::BitWiseXor),
+            ExprOperatorType::LogicalOr => SOUL_NAMES.get_name(NamesOperator::LogicalOr),
+            ExprOperatorType::LogicalAnd => SOUL_NAMES.get_name(NamesOperator::LogicalAnd),
 
-            OperatorType::Increment => SOUL_NAMES.get_name(NamesOperator::Increment),
-            OperatorType::Decrement => SOUL_NAMES.get_name(NamesOperator::Decrement),
+            ExprOperatorType::Increment => SOUL_NAMES.get_name(NamesOperator::Increment),
+            ExprOperatorType::Decrement => SOUL_NAMES.get_name(NamesOperator::Decrement),
         }
     }
 
     pub fn get_precedence_str(str: &str) -> u8 {
-        OperatorType::from_str(str).get_precedence()
+        ExprOperatorType::from_str(str).get_precedence()
     }
 
     pub fn get_precedence(&self) -> u8 {
         match self {
-            OperatorType::Increment |
-            OperatorType::Decrement => 9,
+            ExprOperatorType::Increment |
+            ExprOperatorType::Decrement => 9,
 
-            OperatorType::Not => 8,
+            ExprOperatorType::Not => 8,
 
-            OperatorType::Log |
-            OperatorType::Pow |
-            OperatorType::Root => 7,
+            ExprOperatorType::Log |
+            ExprOperatorType::Pow |
+            ExprOperatorType::Root => 7,
 
-            OperatorType::Mul |
-            OperatorType::Div |
-            OperatorType::Modulo => 6,
+            ExprOperatorType::Mul |
+            ExprOperatorType::Div |
+            ExprOperatorType::Modulo => 6,
 
-            OperatorType::Add |
-            OperatorType::Sub => 5,
+            ExprOperatorType::Add |
+            ExprOperatorType::Sub => 5,
 
-            OperatorType::IsSmaller |
-            OperatorType::IsSmallerEquals |
-            OperatorType::IsBigger |
-            OperatorType::IsBiggerEquals => 4,
+            ExprOperatorType::IsSmaller |
+            ExprOperatorType::IsSmallerEquals |
+            ExprOperatorType::IsBigger |
+            ExprOperatorType::IsBiggerEquals => 4,
 
-            OperatorType::Equals |
-            OperatorType::NotEquals => 3,
+            ExprOperatorType::Equals |
+            ExprOperatorType::NotEquals => 3,
 
-            OperatorType::BitWiseOr |
-            OperatorType::BitWiseAnd |
-            OperatorType::BitWiseXor => 2,
+            ExprOperatorType::BitWiseOr |
+            ExprOperatorType::BitWiseAnd |
+            ExprOperatorType::BitWiseXor => 2,
 
-            OperatorType::LogicalOr |
-            OperatorType::LogicalAnd => 1,
+            ExprOperatorType::LogicalOr |
+            ExprOperatorType::LogicalAnd => 1,
 
-            OperatorType::Invalid => 0,
+            ExprOperatorType::Invalid => 0,
         }
     }
 
     pub fn is_boolean_operator(&self) -> bool {
         match self {
-            OperatorType::Invalid |
-            OperatorType::Add |
-            OperatorType::Sub |
-            OperatorType::Mul |
-            OperatorType::Div |
-            OperatorType::Modulo |
-            OperatorType::Pow |
-            OperatorType::Root |
-            OperatorType::Log |
-            OperatorType::BitWiseOr |
-            OperatorType::BitWiseAnd |
-            OperatorType::Increment |
-            OperatorType::Decrement |
-            OperatorType::BitWiseXor => false,
+            ExprOperatorType::Invalid |
+            ExprOperatorType::Add |
+            ExprOperatorType::Sub |
+            ExprOperatorType::Mul |
+            ExprOperatorType::Div |
+            ExprOperatorType::Modulo |
+            ExprOperatorType::Pow |
+            ExprOperatorType::Root |
+            ExprOperatorType::Log |
+            ExprOperatorType::BitWiseOr |
+            ExprOperatorType::BitWiseAnd |
+            ExprOperatorType::Increment |
+            ExprOperatorType::Decrement |
+            ExprOperatorType::BitWiseXor => false,
 
-            OperatorType::Not |
-            OperatorType::Equals |
-            OperatorType::NotEquals |
-            OperatorType::IsSmaller |
-            OperatorType::IsSmallerEquals |
-            OperatorType::IsBigger |
-            OperatorType::IsBiggerEquals |
-            OperatorType::LogicalOr |
-            OperatorType::LogicalAnd => true,
+            ExprOperatorType::Not |
+            ExprOperatorType::Equals |
+            ExprOperatorType::NotEquals |
+            ExprOperatorType::IsSmaller |
+            ExprOperatorType::IsSmallerEquals |
+            ExprOperatorType::IsBigger |
+            ExprOperatorType::IsBiggerEquals |
+            ExprOperatorType::LogicalOr |
+            ExprOperatorType::LogicalAnd => true,
         }
     }
 }
 
-pub static ALL_OPERATORS: Lazy<Vec<OperatorType>> = Lazy::new(||
-    enum_iterator::all::<OperatorType>().collect()
+pub static ALL_OPERATORS: Lazy<Vec<ExprOperatorType>> = Lazy::new(||
+    enum_iterator::all::<ExprOperatorType>().collect()
 );
 
-pub static BOOLEAN_OPERATOR: Lazy<Vec<OperatorType>> = Lazy::new(||
-    enum_iterator::all::<OperatorType>().filter(|op| op.is_boolean_operator()).collect()
+pub static BOOLEAN_OPERATOR: Lazy<Vec<ExprOperatorType>> = Lazy::new(||
+    enum_iterator::all::<ExprOperatorType>().filter(|op| op.is_boolean_operator()).collect()
 );
 
 

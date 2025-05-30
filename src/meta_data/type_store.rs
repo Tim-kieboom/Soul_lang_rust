@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use std::{collections::{BTreeSet, HashMap}, result, sync::Arc};
-use crate::abstract_styntax_tree::operator_type::{OperatorType, ALL_OPERATORS, BOOLEAN_OPERATOR};
+use crate::abstract_styntax_tree::{assign_type::AssignType, operator_type::{ExprOperatorType, ALL_OPERATORS, BOOLEAN_OPERATOR}};
 use super::{soul_names::{NamesInternalType, NAMES_INTERNAL_TYPE_NUMBER, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_wrappers::{TypeWrappers, ALL_TYPE_WRAPPERS}}};
 
 static NO_DEFAULT_OPERATORS: Lazy<ImplOperators> = Lazy::new(|| {
@@ -11,13 +11,13 @@ static NO_DEFAULT_OPERATORS: Lazy<ImplOperators> = Lazy::new(|| {
 
 static NUMBER_DEFAULT_OPERATORS: Lazy<ImplOperators> = Lazy::new(|| {
     ImplOperators{
-        operator: ALL_OPERATORS.iter().cloned().collect(),
+        operator: ALL_OPERATORS.iter().cloned().map(|op| ImplOperator::ExprOperatorType(op)).collect(),
     }
 });
 
 static BOOLEAN_DEFAULT_OPERATORS: Lazy<ImplOperators> = Lazy::new(|| {
     ImplOperators{
-        operator: BOOLEAN_OPERATOR.iter().cloned().collect(),
+        operator: BOOLEAN_OPERATOR.iter().cloned().map(|op| ImplOperator::ExprOperatorType(op)).collect(),
     }
 });
 
@@ -41,9 +41,24 @@ pub struct TypeID(pub u64);
 #[derive(Debug, Clone)]
 pub struct TypeDef {pub type_id: TypeID, pub from_stringed: String}
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ImplOperator {
+    ExprOperatorType(ExprOperatorType),
+    AssignType(AssignType),
+}
+
+impl ImplOperator {
+    pub fn to_str(&self) -> &str {
+        match self {
+            ImplOperator::ExprOperatorType(expr_operator_type) => expr_operator_type.to_str(),
+            ImplOperator::AssignType(assign_type) => assign_type.to_str(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Hash)]
 pub struct ImplOperators {
-    pub operator: BTreeSet<OperatorType>,
+    pub operator: BTreeSet<ImplOperator>,
 }
 
 #[derive(Debug, Clone)]
@@ -99,7 +114,7 @@ fn add_internal_types(type_store: &mut TypeStore) {
         type_store.implemented_type_operators.insert(id, BOOLEAN_DEFAULT_OPERATORS.clone());
     }
 
-    let array_operators: ImplOperators = ImplOperators{operator: BTreeSet::from([OperatorType::Equals, OperatorType::NotEquals, OperatorType::Add])};
+    let array_operators: ImplOperators = ImplOperators{operator: BTreeSet::from([ExprOperatorType::Equals, ExprOperatorType::NotEquals, ExprOperatorType::Add].map(|op| ImplOperator::ExprOperatorType(op)))};
     for wrap in ALL_TYPE_WRAPPERS {
         let ops = match wrap {
             TypeWrappers::ConstRef |

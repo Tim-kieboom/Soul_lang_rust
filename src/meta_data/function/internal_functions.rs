@@ -50,7 +50,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
                 )
             ],
             optionals: BTreeMap::new(),
-            generics: BTreeMap::from([]),
+            generics: BTreeMap::from([ANY_T_GENERIC.clone()]),
             modifiers: FunctionModifiers::Const,
             id: new_function_id(&mut current_id),
             is_forward_declared: false,

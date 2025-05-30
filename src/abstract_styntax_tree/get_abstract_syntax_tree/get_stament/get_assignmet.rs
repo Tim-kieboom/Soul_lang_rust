@@ -1,5 +1,5 @@
 use std::io::Result;
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::OperatorType}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::VarFlags, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::ExprOperatorType}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::VarFlags, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
 
 pub struct AssignmentResult {
     pub assignment: MultiStamentResult<IStatment>,
@@ -96,13 +96,13 @@ pub fn get_assignment(
 fn add_compount_assignment(symbool: &str, i_variable: &IVariable, expression: IExpression) -> IExpression {
     let op = match symbool {
         "=" => return expression,
-        "+=" => OperatorType::Add,
-        "*=" => OperatorType::Mul,
-        "/=" => OperatorType::Div,
-        "%=" => OperatorType::Modulo,
-        "&=" => OperatorType::BitWiseAnd,
-        "|=" => OperatorType::BitWiseOr,
-        "^=" => OperatorType::BitWiseXor,
+        "+=" => ExprOperatorType::Add,
+        "*=" => ExprOperatorType::Mul,
+        "/=" => ExprOperatorType::Div,
+        "%=" => ExprOperatorType::Modulo,
+        "&=" => ExprOperatorType::BitWiseAnd,
+        "|=" => ExprOperatorType::BitWiseOr,
+        "^=" => ExprOperatorType::BitWiseXor,
         _ => panic!("symbool: '{}' unknown", symbool)
     };
 

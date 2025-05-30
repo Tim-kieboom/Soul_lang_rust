@@ -72,7 +72,10 @@ impl RunOptions {
             };
 
             let args = _args.collect::<Vec<_>>();
-            if args.len() < 2 {
+            if args.len() == 1 {
+                return Ok(options);
+            }
+            else if args.len() < 2 {
                 return Err("Missing command (e.g., 'run' or 'build').".to_string());
             }
 

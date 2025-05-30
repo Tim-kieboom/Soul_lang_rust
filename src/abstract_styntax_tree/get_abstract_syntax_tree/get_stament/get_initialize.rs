@@ -135,7 +135,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
                 NumberCategory::FloatingPoint => PrimitiveType::F32,
             };
 
-            expression.is_type.name = primitive_expr_type.to_str(&meta_data.type_meta_data)
+            expression.is_type.name = primitive_expr_type.to_str()
                 .expect("Internal error: Primitive type was not able to be converted into str")
                 .to_string();
 

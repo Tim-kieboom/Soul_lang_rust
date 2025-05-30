@@ -1,18 +1,18 @@
 extern crate soul_lang_rust;
 
 use std::path::Path;
-use std::io::{self, Result, Write};
 use itertools::Itertools;
-use soul_lang_rust::abstract_styntax_tree::abstract_styntax_tree::AbstractSyntaxTree;
-use soul_lang_rust::meta_data::current_context::current_context::CurrentContext;
-use soul_lang_rust::tokenizer::file_line::FileLine;
 use std::fs::{self, write};
+use std::io::{self, Result, Write};
 use std::{env::args, time::Instant};
+use soul_lang_rust::tokenizer::file_line::FileLine;
 use soul_lang_rust::meta_data::meta_data::MetaData;
 use soul_lang_rust::tokenizer::token::TokenIterator;
 use soul_lang_rust::run_options::show_times::ShowTimes;
 use soul_lang_rust::run_options::run_options::RunOptions;
 use soul_lang_rust::run_options::show_output::ShowOutputs;
+use soul_lang_rust::meta_data::current_context::current_context::CurrentContext;
+use soul_lang_rust::abstract_styntax_tree::abstract_styntax_tree::AbstractSyntaxTree;
 use soul_lang_rust::tokenizer::tokenizer::{read_as_file_lines, tokenize_file, tokenize_line};
 use soul_lang_rust::abstract_styntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree::{get_abstract_syntax_tree_file, get_abstract_syntax_tree_line};
 

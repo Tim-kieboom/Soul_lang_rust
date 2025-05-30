@@ -85,7 +85,7 @@ impl MetaData {
 
         let mut this = MetaData {  
             type_meta_data: TypeMetaData::new(), 
-            scope_store: new_scope_store(&borrow_checker),
+            scope_store: new_scope_store(),
             function_store: FunctionStore::new(),
             borrow_checker: borrow_checker,
             next_function_id: FunctionID(0),
@@ -223,7 +223,7 @@ impl MetaData {
     pub fn open_scope(&mut self, parent_id: ScopeId) -> result::Result<ScopeId, String> {
         let parent = self.scope_store.get(&parent_id)
             .ok_or("Internal Error: can not get parent scope from scope_store")?;
-        let child = Scope::new_child(Arc::clone(&self.borrow_checker), &parent);
+        let child = Scope::new_child(&parent);
         let child_id = *child.id();
         self.scope_store.insert(child_id, child);
         self.borrow_checker.lock().unwrap().open_scope(&child_id)?;
@@ -238,9 +238,9 @@ impl MetaData {
 
 }
 
-fn new_scope_store(borrow_checker: &Arc<Mutex<BorrowChecker>>) -> HashMap<ScopeId, Scope> {
+fn new_scope_store() -> HashMap<ScopeId, Scope> {
     let mut map = HashMap::new();
-    let global_scope = Scope::new_global(Arc::clone(borrow_checker));
+    let global_scope = Scope::new_global();
     map.insert(*global_scope.id(), global_scope);
     map
 }

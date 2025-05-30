@@ -1,6 +1,4 @@
-use std::{collections::{BTreeMap, HashMap}, sync::{Arc, Mutex}};
-use crate::meta_data::borrow_checker::borrow_checker::BorrowChecker;
-
+use std::collections::{BTreeMap, HashMap};
 use super::var_info::VarInfo;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -19,7 +17,7 @@ pub struct Scope {
 } 
 
 impl Scope {
-    pub fn new_global(borrow_checker: Arc<Mutex<BorrowChecker>>) -> Self {
+    pub fn new_global() -> Self {
         Scope { 
             id: ScopeId(0), 
             parent: None, 
@@ -28,7 +26,7 @@ impl Scope {
         }
     }
 
-    pub fn new_child(borrow_checker: Arc<Mutex<BorrowChecker>>, parent: &Scope) -> Self {
+    pub fn new_child(parent: &Scope) -> Self {
         let child_id = parent.last_child_id.increment();
         Scope { 
             id: child_id, 

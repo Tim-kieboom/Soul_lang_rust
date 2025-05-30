@@ -1,6 +1,6 @@
 use std::{collections::{BTreeMap, HashMap}, io::Result};
 
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, operator_type::{OperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, operator_type::{ExprOperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 use super::get_expression::{get_expression, GetExpressionResult};
 
@@ -69,11 +69,11 @@ fn check_variable_expression(expr_result: GetExpressionResult, variable_name: &s
     }
 }
 
-fn check_lit_binary_single(expr_result: GetExpressionResult, left_value: &str, operator: OperatorType, right_value: &str, should_be_type: &SoulType) {
+fn check_lit_binary_single(expr_result: GetExpressionResult, left_value: &str, operator: ExprOperatorType, right_value: &str, should_be_type: &SoulType) {
     check_lit_binary_single_multi_type(expr_result, left_value, operator, right_value, should_be_type, should_be_type, should_be_type)
 }
 
-fn check_lit_binary_single_multi_type(expr_result: GetExpressionResult, left_value: &str, operator: OperatorType, right_value: &str, left_type: &SoulType, right_type: &SoulType, bin_type: &SoulType) {
+fn check_lit_binary_single_multi_type(expr_result: GetExpressionResult, left_value: &str, operator: ExprOperatorType, right_value: &str, left_type: &SoulType, right_type: &SoulType, bin_type: &SoulType) {
     if let IExpression::BinairyExpression{left, operator_type, right, type_name} = expr_result.result.value {
         
         if let IExpression::Literal{value, type_name} = *left {
@@ -393,7 +393,7 @@ fn test_get_expression_binary_expression_single_number() {
     
     let mut expr_result = simple_get_expression(BINARY_ADD, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_lit_binary_single(expr_result, "1", OperatorType::Add, "2", &lit_untyped_int_type);
+    check_lit_binary_single(expr_result, "1", ExprOperatorType::Add, "2", &lit_untyped_int_type);
     
 
 
@@ -401,7 +401,7 @@ fn test_get_expression_binary_expression_single_number() {
 
     expr_result = simple_get_expression(BINARY_POWER, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_lit_binary_single(expr_result, "1", OperatorType::Pow, "2", &lit_untyped_int_type);
+    check_lit_binary_single(expr_result, "1", ExprOperatorType::Pow, "2", &lit_untyped_int_type);
 
 
 
@@ -409,7 +409,7 @@ fn test_get_expression_binary_expression_single_number() {
 
     expr_result = simple_get_expression(BINARY_LOG, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_lit_binary_single(expr_result, "1", OperatorType::Log, "2", &lit_untyped_int_type);
+    check_lit_binary_single(expr_result, "1", ExprOperatorType::Log, "2", &lit_untyped_int_type);
 
 
 
@@ -417,7 +417,7 @@ fn test_get_expression_binary_expression_single_number() {
 
     expr_result = simple_get_expression(BINARY_ROOT, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_lit_binary_single(expr_result, "1", OperatorType::Root, "2", &lit_untyped_int_type);
+    check_lit_binary_single(expr_result, "1", ExprOperatorType::Root, "2", &lit_untyped_int_type);
 
 
 
@@ -427,7 +427,7 @@ fn test_get_expression_binary_expression_single_number() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression( 
         IExpression::new_literal("1", &lit_untyped_int_type.to_string()), 
-        OperatorType::Equals, 
+        ExprOperatorType::Equals, 
         IExpression::new_literal("2", &lit_untyped_int_type.to_string()), 
         &lit_bool_type.to_string(),
     ));
@@ -438,7 +438,7 @@ fn test_get_expression_binary_expression_single_number() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression( 
         IExpression::new_literal("true", &lit_bool_type.to_string()), 
-        OperatorType::LogicalAnd, 
+        ExprOperatorType::LogicalAnd, 
         IExpression::new_literal("true", &lit_bool_type.to_string()), 
         &lit_bool_type.to_string(),
     ));
@@ -449,7 +449,7 @@ fn test_get_expression_binary_expression_single_number() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression( 
         IExpression::new_literal("1", &lit_untyped_int_type.to_string()), 
-        OperatorType::BitWiseAnd, 
+        ExprOperatorType::BitWiseAnd, 
         IExpression::new_literal("2", &lit_untyped_int_type.to_string()), 
         &lit_untyped_int_type.to_string(),
     ));
@@ -466,7 +466,7 @@ fn test_get_expression_binary_expression_single_str() {
 
     let mut expr_result = simple_get_expression(BINARY_ADD_STRING, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_lit_binary_single(expr_result, "__Soul_c_str_0__", OperatorType::Add, "__Soul_c_str_1__", &lit_str_type);
+    check_lit_binary_single(expr_result, "__Soul_c_str_0__", ExprOperatorType::Add, "__Soul_c_str_1__", &lit_str_type);
 
 
 
@@ -474,7 +474,7 @@ fn test_get_expression_binary_expression_single_str() {
 
     expr_result = simple_get_expression(BINARY_EQ_STRING, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_lit_binary_single(expr_result, "__Soul_c_str_0__", OperatorType::Equals, "__Soul_c_str_1__", &lit_bool_type);
+    check_lit_binary_single(expr_result, "__Soul_c_str_0__", ExprOperatorType::Equals, "__Soul_c_str_1__", &lit_bool_type);
 
 
     
@@ -482,7 +482,7 @@ fn test_get_expression_binary_expression_single_str() {
 
     expr_result = simple_get_expression(BINARY_NOT_EQ_STRING, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_lit_binary_single(expr_result, "__Soul_c_str_0__", OperatorType::NotEquals, "__Soul_c_str_1__", &lit_bool_type);
+    check_lit_binary_single(expr_result, "__Soul_c_str_0__", ExprOperatorType::NotEquals, "__Soul_c_str_1__", &lit_bool_type);
 
 
 
@@ -549,11 +549,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_literal("1", &lit_untyped_int_string), 
-            OperatorType::Add, 
+            ExprOperatorType::Add, 
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &lit_untyped_int_string,
         ),
-        OperatorType::Add,
+        ExprOperatorType::Add,
         IExpression::new_literal("3", &lit_untyped_int_string),
         &lit_untyped_int_string
     ));
@@ -564,11 +564,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_literal("1", &lit_untyped_int_string), 
-            OperatorType::Add, 
+            ExprOperatorType::Add, 
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &lit_untyped_int_string,
         ),
-        OperatorType::Add,
+        ExprOperatorType::Add,
         IExpression::new_literal("3.0", &lit_untyped_float_string),
         &lit_untyped_float_string
     ));
@@ -579,11 +579,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_literal("1.0", &lit_untyped_float_string), 
-            OperatorType::Add, 
+            ExprOperatorType::Add, 
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &lit_untyped_float_string,
         ),
-        OperatorType::Add,
+        ExprOperatorType::Add,
         IExpression::new_literal("3", &lit_untyped_int_string),
         &lit_untyped_float_string
     ));
@@ -595,11 +595,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_literal("1", &lit_untyped_int_string), 
-            OperatorType::Mul, 
+            ExprOperatorType::Mul, 
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &lit_untyped_int_string,
         ),
-        OperatorType::Add,
+        ExprOperatorType::Add,
         IExpression::new_literal("3", &lit_untyped_int_string),
         &lit_untyped_int_string
     ));
@@ -609,10 +609,10 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_literal("1", &lit_untyped_int_string),
-        OperatorType::Add,
+        ExprOperatorType::Add,
         IExpression::new_binary_expression(
             IExpression::new_literal("2", &lit_untyped_int_string), 
-            OperatorType::Mul, 
+            ExprOperatorType::Mul, 
             IExpression::new_literal("3", &lit_untyped_int_string), 
             &lit_untyped_int_string,
         ),
@@ -626,11 +626,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_literal("1", &lit_untyped_int_string), 
-            OperatorType::Add,
+            ExprOperatorType::Add,
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &lit_untyped_int_string,
         ),
-        OperatorType::Mul, 
+        ExprOperatorType::Mul, 
         IExpression::new_literal("3", &lit_untyped_int_string),
         &lit_untyped_int_string
     ));
@@ -650,11 +650,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_variable("var1", &int_string), 
-            OperatorType::Add,
+            ExprOperatorType::Add,
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &int_string,
         ),
-        OperatorType::Mul, 
+        ExprOperatorType::Mul, 
         IExpression::new_literal("3", &lit_untyped_int_string),
         &int_string
     ));
@@ -666,11 +666,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_increment(IVariable::new_variable("var1", &int_string), false, 1), 
-            OperatorType::Add,
+            ExprOperatorType::Add,
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &int_string,
         ),
-        OperatorType::Mul, 
+        ExprOperatorType::Mul, 
         IExpression::new_literal("3", &lit_untyped_int_string),
         &int_string
     ));
@@ -682,11 +682,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_increment(IVariable::new_variable("var1", &int_string), true, 1), 
-            OperatorType::Add,
+            ExprOperatorType::Add,
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &int_string,
         ),
-        OperatorType::Mul, 
+        ExprOperatorType::Mul, 
         IExpression::new_literal("3", &lit_untyped_int_string),
         &int_string
     ));
@@ -698,11 +698,11 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
             IExpression::new_literal("1", &lit_untyped_int_string), 
-            OperatorType::IsSmaller,
+            ExprOperatorType::IsSmaller,
             IExpression::new_literal("2", &lit_untyped_int_string), 
             &lit_bool_string,
         ),
-        OperatorType::NotEquals, 
+        ExprOperatorType::NotEquals, 
         IExpression::new_literal("true", &lit_bool_string),
         &lit_bool_string
     ));
@@ -863,7 +863,7 @@ fn test_get_expression_function_call() {
             vec![IExpression::new_literal("1", &lit_untyped_int)], 
             BTreeMap::new(), 
         ),
-        OperatorType::Add, 
+        ExprOperatorType::Add, 
         IExpression::new_funtion_call(
             u8_int_func.clone(),
             vec![IExpression::new_literal("2", &lit_untyped_int)], 

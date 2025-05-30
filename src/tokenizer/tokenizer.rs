@@ -1,4 +1,6 @@
+use regex::Regex;
 use super::token::Token;
+use once_cell::sync::Lazy;
 use std::io::{BufRead, Result};
 use super::file_line::FileLine;
 use crate::meta_data::meta_data::MetaData;
@@ -10,8 +12,6 @@ use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
 use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
 use crate::meta_data::soul_type::type_checker::type_checker::get_primitive_type_from_literal;
 use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
-use once_cell::sync::Lazy;
-use regex::Regex;
 
 static SPLIT_REGEX: Lazy<Regex> = Lazy::new(||SoulNames::str_vec_to_regex(&SOUL_NAMES.parse_tokens));
 

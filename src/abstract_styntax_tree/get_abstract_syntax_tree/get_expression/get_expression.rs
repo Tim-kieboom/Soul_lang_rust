@@ -5,7 +5,7 @@ use std::result;
 
 use crate::tokenizer::token::Token;
 use crate::meta_data::meta_data::MetaData;
-use crate::meta_data::type_store::ImplOperators;
+use crate::meta_data::type_store::{ImplOperator, ImplOperators};
 use crate::meta_data::type_meta_data::TypeMetaData;
 use crate::meta_data::soul_type::soul_type::SoulType;
 use crate::meta_data::scope_and_var::var_info::VarInfo;
@@ -14,7 +14,7 @@ use crate::meta_data::soul_type::type_modifiers::TypeModifiers;
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
 use super::get_function_call::get_function_call::get_function_call;
 use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
-use crate::abstract_styntax_tree::operator_type::{OperatorType, ALL_OPERATORS};
+use crate::abstract_styntax_tree::operator_type::{ExprOperatorType, ALL_OPERATORS};
 use crate::meta_data::soul_names::{NamesInternalType, NamesTypeWrapper, SOUL_NAMES};
 use crate::meta_data::current_context::current_context::{CurrentContext, CurrentGenerics};
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::multi_stament_result::MultiStamentResult;
@@ -63,7 +63,7 @@ pub fn get_expression(
     )?;
 
     while let Some(symbool) = stacks.symbool_stack.pop() {
-        let operator = OperatorType::from_str(&symbool);
+        let operator = ExprOperatorType::from_str(&symbool);
         let binary = get_binairy_expression(iter, meta_data, context, &mut stacks, &operator)?;
 
         stacks.node_stack.push(binary);
@@ -158,10 +158,10 @@ fn convert_expression(
             ref_stack.push(iter.current().text.clone());
         }
         else if is_token_operator(iter.current()) {
-            let operator_type = OperatorType::from_str(&iter.current().text);
+            let operator_type = ExprOperatorType::from_str(&iter.current().text);
             
-            if operator_type == OperatorType::Increment || 
-               operator_type == OperatorType::Decrement 
+            if operator_type == ExprOperatorType::Increment || 
+               operator_type == ExprOperatorType::Decrement 
             {
                 let is_before = !meta_data.is_variable(&prev_token.text, &context.current_scope_id);
                 stacks.increment_info_stack.push(is_before);
@@ -292,13 +292,13 @@ fn convert_operator(
     result: &mut MultiStamentResult<IExpression>,
     should_be_type: &Option<&SoulType>,
 ) -> Result<()> {
-    let operator_type = OperatorType::from_str(&iter.current().text);
+    let operator_type = ExprOperatorType::from_str(&iter.current().text);
 
     let current_precedence = operator_type.get_precedence();
     while !stacks.symbool_stack.is_empty() && 
-          OperatorType::get_precedence_str(stacks.symbool_stack.last().unwrap()) >= current_precedence 
+          ExprOperatorType::get_precedence_str(stacks.symbool_stack.last().unwrap()) >= current_precedence 
     {
-        let operator = OperatorType::from_str(&stacks.symbool_stack.pop().unwrap());
+        let operator = ExprOperatorType::from_str(&stacks.symbool_stack.pop().unwrap());
         let binary_expression = get_binairy_expression(iter, meta_data, context, stacks, &operator)?;
         stacks.node_stack.push(binary_expression);
     }
@@ -395,7 +395,7 @@ fn get_bracket_binairy_expression(
             break;
         }
 
-        let op_type = OperatorType::from_str(symbool);
+        let op_type = ExprOperatorType::from_str(symbool);
         stacks.symbool_stack.pop();
         let expression = get_binairy_expression(iter, meta_data, context, stacks, &op_type)?;
 
@@ -414,7 +414,7 @@ fn get_binairy_expression(
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
     stacks: &mut ExpressionStacks,
-    operator_type: &OperatorType
+    operator_type: &ExprOperatorType
 ) -> Result<IExpression> {
     assert!(!stacks.node_stack.is_empty(), "at: {}, Internal error while trying to get binaryExpression node_stack is empty", new_soul_error(iter.current(), ""));
     let right = stacks.node_stack.pop().unwrap();
@@ -434,7 +434,7 @@ fn get_binairy_expression(
         return Err(new_soul_error(current, format!("while trying to parse binary expression: {}", msg).as_str()));
     }
 
-    if operator_type == &OperatorType::Increment || operator_type == &OperatorType::Decrement {
+    if operator_type == &ExprOperatorType::Increment || operator_type == &ExprOperatorType::Decrement {
         let incr_variable;
         if let IExpression::IVariable{this} = right {
             incr_variable = this.clone();
@@ -445,13 +445,13 @@ fn get_binairy_expression(
 
         let is_before = stacks.increment_info_stack.pop().unwrap();
         
-        let amount = if operator_type == &OperatorType::Increment {1}
+        let amount = if operator_type == &ExprOperatorType::Increment {1}
                      else {-1};
 
         stacks.type_stack.push(right_type);
         return Ok(IExpression::new_increment(incr_variable, is_before, amount));         
     }
-    else if operator_type == &OperatorType::Not {
+    else if operator_type == &ExprOperatorType::Not {
         if let IExpression::EmptyExpression() = right {
             return Err(new_soul_error(iter.current(), "right side of BinairyExpression is can not be empty"));
         }
@@ -466,7 +466,7 @@ fn get_binairy_expression(
         stacks.type_stack.push(bool_type);
         return Ok(IExpression::new_binary_expression(
             right,
-            OperatorType::NotEquals, 
+            ExprOperatorType::NotEquals, 
             TRUE_LITERAL.clone(), 
             &type_name,
         ));
@@ -507,7 +507,7 @@ fn get_binairy_expression(
     ))
 }
 
-fn get_binary_type(left_type: SoulType, operator_type: &OperatorType, right_type: SoulType, meta_data: &MetaData) -> SoulType {
+fn get_binary_type(left_type: SoulType, operator_type: &ExprOperatorType, right_type: SoulType, meta_data: &MetaData) -> SoulType {
     let is_left_literal = left_type.is_literal();
     let is_right_literal = right_type.is_literal();
 
@@ -577,7 +577,7 @@ fn get_highest_priority_untyped_type(left_type: SoulType, right_type: SoulType, 
 fn check_if_types_in_binary_compatible(
     token: &Token,
     meta_data: &mut MetaData,
-    operator_type: &OperatorType,
+    operator_type: &ExprOperatorType,
     right_type: &SoulType,
     left_type: &SoulType,
 ) -> Result<()> {
@@ -628,7 +628,7 @@ fn get_negative_expression(
 
         result.value = IExpression::new_binary_expression(
             var_expression, 
-            OperatorType::Mul, 
+            ExprOperatorType::Mul, 
             NEGATIVE_ONE_LITERAL.clone(), 
             &variable.type_name
         );
@@ -644,7 +644,7 @@ fn get_negative_expression(
         let literal_expression = IExpression::new_literal(&literal_value, &literal_type_string);
         result.value = IExpression::new_binary_expression(
             literal_expression, 
-            OperatorType::Mul, 
+            ExprOperatorType::Mul, 
             NEGATIVE_ONE_LITERAL.clone(), 
             &literal_type_string,
         );
@@ -715,7 +715,7 @@ fn is_token_any_ref(token: &Token) -> bool {
 }
 
 fn is_token_operator(token: &Token) -> bool {
-    OperatorType::from_str(&token.text) != OperatorType::Invalid
+    ExprOperatorType::from_str(&token.text) != ExprOperatorType::Invalid
 }
 
 fn is_negative_number(token: &Token, stacks: &ExpressionStacks) -> bool {
@@ -726,10 +726,10 @@ fn should_convert_to_ref(to_ref: &Vec<String>, stacks: &ExpressionStacks) -> boo
     !to_ref.is_empty() && !stacks.node_stack.is_empty()
 }
 
-fn is_valid_oparator(current_type: &SoulType, operator: &OperatorType, type_meta_data: &TypeMetaData) -> result::Result<(), String> {
+fn is_valid_oparator(current_type: &SoulType, operator: &ExprOperatorType, type_meta_data: &TypeMetaData) -> result::Result<(), String> {
 
-    let allowed_operators = get_allowed_operators(current_type, type_meta_data)?;
-    let is_allowed = allowed_operators.operator.contains(operator);
+    let allowed_operators = get_allowed_expr_operators(current_type, type_meta_data)?;
+    let is_allowed = allowed_operators.operator.contains(&ImplOperator::ExprOperatorType(*operator));
 
     if !is_allowed {
         let allowed_str = allowed_operators.operator
@@ -744,21 +744,20 @@ fn is_valid_oparator(current_type: &SoulType, operator: &OperatorType, type_meta
     Ok(())
 }
 
-// impl after test success
-// find allowed_operatoers.min() validate all operators in min
-fn get_allowed_operators(current_type: &SoulType, type_meta_data: &TypeMetaData) -> result::Result<ImplOperators, String> {    
-    let READ_COMMENT = 1;
+fn get_allowed_expr_operators(current_type: &SoulType, type_meta_data: &TypeMetaData) -> result::Result<ImplOperators, String> {    
     let type_id = type_meta_data
         .type_store
         .to_id
         .get(&current_type.name)
         .ok_or_else(|| format!("type: '{}' is not found", current_type.to_string()))?;
 
-    let mut operator_counts: HashMap<OperatorType, usize> = HashMap::with_capacity(ALL_OPERATORS.len());
+    let mut operator_counts: HashMap<ExprOperatorType, usize> = HashMap::with_capacity(ALL_OPERATORS.len());
     
     let allowed_type_operators = type_meta_data.type_store.implemented_type_operators.get(type_id).expect(format!("Internal error: implemented_type_operators missing type: '{}'", current_type.name).as_str());
-    for operator in &allowed_type_operators.operator {
-        *operator_counts.entry(*operator).or_insert(0) += 1;
+    for impl_operator in &allowed_type_operators.operator {
+        if let ImplOperator::ExprOperatorType(operator) = impl_operator {
+            *operator_counts.entry(*operator).or_insert(0) += 1;
+        }
     }
 
     for wrap in &current_type.wrappers {
@@ -768,15 +767,17 @@ fn get_allowed_operators(current_type: &SoulType, type_meta_data: &TypeMetaData)
             None => continue,
         }
         
-        for operator in &wrap_operators.operator {
-            *operator_counts.entry(*operator).or_insert(0) += 1;
+        for impl_operator in &wrap_operators.operator {
+            if let ImplOperator::ExprOperatorType(operator) = impl_operator {
+                *operator_counts.entry(*operator).or_insert(0) += 1;
+            }
         }
     }
 
     let num_of_impls = current_type.wrappers.len() + 1;
     let allowed_operators = operator_counts
         .into_iter()
-        .filter_map(|(op_type, count)| if count == num_of_impls { Some(op_type) } else { None })
+        .filter_map(|(op_type, count)| if count == num_of_impls { Some(ImplOperator::ExprOperatorType(op_type)) } else { None })
         .collect();
 
     Ok(ImplOperators { operator: allowed_operators })

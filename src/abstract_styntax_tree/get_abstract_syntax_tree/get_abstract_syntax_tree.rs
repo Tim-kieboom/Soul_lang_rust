@@ -1,9 +1,7 @@
 use std::io::Result;
+use super::get_stament::get_initialize::get_initialize;
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{AbstractSyntaxTree, IStatment}, get_abstract_syntax_tree::get_stament::get_statment::get_statment}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesTypeModifiers, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
-use super::get_stament::get_initialize::get_initialize;
-
-#[allow(dead_code)]
 pub fn get_abstract_syntax_tree_file(iter: &mut TokenIterator, meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
@@ -40,7 +38,6 @@ pub fn get_abstract_syntax_tree_file(iter: &mut TokenIterator, meta_data: &mut M
     Ok(tree)
 }
 
-#[allow(dead_code)]
 pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData, open_bracket_stack: &mut usize) -> Result<()> {
     
     loop {
@@ -119,7 +116,7 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
 }
 
 fn traverse_through_scope(iter: &mut TokenIterator) {
-    let mut open_btacket_stack = 1;
+    let mut open_bracket_stack = 1;
 
     loop {
         if iter.next().is_none() {
@@ -127,14 +124,14 @@ fn traverse_through_scope(iter: &mut TokenIterator) {
         }
 
         if iter.current().text == "{" {
-            open_btacket_stack += 1;
+            open_bracket_stack += 1;
         }
 
         if iter.current().text == "}" {
-            open_btacket_stack -= 1;
+            open_bracket_stack -= 1;
         }
 
-        if open_btacket_stack == 0 {
+        if open_bracket_stack == 0 {
             break;
         }
     }

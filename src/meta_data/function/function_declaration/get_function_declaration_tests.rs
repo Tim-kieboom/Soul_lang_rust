@@ -97,7 +97,7 @@ fn test_get_function_main() {
 
     let res = try_simple_get_function(&main_str);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), format!("at 0:6; !!error!! function: 'main' can only be on type or type: '{}'", int));
+    assert_eq!(res.unwrap_err().to_string(), format!("at 0:7; !!error!! function: 'main' can only be on type or type: '{}'", int));
 
 //----------------------------
 
@@ -105,7 +105,7 @@ fn test_get_function_main() {
 
     let res = try_simple_get_function(&mut_args_main);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), format!("at 0:18; !!error!! function 'main' only allows 'main()' and 'main({})' as arguments", str_array));
+    assert_eq!(res.unwrap_err().to_string(), format!("at 0:21; !!error!! function 'main' only allows 'main()' and 'main({})' as arguments", str_array));
 
 
 }
@@ -348,7 +348,7 @@ fn test_get_function_forward_declaring() {
         .unwrap();
     
     assert!(result.is_err());
-    assert_eq!(result.unwrap_err().to_string(), "at 0:6; !!error!! function with these arguments already exists, name 'func', args: '<empty>'\n");
+    assert_eq!(result.unwrap_err().to_string(), "at 0:7; !!error!! function with these arguments already exists, name 'func', args: '<empty>'\n");
 }
 
 #[test]

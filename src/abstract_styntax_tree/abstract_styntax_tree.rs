@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools;
 
-use super::operator_type::OperatorType;
+use super::operator_type::ExprOperatorType;
 use crate::meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -14,7 +14,7 @@ pub enum IVariable {
 #[derive(Debug, Clone, PartialEq)]
 pub enum IExpression {
     IVariable{this: IVariable},
-    BinairyExpression{left: Box<IExpression>, operator_type: OperatorType, right: Box<IExpression>, type_name: String},
+    BinairyExpression{left: Box<IExpression>, operator_type: ExprOperatorType, right: Box<IExpression>, type_name: String},
     Literal{value: String, type_name: String}, 
     ConstRef{expression: Box<IExpression>},
     MutRef{expression: Box<IExpression>},
@@ -187,7 +187,7 @@ impl IExpression {
     }
 
     #[allow(dead_code)]
-    pub fn new_binary_expression(left: IExpression, operator_type: OperatorType, right: IExpression, type_name: &str) -> Self {
+    pub fn new_binary_expression(left: IExpression, operator_type: ExprOperatorType, right: IExpression, type_name: &str) -> Self {
         IExpression::BinairyExpression{
             left: Box::new(left), 
             operator_type, right: Box::new(right), 

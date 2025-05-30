@@ -51,7 +51,7 @@ pub struct SoulNames<'a> {
     #[serde(borrow)]
     pub other_keywords_names: HashMap<NamesOtherKeyWords, &'a str>,
     #[serde(borrow)]
-    pub assign_symbools: HashMap<NamesAssignSymbools, &'a str>,
+    pub assign_symbools: HashMap<NamesAssignType, &'a str>,
 }
 
 impl<'a> SoulNames<'a> {
@@ -123,14 +123,18 @@ impl<'a> SoulNames<'a> {
         ]);
 
         let assign_symbools = HashMap::from([
-            (NamesAssignSymbools::Assign, "="),
-            (NamesAssignSymbools::AddAssign, "+="),
-            (NamesAssignSymbools::MulAssign, "*="),
-            (NamesAssignSymbools::DivAssign, "/="),
-            (NamesAssignSymbools::ModuloAssign, "%="),
-            (NamesAssignSymbools::BitAndAssign, "&="),
-            (NamesAssignSymbools::BitOrAssign, "|="),
-            (NamesAssignSymbools::BotXorAssign, "^="),
+            (NamesAssignType::Assign, "="),
+            (NamesAssignType::AddAssign, "+="),
+            (NamesAssignType::SubAssign, "-="),
+            (NamesAssignType::MulAssign, "*="),
+            (NamesAssignType::DivAssign, "/="),
+            (NamesAssignType::ModuloAssign, "%="),
+            (NamesAssignType::BitAndAssign, "&="),
+            (NamesAssignType::BitOrAssign, "|="),
+            (NamesAssignType::BitXorAssign, "^="),
+
+            (NamesAssignType::GetObjectInner, "."),
+            (NamesAssignType::Index, "["),
         ]);
 
         let other_keywords_names = HashMap::from([
@@ -160,8 +164,6 @@ impl<'a> SoulNames<'a> {
             ":=", ",", "[]", "[", "]", 
             "(", ")", "{", "}", ":", 
             ";", "=", "\\", " ", "\t",
-            "-=", "+=", "*=", "/=", 
-            "&=", "|=", "^=", "%="
         ];
 
         let mut iligal_names = HashSet::<&str>::new();
@@ -172,6 +174,7 @@ impl<'a> SoulNames<'a> {
 
         let mut parse_tokens: Vec<&str> = BASE_TOKENS.iter().copied().collect();
         parse_tokens.extend(operator_names.iter().filter(|(key, _)| key != &&NamesOperator::Logarithm).map(|(_, str)| *str));
+        parse_tokens.extend(assign_symbools.iter().map(|(_, str)| *str));
         parse_tokens.extend(type_wappers.iter().map(|(_, str)| *str));
 
         //this is so that the tokenizer takes priority over for example '**' over '*'
@@ -278,17 +281,22 @@ pub enum NamesOperator {
 impl_soul_name_enum!(NamesOperator, operator_names);
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
-pub enum NamesAssignSymbools {
+pub enum NamesAssignType {
     Assign,
+    VarAssign,
     AddAssign,
+    SubAssign,
     MulAssign,
     DivAssign,
     ModuloAssign,
     BitAndAssign,
     BitOrAssign,
-    BotXorAssign,
+    BitXorAssign,
+
+    GetObjectInner,
+    Index
 }
-impl_soul_name_enum!(NamesAssignSymbools, assign_symbools);
+impl_soul_name_enum!(NamesAssignType, assign_symbools);
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NamesTypeWrapper {

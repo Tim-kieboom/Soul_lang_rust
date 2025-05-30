@@ -62,7 +62,7 @@ fn test_initialize_default_typed() {
 
     let res = try_simple_initialize(&init3);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "at 0:23; !!error!! assignment type: 'Literal str' is not compatible with variable type: 'int'");
+    assert_eq!(res.unwrap_err().to_string(), "at 0:26; !!error!! assignment type: 'Literal str' is not compatible with variable type: 'int'");
 }
 
 #[test]

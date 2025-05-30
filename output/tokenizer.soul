@@ -1,5 +1,3 @@
-main ( str [] args ) int { 
-foo := ( 2 ** 2 ) 
-bar := 2 
-Println ( ) 
+main ( ) int { 
+Println ( __Soul_c_str_0__ ) 
 } 

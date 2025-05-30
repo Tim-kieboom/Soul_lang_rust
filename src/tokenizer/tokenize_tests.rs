@@ -251,7 +251,7 @@ fn test_tokenize_backslash() {
 
 	let result_tokens = tokenize_file(source_file, 10, &mut meta_data);
 	assert!(result_tokens.is_err());
-	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:3; !!error!! '\\' can only be placed at the end of a line");
+	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:4; !!error!! '\\' can only be placed at the end of a line");
 
 	const BAD_BACKSLASH_DOT: &str = "if 1 == a\\.Len() {}";
 	meta_data = MetaData::new();
@@ -259,7 +259,7 @@ fn test_tokenize_backslash() {
 
 	let result_tokens = tokenize_file(source_file, 10, &mut meta_data);
 	assert!(result_tokens.is_err());
-	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:6; !!error!! '\\' can only be placed at the end of a line");
+	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:9; !!error!! '\\' can only be placed at the end of a line");
 }
 
 #[test]

@@ -12,11 +12,15 @@ interface IList<T> typeof Iter<T>() {
 }
 
 class List<T> typeof {
-    T[]* buffer = T[]*([])
+    T[] buffer = []
     usize len = 0
 
-    const Ctor::[](T[] init) { 
-        buffer = T[]*(init)
+    const Ctor(usize initialCapacity) {
+        Reserve(initialCapacity)
+    }
+
+    const Ctor[](T[] init) { 
+        buffer = init
         len = init.Len()
     }
 
@@ -27,28 +31,28 @@ class List<T> typeof {
     #[inline]
     Resize(usize additional, T default) {
         len += additional
-        *buffer += [len => default]
+        buffer += [len => default]
     }
 
     #[inline]
     Reserve(usize additional, T default) {
         len += additional
-        *buffer += [len => default]
+        buffer += [len => default]
     }
 
     #[inline]
     Reserve(usize additional) {
         // unsafe is to be able to copy without default T
         len += additional
-        *buffer = unsafe{ copy[len] *buffer }
+        buffer = unsafe{ copy[len] buffer }
     }
 
     #[inline]
     Shrink(usize amount) {
-        assert_bigger(len, amount+1)
+        Assert_Bigger(len, amount+1)
 
         // unsafe is to be able to copy without default T
-        *buffer = unsafe{ copy[len-amount] *buffer }
+        buffer = unsafe{ copy[len-amount] buffer }
     }
 
     const Len() usize {
@@ -126,19 +130,19 @@ class List<T> typeof {
 
 Test ListAssert() {
     list := List<int>[]
-    listArrayCtor := List<int>[1, 2, 3, 4, 5]
-    assert(list.IsEmpty())
-    assert_equal(list.Len(), 0)
-    assert_equal(list.Cap(), 0)
+    listArrayCtor := List[1, 2, 3, 4, 5]
+    Assert(list.IsEmpty())
+    Assert_Equal(list.Len(), 0)
+    Assert_Equal(list.Cap(), 0)
 
     list.Push(1)
-    assert(!list.IsEmpty())
-    assert_equal(list.Len(), 1)
-    assert_equal(list.Cap(), 1)
+    Assert(!list.IsEmpty())
+    Assert_Equal(list.Len(), 1)
+    Assert_Equal(list.Cap(), 1)
 
     list.Push({2, 3})
-    assert_equal(list.Len(), 3)
-    assert_equal(list.Cap(), 5)
+    Assert_Equal(list.Len(), 3)
+    Assert_Equal(list.Cap(), 5)
 
     list.Reserve(10, 0);
     list2 := List<List<int>>()[12 => [1, 2]]
