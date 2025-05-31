@@ -26,11 +26,12 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     loop {
 
         let multi_statment = get_statment(&mut iter, &mut statment_iter, meta_data, &mut context)?;
+        
         tree.main_nodes.extend(multi_statment.before.into_iter().flatten());
         tree.main_nodes.push(multi_statment.value);
         tree.main_nodes.extend(multi_statment.after.into_iter().flatten());
 
-        if iter.next().is_none() {
+        if iter.peek().is_none() {
             break;
         }
     }

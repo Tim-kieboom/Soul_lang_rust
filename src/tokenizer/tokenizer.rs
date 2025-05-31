@@ -74,11 +74,7 @@ pub fn tokenize_file(source_file: Vec<FileLine>, estimated_token_count: u64, met
     let formated_str_file = format_str_file(comment_less_file)?; 
     let new_source_file = rawstr_to_litstr_file(formated_str_file, meta_data)?;
 
-    for line in new_source_file {
-        if line.text == "\n" || line.text == "\t" {
-            continue;
-        }
-
+    for line in new_source_file.into_iter().filter(is_not_empty_line) {
         get_tokens(line, &mut tokens)?;
     }
 
@@ -115,10 +111,26 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
     let mut line_offset = 0;
     let mut last_is_forward_slash = false;
 
+    let mut last_was_semicolon = false;
+
     for (i, text) in splits.iter().enumerate() {
         if text.is_empty() || *text == " " || *text == "\t" {
             line_offset += text.len();
             continue;
+        }
+
+        if *text == ";" {
+            last_was_semicolon = true;
+        }
+        else if last_was_semicolon && *text == "\n" {
+            return Err(new_soul_error(&Token{
+                text: text.to_string(), 
+                line_number: line.line_number as usize, 
+                line_offset,
+            }, "can not end a line on ';'"));
+        }
+        else {
+            last_was_semicolon = false;
         }
 
         if !needs_to_dot_tokenize(text) {
@@ -229,6 +241,8 @@ fn needs_to_dot_tokenize(text: &str) -> bool {
     text.contains(".") && get_primitive_type_from_literal(text) == PrimitiveType::Invalid
 }
 
-
+fn is_not_empty_line(line: &FileLine) -> bool {
+    !line.text.trim().is_empty()
+}
 
 

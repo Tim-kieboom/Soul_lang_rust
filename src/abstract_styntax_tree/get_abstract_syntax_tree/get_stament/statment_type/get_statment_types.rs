@@ -1,7 +1,7 @@
 use std::{collections::HashSet, io::{Error, Result}};
 use once_cell::sync::Lazy;
 
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::get_initialize}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::SOUL_NAMES, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::{get_forward_declared_initialize, get_initialize}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::SOUL_NAMES, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
 use super::statment_type::StatmentType;
 
@@ -197,7 +197,7 @@ fn get_symbool_after_generic<'a>(iter: &'a mut TokenIterator, start_i: usize) ->
 }
 
 fn get_initialize_info(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<StatmentType> {
-    let init = get_initialize(iter, meta_data, context)?;
+    let init = get_forward_declared_initialize(iter, meta_data, context)?;
     let var;
     let is_mutable;
     let is_assigned;

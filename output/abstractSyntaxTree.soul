@@ -1,3 +1,8 @@
+Initialize(
+		Assignment(
+			Variable(const int number) = Literal(Literal untypedInt 1)
+		)
+	)
 FunctionBody(main( str[] args) int {
 
 	Initialize(
@@ -24,5 +29,6 @@ FunctionBody(main( str[] args) int {
 		Variable(int foo) = Literal(int 1)
 	)
 })
+	FunctionCall(sum())
 	FunctionCall(Println(Variable(Literal str __Soul_c_str_0__)))
 })

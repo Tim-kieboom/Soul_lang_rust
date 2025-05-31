@@ -1,4 +1,4 @@
-// const number = 1
+const number = 1
 // Literal gravity = 9.81
 // int sum(int b) int {
 // 	return *this + b
@@ -27,8 +27,13 @@ main(str[] args) int {
 		foo = 1
 	}
 
+	sum()
 	Println("hello world") 
 }
+
+// sum() int {
+
+// }
 
 
 

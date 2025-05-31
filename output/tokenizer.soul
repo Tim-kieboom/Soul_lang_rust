@@ -1,3 +1,4 @@
+const number = 1 
 main ( str [] args ) int { 
 foo := 1 + 1 ** 2 
 sum ( ) int { 
@@ -6,5 +7,6 @@ foo = 0 ; foo += 1
 foo &= 1 ; foo -= 1 
 foo = 1 
 } 
+sum ( ) 
 Println ( __Soul_c_str_0__ ) 
 } 
