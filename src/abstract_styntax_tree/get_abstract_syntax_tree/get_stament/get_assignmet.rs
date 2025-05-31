@@ -97,6 +97,7 @@ fn add_compount_assignment(symbool: &str, i_variable: &IVariable, expression: IE
     let op = match symbool {
         "=" => return expression,
         "+=" => ExprOperatorType::Add,
+        "-=" => ExprOperatorType::Sub,
         "*=" => ExprOperatorType::Mul,
         "/=" => ExprOperatorType::Div,
         "%=" => ExprOperatorType::Modulo,

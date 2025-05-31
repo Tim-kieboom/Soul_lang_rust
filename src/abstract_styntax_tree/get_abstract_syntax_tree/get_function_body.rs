@@ -1,9 +1,9 @@
 use std::{collections::BTreeMap, io::Result};
 use crate::{abstract_styntax_tree::abstract_styntax_tree::IStatment, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
-use super::{get_body::get_body, multi_stament_result::MultiStamentResult};
+use super::{get_body::get_body, get_stament::statment_type::statment_type::StatmentIterator, multi_stament_result::MultiStamentResult};
 
-pub fn get_function_body(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, open_bracket_stack: &mut usize) -> Result<MultiStamentResult<IStatment>> {
+pub fn get_function_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let function = add_function_declaration(iter, meta_data, context)?;
     
     if iter.next().is_none() {
@@ -32,12 +32,15 @@ pub fn get_function_body(iter: &mut TokenIterator, meta_data: &mut MetaData, con
                 var_flags |= VarFlags::IsLiteral;
             }
 
-            (name.clone(), VarInfo::with_var_flag(name.clone(), arg.value_type.clone(), var_flags))
+            (name.clone(), VarInfo::with_var_flag(name.clone(), arg.value_type.clone(), var_flags, false))
         })
         .collect::<BTreeMap<String, VarInfo>>();
 
-    let function_body = get_body(iter, meta_data, context, Some(arguments), open_bracket_stack)?;
-
+    let function_body = get_body(iter, statment_iter, meta_data, context, Some(arguments))?;
+    if iter.next().is_none() {
+        return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
+    }
+    
     Ok(MultiStamentResult::new(IStatment::new_function_body(function, function_body)))
 }
 

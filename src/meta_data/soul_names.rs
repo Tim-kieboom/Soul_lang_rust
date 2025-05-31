@@ -5,6 +5,8 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Serialize, Deserialize};
 
+pub const FUNCTION_DECLARATION_ID: &str = "_@_<FunctionBody>";
+
 pub static SOUL_NAMES: Lazy<SoulNames> = Lazy::new(|| {
     SoulNames::new()
 });

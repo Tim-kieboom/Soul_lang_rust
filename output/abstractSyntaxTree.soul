@@ -1,4 +1,28 @@
-FunctionBody(main() int {
+FunctionBody(main( str[] args) int {
 
+	Initialize(
+		Assignment(
+			Variable(int foo) = BinaryExpression(Literal(Literal untypedInt 1) + BinaryExpression(Literal(Literal untypedInt 1) ** Literal(Literal untypedInt 2), type: Literal untypedInt), type: Literal untypedInt)
+		)
+	)
+	FunctionBody(sum() int {
+
+	FunctionCall(Println())
+	Assignment(
+		Variable(int foo) = Literal(int 0)
+	)
+	Assignment(
+		Variable(int foo) = BinaryExpression(Variable(int foo) + Literal(int 1), type: int)
+	)
+	Assignment(
+		Variable(int foo) = BinaryExpression(Variable(int foo) & Literal(int 1), type: int)
+	)
+	Assignment(
+		Variable(int foo) = BinaryExpression(Variable(int foo) - Literal(int 1), type: int)
+	)
+	Assignment(
+		Variable(int foo) = Literal(int 1)
+	)
+})
 	FunctionCall(Println(Variable(Literal str __Soul_c_str_0__)))
 })

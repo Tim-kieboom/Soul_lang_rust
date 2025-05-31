@@ -13,11 +13,32 @@ use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, forma
 use crate::meta_data::soul_type::type_checker::type_checker::get_primitive_type_from_literal;
 use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
 
-static SPLIT_REGEX: Lazy<Regex> = Lazy::new(||SoulNames::str_vec_to_regex(&SOUL_NAMES.parse_tokens));
+static SPLIT_REGEX: Lazy<Regex> = Lazy::new(||SoulNames::str_vec_to_regex(&SOUL_NAMES.parse_tokens.iter().cloned().filter(|str| str != &".").collect::<Vec<_>>()));
 
 pub struct FileLineResult {
     pub source_file: Vec<FileLine>, 
     pub estimated_token_count: u64
+}
+
+pub fn raw_file_as_file_lines(file: String) -> Result<FileLineResult> {
+    
+    use std::io::Cursor;
+    use std::io::BufReader;
+    let parse_tokens = &SOUL_NAMES.parse_tokens;
+
+    let cursor = Cursor::new(file.as_bytes());
+    let reader = BufReader::new(cursor);
+    
+    let mut line_number = 1;
+    let mut result = FileLineResult{source_file: Vec::new(), estimated_token_count: 0};
+    for res in reader.lines() {
+        let line = res?;
+        result.estimated_token_count += get_token_count(line.as_str(), parse_tokens);
+        result.source_file.push(FileLine{text: line, line_number});
+        line_number += 1;
+    }
+
+    Ok(result)
 }
 
 pub fn read_as_file_lines(path: &str) -> Result<FileLineResult> {
@@ -54,6 +75,10 @@ pub fn tokenize_file(source_file: Vec<FileLine>, estimated_token_count: u64, met
     let new_source_file = rawstr_to_litstr_file(formated_str_file, meta_data)?;
 
     for line in new_source_file {
+        if line.text == "\n" || line.text == "\t" {
+            continue;
+        }
+
         get_tokens(line, &mut tokens)?;
     }
 
@@ -144,7 +169,7 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
         }
     } 
 
-    if !tokens.is_empty() && !last_is_forward_slash {
+    if !tokens.is_empty() && !last_is_forward_slash { 
         tokens.push(Token{
             text: "\n".to_string(), 
             line_number: line.line_number as usize, 

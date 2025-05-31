@@ -1,5 +1,5 @@
 use std::{collections::{BTreeMap, HashMap}, io::Result};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration}, internal_functions::INTERNAL_FUNCTIONS}, meta_data::{MetaData}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration}, internal_functions::INTERNAL_FUNCTIONS}, meta_data::{CloseScopeResult, MetaData}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 use super::get_function_call::get_function_call;
 
@@ -12,6 +12,7 @@ fn try_store_function(line: &str, meta_data: &mut MetaData, context: &mut Curren
 
     Ok(function)
 }
+
 
 fn store_function(line: &str, meta_data: &mut MetaData, context: &mut CurrentContext) -> FunctionDeclaration {
     try_store_function(line, meta_data, context)
@@ -271,7 +272,6 @@ fn test_get_function_call_internal_function() {
 
 }
 
-
 #[test]
 fn test_get_function_call_generic_no_validater() {
     let untyped_int = SOUL_NAMES.get_name(NamesInternalType::UntypedInt);
@@ -364,7 +364,88 @@ fn test_get_function_call_generic_no_validater() {
     );
 }
 
+#[test]
+fn test_get_function_call_in_child_scope() {
+    let mut meta_data = MetaData::new();
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
 
+
+    let func_declr1 = "empty();";
+    let empty_func = store_function(&func_declr1, &mut meta_data, &mut context);
+
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id)
+        .inspect_err(|err| panic!("{:?}", err))
+        .unwrap();
+
+    const FUNC_CALL1: &str = "empty();";
+    let mut function = simple_get_function_call(FUNC_CALL1, &mut meta_data, &mut context);
+    let mut should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            empty_func, 
+            vec![], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+
+    
+
+    /* 
+        empty() {
+            emptyInEmpty() {
+                //do stuff
+            }
+
+            emptyInEmpty() // call
+        }
+    */
+    let func_declr2 = "emptyInEmpty();";
+    let empty_func2 = store_function(&func_declr2, &mut meta_data, &mut context);
+
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id)
+        .inspect_err(|err| panic!("{:?}", err))
+        .unwrap();
+
+    const FUNC_CALL2: &str = "emptyInEmpty();";
+    function = simple_get_function_call(FUNC_CALL2, &mut meta_data, &mut context);
+    should_be = MultiStamentResult::new(
+        IExpression::new_funtion_call(
+            empty_func2, 
+            vec![], 
+            BTreeMap::new(),
+        )
+    );
+
+    assert!(
+        function == should_be,
+        "{:#?}\n!=\n{:#?}", function, should_be 
+    );
+
+
+    let CloseScopeResult{delete_list:_, parent} = meta_data.close_scope(&context.current_scope_id)
+        .inspect_err(|err| panic!("{:?}", err))
+        .unwrap();
+
+    context.current_scope_id = parent;
+
+    /* 
+        empty() {
+            emptyInEmpty() {
+                //do stuff
+            }
+
+        }
+        emptyInEmpty() // call SHOULD FAIL
+    */
+    let result = try_simple_get_function_call(FUNC_CALL2, &mut meta_data, &mut context);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().to_string(), "");
+
+}
 
 
 

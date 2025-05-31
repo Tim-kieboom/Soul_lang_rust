@@ -1,6 +1,6 @@
 use std::io::Result;
 use super::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration};
-use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{class_info::access_level::AccesLevel, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, internal_functions::FIRST_FUNCTION_ID}, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{class_info::access_level::AccesLevel, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, internal_functions::FIRST_FUNCTION_ID}, meta_data::MetaData, scope_and_var::scope::{Scope}, soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 
 fn try_data_simple_get_function(line: &str, meta_data: &mut MetaData) -> Result<(Result<FunctionDeclaration>, (TokenIterator, CurrentContext))> {
@@ -24,6 +24,10 @@ fn simple_get_function(line: &str) -> FunctionDeclaration {
     try_simple_get_function(line)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap()
+}
+
+fn global_scope(meta_data: &MetaData) -> &Scope {
+    meta_data.scope_store.get(&MetaData::GLOBAL_SCOPE_ID).expect("Internal Error: scope_id could not be found")
 }
 
 #[test]
@@ -222,15 +226,15 @@ fn test_get_function_store_in_meta_data() {
     let mut meta_data = MetaData::new();
 
     const FUNC: &str = "func() {}";
-   
-    let old_funcs_len = meta_data.function_store.from_id.len();
-    let old_funcs_ids_len = meta_data.function_store.to_id.len();
+
+    let old_funcs_len = global_scope(&meta_data).function_store.from_id.len();
+    let old_funcs_ids_len = global_scope(&meta_data).function_store.to_id.len();
     let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
-    assert_eq!(meta_data.function_store.from_id.len(), old_funcs_len+1);
-    assert_eq!(meta_data.function_store.to_id.len(), old_funcs_ids_len+1);
+    assert_eq!(global_scope(&meta_data).function_store.from_id.len(), old_funcs_len+1);
+    assert_eq!(global_scope(&meta_data).function_store.to_id.len(), old_funcs_ids_len+1);
 
     let function = result
         .inspect_err(|err| panic!("{}", err.to_string()))
@@ -248,8 +252,8 @@ fn test_get_function_store_in_meta_data() {
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
-    assert_eq!(meta_data.function_store.from_id.len(), old_funcs_len+2);
-    assert_eq!(meta_data.function_store.to_id.len(), old_funcs_ids_len+2);
+    assert_eq!(global_scope(&meta_data).function_store.from_id.len(), old_funcs_len+2);
+    assert_eq!(global_scope(&meta_data).function_store.to_id.len(), old_funcs_ids_len+2);
 
     let function = result
         .inspect_err(|err| panic!("{}", err.to_string()))
@@ -267,8 +271,8 @@ fn test_get_function_store_in_meta_data() {
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
-    assert_eq!(meta_data.function_store.from_id.len(), old_funcs_len+3);
-    assert_eq!(meta_data.function_store.to_id.len(), old_funcs_ids_len+2);
+    assert_eq!(global_scope(&meta_data).function_store.from_id.len(), old_funcs_len+3);
+    assert_eq!(global_scope(&meta_data).function_store.to_id.len(), old_funcs_ids_len+2);
 
     let function = result
         .inspect_err(|err| panic!("{}", err.to_string()))
@@ -286,8 +290,8 @@ fn test_get_function_store_in_meta_data() {
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
-    assert_eq!(meta_data.function_store.from_id.len(), old_funcs_len+4);
-    assert_eq!(meta_data.function_store.to_id.len(), old_funcs_ids_len+2);
+    assert_eq!(global_scope(&meta_data).function_store.from_id.len(), old_funcs_len+4);
+    assert_eq!(global_scope(&meta_data).function_store.to_id.len(), old_funcs_ids_len+2);
 
     let function = result
         .inspect_err(|err| panic!("{}", err.to_string()))
@@ -305,14 +309,14 @@ fn test_get_function_forward_declaring() {
 
     const FUNC: &str = "func() {}";
    
-    let old_funcs_len = meta_data.function_store.from_id.len();
-    let old_funcs_ids_len = meta_data.function_store.to_id.len();
+    let old_funcs_len = global_scope(&meta_data).function_store.from_id.len();
+    let old_funcs_ids_len = global_scope(&meta_data).function_store.to_id.len();
     let (result, (mut iter, mut context)) = try_data_simple_get_function(FUNC, &mut meta_data)
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
-    assert_eq!(meta_data.function_store.from_id.len(), old_funcs_len+1);
-    assert_eq!(meta_data.function_store.to_id.len(), old_funcs_ids_len+1);
+    assert_eq!(global_scope(&meta_data).function_store.from_id.len(), old_funcs_len+1);
+    assert_eq!(global_scope(&meta_data).function_store.to_id.len(), old_funcs_ids_len+1);
 
     let function = result
         .inspect_err(|err| panic!("{}", err.to_string()))
@@ -329,8 +333,8 @@ fn test_get_function_forward_declaring() {
         .inspect_err(|err| panic!("{}", err.to_string()))
         .unwrap();
 
-    assert_eq!(meta_data.function_store.from_id.len(), old_funcs_len+1);
-    assert_eq!(meta_data.function_store.to_id.len(), old_funcs_ids_len+1);
+    assert_eq!(global_scope(&meta_data).function_store.from_id.len(), old_funcs_len+1);
+    assert_eq!(global_scope(&meta_data).function_store.to_id.len(), old_funcs_ids_len+1);
 
     let function = result
         .inspect_err(|err| panic!("{}", err.to_string()))

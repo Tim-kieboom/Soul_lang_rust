@@ -52,12 +52,20 @@ pub fn get_function_call(
     
     let function_id = meta_data.try_get_function(&iter[function_name_index].text, iter, context, &arguments.args, &arguments.optionals, generic_defines)
         .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
-    
-    let function = meta_data.function_store.from_id.get(&function_id)
+
+    let scope = meta_data.scope_store.get(&function_id.0)
+        .expect("Internal Error: scope_id could not be found");
+
+    let function = scope.function_store.from_id.get(&function_id.1)
         .expect("Internal Error function id is not in function_store");
 
     let expressions = get_argument_expression(arguments, function);
     statment_result.value = IExpression::new_funtion_call(function.clone(), expressions, BTreeMap::new());
+
+
+    if iter.next().is_none() {
+        return Err(new_soul_error(iter.current(), "unexpected end while parsing FunctionCall"));
+    }
 
     Ok(statment_result)   
 }

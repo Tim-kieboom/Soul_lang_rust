@@ -25,9 +25,17 @@ impl TokenIterator {
         }
     }
 
+    pub fn go_to_before_start(&mut self) {
+        self.index = -1;
+    }
+
     pub fn len(&self) -> usize {
         self.tokens.len()
     }
+
+    pub fn consume_tokens(self) -> Vec<Token> {
+        self.tokens
+    } 
 
     pub fn get_tokens_text(&self) -> Vec<&str> {
         self.tokens.iter()
@@ -104,3 +112,12 @@ impl fmt::Debug for TokenIterator {
               .finish()
     }
 }
+
+
+
+
+
+
+
+
+

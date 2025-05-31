@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use soul_lang_rust::{meta_data::meta_data::MetaData, tokenizer::{file_line::FileLine, tokenizer::tokenize_file}};
+use soul_lang_rust::{meta_data::meta_data::MetaData, run_compiler::run_compiler, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, tokenizer::{file_line::FileLine, tokenizer::tokenize_file}};
 
 const TEST_FILE: &str = r#"
 
@@ -39,6 +39,19 @@ adsrfg
 }
 "#;
 
+const TEST_HELLO_WORLD_FILE: &str = r#"
+main() int {
+	Println("hello world")
+	Println("hello world")
+	Println("hello world")
+	Println("hello world")
+	Println("hello world")
+	Println("hello world")
+	Println("hello world")
+	Println("hello world")
+}
+"#;
+
 fn bench_tokenize_file(c: &mut Criterion) {
 	
 	let estimated_token_count = TEST_FILE.matches(" ").count() as u64;
@@ -68,5 +81,23 @@ fn bench_tokenize_file(c: &mut Criterion) {
 	);
 }
 
-criterion_group!(benches, bench_tokenize_file);
+fn bench_hello_world_compiled(c: &mut Criterion) {
+	
+	c.bench_function(
+		"compile hello_world.soul", 
+		|b| b.iter(|| 
+			run_compiler(RunOptions {
+				file_path: TEST_HELLO_WORLD_FILE.to_string(),
+				is_file_raw_str: true,
+				is_compiled: true,
+				show_outputs: ShowOutputs::SHOW_NONE,
+				show_times: ShowTimes::SHOW_NONE,
+				is_garbage_collected: false,
+			})
+			.expect("error in compiler while running bench tests")
+		)
+	);
+}
+
+criterion_group!(benches, bench_tokenize_file, bench_hello_world_compiled);
 criterion_main!(benches);

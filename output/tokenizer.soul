@@ -1,3 +1,10 @@
-main ( ) int { 
+main ( str [] args ) int { 
+foo := 1 + 1 ** 2 
+sum ( ) int { 
+Println ( ) 
+foo = 0 ; foo += 1 
+foo &= 1 ; foo -= 1 
+foo = 1 
+} 
 Println ( __Soul_c_str_0__ ) 
 } 

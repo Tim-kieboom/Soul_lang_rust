@@ -1,4 +1,11 @@
+use std::io::Result;
 use std::collections::{BTreeMap, HashMap};
+use crate::meta_data::current_context::current_context::{CurrentContext, DefinedGenric};
+use crate::meta_data::function::argument_info::argument_info::ArgumentInfo;
+use crate::meta_data::meta_data::MetaData;
+use crate::meta_data::{function::function_declaration::function_declaration::FunctionID, meta_data::FunctionStore};
+use crate::tokenizer::token::TokenIterator;
+
 use super::var_info::VarInfo;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -14,6 +21,8 @@ pub struct Scope {
     pub parent: Option<ScopeId>,
     last_child_id: ScopeId,
     pub vars: BTreeMap<String, VarInfo>,
+    pub function_store: FunctionStore,
+    next_function_id: FunctionID,
 } 
 
 impl Scope {
@@ -23,6 +32,8 @@ impl Scope {
             parent: None, 
             last_child_id: ScopeId(0),
             vars: BTreeMap::new(), 
+            function_store: FunctionStore::new(),
+            next_function_id: FunctionID(0),
         }
     }
 
@@ -33,6 +44,8 @@ impl Scope {
             parent: Some(parent.id), 
             last_child_id: child_id,
             vars: BTreeMap::new(), 
+            function_store: FunctionStore::new(),
+            next_function_id: FunctionID(0),
         }
     }
 
@@ -87,6 +100,58 @@ impl Scope {
         }
 
         None
+    }
+
+    pub fn remove_variable_current_scope_only(&mut self, var_name: &String) -> Option<VarInfo> {
+        self.vars.remove(var_name)
+    }
+
+    pub fn get_next_function_id(&mut self) -> FunctionID {
+        let id = self.next_function_id.clone();
+        self.next_function_id = FunctionID(self.next_function_id.0 + 1);
+        id
+    }
+
+    pub fn try_get_function(
+        &self,        
+        name: &str,
+        iter: &TokenIterator, 
+        meta_data: &MetaData,
+        context: &mut CurrentContext, 
+        args: &Vec<ArgumentInfo>, 
+        optionals: &Vec<ArgumentInfo>,
+        generic_defined: &Vec<String>
+    ) -> Result<Option<FunctionID>> {
+
+        let overloaded_functions;
+        match self.function_store.from_name(name) {
+            Some(val) => overloaded_functions = val,
+            None => return Ok(None),
+        }
+        
+        for function in overloaded_functions {
+
+            let mut function_call_generics = BTreeMap::<String, DefinedGenric>::new();
+            for (i, (name, generic)) in function.generics.iter().enumerate() {
+                if i+1 > generic_defined.len() {
+                    break;
+                }
+                
+                function_call_generics.insert(
+                    name.clone(), 
+                    DefinedGenric{define_type: generic_defined[i].clone(), generic: generic.clone()}
+                );
+            }
+
+            context.current_generics.function_call_defined_generics = Some(function_call_generics);
+
+            let comparable = function.are_arguments_compatible(iter, &args, &optionals, &meta_data.type_meta_data, &mut context.current_generics);
+            if comparable {
+                return Ok(Some(function.id));
+            }
+        }
+
+        Ok(None)
     }
 }
 

@@ -3,10 +3,10 @@ use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable
 
 use super::get_assignmet::{get_assignment, AssignmentResult};
 
-pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
+pub fn get_forward_declared_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let begin_i = iter.current_index();
 
-    let result = internal_get_initialize(iter, meta_data, context);
+    let result = internal_get_initialize(iter, meta_data, context, true);
     if result.is_err() {
         iter.go_to_index(begin_i);
     }
@@ -14,7 +14,18 @@ pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, contex
     result
 }
 
-fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext)  -> Result<MultiStamentResult<IStatment>> {
+pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
+    let begin_i = iter.current_index();
+
+    let result = internal_get_initialize(iter, meta_data, context, false);
+    if result.is_err() {
+        iter.go_to_index(begin_i);
+    }
+
+    result
+}
+
+fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, var_is_forward_declared: bool)  -> Result<MultiStamentResult<IStatment>> {
     
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
 
@@ -52,14 +63,26 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
         return Err(new_soul_error(iter.current(), msg.as_str()));
     }
 
-    let already_exists = meta_data.scope_store.get(&context.current_scope_id)
+    let possible_var = meta_data.scope_store.get(&context.current_scope_id)
         .unwrap()
         .try_get_variable_current_scope_only(&iter[var_name_index].text);
+   
+    let (already_exists, is_forward_declared) = match &possible_var {
+        Some(var) => (true, var.is_forward_declared),
+        None => (false, false),
+    };
 
-    if already_exists.is_some() {
-        return Err(new_soul_error(iter.current(), format!("variable '{}' already exists in scope", &iter[var_name_index].text).as_str()));
+    if is_forward_declared {
+        meta_data.scope_store.get_mut(&context.current_scope_id)
+            .unwrap()
+            .remove_variable_current_scope_only(&iter[var_name_index].text);
     }
-
+    else {
+        if already_exists {
+            return Err(new_soul_error(iter.current(), format!("variable '{}' already exists in scope", &iter[var_name_index].text).as_str()));
+        }
+    }
+    
     if !context.rulesets.is_mutable() && modifier.is_mutable() {
         return Err(new_soul_error(iter.current(), format!("variable '{}' is mutable but current ruleset ", &iter[var_name_index].text).as_str()));
     }
@@ -73,27 +96,21 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             return Err(new_soul_error(iter.current(), format!("variable: '{}' is not assign a type (add type before variable like 'i32 var')", &iter[var_name_index].text).as_str()));
         }
 
-        let variable_type = possible_type.as_ref().unwrap();
+        let var_type = possible_type.as_ref().unwrap();
         body_result.value = IStatment::new_initialize(
             IVariable::Variable {
                 name: iter[var_name_index].text.clone(), 
-                type_name: variable_type.to_string(),
+                type_name: var_type.to_string(),
             }, 
             None
         );
         
-        let mut var_flags = VarFlags::Empty;
-        if variable_type.is_mutable() {
-            var_flags |= VarFlags::IsMutable;
-        }
-        if variable_type.is_literal() {
-            var_flags |= VarFlags::IsLiteral;
-        }
-
+        let var_flags = get_var_flags(&var_type);
         let var_info = VarInfo::with_var_flag(
             iter[var_name_index].text.clone(), 
-            variable_type.to_string(),
+            var_type.to_string(),
             var_flags,
+            var_is_forward_declared
         );
 
         meta_data.add_to_scope(var_info, &context.current_scope_id);
@@ -152,19 +169,15 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
         expression.is_type.add_modifier(modifier)
             .map_err(|msg| new_soul_error(iter.current(), &msg))?;
 
-        let mut var_flags = VarFlags::Empty;
-        if expression.is_type.is_mutable() {
-            var_flags |= VarFlags::IsMutable;
-        }
-        if expression.is_type.is_literal() {
-            var_flags |= VarFlags::IsLiteral;
-        }
+        let mut var_flags = get_var_flags(&expression.is_type);
         var_flags |= VarFlags::IsAssigned;
-        
+
+
         let var_info = VarInfo::with_var_flag(
             iter[var_name_index].text.to_string(), 
             expression.is_type.to_string(), 
             var_flags,
+            var_is_forward_declared
         );
 
         meta_data.add_to_scope(var_info, &context.current_scope_id);
@@ -188,19 +201,14 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             type_name: var_type.to_string(),
         };
 
-        let mut var_flags = VarFlags::Empty;
-        if var_type.is_mutable() {
-            var_flags |= VarFlags::IsMutable;
-        }
-        if var_type.is_literal() {
-            var_flags |= VarFlags::IsLiteral;
-        }
+        let mut var_flags = get_var_flags(&var_type);
         var_flags |= VarFlags::IsAssigned;
 
         let var_info = VarInfo::with_var_flag(
             iter[var_name_index].text.to_string(), 
             var_type.to_string(), 
             var_flags,
+            var_is_forward_declared
         );
 
         meta_data.add_to_scope(var_info, &context.current_scope_id);
@@ -213,7 +221,17 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
     }
 }
 
+fn get_var_flags(var_type: &SoulType) -> VarFlags {
+    let mut var_flags = VarFlags::Empty;
+    if var_type.is_mutable() {
+        var_flags |= VarFlags::IsMutable;
+    }
+    if var_type.is_literal() {
+        var_flags |= VarFlags::IsLiteral;
+    }
 
+    var_flags
+}
 
 
 

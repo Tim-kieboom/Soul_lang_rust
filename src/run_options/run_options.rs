@@ -8,6 +8,7 @@ use super::show_times::ShowTimes;
 
 pub struct RunOptions {
     pub file_path: String,
+    pub is_file_raw_str: bool,
     pub is_compiled: bool,
     pub show_times: ShowTimes,
     pub show_outputs: ShowOutputs,
@@ -65,6 +66,7 @@ impl RunOptions {
     pub fn new(_args: Args) -> result::Result<Self, String> {
         let mut options = Self {
                 file_path: String::new(),
+                is_file_raw_str: false,
                 is_compiled: true,
                 show_outputs: ShowOutputs::SHOW_NONE,
                 show_times: ShowTimes::SHOW_TOTAL,

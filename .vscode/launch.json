@@ -54,33 +54,35 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Throw_result executable feature",
+            "name": "Throw_result executable 'soul_lang_rust' Compiler",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin",
-                    "Soul_lang_rust",
-                    "--package",
-                    "Soul_lang_rust",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust",
                     "--features",
                     "throw_result"
                 ],
                 "filter": {
-                    "name": "Soul_lang_rust",
+                    "name": "soul_lang_rust",
                     "kind": "bin"
                 }
             },
-            "program": "${workspaceFolder}/target/debug/Soul_lang_rust",
-            "args": [],
+            "args": [
+                "run", 
+                "test.soul",
+                "-showOutput=SHOW_ALL",
+                "-showTime=SHOW_ALL"
+            ],
             "cwd": "${workspaceFolder}",
-            "env": {},
-            "stopOnEntry": false,
-            "sourceLanguages": ["rust"]
+            "env": {
+                "RUST_BACKTRACE": "1"
+            }
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Release executable 'soul_lang_rust'",
+            "name": "Release executable 'soul_lang_rust' compiler SHOW_ALL",
             "cargo": {
                 "args": [
                     "build",
@@ -97,6 +99,30 @@
                 "run", 
                 "test.soul",
                 "-showOutput=SHOW_ALL",
+                "-showTime=SHOW_ALL"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release executable 'soul_lang_rust' compiler SHOW_NONE",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust"
+                ],
+                "filter": {
+                    "name": "soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "run", 
+                "test.soul",
+                "-showOutput=SHOW_NONE",
                 "-showTime=SHOW_ALL"
             ],
             "cwd": "${workspaceFolder}"

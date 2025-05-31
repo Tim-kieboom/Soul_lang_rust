@@ -1,6 +1,5 @@
-// const number = 1;
-// Literal gravity = 9.81;
-
+// const number = 1
+// Literal gravity = 9.81
 // int sum(int b) int {
 // 	return *this + b
 // }
@@ -17,7 +16,28 @@
 // 	Println(f"1 + 2 = {num}")
 // }
 
-main() int {
-	Println("hello world")
+main(str[] args) int {
+	foo := 1 + 1 ** 2
+
+	sum() int {
+		Println()
+		foo = 0; foo += 1
+		foo &= 1 \
+			; foo -= 1
+		foo = 1
+	}
+
+	Println("hello world") 
 }
+
+
+
+
+
+
+
+
+
+
+
 

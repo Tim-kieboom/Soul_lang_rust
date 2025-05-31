@@ -1,6 +1,6 @@
 use std::io::Result;
 use super::format_stringer::{indexesof_qoutes, indexesof_qoutes_line};
-use crate::{meta_data::{meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::file_line::FileLine};
+use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::Token}};
 
 #[allow(dead_code)]
 pub fn rawstr_to_litstr_file(source_file: Vec<FileLine>, meta_data: &mut MetaData) -> Result<Vec<FileLine>> {
@@ -29,6 +29,10 @@ fn rawstr_to_litstr(line: &mut FileLine, meta_data: &mut MetaData, indexes: &Vec
     let soul_string_name = SOUL_NAMES.get_name(NamesInternalType::String);
 
     let literal_string_type_name = format!("{soul_literal_name} {soul_string_name}");
+
+    if indexes.len() % 2 != 0 {
+        panic!("{}", new_soul_error(&Token{text: line.text.to_owned(), line_number: line.line_number as usize, line_offset: 0}, "opening qoute (so '\"') without a closing qoute every str NEEDS TO BE CLOSED ON THE SAME LINE").to_string())
+    }
 
     for i in (0..indexes.len()).rev().step_by(2) {
         let begin = indexes[i-1];

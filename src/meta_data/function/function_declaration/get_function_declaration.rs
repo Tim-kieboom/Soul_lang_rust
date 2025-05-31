@@ -34,12 +34,18 @@ fn internal_function_declaration(
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
 ) -> Result<FunctionDeclaration> {
+    let next_id = meta_data
+        .scope_store
+        .get_mut(&context.current_scope_id)
+        .ok_or(new_soul_error(iter.current(), "Internal ewrror: scope not found"))?
+        .get_next_function_id();
+
     let mut function = FunctionDeclaration::new(
         String::new(), 
         None, 
         Vec::new(),
         true,
-        meta_data.get_next_function_id(),
+        next_id,
     );
 
     loop {
@@ -137,7 +143,10 @@ fn internal_function_declaration(
 
     if let Some(function_id) = possible_function_id {
 
-        if let Some(func_ref) = meta_data.function_store.from_id.get_mut(&function_id) {
+        if let Some(func_ref) = meta_data.scope_store.get_mut(&function_id.0)
+            .ok_or(new_soul_error(iter.current(), "Internal error: scope not found"))?
+            .function_store.from_id.get_mut(&function_id.1) 
+        {
             
             if !func_ref.is_forward_declared {
                 return Err(new_soul_error(
@@ -177,7 +186,10 @@ fn internal_function_declaration(
         }
     }
 
-    if let Some(function_overloads) = meta_data.function_store.from_name(&function.name) {
+    if let Some(function_overloads) = meta_data.scope_store.get(&context.current_scope_id)
+            .ok_or(new_soul_error(iter.current(), "Internal error: scope not found"))?
+            .function_store.from_name(&function.name) 
+    {
 
         if function_overloads.first().is_some_and(|func| func.return_type != function.return_type) {
             return Err(new_soul_error(iter.current(), format!("function of same name: '{}' with diffrent returnType already exist you can not overload return types", function.name).as_str()))
@@ -194,7 +206,7 @@ fn get_return_type(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
 }
 
 fn err_get_function_out_of_bounds(iter: &TokenIterator) -> Error {
-    new_soul_error(iter.current(), "unexped end while trying to get function declaration")
+    new_soul_error(iter.current(), "unexpeced end while trying to get function declaration")
 }
 
 
