@@ -1,7 +1,7 @@
 use std::{collections::HashSet, io::{Error, Result}};
 use once_cell::sync::Lazy;
 
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::{get_forward_declared_initialize, get_initialize}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::SOUL_NAMES, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::{get_forward_declared_initialize, get_initialize}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::{NamesOtherKeyWords, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
 use super::statment_type::StatmentType;
 
@@ -37,13 +37,19 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         *open_bracket_stack -= 1;
         return Ok(StatmentType::CloseScope);
     }
+
+    if iter.current().text == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) {
+        traverse_to_end_statment(iter)?;
+        return Ok(StatmentType::Return);
+    }
     
     let mut is_wrong_type = false;
+    let begin_i = iter.current_index();
     let possible_type = SoulType::try_from_iterator(iter, &meta_data.type_meta_data, &context.current_generics, &mut is_wrong_type).ok();
 
     if possible_type.is_some() && !is_wrong_type  {
 
-        let next_token = iter.peek()
+        let next_token = iter.peek_multiple(2)
             .ok_or(err_out_of_bounds(iter))?;
 
         let symbool;
@@ -59,6 +65,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         }
 
         if symbool == "=" {
+            iter.go_to_index(begin_i);
             return Ok(get_initialize_info(iter, meta_data, context)?);
         }
     }
@@ -112,11 +119,11 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         return Err(new_soul_error(next, format!("token invalid for statment: '{}'", next.text).as_str()));
     }
 
-    traverse_assignment(iter)?;
+    traverse_to_end_statment(iter)?;
     return Ok(StatmentType::Assignment)
 }
 
-fn traverse_assignment(iter: &mut TokenIterator) -> Result<()> {
+fn traverse_to_end_statment(iter: &mut TokenIterator) -> Result<()> {
     loop {
         if iter.next().is_none() {
             break Err(new_soul_error(iter.current(), "unexpected end while trying to get assignment (add enter or ';')"));

@@ -7,6 +7,8 @@ const GLOBAL_SCOPE: i64 = 0;
 pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
+    println!("{:?}", iter.get_tokens_text().iter().enumerate().collect::<Vec<_>>());
+    
     let mut statments = Vec::new();
     let mut open_bracket_stack = GLOBAL_SCOPE;
     loop {
@@ -19,7 +21,6 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     iter.go_to_before_start();
 
     println!("{:#?}", statments);
-    println!("{:?}", iter.get_tokens_text().iter().enumerate().collect::<Vec<_>>());
     
     let mut statment_iter = StatmentIterator::new(statments);
     let mut tree = AbstractSyntaxTree::new();
@@ -51,9 +52,9 @@ pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut T
 
     iter.go_to_index(begin_i);
 
-    loop {
-
+    loop {  
         let multi_statment = get_statment(iter, statment_iter, meta_data, context)?;
+
         tree.main_nodes.extend(multi_statment.before.into_iter().flatten());
         tree.main_nodes.push(multi_statment.value);
         tree.main_nodes.extend(multi_statment.after.into_iter().flatten());
@@ -105,6 +106,11 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
         StatmentType::FunctionBody{..} => (),
         StatmentType::FunctionCall => (),
         StatmentType::Scope => (),
+        StatmentType::Return => {
+            if *open_bracket_stack == GLOBAL_SCOPE {
+                return Err(new_soul_error(iter.current(), "can not return in global scope"));
+            }
+        },
     }
 
     statments.push(statment_type);

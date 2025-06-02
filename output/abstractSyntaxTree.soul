@@ -3,32 +3,37 @@ Initialize(
 			Variable(const int number) = Literal(Literal untypedInt 1)
 		)
 	)
-FunctionBody(main( str[] args) int {
-
-	Initialize(
+Initialize(
 		Assignment(
-			Variable(int foo) = BinaryExpression(Literal(Literal untypedInt 1) + BinaryExpression(Literal(Literal untypedInt 1) ** Literal(Literal untypedInt 2), type: Literal untypedInt), type: Literal untypedInt)
+			Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
 		)
 	)
-	FunctionBody(sum() int {
-
-	FunctionCall(Println())
-	Assignment(
-		Variable(int foo) = Literal(int 0)
+Initialize(
+		Assignment(
+			Variable(const f32 float) = Literal(const f32 1)
+		)
 	)
-	Assignment(
-		Variable(int foo) = BinaryExpression(Variable(int foo) + Literal(int 1), type: int)
+Initialize(
+		Assignment(
+			Variable(Literal uint uintNumber) = Literal(Literal uint 1)
+		)
 	)
-	Assignment(
-		Variable(int foo) = BinaryExpression(Variable(int foo) & Literal(int 1), type: int)
+FunctionBody(printSum( f64 a,  f64 b) int{
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_0__), Variable(const f64 a), Variable(Literal str __Soul_c_str_2__), Variable(const f64 b), Variable(Literal str __Soul_c_str_1__), BinaryExpression(Variable(const f64 a) + Variable(const f64 b), type: const f64), Variable(Literal str __Soul_c_str_0__)))))
+	})
+FunctionBody(main( str[] args) int{
+	FunctionBody(sum( int a,  int b) int{
+	Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))
+	})
+	Initialize(
+		Assignment(
+			Variable(int num) = FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2)))
+		)
 	)
-	Assignment(
-		Variable(int foo) = BinaryExpression(Variable(int foo) - Literal(int 1), type: int)
+	Initialize(
+		Assignment(
+			Variable(Literal int foo) = BinaryExpression(Literal(Literal untypedInt 1) + BinaryExpression(Literal(Literal untypedInt 1) ** Literal(Literal untypedInt 2), type: Literal untypedInt), type: Literal untypedInt)
+		)
 	)
-	Assignment(
-		Variable(int foo) = Literal(int 1)
-	)
-})
-	FunctionCall(sum())
-	FunctionCall(Println(Variable(Literal str __Soul_c_str_0__)))
-})
+	FunctionCall(Println(Variable(Literal int foo)))
+	})

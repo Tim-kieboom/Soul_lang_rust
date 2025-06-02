@@ -12,6 +12,7 @@ pub enum StatmentType {
     Initialize{is_mutable: bool, is_assigned: bool, var: IVariable},
     FunctionBody{func_info: FunctionDeclaration},
     FunctionCall,
+    Return,
     Scope,
 }
 
@@ -28,6 +29,7 @@ impl StatmentType {
             IStatment::FunctionBody{..} => StatmentType::FunctionBody{func_info:FunctionDeclaration::new(String::new(), None, Vec::new(), false, FunctionID(0))},
             IStatment::FunctionCall{..} => StatmentType::FunctionCall,
             IStatment::Scope{..} => StatmentType::Scope,
+            IStatment::Return{..} => StatmentType::Return,
         }
     }
 
@@ -42,6 +44,7 @@ impl fmt::Debug for StatmentType {
             Self::Initialize{..} => write!(f, "Initialize"),
             Self::FunctionBody{..} => write!(f, "FunctionBody"),
             Self::FunctionCall => write!(f, "FunctionCall"),
+            Self::Return => write!(f, "Return"),
             Self::Scope => write!(f, "Scope"),
         }
     }

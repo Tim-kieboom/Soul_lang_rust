@@ -157,7 +157,7 @@ impl MetaData {
         let mut scope = self.scope_store.get(&context.current_scope_id).expect("Internal Error: scope_id could not be found");
         let global_scope = self.scope_store.get(&MetaData::GLOBAL_SCOPE_ID).expect("Internal Error: global scope_id could not be found");
 
-        if name == "__Soul_format_string__" {
+        if name == "__soul_format_string__" {
             return Ok((MetaData::GLOBAL_SCOPE_ID, global_scope.function_store.from_name(name).unwrap()[0].id));
         }
 

@@ -1,42 +1,29 @@
 const number = 1
-// Literal gravity = 9.81
-// int sum(int b) int {
-// 	return *this + b
+Literal gravity = 9.81
+const f32 float = 1
+Literal uint uintNumber = 1
+
+// int sum(int a) int {
+// 	return *this + a
 // }
 
-// main() {
-	
-// 	sum(int a, int b) int {
-// 		return a + b
-// 	}
-
-// 	num := sum(1, 2)
-// 	num = 1.sum(2)
-// 	Println("hello world")
-// 	Println(f"1 + 2 = {num}")
-// }
-
-main(str[] args) int {
-	foo := 1 + 1 ** 2
-
-	sum() int {
-		Println()
-		foo = 0; foo += 1
-		foo &= 1 \
-			; foo -= 1
-		foo = 1
-	}
-
-	sum()
-	Println("hello world") 
+printSum(f64 a, f64 b) int {
+	Println(f"{a} + {b} = {a+b}")
 }
 
-// sum() int {
+main(str[] args) int {
+	sum(int a, int b) int {
+		return a + b
+	}
 
-// }
+	int num = sum(1, 2)
+	// if num == 3 {
+	// 	Println("1 + 2 is 3 WOW!!!")
+	// }
 
-
-
+	Literal foo = 1 + 1 ** 2
+	Println(foo)
+}
 
 
 

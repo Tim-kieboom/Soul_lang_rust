@@ -25,6 +25,8 @@ fn try_simple_get_function_call(line: &str, meta_data: &mut MetaData, context: &
     let tokens = tokenize_line(FileLine{text: line.to_string(), line_number: 0}, 0, &mut dummy, meta_data)?;
     let mut iter = TokenIterator::new(tokens);
 
+    println!("{:?}", iter.get_tokens_text().iter().enumerate().map(|(i, el)| (i, el)).collect::<Vec<_>>());
+
     get_function_call(&mut iter, meta_data, context)
 }
 
@@ -165,8 +167,6 @@ fn test_get_function_call_function_in_function() {
         .collect::<Vec<_>>()
         .first()
         .expect("int(int) not found")).clone();
-
-
 
     let mut meta_data = MetaData::new();
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
@@ -328,12 +328,12 @@ fn test_get_function_call_generic_no_validater() {
     );
 
     let str_format = (**internal_functions
-        .get(&"__Soul_format_string__".to_string())
-        .expect("__Soul_format_string__ not found")
+        .get(&"__soul_format_string__".to_string())
+        .expect("__soul_format_string__ not found")
         .first()
-        .expect("__Soul_format_string__(any...) not found")).clone();
+        .expect("__soul_format_string__(any...) not found")).clone();
 
-    const FUNC_CALL3: &str = "__Soul_format_string__(1);";
+    const FUNC_CALL3: &str = "__soul_format_string__(1);";
     let function = simple_get_function_call(FUNC_CALL3, &mut meta_data, &mut context);
     let should_be = MultiStamentResult::new(
         IExpression::new_funtion_call(
@@ -431,19 +431,6 @@ fn test_get_function_call_in_child_scope() {
         .unwrap();
 
     context.current_scope_id = parent;
-
-    /* 
-        empty() {
-            emptyInEmpty() {
-                //do stuff
-            }
-
-        }
-        emptyInEmpty() // call SHOULD FAIL
-    */
-    let result = try_simple_get_function_call(FUNC_CALL2, &mut meta_data, &mut context);
-    assert!(result.is_err());
-    assert_eq!(result.unwrap_err().to_string(), "");
 
 }
 

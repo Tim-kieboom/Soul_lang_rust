@@ -1,7 +1,7 @@
 use std::io::{Error, Result};
 
 use super::statment_type::statment_type::{StatmentIterator, StatmentType};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_function_call::get_function_call::get_function_call, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::check_name}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
 pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let statment_type;
@@ -22,18 +22,68 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
             get_assignment(iter, meta_data, context, variable)
                 .map(|result| result.assignment)
         },
-        StatmentType::Initialize{..} => {
-            get_initialize(iter, meta_data, context)
-        },
-        StatmentType::FunctionBody{..} => {
-            get_function_body(iter, statment_iter, meta_data, context)
-        }
+        StatmentType::Initialize{..} => get_initialize(iter, meta_data, context),
+        StatmentType::FunctionBody{..} => get_function_body(iter, statment_iter, meta_data, context),
         StatmentType::FunctionCall => {
-            get_function_call(iter, meta_data, context)
-                .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value)))
+            let result = get_function_call(iter, meta_data, context)
+                .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value)));
+        
+            if iter.next().is_none() {
+                return Err(err_out_of_bounds(iter));
+            }
+            result
         },
         StatmentType::Scope => todo!(),
+        StatmentType::Return => {
+            get_return(iter, context, meta_data)
+        },
     }
+}
+
+fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData) -> Result<MultiStamentResult<IStatment>> {
+    if iter.current().text != SOUL_NAMES.get_name(NamesOtherKeyWords::Return) {
+        return Err(new_soul_error(iter.current(), format!("Internal error: return Statment doesn't start with '{}'", SOUL_NAMES.get_name(NamesOtherKeyWords::Return)).as_str()));
+    }
+    if context.current_function.is_none() {
+        return Err(new_soul_error(iter.current(), "trying to return while not being in function"));
+    }
+
+    let return_type = context.current_function.as_ref().unwrap().return_type.clone();
+
+
+    if iter.next().is_none() {
+        return Err(err_out_of_bounds(iter));
+    }
+
+    if iter.current().text == "\n" || iter.current().text == ";" {
+
+        if return_type.is_some() {
+            return Err(new_soul_error(iter.current(), "trying to return without a returnType while function has a return type"));
+        }
+
+        return Ok(MultiStamentResult::new(
+            IStatment::new_return(None)
+        ));
+    }
+
+    if return_type.is_none() {
+        return Err(new_soul_error(iter.current(), "trying to return with a type while function does not have return type"));
+    }
+
+    let return_str = return_type.as_ref().unwrap();
+    let return_type = SoulType::from_stringed_type(return_str, iter.current(), &meta_data.type_meta_data, &mut context.current_generics)?;    
+
+    let expression_result = get_expression(iter, meta_data, context, &Some(&return_type), &vec!["\n", ";"])?;
+
+    if !return_type.is_convertable(&expression_result.is_type, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
+        return Err(new_soul_error(iter.current(), format!("trying to return with a type: '{}' but can not be converted to function return type: '{}' ", expression_result.is_type.to_string(), return_str).as_str()));
+    }
+
+    let mut result = MultiStamentResult::new(IStatment::EmptyStatment());
+    result.add_result(&expression_result.result);
+    result.value = IStatment::new_return(Some(expression_result.result.value));
+
+    return Ok(result);
 }
 
 fn get_variable(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData) -> Result<IVariable> {

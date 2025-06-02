@@ -62,11 +62,6 @@ pub fn get_function_call(
     let expressions = get_argument_expression(arguments, function);
     statment_result.value = IExpression::new_funtion_call(function.clone(), expressions, BTreeMap::new());
 
-
-    if iter.next().is_none() {
-        return Err(new_soul_error(iter.current(), "unexpected end while parsing FunctionCall"));
-    }
-
     Ok(statment_result)   
 }
 

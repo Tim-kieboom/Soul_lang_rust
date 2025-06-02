@@ -1,6 +1,6 @@
 use super::rulesets::RuleSet;
 use std::collections::BTreeMap;
-use crate::meta_data::{class_info::class_info::ClassInfo, scope_and_var::scope::ScopeId, soul_type::generic::Generic};
+use crate::meta_data::{class_info::class_info::ClassInfo, function::function_declaration::function_declaration::FunctionDeclaration, scope_and_var::scope::ScopeId, soul_type::generic::Generic};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DefinedGenric {
@@ -27,18 +27,20 @@ impl CurrentGenerics {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CurrentContext {
     pub rulesets: RuleSet,
-    pub current_scope_id: ScopeId,
     // this_ptr: Option<VarInfo>,
+    pub current_scope_id: ScopeId,
     pub in_class: Option<ClassInfo>,
     pub current_generics: CurrentGenerics,
+    pub current_function: Option<FunctionDeclaration>,
 }
 
 impl CurrentContext {
     pub fn new(current_scope_id: ScopeId) -> Self {
         CurrentContext { 
-            rulesets: RuleSet::Default, 
-            current_scope_id, 
             in_class: None, 
+            current_scope_id, 
+            current_function: None,
+            rulesets: RuleSet::Default, 
             current_generics: CurrentGenerics::new(),
         }
     }

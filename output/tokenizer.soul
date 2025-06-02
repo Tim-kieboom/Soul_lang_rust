@@ -1,12 +1,15 @@
 const number = 1 
-main ( str [] args ) int { 
-foo := 1 + 1 ** 2 
-sum ( ) int { 
-Println ( ) 
-foo = 0 ; foo += 1 
-foo &= 1 ; foo -= 1 
-foo = 1 
+Literal gravity = 9.81 
+const f32 float = 1 
+Literal uint uintNumber = 1 
+printSum ( f64 a , f64 b ) int { 
+Println ( __soul_format_string__ ( __Soul_c_str_0__ , a , __Soul_c_str_2__ , b , __Soul_c_str_1__ , a + b , __Soul_c_str_0__ ) ) 
 } 
-sum ( ) 
-Println ( __Soul_c_str_0__ ) 
+main ( str [] args ) int { 
+sum ( int a , int b ) int { 
+return a + b 
+} 
+int num = sum ( 1 , 2 ) 
+Literal foo = 1 + 1 ** 2 
+Println ( foo ) 
 } 

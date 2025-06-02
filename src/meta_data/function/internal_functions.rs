@@ -68,7 +68,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             access_level: AccesLevel::Public,
         },
         FunctionDeclaration{
-            name: "__Soul_format_string__".to_string(), 
+            name: "__soul_format_string__".to_string(), 
             return_type: Some(SOUL_NAMES.get_name(NamesInternalType::String).to_string()),
             args: vec![
                 ArgumentInfo{

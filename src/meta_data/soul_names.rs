@@ -149,6 +149,7 @@ impl<'a> SoulNames<'a> {
             (NamesOtherKeyWords::WhereLoop, "where"),
             (NamesOtherKeyWords::BreakLoop, "break"),
             (NamesOtherKeyWords::ContinueLoop, "continue"),
+            (NamesOtherKeyWords::Return, "return"),
 
             (NamesOtherKeyWords::SwitchCase, "match"),
             (NamesOtherKeyWords::Typeof, "typeof"),
@@ -239,6 +240,7 @@ pub enum NamesOtherKeyWords {
     InForLoop,
     ContinueLoop,
     BreakLoop,
+    Return,
 
     SwitchCase,
     Typeof,
