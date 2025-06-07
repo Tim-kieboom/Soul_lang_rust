@@ -50,14 +50,14 @@ pub fn check_convert_to_ref(
                         return Err(err_literal_mut_refs(iter, format!("{:?}", expression).as_str()))
                     }
                 },
-            IExpression::Literal { value, type_name: _ } => {
+            IExpression::Literal { value, type_name: _, span:_ } => {
                     if ref_wrap == &TypeWrappers::ConstRef {
                         continue;
                     }
             
                     return Err(err_literal_mut_refs(&iter, &value));
                 },
-            IExpression::IVariable { this } => {
+            IExpression::IVariable { this, span:_ } => {
                     if ref_wrap == &TypeWrappers::ConstRef {
                         continue;
                     }
@@ -83,9 +83,9 @@ pub fn check_convert_to_ref(
                         return Err(new_soul_error(iter.current(), "can not ref functionCall with no return type"));
                     }                    
                 },
-            IExpression::ConstRef { expression } => expression_stack.push(&expression),
-            IExpression::MutRef { expression } => expression_stack.push(&expression),
-            IExpression::DeRef { expression } => expression_stack.push(&expression),
+            IExpression::ConstRef { expression, span:_ } => expression_stack.push(&expression),
+            IExpression::MutRef { expression, span:_ } => expression_stack.push(&expression),
+            IExpression::DeRef { expression, span:_ } => expression_stack.push(&expression),
             IExpression::EmptyExpression() => (),
         };
     }
@@ -114,7 +114,7 @@ pub fn is_expression_literal(
             IExpression::EmptyExpression() => {
                     return Ok(true);
                 },
-            IExpression::IVariable { this } => {
+            IExpression::IVariable { this, span:_ } => {
                     return is_ivariable_literal(this, token, meta_data, generics);
                 },
             IExpression::Increment { variable, .. } => {
@@ -123,9 +123,9 @@ pub fn is_expression_literal(
             IExpression::FunctionCall { function_info, .. } => {
                     return Ok(function_info.modifiers.contains(FunctionModifiers::Literal))
                 },
-            IExpression::ConstRef { expression } => expression_stack.push(&expression),
-            IExpression::MutRef { expression } => expression_stack.push(&expression),
-            IExpression::DeRef { expression } => expression_stack.push(&expression),
+            IExpression::ConstRef { expression, span:_ } => expression_stack.push(&expression),
+            IExpression::MutRef { expression, span:_ } => expression_stack.push(&expression),
+            IExpression::DeRef { expression, span:_ } => expression_stack.push(&expression),
         };
     }
 
@@ -139,7 +139,7 @@ pub fn is_ivariable_literal(
     generics: &mut CurrentGenerics,
 ) -> Result<bool> {
     match var {
-        IVariable::Variable{ name: _, type_name } => return is_type_name_literal(&type_name, token, meta_data, generics),
+        IVariable::Variable{ name: _, type_name, span:_ } => return is_type_name_literal(&type_name, token, meta_data, generics),
         // IVariable::MemberExpression{ parent, .. } => {
 
         //     if let IVariable::Variable{ name: _, type_name } = &**parent {

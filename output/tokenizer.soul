@@ -1,5 +1,5 @@
 main ( Literal str [] args ) int { 
 const num = 1 + 2 
-sec := num 
+sec := u8 ( num ) 
 return 0 
 } 

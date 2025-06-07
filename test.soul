@@ -22,7 +22,7 @@ main(Literal str[] args) int {
 	// }
 
 	const num = 1 + 2
-	sec := num
+	sec := u8(num)
 	// Println(num)
 	// if num == 3 {
 	// 	Println("1 + 2 is 3 WOW!!!")
@@ -31,6 +31,7 @@ main(Literal str[] args) int {
 
 	// Literal foo = 1 + 1 ** 2
 	// Println(foo)
+
 	return 0
 }
 

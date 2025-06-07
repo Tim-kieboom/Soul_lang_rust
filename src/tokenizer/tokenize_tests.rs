@@ -87,7 +87,7 @@ fn test_multi_char_symbools_take_priority_over_single_once() {
     for (i, line) in source_file.iter().enumerate() {
 
         let result = tokenize_line(line.clone(), i, &mut in_multi_line, &mut meta_data);
-        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_string());
+        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
         let mut tokens = result.unwrap();
         if in_multi_line {
             tokens.clear();
@@ -156,7 +156,7 @@ fn test_tokenize_line() {
     for (i, line) in source_file.iter().enumerate() {
 
         let result = tokenize_line(line.clone(), i, &mut in_multi_line, &mut meta_data);
-        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_string());
+        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
         let mut tokens = result.unwrap();
         if in_multi_line {
             tokens.clear();
@@ -251,7 +251,7 @@ fn test_tokenize_backslash() {
 
 	let result_tokens = tokenize_file(source_file, 10, &mut meta_data);
 	assert!(result_tokens.is_err());
-	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:4; !!error!! '\\' can only be placed at the end of a line");
+	assert_eq!(result_tokens.unwrap_err().to_err_message(), "at 1:4; !!error!! '\\' can only be placed at the end of a line");
 
 	const BAD_BACKSLASH_DOT: &str = "if 1 == a\\.Len() {}";
 	meta_data = MetaData::new();
@@ -259,7 +259,7 @@ fn test_tokenize_backslash() {
 
 	let result_tokens = tokenize_file(source_file, 10, &mut meta_data);
 	assert!(result_tokens.is_err());
-	assert_eq!(result_tokens.unwrap_err().to_string(), "at 1:9; !!error!! '\\' can only be placed at the end of a line");
+	assert_eq!(result_tokens.unwrap_err().to_err_message(), "at 1:9; !!error!! '\\' can only be placed at the end of a line");
 }
 
 #[test]

@@ -49,6 +49,7 @@ main() int {
 	Println("hello world")
 	Println("hello world")
 	Println("hello world")
+	return 0
 }
 "#;
 

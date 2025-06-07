@@ -25,7 +25,7 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
         StatmentType::FunctionBody{..} => get_function_body(iter, statment_iter, meta_data, context),
         StatmentType::FunctionCall => {
                 let result = get_function_call(iter, meta_data, context)
-                    .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value)));
+                    .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value, iter.current())));
         
                 if iter.next().is_none() {
                     return Err(err_out_of_bounds(iter));
@@ -64,7 +64,7 @@ fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data:
         }
 
         return Ok(MultiStamentResult::new(
-            IStatment::new_return(None)
+            IStatment::new_return(None, iter.current())
         ));
     }
 
@@ -84,7 +84,7 @@ fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data:
 
     let mut result = MultiStamentResult::new(IStatment::EmptyStatment());
     result.add_result(&expression_result.result);
-    result.value = IStatment::new_return(Some(expression_result.result.value));
+    result.value = IStatment::new_return(Some(expression_result.result.value), iter.current());
 
     return Ok(result);
 }
@@ -105,7 +105,7 @@ fn get_variable(iter: &mut TokenIterator, context: &mut CurrentContext, meta_dat
         return Err(err_out_of_bounds(iter));
     }
 
-    Ok(IVariable::new_variable(&variable.0.name, &variable.0.type_name))
+    Ok(IVariable::new_variable(&variable.0.name, &variable.0.type_name, iter.current()))
 }
 
 fn err_out_of_bounds(iter: &TokenIterator) -> SoulError {

@@ -44,7 +44,7 @@ fn to_string(file_lines: Vec<FileLine>) -> String {
 #[test]
 fn does_format_str_file_work() {
     let result = format_str_file(str_to_file_lines(TEST_FILE).into_iter());
-    assert!(result.is_ok(), "err: {}", result.unwrap_err().to_string());
+    assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
 
     let file_result = to_string(result.unwrap());
     assert!(
@@ -60,7 +60,7 @@ fn does_format_str_line_work() {
     
     for (i, line) in source_file.iter().enumerate() {
         let result = format_str_line(line.clone(), i);
-        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_string());
+        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
         results.push(result.unwrap());
     }
 

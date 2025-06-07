@@ -45,7 +45,7 @@ fn to_string(file_lines: Vec<FileLine>) -> String {
 fn does_rawstr_to_litstr_file_work() {
     let mut meta_data = MetaData::new();
     let result = rawstr_to_litstr_file(str_to_file_lines(TEST_FILE), &mut meta_data);
-    assert!(result.is_ok(), "err: {}", result.unwrap_err().to_string());
+    assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
 
     let file_result = to_string(result.unwrap());
     assert!(
@@ -62,7 +62,7 @@ fn does_rawstr_to_litstr_line_work() {
     let mut results = Vec::new();
     for line in source_file {
         let result = rawstr_to_litstr_line(line, &mut meta_data);
-        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_string());
+        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
         
         results.push(result.unwrap());
     }

@@ -162,7 +162,7 @@ pub fn get_arguments(
                     function_name, 
                     new_soul_error(
                         iter.current(), 
-                        format!("while trying to get optional argument: '{}'\n{}", store_arg_info.arg_info.name, err.to_string()).as_str()
+                        format!("while trying to get optional argument: '{}'\n{}", store_arg_info.arg_info.name, err.to_err_message()).as_str()
                     )
                 ))?;
             
@@ -252,7 +252,7 @@ fn err_arguments_out_of_bounds(iter: &mut TokenIterator, function_name: &str) ->
 }
 
 fn pass_err(iter: &TokenIterator, name: &str, err: SoulError) -> SoulError {
-    pass_soul_error(iter.current(), format!("while trying to get arguments of function: '{}'", name).as_str(), &err)
+    pass_soul_error(iter.current(), format!("while trying to get arguments of function: '{}'", name).as_str(), err)
 }
 
 

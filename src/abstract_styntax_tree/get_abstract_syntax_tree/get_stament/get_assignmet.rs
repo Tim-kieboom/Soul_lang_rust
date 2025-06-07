@@ -18,7 +18,7 @@ pub fn get_assignment(
     let symbool_index = iter.current_index();
     
     let var_type = SoulType::from_stringed_type(i_variable.get_type_name(), iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
-        .map_err(|err| pass_soul_error(iter.current(), format!("error while trying to get type from variable of assignment").as_str(), &err))?;
+        .map_err(|err| pass_soul_error(iter.current(), format!("error while trying to get type from variable of assignment").as_str(), err))?;
 
     let is_forward_declared = meta_data.try_get_variable(i_variable.get_name(), &context.current_scope_id)
         .ok_or(new_soul_error(iter.current(), format!("variable: '{}' could not be found in scope", i_variable.get_name()).as_str()))?
@@ -64,14 +64,16 @@ pub fn get_assignment(
                 i_variable, 
                 false, 
                 increment_amount,
+                iter.current()
             ),
+            iter.current()
         );
         return Ok(AssignmentResult{is_type: var_type, assignment: body_result});
     }
 
     let begin_i = iter.current_index();
     let mut expression = get_expression(iter, meta_data, context, &Some(&var_type), is_forward_declared, &vec!["\n", ";"])
-        .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get assignment expression", &err))?;
+        .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get assignment expression", err))?;
 
     body_result.add_result(&expression.result);
     meta_data.try_get_variable_mut(i_variable.get_name(), &context.current_scope_id)
@@ -91,7 +93,7 @@ pub fn get_assignment(
     }
 
     expression.result.value = add_compount_assignment(&iter[symbool_index].text, &i_variable, expression.result.value);
-    body_result.value = IStatment::new_assignment(i_variable, expression.result.value);
+    body_result.value = IStatment::new_assignment(i_variable, expression.result.value, iter.current());
     Ok(AssignmentResult{is_type: var_type, assignment: body_result})
 }
 
@@ -110,9 +112,10 @@ fn add_compount_assignment(symbool: &str, i_variable: &IVariable, expression: IE
     };
 
     IExpression::BinairyExpression { 
-        left: Box::new(IExpression::IVariable {this: i_variable.clone()}), 
+        left: Box::new(IExpression::IVariable {this: i_variable.clone(), span: i_variable.get_span().clone()}), 
         operator_type: op, right: Box::new(expression), 
         type_name: i_variable.get_type_name().clone(),
+        span: i_variable.get_span().clone()
     }
 }
 

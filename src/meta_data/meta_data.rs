@@ -143,7 +143,9 @@ impl MetaData {
     }
 
     pub fn check_variable_valid(&self, var_name: &String, scope_id: &ScopeId) -> BorrowResult<()> {
-        self.borrow_checker.lock().unwrap().is_valid(&BorrowId(&var_name, scope_id))
+        self.borrow_checker
+            .lock().unwrap()
+            .is_valid(&BorrowId(&var_name, scope_id))
     }
 
     pub fn try_get_function(

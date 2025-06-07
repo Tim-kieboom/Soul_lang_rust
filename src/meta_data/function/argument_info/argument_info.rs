@@ -86,7 +86,7 @@ impl ArgumentInfo {
             type_meta_data, 
             generics,
         )
-            .inspect_err(|err| panic!("Internal Error while trying to run are_compatible other_type from string failed err: {}", err.to_string()))
+            .inspect_err(|err| panic!("Internal Error while trying to run are_compatible other_type from string failed err: {}", err.to_err_message()))
             .unwrap();
         
         let self_type = SoulType::from_stringed_type(
@@ -95,7 +95,7 @@ impl ArgumentInfo {
             type_meta_data, 
             generics,
         )
-            .inspect_err(|err| panic!("Internal Error while trying to run are_compatible self_type from string failed err: {}", err.to_string()))
+            .inspect_err(|err| panic!("Internal Error while trying to run are_compatible self_type from string failed err: {}", err.to_err_message()))
             .unwrap();
 
         if !other_type.is_convertable(&self_type, iter.current(), type_meta_data, generics) {

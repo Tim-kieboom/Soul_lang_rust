@@ -26,7 +26,7 @@ pub fn get_function_call(
     context: &mut CurrentContext,
 ) -> Result<MultiStamentResult<IExpression>> {
     fn pass_err(err: SoulError, function_name: &str, iter: &TokenIterator) -> SoulError {
-        pass_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'", function_name).as_str(), &err)
+        pass_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'", function_name).as_str(), err)
     }
     
     let mut statment_result = MultiStamentResult::new(IExpression::EmptyExpression());
@@ -61,7 +61,7 @@ pub fn get_function_call(
         .expect("Internal Error function id is not in function_store");
 
     let expressions = get_argument_expression(arguments, function);
-    statment_result.value = IExpression::new_funtion_call(function.clone(), expressions, BTreeMap::new());
+    statment_result.value = IExpression::new_funtion_call(function.clone(), expressions, BTreeMap::new(), iter.current());
 
     Ok(statment_result)   
 }
@@ -81,7 +81,7 @@ fn get_generics(
         loop {
             let begin_i = iter.current_index();
             SoulType::from_iterator(iter, &meta_data.type_meta_data, &context.current_generics)
-                .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get generics", &err))?;
+                .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get generics", err))?;
 
             generic_defines.push(iter.current().text.clone());
             
@@ -158,7 +158,7 @@ fn get_arguments(
         let begin_i = iter.current_index();
         const IS_FORWARD_DECLARED: bool = false;
         let expr_result = get_expression(iter, meta_data, context, &None, IS_FORWARD_DECLARED, &vec![",", ")"])
-            .map_err(|err| pass_soul_error(&iter[begin_i], format!("at argument number: {}", arg.arg_position+1).as_str(), &err))?;
+            .map_err(|err| pass_soul_error(&iter[begin_i], format!("at argument number: {}", arg.arg_position+1).as_str(), err))?;
 
         let (is_type, expression) = (expr_result.is_type, expr_result.result);
         if is_type.is_empty() {

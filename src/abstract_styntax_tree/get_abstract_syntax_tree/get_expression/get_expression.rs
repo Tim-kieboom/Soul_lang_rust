@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::result;
 use once_cell::sync::Lazy;
-use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulSpan};
 
 use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::tokenizer::token::Token;
@@ -27,8 +27,9 @@ static TRUE_LITERAL: Lazy<IExpression> = Lazy::new(|| {
         "true", 
         &SoulType::from_modifiers(
             SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string(),
-            TypeModifiers::Literal
-        ).to_string()
+            TypeModifiers::Literal,
+        ).to_string(),
+        &Token{line_number: 0, line_offset: 0, text: String::new()},
     )
 });
 
@@ -38,8 +39,9 @@ static NEGATIVE_ONE_LITERAL: Lazy<IExpression> = Lazy::new(|| {
         "-1", 
         &SoulType::from_modifiers(
             SOUL_NAMES.get_name(NamesInternalType::UntypedInt).to_string(),
-            TypeModifiers::Literal
+            TypeModifiers::Literal,
         ).to_string(),
+        &Token{line_number: 0, line_offset: 0, text: String::new()},
     )
 });
 
@@ -172,7 +174,7 @@ fn convert_expression(
             convert_operator(iter, stacks, meta_data, context, result, should_be_type)?;
         }
         else if let Some(variable) = possible_variable {
-            convert_variable(iter, stacks, meta_data, context, variable)?;
+            convert_variable(iter, stacks, meta_data, context, variable, is_forward_declared)?;
         }
         else if possible_literal.is_ok() {
             convert_literal(iter, stacks, meta_data, context, possible_literal)?;
@@ -207,6 +209,7 @@ fn convert_variable(
     meta_data: &MetaData,
     context: &mut CurrentContext,
     _variable: (&VarInfo, ScopeId),
+    is_forward_declared: bool,
 ) -> Result<()> {
     let (variable, scope_id) = _variable;
 
@@ -214,17 +217,19 @@ fn convert_variable(
         return Err(new_soul_error(iter.current(), format!("'{}' can not be used before it is assigned", variable.name).as_str()));
     }
 
-    meta_data.check_variable_valid(&variable.name, &scope_id)
-        .map_err(|msg| new_soul_error(iter.current(), format!("while trying to use variable: '{}' in expression\n{}", variable.name, msg).as_str()))?;
+    if is_forward_declared {
+        meta_data.check_variable_valid(&variable.name, &scope_id)
+            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to use variable: '{}' in expression\n{}", variable.name, msg).as_str()))?;
+    }
 
     let var_type;
     match SoulType::from_stringed_type(&variable.type_name, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
         Ok(val) => var_type = val,
-        Err(err) => return Err(pass_soul_error(iter.current(), format!("while trying to get type of variable '{}'", variable.name).as_str(), &err)),
+        Err(err) => return Err(pass_soul_error(iter.current(), format!("while trying to get type of variable '{}'", variable.name).as_str(), err)),
     }
 
     stacks.type_stack.push(var_type);
-    stacks.node_stack.push(IExpression::new_variable(&variable.name, &variable.type_name));
+    stacks.node_stack.push(IExpression::new_variable(&variable.name, &variable.type_name, iter.current()));
     Ok(())
 }
 
@@ -255,7 +260,7 @@ fn convert_literal(
 
     let literal_type_string = literal_type.to_string();
     stacks.type_stack.push(literal_type);
-    stacks.node_stack.push(IExpression::Literal{value: literal_value, type_name: literal_type_string});
+    stacks.node_stack.push(IExpression::Literal{value: literal_value, type_name: literal_type_string, span: SoulSpan::from_token(iter.current())});
     Ok(())
 }
 
@@ -275,7 +280,7 @@ fn convert_function_call(
         if let Some(type_string) = &function_info.return_type {
             let begin_i = iter.current_index();
             return_type = SoulType::from_stringed_type(type_string, iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
-                .map_err(|err| pass_soul_error(&iter[begin_i], format!("while trying to get return type of function call: '{}'", function_info.name).as_str(), &err))?;
+                .map_err(|err| pass_soul_error(&iter[begin_i], format!("while trying to get return type of function call: '{}'", function_info.name).as_str(), err))?;
         } 
         else {
             return_type = SoulType::new_empty();
@@ -356,15 +361,15 @@ fn convert_to_ref(
 
         let mut refrence;
         if ref_wrap == TypeWrappers::MutRef {
-            refrence = IExpression::new_mutref(expression);
+            refrence = IExpression::new_mutref(expression, iter.current());
             if is_double {
-                refrence = IExpression::new_mutref(refrence);
+                refrence = IExpression::new_mutref(refrence, iter.current());
             }
         }
         else {
-            refrence = IExpression::new_constref(expression);
+            refrence = IExpression::new_constref(expression, iter.current());
             if is_double {
-                refrence = IExpression::new_constref(refrence);
+                refrence = IExpression::new_constref(refrence, iter.current());
             }
         }
 
@@ -423,7 +428,7 @@ fn get_binairy_expression(
     stacks: &mut ExpressionStacks,
     operator_type: &ExprOperatorType
 ) -> Result<IExpression> {
-    assert!(!stacks.node_stack.is_empty(), "at: {}, Internal error while trying to get binaryExpression node_stack is empty", new_soul_error(iter.current(), "").to_string());
+    assert!(!stacks.node_stack.is_empty(), "at: {}, Internal error while trying to get binaryExpression node_stack is empty", new_soul_error(iter.current(), "").to_err_message());
     let right = stacks.node_stack.pop().unwrap();
     let right_type = stacks.type_stack.pop().unwrap();
     if right_type.is_empty() {
@@ -443,7 +448,7 @@ fn get_binairy_expression(
 
     if operator_type == &ExprOperatorType::Increment || operator_type == &ExprOperatorType::Decrement {
         let incr_variable;
-        if let IExpression::IVariable{this} = right {
+        if let IExpression::IVariable{this, span:_} = right {
             incr_variable = this.clone();
         }
         else {
@@ -456,7 +461,7 @@ fn get_binairy_expression(
                      else {-1};
 
         stacks.type_stack.push(right_type);
-        return Ok(IExpression::new_increment(incr_variable, is_before, amount));         
+        return Ok(IExpression::new_increment(incr_variable, is_before, amount, iter.current()));         
     }
     else if operator_type == &ExprOperatorType::Not {
         if let IExpression::EmptyExpression() = right {
@@ -476,6 +481,7 @@ fn get_binairy_expression(
             ExprOperatorType::NotEquals, 
             TRUE_LITERAL.clone(), 
             &type_name,
+            iter.current()
         ));
     }
 
@@ -510,7 +516,8 @@ fn get_binairy_expression(
         left, 
         operator_type.clone(), 
         right, 
-        &binary_type_string
+        &binary_type_string,
+        iter.current()
     ))
 }
 
@@ -631,13 +638,14 @@ fn get_negative_expression(
             &mut context.current_generics,
         )?;
 
-        let var_expression = IExpression::new_variable(&variable.name, &variable.type_name);
+        let var_expression = IExpression::new_variable(&variable.name, &variable.type_name, iter.current());
 
         result.value = IExpression::new_binary_expression(
             var_expression, 
             ExprOperatorType::Mul, 
             NEGATIVE_ONE_LITERAL.clone(), 
-            &variable.type_name
+            &variable.type_name,
+            iter.current()
         );
         
         return Ok((result, var_type)); 
@@ -648,12 +656,13 @@ fn get_negative_expression(
         }
 
         let literal_type_string = literal_type.to_string();
-        let literal_expression = IExpression::new_literal(&literal_value, &literal_type_string);
+        let literal_expression = IExpression::new_literal(&literal_value, &literal_type_string, iter.current());
         result.value = IExpression::new_binary_expression(
             literal_expression, 
             ExprOperatorType::Mul, 
             NEGATIVE_ONE_LITERAL.clone(), 
             &literal_type_string,
+            iter.current()
         );
 
         return Ok((result, literal_type));

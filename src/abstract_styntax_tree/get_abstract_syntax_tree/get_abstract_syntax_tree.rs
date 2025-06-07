@@ -1,4 +1,4 @@
-use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
 
 use super::get_stament::statment_type::statment_type::{StatmentIterator, StatmentType};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::AbstractSyntaxTree, get_abstract_syntax_tree::get_stament::{get_statment::get_statment, statment_type::get_statment_types::get_statment_types}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesTypeModifiers, SOUL_NAMES}}, tokenizer::token::TokenIterator};
@@ -13,7 +13,9 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     let mut statments = Vec::new();
     let mut open_bracket_stack = GLOBAL_SCOPE;
     loop {
-        let is_done = forward_declare(&mut iter, meta_data, &mut context, &mut statments, &mut open_bracket_stack)?;
+        let is_done = forward_declare(&mut iter, meta_data, &mut context, &mut statments, &mut open_bracket_stack)
+            .map_err(|err| pass_soul_error(iter.current(), "while forward declaring", err))?;
+
         if is_done {
             break;
         }
@@ -21,7 +23,7 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     
     iter.go_to_before_start();
 
-    // println!("{:#?}", statments);
+    println!("{:#?}", statments);
     
     let mut statment_iter = StatmentIterator::new(statments);
     let mut tree = AbstractSyntaxTree::new();

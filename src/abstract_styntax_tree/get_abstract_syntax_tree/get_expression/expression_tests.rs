@@ -1,5 +1,5 @@
 use std::{collections::{BTreeMap, HashMap}};
-use crate::meta_data::soul_error::soul_error::Result;
+use crate::{meta_data::soul_error::soul_error::Result, tokenizer::token::Token};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, operator_type::{ExprOperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 use super::get_expression::{get_expression, GetExpressionResult};
@@ -17,7 +17,7 @@ fn simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>,
 
     let end_tokens = vec![";"];
     get_expression(&mut iter, meta_data, context, &should_be_type, false, &end_tokens)
-        .inspect_err(|msg| panic!("{}", msg.to_string()))
+        .inspect_err(|msg| panic!("{}", msg.to_err_message()))
         .unwrap()
 }
 fn try_simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<GetExpressionResult> {
@@ -43,7 +43,7 @@ fn try_simple_get_expression(line: &str, should_be_type: Option<&SoulType>) -> R
 }
 
 fn check_literal_expression(expr_result: GetExpressionResult, lit_value: &str, is_type: &SoulType) {
-    if let IExpression::Literal{value, type_name} = expr_result.result.value {
+    if let IExpression::Literal{value, type_name, span:_} = expr_result.result.value {
         assert_eq!(value, lit_value);
         assert_eq!(type_name, is_type.to_string());
         assert_eq!(expr_result.is_type.to_string(), is_type.to_string());
@@ -54,9 +54,9 @@ fn check_literal_expression(expr_result: GetExpressionResult, lit_value: &str, i
 }
 
 fn check_variable_expression(expr_result: GetExpressionResult, variable_name: &str, is_type: &str) {
-    if let IExpression::IVariable{this} = expr_result.result.value {
+    if let IExpression::IVariable{this, span:_} = expr_result.result.value {
         match this {
-            IVariable::Variable {name, type_name} => {
+            IVariable::Variable {name, type_name, span:_} => {
                 assert_eq!(name, variable_name);
                 assert_eq!(type_name, is_type.to_string());
                 assert_eq!(expr_result.is_type.to_string(), is_type.to_string());
@@ -74,16 +74,16 @@ fn check_lit_binary_single(expr_result: GetExpressionResult, left_value: &str, o
 }
 
 fn check_lit_binary_single_multi_type(expr_result: GetExpressionResult, left_value: &str, operator: ExprOperatorType, right_value: &str, left_type: &SoulType, right_type: &SoulType, bin_type: &SoulType) {
-    if let IExpression::BinairyExpression{left, operator_type, right, type_name} = expr_result.result.value {
+    if let IExpression::BinairyExpression{left, operator_type, right, type_name, span:_} = expr_result.result.value {
         
-        if let IExpression::Literal{value, type_name} = *left {
+        if let IExpression::Literal{value, type_name, span:_} = *left {
             assert_eq!(&value, left_value, "left value");
             assert_eq!(type_name, left_type.to_string(), "left type");
         }
 
         assert_eq!(operator_type, operator);
 
-        if let IExpression::Literal{value, type_name} = *right {
+        if let IExpression::Literal{value, type_name, span:_} = *right {
             assert_eq!(&value, right_value, "right value");
             assert_eq!(type_name, right_type.to_string(), "right type");
         }
@@ -142,7 +142,7 @@ fn test_get_expression_lit_float() {
     let mut expr_result = simple_get_expression(LIT_FLOAT, None);
 
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    if let IExpression::Literal{value, type_name} = expr_result.result.value {
+    if let IExpression::Literal{value, type_name, span:_} = expr_result.result.value {
         assert_eq!(value, "1.0");
         assert_eq!(type_name, lit_untyped_float_type.to_string());
         assert_eq!(expr_result.is_type.to_string(), lit_untyped_float_type.to_string());
@@ -154,7 +154,7 @@ fn test_get_expression_lit_float() {
     expr_result = simple_get_expression(LIT_FLOAT, Some(&lit_f32_type));
 
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    if let IExpression::Literal{value, type_name} = expr_result.result.value {
+    if let IExpression::Literal{value, type_name, span:_} = expr_result.result.value {
         assert_eq!(value, "1.0");
         assert_eq!(type_name, lit_f32_type.to_string());
         assert_eq!(expr_result.is_type.to_string(), lit_f32_type.to_string());
@@ -168,7 +168,7 @@ fn test_get_expression_lit_float() {
     expr_result = simple_get_expression(LIT_MINUS_FLOAT, None);
 
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    if let IExpression::Literal{value, type_name} = expr_result.result.value {
+    if let IExpression::Literal{value, type_name, span:_} = expr_result.result.value {
         assert_eq!(value, "-1.0");
         assert_eq!(type_name, lit_untyped_float_type.to_string());
         assert_eq!(expr_result.is_type.to_string(), lit_untyped_float_type.to_string());
@@ -180,7 +180,7 @@ fn test_get_expression_lit_float() {
     expr_result = simple_get_expression(LIT_MINUS_FLOAT, Some(&lit_f32_type));
 
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    if let IExpression::Literal{value, type_name} = expr_result.result.value {
+    if let IExpression::Literal{value, type_name, span:_} = expr_result.result.value {
         assert_eq!(value, "-1.0");
         assert_eq!(type_name, lit_f32_type.to_string());
         assert_eq!(expr_result.is_type.to_string(), lit_f32_type.to_string());
@@ -424,16 +424,17 @@ fn test_get_expression_binary_expression_single_number() {
     check_lit_binary_single(expr_result, "1", ExprOperatorType::Root, "2", &lit_untyped_int_type);
 
 
-
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new() };
     const BINARY_EQ: &str = "1 == 2;";
 
     expr_result = simple_get_expression(BINARY_EQ, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression( 
-        IExpression::new_literal("1", &lit_untyped_int_type.to_string()), 
+        IExpression::new_literal("1", &lit_untyped_int_type.to_string(), &DUMMY_TOKEN), 
         ExprOperatorType::Equals, 
-        IExpression::new_literal("2", &lit_untyped_int_type.to_string()), 
+        IExpression::new_literal("2", &lit_untyped_int_type.to_string(), &DUMMY_TOKEN), 
         &lit_bool_type.to_string(),
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_LOGICAL_AND: &str = "true && true;";
@@ -441,10 +442,11 @@ fn test_get_expression_binary_expression_single_number() {
     expr_result = simple_get_expression(BINARY_LOGICAL_AND, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression( 
-        IExpression::new_literal("true", &lit_bool_type.to_string()), 
+        IExpression::new_literal("true", &lit_bool_type.to_string(), &DUMMY_TOKEN), 
         ExprOperatorType::LogicalAnd, 
-        IExpression::new_literal("true", &lit_bool_type.to_string()), 
+        IExpression::new_literal("true", &lit_bool_type.to_string(), &DUMMY_TOKEN), 
         &lit_bool_type.to_string(),
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_BIT_AND: &str = "1 & 2;";
@@ -452,10 +454,11 @@ fn test_get_expression_binary_expression_single_number() {
     let expr_result = simple_get_expression(BINARY_BIT_AND, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression( 
-        IExpression::new_literal("1", &lit_untyped_int_type.to_string()), 
+        IExpression::new_literal("1", &lit_untyped_int_type.to_string(), &DUMMY_TOKEN), 
         ExprOperatorType::BitWiseAnd, 
-        IExpression::new_literal("2", &lit_untyped_int_type.to_string()), 
-        &lit_untyped_int_type.to_string(),
+        IExpression::new_literal("2", &lit_untyped_int_type.to_string(), &DUMMY_TOKEN), 
+        &lit_untyped_int_type.to_string(), 
+        &DUMMY_TOKEN,
     ));
 }
 
@@ -495,7 +498,7 @@ fn test_get_expression_binary_expression_single_str() {
     let result = try_simple_get_expression(BINARY_ERROR_SMALLER_STRING, None);
     if let Err(err) = result {
         assert_eq!(
-            &err.to_string(), 
+            &err.to_err_message(), 
             format!("at 1:17; !!error!! while trying to parse binary expression: operator: '<' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
         );
     }
@@ -510,7 +513,7 @@ fn test_get_expression_binary_expression_single_str() {
     let result = try_simple_get_expression(BINARY_ERROR_MUL_STRING, None);
     if let Err(err) = result {
         assert_eq!(
-            &err.to_string(), 
+            &err.to_err_message(), 
             format!("at 1:17; !!error!! while trying to parse binary expression: operator: '*' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
         );
     }
@@ -525,7 +528,7 @@ fn test_get_expression_binary_expression_single_str() {
     let result = try_simple_get_expression(BINARY_ERROR_SUB_STRING, None);
     if let Err(err) = result {
         assert_eq!(
-            &err.to_string(), 
+            &err.to_err_message(), 
             format!("at 1:17; !!error!! while trying to parse binary expression: operator: '-' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
         );
     }
@@ -547,19 +550,22 @@ fn test_get_expression_binary_expression_multiple_operators() {
     let lit_bool_string = lit_bool_type.to_string();
     let int_string = int_type.to_string();
 
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
     const BINARY_ADD: &str = "1 + 2 + 3;";
     let mut expr_result = simple_get_expression(BINARY_ADD, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_literal("1", &lit_untyped_int_string), 
+            IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN), 
             ExprOperatorType::Add, 
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &lit_untyped_int_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Add,
-        IExpression::new_literal("3", &lit_untyped_int_string),
-        &lit_untyped_int_string
+        IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN),
+        &lit_untyped_int_string,
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_ADD_FLOAT: &str = "1 + 2 + 3.0;";
@@ -567,14 +573,16 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_literal("1", &lit_untyped_int_string), 
+            IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN), 
             ExprOperatorType::Add, 
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &lit_untyped_int_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Add,
-        IExpression::new_literal("3.0", &lit_untyped_float_string),
-        &lit_untyped_float_string
+        IExpression::new_literal("3.0", &lit_untyped_float_string, &DUMMY_TOKEN),
+        &lit_untyped_float_string,
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_ADD_FLOAT_2: &str = "1.0 + 2 + 3;";
@@ -582,14 +590,16 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_literal("1.0", &lit_untyped_float_string), 
+            IExpression::new_literal("1.0", &lit_untyped_float_string, &DUMMY_TOKEN), 
             ExprOperatorType::Add, 
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &lit_untyped_float_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Add,
-        IExpression::new_literal("3", &lit_untyped_int_string),
-        &lit_untyped_float_string
+        IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN),
+        &lit_untyped_float_string,
+        &DUMMY_TOKEN,
     ));
 
 
@@ -598,29 +608,33 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_literal("1", &lit_untyped_int_string), 
+            IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN), 
             ExprOperatorType::Mul, 
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &lit_untyped_int_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Add,
-        IExpression::new_literal("3", &lit_untyped_int_string),
-        &lit_untyped_int_string
+        IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN),
+        &lit_untyped_int_string,
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_ADD_MULL: &str = "1 + 2 * 3;";
     expr_result = simple_get_expression(BINARY_ADD_MULL, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
-        IExpression::new_literal("1", &lit_untyped_int_string),
+        IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN),
         ExprOperatorType::Add,
         IExpression::new_binary_expression(
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             ExprOperatorType::Mul, 
-            IExpression::new_literal("3", &lit_untyped_int_string), 
+            IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &lit_untyped_int_string,
+            &DUMMY_TOKEN,
         ),
-        &lit_untyped_int_string
+        &lit_untyped_int_string,
+        &DUMMY_TOKEN,
     ));
 
 
@@ -629,14 +643,16 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_literal("1", &lit_untyped_int_string), 
+            IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN), 
             ExprOperatorType::Add,
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &lit_untyped_int_string,
+            &DUMMY_TOKEN, 
         ),
         ExprOperatorType::Mul, 
-        IExpression::new_literal("3", &lit_untyped_int_string),
-        &lit_untyped_int_string
+        IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN),
+        &lit_untyped_int_string,
+        &DUMMY_TOKEN,
     ));
 
 
@@ -655,14 +671,16 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_variable("var1", &int_string), 
+            IExpression::new_variable("var1", &int_string, &DUMMY_TOKEN), 
             ExprOperatorType::Add,
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &int_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Mul, 
-        IExpression::new_literal("3", &lit_untyped_int_string),
-        &int_string
+        IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN),
+        &int_string,
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_BRACKETS_VAR_INCR: &str = "(var1++ + 2) * 3;";
@@ -671,14 +689,16 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_increment(IVariable::new_variable("var1", &int_string), false, 1), 
+            IExpression::new_increment(IVariable::new_variable("var1", &int_string, &DUMMY_TOKEN), false, 1, &DUMMY_TOKEN), 
             ExprOperatorType::Add,
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &int_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Mul, 
-        IExpression::new_literal("3", &lit_untyped_int_string),
-        &int_string
+        IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN),
+        &int_string,
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_BRACKETS_VAR_INCR2: &str = "(++var1 + 2) * 3;";
@@ -687,14 +707,16 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_increment(IVariable::new_variable("var1", &int_string), true, 1), 
+            IExpression::new_increment(IVariable::new_variable("var1", &int_string, &DUMMY_TOKEN), true, 1, &DUMMY_TOKEN), 
             ExprOperatorType::Add,
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &int_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Mul, 
-        IExpression::new_literal("3", &lit_untyped_int_string),
-        &int_string
+        IExpression::new_literal("3", &lit_untyped_int_string, &DUMMY_TOKEN),
+        &int_string,
+        &DUMMY_TOKEN,
     ));
 
     const BINARY_BRACKETS_BOOL: &str = "1 < 2 != true;";
@@ -703,14 +725,16 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_literal("1", &lit_untyped_int_string), 
+            IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN), 
             ExprOperatorType::IsSmaller,
-            IExpression::new_literal("2", &lit_untyped_int_string), 
+            IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &lit_bool_string,
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::NotEquals, 
-        IExpression::new_literal("true", &lit_bool_string),
-        &lit_bool_string
+        IExpression::new_literal("true", &lit_bool_string, &DUMMY_TOKEN),
+        &lit_bool_string,
+        &DUMMY_TOKEN,
     ));
 }
 
@@ -728,31 +752,32 @@ fn test_get_expression_ref_literal() {
     const EXPECTED_ERROR: &str = "at 1:1; !!error!! while trying to get ref expression '&1'\nis a literal type so can not be mutRef'ed (remove '&' use '@' instead)";
     let result = try_simple_get_expression(LIT_MUT_REF_ERROR, None);
     if let Err(err) = result {
-        assert_eq!(err.to_string().as_str(), EXPECTED_ERROR)
+        assert_eq!(err.to_err_message().as_str(), EXPECTED_ERROR)
     }
     else {
         panic!("result should return error");
     }
 
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
     const INT_CONST_REF: &str = "@1;";
     let mut expr_result = simple_get_expression(INT_CONST_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
-        IExpression::new_literal("1", &lit_untyped_int_string)
+        IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
     const FLOAT_CONST_REF: &str = "@1.0;";
     expr_result = simple_get_expression(FLOAT_CONST_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
-        IExpression::new_literal("1.0", &lit_untyped_float_string)
+        IExpression::new_literal("1.0", &lit_untyped_float_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
     const BOOL_CONST_REF: &str = "@true;";
     expr_result = simple_get_expression(BOOL_CONST_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
-        IExpression::new_literal("true", &lit_bool_string)
+        IExpression::new_literal("true", &lit_bool_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
     const BOOL_CONST_REF_REF: &str = "@@true;";
@@ -760,8 +785,10 @@ fn test_get_expression_ref_literal() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_constref(
-            IExpression::new_literal("true", &lit_bool_string),
+            IExpression::new_literal("true", &lit_bool_string, &DUMMY_TOKEN),
+            &DUMMY_TOKEN,
         ),
+        &DUMMY_TOKEN,
     ));
 
     const BOOL_CONST_REF_REF_REF: &str = "@@@true;";
@@ -770,9 +797,12 @@ fn test_get_expression_ref_literal() {
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_constref(
             IExpression::new_constref(
-                IExpression::new_literal("true", &lit_bool_string),
-            )
+                IExpression::new_literal("true", &lit_bool_string, &DUMMY_TOKEN),
+                &DUMMY_TOKEN,
+            ),
+            &DUMMY_TOKEN,
         ),
+        &DUMMY_TOKEN,
     ));
 }
 
@@ -789,32 +819,38 @@ fn test_get_expression_ref_variable() {
         .unwrap();
 
     
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
     const VAR_MUT_REF: &str = "&var;";
     let expr_result = simple_get_expression_metadata(VAR_MUT_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_mutref(
-        IExpression::new_variable("var", &int_string)
+        IExpression::new_variable("var", &int_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
     const VAR_MUT_REF_REF: &str = "&&var;";
     let expr_result = simple_get_expression_metadata(VAR_MUT_REF_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_mutref(
         IExpression::new_mutref(
-            IExpression::new_variable("var", &int_string),
+            IExpression::new_variable("var", &int_string, &DUMMY_TOKEN),
+            &DUMMY_TOKEN,
         ),
+        &DUMMY_TOKEN,
     ));
 
     const VAR_CONST_REF: &str = "@var;";
     let expr_result = simple_get_expression_metadata(VAR_CONST_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_constref(
-        IExpression::new_variable("var", &int_string)
+        IExpression::new_variable("var", &int_string, &DUMMY_TOKEN),
+        &DUMMY_TOKEN,
     ));
 
     const VAR_CONST_REF_REF: &str = "@@var;";
     let expr_result = simple_get_expression_metadata(VAR_CONST_REF_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_constref(
-            IExpression::new_variable("var", &int_string)
-        )
+            IExpression::new_variable("var", &int_string, &DUMMY_TOKEN),
+            &DUMMY_TOKEN,
+        ),
+        &DUMMY_TOKEN,
     ));
 }
 
@@ -840,12 +876,14 @@ fn test_get_expression_function_call() {
         .first()
         .expect("u8(int) not found")).clone();
 
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
     const INTERNAL_U8: &str = "u8(1);"; 
     let mut expr_result = simple_get_expression(INTERNAL_U8, None);
     assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
         u8_int_func.clone(),
-        vec![IExpression::new_literal("1", &lit_untyped_int)], 
-        BTreeMap::new(), 
+        vec![IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN)], 
+        BTreeMap::new(),
+        &DUMMY_TOKEN,
     ));
 
     const DOUBLE_INTERNAL_U8: &str = "u8(u8(1));"; 
@@ -855,11 +893,13 @@ fn test_get_expression_function_call() {
         vec![
             IExpression::new_funtion_call(
                 u8_int_func.clone(), 
-                vec![IExpression::new_literal("1", &lit_untyped_int)], 
-                BTreeMap::new()
+                vec![IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN)], 
+                BTreeMap::new(),
+                &DUMMY_TOKEN,
             )
         ], 
-        BTreeMap::new(), 
+        BTreeMap::new(),
+        &DUMMY_TOKEN, 
     ));
 
     const BIN_INTERNAL_U8: &str = "u8(1) + u8(2);"; 
@@ -868,16 +908,19 @@ fn test_get_expression_function_call() {
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_funtion_call(
             u8_int_func.clone(),
-            vec![IExpression::new_literal("1", &lit_untyped_int)], 
+            vec![IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN)], 
             BTreeMap::new(), 
+            &DUMMY_TOKEN,
         ),
         ExprOperatorType::Add, 
         IExpression::new_funtion_call(
             u8_int_func.clone(),
-            vec![IExpression::new_literal("2", &lit_untyped_int)], 
+            vec![IExpression::new_literal("2", &lit_untyped_int, &DUMMY_TOKEN)], 
             BTreeMap::new(), 
+            &DUMMY_TOKEN,
         ),
         u8,
+        &DUMMY_TOKEN,
     ));
 
 }
@@ -895,23 +938,25 @@ fn test_get_expression_binary_expression_no_return_type() {
         .find(|func| func.args.is_empty())
         .unwrap();
 
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
     const PRINTLN: &str = "Println();";
     let expr_result = simple_get_expression(PRINTLN, None);
     assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
         (*println_func).clone(),
         vec![], 
-        BTreeMap::new(), 
+        BTreeMap::new(),
+        &DUMMY_TOKEN, 
     ));
 
     const PRINTLN_BIN: &str = "Println() + 1;";
     let mut res = try_simple_get_expression(PRINTLN_BIN, None);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "at 1:11; !!error!! binairy expression: 'Literal(1, type: Literal untypedInt) + Println()' lefts type is 'none' which is not a valid type for binairy expressions");
+    assert_eq!(res.unwrap_err().to_err_message(), "at 1:11; !!error!! binairy expression: 'Literal(1, type: Literal untypedInt) + Println()' lefts type is 'none' which is not a valid type for binairy expressions");
 
     const PRINTLN_INNER: &str = "Println(Print(1))";
     res = try_simple_get_expression(PRINTLN_INNER, None);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "at 1:16; !!error!! while trying to get functionCall of: 'Println'\nat 1:16; !!error!! argument number: 1, 'Print(Literal(1, type: Literal untypedInt))' is of type 'none', you can not have a 'none' type in an argument");
+    assert_eq!(res.unwrap_err().to_err_message(), "at 1:16; !!error!! while trying to get functionCall of: 'Println'\nat 1:16; !!error!! argument number: 1, 'Print(Literal(1, type: Literal untypedInt))' is of type 'none', you can not have a 'none' type in an argument");
 }
 
 #[test]

@@ -1,4 +1,4 @@
-use crate::meta_data::soul_error::soul_error::Result;
+use crate::{meta_data::soul_error::soul_error::Result, tokenizer::token::Token};
 use super::get_initialize::get_initialize;
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
@@ -15,7 +15,7 @@ fn try_simple_initialize(line: &str) -> Result<MultiStamentResult<IStatment>> {
 
 fn simple_initialize(line: &str) -> MultiStamentResult<IStatment> {
     try_simple_initialize(line)
-        .inspect_err(|err| panic!("{}", err.to_string()))
+        .inspect_err(|err| panic!("{}", err.to_err_message()))
         .unwrap()
 }
 
@@ -27,11 +27,13 @@ fn test_initialize_default_typed() {
     
     let mut result = simple_initialize(&init1);
 
-    let mut varaiable = IVariable::new_variable("foo", int);
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
+    let mut varaiable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
     let mut should_be = MultiStamentResult::new(
         IStatment::new_initialize(
             varaiable.clone(), 
-            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", int)))
+            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", int, &DUMMY_TOKEN), &DUMMY_TOKEN)),
+            &DUMMY_TOKEN
         )
     );
 
@@ -45,11 +47,12 @@ fn test_initialize_default_typed() {
     
     result = simple_initialize(&init2);
 
-    varaiable = IVariable::new_variable("foo", int);
+    varaiable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
     should_be = MultiStamentResult::new(
         IStatment::new_initialize(
             varaiable.clone(), 
-            None
+            None,
+            &DUMMY_TOKEN
         )
     );
 
@@ -62,7 +65,7 @@ fn test_initialize_default_typed() {
 
     let res = try_simple_initialize(&init3);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "at 0:26; !!error!! assignment type: 'Literal str' is not compatible with variable type: 'int'");
+    assert_eq!(res.unwrap_err().to_err_message(), "at 0:26; !!error!! assignment type: 'Literal str' is not compatible with variable type: 'int'");
 }
 
 #[test]
@@ -78,11 +81,13 @@ fn test_initialize_default_invered() {
     
     let result = simple_initialize(&init1);
 
-    let varaiable = IVariable::new_variable("foo", int);
+    const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
+    let varaiable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
     let should_be = MultiStamentResult::new(
         IStatment::new_initialize(
             varaiable.clone(), 
-            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", &lit_untyped_int)))
+            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN), &DUMMY_TOKEN)),
+            &DUMMY_TOKEN
         )
     );
 
@@ -95,7 +100,7 @@ fn test_initialize_default_invered() {
     
     let res = try_simple_initialize(&init2);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), "at 0:3; !!error!! variable: 'foo' is not assign a type (add type before variable like 'i32 var')");
+    assert_eq!(res.unwrap_err().to_err_message(), "at 0:3; !!error!! variable: 'foo' is not assign a type (add type before variable like 'i32 var')");
 }
 
 

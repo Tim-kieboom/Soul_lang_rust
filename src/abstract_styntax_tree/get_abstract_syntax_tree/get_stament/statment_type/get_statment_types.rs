@@ -215,7 +215,7 @@ fn get_initialize_info(iter: &mut TokenIterator, meta_data: &mut MetaData, conte
     let var;
     let is_mutable;
     let is_assigned;
-    if let IStatment::Initialize { variable, assignment } = init.value {
+    if let IStatment::Initialize { variable, assignment, span:_ } = init.value {
         let var_type = SoulType::get_unchecked_from_stringed_type(&variable.get_type_name(), iter.current(), &meta_data.type_meta_data, &mut context.current_generics)?;
         is_mutable = var_type.is_mutable();
         is_assigned = assignment.is_some();

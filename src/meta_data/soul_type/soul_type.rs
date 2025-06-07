@@ -322,7 +322,7 @@ impl SoulType {
             }
 
             iter.go_to_index(begin_index);
-            return Err(pass_soul_error(iter.current(), format!("value: '{}' is not valid literal value", string_builder).as_str(), &err));
+            return Err(pass_soul_error(iter.current(), format!("value: '{}' is not valid literal value", string_builder).as_str(), err));
         }
         let tuple = possible_tuple.unwrap();
 
@@ -732,7 +732,7 @@ fn get_literal_array(
                 
                 let c_string = type_meta_data.c_str_store.from_name(&iter.current().text);
                 if let None = c_string {
-                    return Err(pass_soul_error(iter.current(), format!("while trying to get literal array").as_str(), &err))
+                    return Err(pass_soul_error(iter.current(), format!("while trying to get literal array").as_str(), err))
                 }
 
                 element_type = SoulType::from_modifiers(

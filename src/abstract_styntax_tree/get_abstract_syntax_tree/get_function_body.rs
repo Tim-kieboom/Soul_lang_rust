@@ -23,7 +23,7 @@ pub fn get_function_body(iter: &mut TokenIterator, statment_iter: &mut StatmentI
         return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
     }
     
-    Ok(MultiStamentResult::new(IStatment::new_function_body(function, function_body)))
+    Ok(MultiStamentResult::new(IStatment::new_function_body(function, function_body, iter.current())))
 }
 
 

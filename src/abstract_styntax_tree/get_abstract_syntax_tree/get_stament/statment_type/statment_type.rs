@@ -1,7 +1,7 @@
 use core::fmt;
 use std::ops::Index;
 
-use crate::{abstract_styntax_tree::abstract_styntax_tree::{IStatment, IVariable}, meta_data::function::function_declaration::function_declaration::{FunctionDeclaration, FunctionID}};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::{IStatment, IVariable}, meta_data::function::function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, tokenizer::token::Token};
 
 #[derive(Clone, PartialEq)]
 #[repr(u32)]
@@ -26,7 +26,7 @@ impl StatmentType {
             IStatment::CloseScope() => StatmentType::CloseScope,
             IStatment::EmptyStatment() => StatmentType::EmptyStatment,
             IStatment::Assignment{..} => StatmentType::Assignment,
-            IStatment::Initialize{..} => StatmentType::Initialize{is_assigned:false, is_mutable:false, var: IVariable::new_variable("", "")},
+            IStatment::Initialize{..} => StatmentType::Initialize{is_assigned:false, is_mutable:false, var: IVariable::new_variable("", "", &Token{line_number: 0, line_offset: 0, text: String::new()})},
             IStatment::FunctionBody{..} => StatmentType::FunctionBody{func_info:FunctionDeclaration::new(String::new(), None, Vec::new(), false, FunctionID(0))},
             IStatment::FunctionCall{..} => StatmentType::FunctionCall,
             IStatment::Scope{..} => StatmentType::Scope,

@@ -94,7 +94,7 @@ fn internal_function_declaration(
 
     let old_index = iter.current_index();
     let arguments = get_arguments(iter, meta_data, context, Some(function.modifiers), &function.name, is_forward_declared)
-        .map_err(|err| pass_soul_error(&iter[old_index], format!("while trying to get function declaration: '{}'", function.name).as_str(), &err))?;
+        .map_err(|err| pass_soul_error(&iter[old_index], format!("while trying to get function declaration: '{}'", function.name).as_str(), err))?;
 
     if arguments.args.is_empty() && arguments.options.is_empty() {
         if iter.next().is_none() {
@@ -167,7 +167,7 @@ fn internal_function_declaration(
     else {
         let old_index = iter.current_index(); 
         meta_data.add_function(iter, context, function.clone())
-            .map_err(|err| pass_soul_error(&iter[old_index], "while trying to get function", &err))?;
+            .map_err(|err| pass_soul_error(&iter[old_index], "while trying to get function", err))?;
     }
 
     if function.name == "main" {
