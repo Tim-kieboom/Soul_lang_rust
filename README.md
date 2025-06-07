@@ -1,4 +1,4 @@
-
+# Soul_lang
 
 **Soul** is a **low-level programming language**, focusing on performance, memory safety, while remaining as simple as possible. Inspired by the power of **Rust's borrow checker** and the minimalism of **Go's syntax**, Soul offers a unique balance between control, safety and developer ergonomics.
 
