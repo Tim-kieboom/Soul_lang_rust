@@ -1,5 +1,7 @@
-use std::{collections::BTreeMap, io::{Result, Error}};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{BodyNode, IStatment}, get_abstract_syntax_tree::get_stament::get_statment::get_statment}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{self, function_declaration::function_declaration::FunctionDeclaration}, meta_data::{CloseScopeResult, MetaData}, scope_and_var::var_info::{VarFlags, VarInfo}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
+use std::{collections::BTreeMap};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
+
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{BodyNode, IStatment}, get_abstract_syntax_tree::get_stament::get_statment::get_statment}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration}, meta_data::{CloseScopeResult, MetaData}, scope_and_var::var_info::{VarFlags, VarInfo}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
 use super::get_stament::statment_type::statment_type::StatmentIterator;
 
@@ -19,7 +21,7 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         return Err(err_out_of_bounds(iter));
     }
 
-    let scope_id = meta_data.open_scope(old_context.current_scope_id)
+    let scope_id = meta_data.open_scope(old_context.current_scope_id, possible_function.is_none())
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add scope\n{}", msg).as_str()))?;
 
     let mut context = old_context.clone();
@@ -27,26 +29,31 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
 
     let vars = if let Some(function) = &possible_function {
         function.args
-        .iter()
-        .map(|arg| (&arg.name, arg))
-        .chain(function.optionals.iter())
-        .map(|(name, arg)| {
-            let soul_type = SoulType::from_stringed_type(&arg.value_type, iter.current(), &meta_data.type_meta_data, &mut context.current_generics).unwrap();
-            let mut var_flags = VarFlags::IsAssigned;
-            if soul_type.is_mutable() {
-                var_flags |= VarFlags::IsMutable;
-            }
-            if soul_type.is_literal() {
-                var_flags |= VarFlags::IsLiteral;
-            }
+            .iter()
+            .map(|arg| (&arg.name, arg))
+            .chain(function.optionals.iter())
+            .map(|(name, arg)| {
+                let soul_type = SoulType::from_stringed_type(&arg.value_type, iter.current(), &meta_data.type_meta_data, &mut context.current_generics).unwrap();
+                let mut var_flags = VarFlags::IsAssigned;
+                if soul_type.is_mutable() {
+                    var_flags |= VarFlags::IsMutable;
+                }
+                if soul_type.is_literal() {
+                    var_flags |= VarFlags::IsLiteral;
+                }
 
-            (name.clone(), VarInfo::with_var_flag(name.clone(), arg.value_type.clone(), var_flags, false))
-        })
-        .collect::<BTreeMap<String, VarInfo>>()
+                (name.clone(), VarInfo::with_var_flag(name.clone(), arg.value_type.clone(), var_flags, false))
+            })
+            .collect::<BTreeMap<String, VarInfo>>()
     }
     else {
         BTreeMap::new()
     };
+
+    for (name, var) in &vars {
+        meta_data.add_to_scope(var.clone(), &scope_id)
+            .map_err(|msg| new_soul_error(iter.current(), format!("while adding argument: '{}' to scope\n{}", name, msg).as_str()))?;
+    }
 
     context.current_function = possible_function;
     
@@ -57,11 +64,14 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         return Err(err_out_of_bounds(iter));
     }
 
+    let mut has_return = false;
     let mut body_node = BodyNode::new(context);
     loop {
         let multi_statment = get_statment(iter, statment_iter, meta_data, &mut body_node.context)?;
-        if let IStatment::CloseScope() = multi_statment.value {
-            break;
+        match &multi_statment.value {
+            IStatment::CloseScope() => break,
+            IStatment::Return{..} => has_return = true,
+            _ => (),
         }
 
         body_node.statments.extend(multi_statment.before.into_iter().flatten()); 
@@ -73,11 +83,17 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to clode scope\n{}", msg).as_str()))?;
 
     body_node.delete_list = delete_list;
+    if let Some(function) = &body_node.context.current_function {
+        
+        if !has_return && function.return_type.is_some() {
+            return Err(new_soul_error(iter.current(), format!("function: '{}' has return type but does not return anything", function.name).as_str()));
+        }
+    }    
 
     Ok(body_node)
 }
 
-fn err_out_of_bounds(iter: &TokenIterator) -> Error {
+fn err_out_of_bounds(iter: &TokenIterator) -> SoulError {
     new_soul_error(iter.current(), "unexpected end while trying to get body")
 }
 

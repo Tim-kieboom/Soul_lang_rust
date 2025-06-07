@@ -1,14 +1,14 @@
 use regex::Regex;
 use super::token::Token;
 use once_cell::sync::Lazy;
-use std::io::{BufRead, Result};
+use std::io::{BufRead};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 use super::file_line::FileLine;
 use crate::meta_data::meta_data::MetaData;
 use crate::meta_data::soul_names::{SoulNames, SOUL_NAMES};
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
 use super::comment_remover::comment_remover::remove_comment_file;
 use crate::tokenizer::comment_remover::comment_remover::remove_comment_line;
-use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
 use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
 use crate::meta_data::soul_type::type_checker::type_checker::get_primitive_type_from_literal;
 use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
@@ -32,9 +32,10 @@ pub fn raw_file_as_file_lines(file: String) -> Result<FileLineResult> {
     let mut line_number = 1;
     let mut result = FileLineResult{source_file: Vec::new(), estimated_token_count: 0};
     for res in reader.lines() {
-        let line = res?;
+        let line = res
+            .map_err(|err| new_soul_error(&new_dummy_token(line_number), &err.to_string()))?;
         result.estimated_token_count += get_token_count(line.as_str(), parse_tokens);
-        result.source_file.push(FileLine{text: line, line_number});
+        result.source_file.push(FileLine{text: line, line_number: line_number as u64});
         line_number += 1;
     }
 
@@ -47,15 +48,19 @@ pub fn read_as_file_lines(path: &str) -> Result<FileLineResult> {
     use std::io::BufReader;
     let parse_tokens = &SOUL_NAMES.parse_tokens;
 
-    let file = File::open(path)?;
+    let file = File::open(path)
+        .map_err(|err| new_soul_error(&new_dummy_token(0), &err.to_string()))?;
+
     let reader = BufReader::new(file);
     
     let mut line_number = 1;
     let mut result = FileLineResult{source_file: Vec::new(), estimated_token_count: 0};
     for res in reader.lines() {
-        let line = res?;
+        let line = res
+            .map_err(|err| new_soul_error(&new_dummy_token(line_number), &err.to_string()))?;
+
         result.estimated_token_count += get_token_count(line.as_str(), parse_tokens);
-        result.source_file.push(FileLine{text: line, line_number});
+        result.source_file.push(FileLine{text: line, line_number: line_number as u64});
         line_number += 1;
     }
 
@@ -245,4 +250,7 @@ fn is_not_empty_line(line: &FileLine) -> bool {
     !line.text.trim().is_empty()
 }
 
+fn new_dummy_token(line_number: usize) -> Token {
+    Token { text: String::new(), line_number, line_offset: 0 }
+}
 

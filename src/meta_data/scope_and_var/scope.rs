@@ -1,4 +1,4 @@
-use std::io::Result;
+use crate::meta_data::soul_error::soul_error::Result;
 use std::collections::{BTreeMap, HashMap};
 use crate::meta_data::current_context::current_context::{CurrentContext, DefinedGenric};
 use crate::meta_data::function::argument_info::argument_info::ArgumentInfo;
@@ -16,9 +16,13 @@ impl ScopeId {
     }
 }
 
+pub struct ScopeParentInfo {
+    pub id: ScopeId,
+    pub allows_vars_access: bool
+}
 pub struct Scope {
     id: ScopeId,
-    pub parent: Option<ScopeId>,
+    pub parent: Option<ScopeParentInfo>,
     last_child_id: ScopeId,
     pub vars: BTreeMap<String, VarInfo>,
     pub function_store: FunctionStore,
@@ -37,11 +41,11 @@ impl Scope {
         }
     }
 
-    pub fn new_child(parent: &Scope) -> Self {
+    pub fn new_child(parent: &Scope, allows_vars_access: bool) -> Self {
         let child_id = parent.last_child_id.increment();
         Scope { 
             id: child_id, 
-            parent: Some(parent.id), 
+            parent: Some(ScopeParentInfo { id: parent.id, allows_vars_access }), 
             last_child_id: child_id,
             vars: BTreeMap::new(), 
             function_store: FunctionStore::new(),
@@ -53,17 +57,17 @@ impl Scope {
         &self.id
     }
 
-    pub fn try_get_variable<'b>(&'b self, var_name: &String, scopes: &'b HashMap<ScopeId, Scope>) -> Option<&'b VarInfo> {
+    pub fn try_get_variable<'b>(&'b self, var_name: &String, scopes: &'b HashMap<ScopeId, Scope>) -> Option<(&'b VarInfo, ScopeId)> {
         if let Some(var) = self.vars.get(var_name) {
-            return Some(var);
+            return Some((var, self.id));
         }
 
         let mut current_scope = self;
-        while let Some(parent) = current_scope.parent {
-            current_scope = scopes.get(&parent)?;
+        while let Some(parent) = &current_scope.parent {
+            current_scope = scopes.get(&parent.id)?;
             
             if let Some(var) = current_scope.vars.get(var_name) {
-                return Some(var);
+                return Some((var, current_scope.id));
             }
         }
 
@@ -77,7 +81,7 @@ impl Scope {
         loop {
             let (found, parent) = {
                 let scope = scopes.get(&current_id)?;
-                (scope.vars.contains_key(var_name), scope.parent)
+                (scope.vars.contains_key(var_name), scope.parent.as_ref().map(|info| info.id.clone()))
             };
 
             if found {

@@ -49,6 +49,15 @@ pub trait BorrowCheckedTrait {
     /// Returns an error if the move is invalid (e.g., outstanding borrows).
     fn move_owner(&mut self, old_owner: &BorrowId, new_owner: &BorrowId) -> BorrowResult<()>;
 
+    /// checks if ownership is valid.
+    ///
+    /// # Arguments
+    /// * `owner` - The owner.
+    ///
+    /// # Errors
+    /// Returns an error if the owner is invalid (e.g., outstanding borrows).
+    fn is_valid(&self, owner: &BorrowId) -> BorrowResult<()>;
+
     /// Opens a new scope in the borrow checker.
     ///
     /// # Arguments
@@ -206,6 +215,28 @@ impl BorrowCheckedTrait for BorrowChecker {
             .rev()
             .filter_map(|(name, id)| filter_delete_list(name, id, self) )
             .collect::<BorrowResult<DeleteList>>()
+    }
+    
+    fn is_valid(&self, owner: &BorrowId) -> BorrowResult<()> {
+        let BorrowId(name, _) = *owner;
+
+        let pass_err = |msg: String| { 
+            format!("in trying to validate '{}', {}", name, msg) 
+        };
+
+        let id = self.get_var_id(owner)
+            .map_err(|msg| pass_err(msg))?;
+        
+        let valid = self.borrow_store.get_var(&id)
+            .ok_or(format!("Internal Error: owner: '{}' not found in borrow_store", name))?
+            .valid;
+        
+        if valid {
+            Ok(())
+        }
+        else {
+            Err(format!("variable: '{}' is moved and does not have ownership anymore", name))
+        }
     }
 
 }

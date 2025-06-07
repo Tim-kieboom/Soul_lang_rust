@@ -1,4 +1,4 @@
-use std::io::Result;
+use crate::meta_data::soul_error::soul_error::Result;
 
 use super::soul_type::SoulType;
 use crate::{meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, soul_type::{type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};

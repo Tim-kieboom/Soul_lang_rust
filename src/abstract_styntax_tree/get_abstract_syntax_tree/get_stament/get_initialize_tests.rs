@@ -1,4 +1,4 @@
-use std::io::Result;
+use crate::meta_data::soul_error::soul_error::Result;
 use super::get_initialize::get_initialize;
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 

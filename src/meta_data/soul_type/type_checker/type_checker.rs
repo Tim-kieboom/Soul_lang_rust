@@ -1,5 +1,5 @@
-use std::io::{Error, Result};
-use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentGenerics, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::TypeMetaData}, tokenizer::token::{Token, TokenIterator}};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::{IExpression, IVariable}, meta_data::{current_context::current_context::CurrentGenerics, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::{NamesTypeWrapper, SOUL_NAMES}, soul_type::{primitive_types::PrimitiveType, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::TypeMetaData}, tokenizer::token::{Token, TokenIterator}};
 
 pub fn get_primitive_type_from_literal(literal: &str) -> PrimitiveType {
     if literal.is_empty() {
@@ -171,7 +171,7 @@ pub fn duck_type_equals(
     a.to_primitive_type(type_meta_data).to_duck_type() == b.to_primitive_type(type_meta_data).to_duck_type()
 }
 
-fn err_literal_mut_refs(iter: &TokenIterator, value: &str)-> Error {
+fn err_literal_mut_refs(iter: &TokenIterator, value: &str)-> SoulError {
     new_soul_error(
         iter.current(), 
         format!(

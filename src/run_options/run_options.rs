@@ -32,6 +32,8 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             Box::new(|arg: &String, options: &mut RunOptions| {
                 should_not_have_input(arg)?;
                 options.is_compiled = false;
+                todo!("garbage collector is not impl yet");
+                #[allow(unreachable_code)]
                 Ok(())
             }) as ArgFunc
         ),
@@ -40,6 +42,8 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             Box::new(|arg: &String, options: &mut RunOptions| {
                 should_not_have_input(arg)?;
                 options.is_garbage_collected = true;
+                todo!("garbage collector is not impl yet");
+                #[allow(unreachable_code)]
                 Ok(())
             }) as ArgFunc
         ),
@@ -91,30 +95,7 @@ impl RunOptions {
             let mut file_path_set = false;
 
             for arg in &args[2..] {
-                if arg.starts_with('-') {
-                    let key = if let Some(idx) = arg.find('=') {
-                        &arg[..idx]
-                    } 
-                    else {
-                        arg.as_str()
-                    };
-
-                    if let Some(func) = OPTIONS.get(key) {
-                        if let Err(e) = func(arg, &mut options) {
-                            errors.push(e);
-                        }
-                    } 
-                    else {
-                        errors.push(format!("Unknown option: '{}'", key));
-                    }
-                } 
-                else if !file_path_set {
-                    options.file_path = arg.clone();
-                    file_path_set = true;
-                } 
-                else {
-                    errors.push(format!("Unexpected positional argument: '{}'", arg));
-                }
+                pocess_arg(arg, &mut options, &mut file_path_set, &mut errors);
             }
 
             if !errors.is_empty() {
@@ -126,6 +107,33 @@ impl RunOptions {
             else {
                 Ok(options)
             }
+    }
+}
+
+fn pocess_arg(arg: &String, options: &mut RunOptions, file_path_set: &mut bool, errors: &mut Vec<String>) {
+    if arg.starts_with('-') {
+        let key = if let Some(idx) = arg.find('=') {
+            &arg[..idx]
+        } 
+        else {
+            arg.as_str()
+        };
+
+        if let Some(func) = OPTIONS.get(key) {
+            if let Err(e) = func(arg, options) {
+                errors.push(e);
+            }
+        } 
+        else {
+            errors.push(format!("Unknown option: '{}'", key));
+        }
+    } 
+    else if !*file_path_set {
+        options.file_path = arg.clone();
+        *file_path_set = true;
+    } 
+    else {
+        errors.push(format!("Unexpected positional argument: '{}'", arg));
     }
 }
 
@@ -149,7 +157,6 @@ fn should_not_have_input(arg: &String) -> result::Result<(), String> {
         Ok(())
     }
 }
-
 
 
 

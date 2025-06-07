@@ -34,6 +34,7 @@ pub enum IStatment {
     FunctionCall{this: /*shouldBe_FunctionCall*/Box<IExpression>},
     Return{expression: Option<Box<IExpression>>},
     Scope{body: Box<BodyNode>},
+    If{condition: Box<IExpression>, body: Box<BodyNode>}
 } 
 
 #[derive(Debug, Clone, PartialEq)] 
@@ -109,6 +110,14 @@ impl IStatment {
                     Some(expr) => format!("Return({})", expr.to_string()),
                     None => format!("Return()"),
                 }
+            },
+            IStatment::If { condition, body } => {
+                format!(
+                    "If({}{}{})",
+                    condition.to_string(),
+                    child_join_char,
+                    body.to_string(pretty_format, tab + 1)
+                )
             },
         }
     }

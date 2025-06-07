@@ -1,6 +1,6 @@
-use std::{collections::{BTreeMap, HashMap}, io::Result};
+use std::{collections::{BTreeMap, HashMap}};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::multi_stament_result::MultiStamentResult}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration}, internal_functions::INTERNAL_FUNCTIONS}, meta_data::{CloseScopeResult, MetaData}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
-
+use crate::meta_data::soul_error::soul_error::Result;
 use super::get_function_call::get_function_call;
 
 fn try_store_function(line: &str, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<FunctionDeclaration> {
@@ -8,7 +8,7 @@ fn try_store_function(line: &str, meta_data: &mut MetaData, context: &mut Curren
     let tokens = tokenize_line(FileLine{text: line.to_string(), line_number: 0}, 0, &mut dummy, meta_data)?;
     let mut iter = TokenIterator::new(tokens);
 
-    let function = add_function_declaration(&mut iter, meta_data, context)?;
+    let function = add_function_declaration(&mut iter, meta_data, context, false)?;
 
     Ok(function)
 }
@@ -348,7 +348,7 @@ fn test_get_function_call_generic_no_validater() {
         "{:#?}\n!=\n{:#?}", function, should_be 
     );
 
-    const FUNC_CALL4: &str = "__Soul_format_string__(1, true);";
+    const FUNC_CALL4: &str = "__soul_format_string__(1, true);";
     let function = simple_get_function_call(FUNC_CALL4, &mut meta_data, &mut context);
     let should_be = MultiStamentResult::new(
         IExpression::new_funtion_call(
@@ -373,7 +373,7 @@ fn test_get_function_call_in_child_scope() {
     let func_declr1 = "empty();";
     let empty_func = store_function(&func_declr1, &mut meta_data, &mut context);
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id)
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
@@ -406,7 +406,7 @@ fn test_get_function_call_in_child_scope() {
     let func_declr2 = "emptyInEmpty();";
     let empty_func2 = store_function(&func_declr2, &mut meta_data, &mut context);
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id)
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 

@@ -1,5 +1,6 @@
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::FunctionDeclaration}, meta_data::MetaData, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
-use std::{collections::BTreeMap, io::{Error, Result}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::FunctionDeclaration}, meta_data::MetaData, soul_error::soul_error::{pass_soul_error, SoulError}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
+use std::{collections::BTreeMap};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 
 struct Arguments {
     pub args: Vec<ArgumentInfo>,
@@ -24,8 +25,8 @@ pub fn get_function_call(
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
 ) -> Result<MultiStamentResult<IExpression>> {
-    fn pass_err(err: Error, function_name: &str, iter: &TokenIterator) -> Error {
-        new_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'\n{}", function_name, err.to_string()).as_str())
+    fn pass_err(err: SoulError, function_name: &str, iter: &TokenIterator) -> SoulError {
+        pass_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'", function_name).as_str(), &err)
     }
     
     let mut statment_result = MultiStamentResult::new(IExpression::EmptyExpression());
@@ -80,7 +81,7 @@ fn get_generics(
         loop {
             let begin_i = iter.current_index();
             SoulType::from_iterator(iter, &meta_data.type_meta_data, &context.current_generics)
-                .map_err(|err| new_soul_error(&iter[begin_i], format!("while trying to get generics\n{}", err.to_string()).as_str()))?;
+                .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get generics", &err))?;
 
             generic_defines.push(iter.current().text.clone());
             
@@ -155,8 +156,9 @@ fn get_arguments(
         }
 
         let begin_i = iter.current_index();
-        let expr_result = get_expression(iter, meta_data, context, &None, &vec![",", ")"])
-            .map_err(|err| new_soul_error(&iter[begin_i], format!("at argument number: {}\n{}", arg.arg_position+1, err.to_string()).as_str()))?;
+        const IS_FORWARD_DECLARED: bool = false;
+        let expr_result = get_expression(iter, meta_data, context, &None, IS_FORWARD_DECLARED, &vec![",", ")"])
+            .map_err(|err| pass_soul_error(&iter[begin_i], format!("at argument number: {}", arg.arg_position+1).as_str(), &err))?;
 
         let (is_type, expression) = (expr_result.is_type, expr_result.result);
         if is_type.is_empty() {
@@ -191,7 +193,7 @@ fn get_arguments(
     Err(err_func_call_out_of_bounds(iter))
 }
 
-fn err_func_call_out_of_bounds(iter: &TokenIterator) -> Error {
+fn err_func_call_out_of_bounds(iter: &TokenIterator) -> SoulError {
     new_soul_error(iter.current(), "unexpeced end while trying to get arguments from function call")
 }
 

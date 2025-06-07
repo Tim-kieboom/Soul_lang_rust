@@ -1,8 +1,8 @@
 use bitflags::bitflags;
-use std::{collections::HashMap, io::Result, result, sync::{Arc, Mutex}};
-use crate::tokenizer::token::TokenIterator;
-
-use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::INTERNAL_FUNCTIONS}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
+use std::{collections::HashMap, result, sync::{Arc, Mutex}};
+use crate::{meta_data::borrow_checker::borrow_checker::{BorrowId, BorrowResult}, tokenizer::token::TokenIterator};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
+use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::INTERNAL_FUNCTIONS}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
 
 bitflags! {
     #[derive(Debug, PartialEq)]
@@ -106,17 +106,27 @@ impl MetaData {
     }
 
 
-    pub fn add_to_global_scope(&mut self, var_info: VarInfo) {
-        self.add_to_scope(var_info, &GLOBAL_SCOPE_ID);
+    pub fn add_to_global_scope(&mut self, var_info: VarInfo) -> BorrowResult<()> {
+        self.add_to_scope(var_info, &GLOBAL_SCOPE_ID)
     }
 
-    pub fn add_to_scope(&mut self, var_info: VarInfo, id: &ScopeId) {
+    pub fn add_to_scope(&mut self, var_info: VarInfo, id: &ScopeId) -> BorrowResult<()> {
+        let var_name = var_info.name.clone();
+        
+        if !var_info.is_forward_declared {
+            self.borrow_checker
+                .lock().unwrap()
+                .declare_owner(&BorrowId(&var_name, id))?;
+        }
+
         self.scope_store.get_mut(id)
                         .unwrap()
-                        .vars.insert(var_info.name.clone(), var_info);
+                        .vars.insert(var_name, var_info);
+
+        Ok(())
     }
 
-    pub fn try_get_variable(&self, var_name: &String, scope_id: &ScopeId) -> Option<&VarInfo> {
+    pub fn try_get_variable(&self, var_name: &String, scope_id: &ScopeId) -> Option<(&VarInfo, ScopeId)> {
         let scope = self.scope_store.get(&scope_id)?;
 
         scope.try_get_variable(var_name, &self.scope_store)
@@ -130,6 +140,10 @@ impl MetaData {
 
     pub fn is_variable(&self, var_name: &String, scope_id: &ScopeId) -> bool {
         self.try_get_variable(var_name, scope_id).is_some()
+    }
+
+    pub fn check_variable_valid(&self, var_name: &String, scope_id: &ScopeId) -> BorrowResult<()> {
+        self.borrow_checker.lock().unwrap().is_valid(&BorrowId(&var_name, scope_id))
     }
 
     pub fn try_get_function(
@@ -170,8 +184,8 @@ impl MetaData {
                 return Ok((*scope.id(), function_id));
             }
 
-            if let Some(parent_id) = scope.parent {
-                scope = self.scope_store.get(&parent_id).expect("Internal Error: scope_id could not be found");
+            if let Some(parent) = &scope.parent {
+                scope = self.scope_store.get(&parent.id).expect("Internal Error: scope_id could not be found");
             }
             else {
                 return Err(new_soul_error(
@@ -209,8 +223,8 @@ impl MetaData {
                 return IsFunctionResult::new(funcs, _IsFunctionResult::IsFunction);
             }
 
-            if let Some(parent_id) = scope.parent {
-                scope = self.scope_store.get(&parent_id).expect("Internal Error: scope_id could not be found");
+            if let Some(parent) = &scope.parent {
+                scope = self.scope_store.get(&parent.id).expect("Internal Error: scope_id could not be found");
             }
             else {
                 return IsFunctionResult::new(Vec::new(), _IsFunctionResult::Empty);
@@ -224,13 +238,16 @@ impl MetaData {
         scope.function_store.from_name(&get_methode_map_entry(name, &this_class.name)).is_some()
     }
 
-    pub fn open_scope(&mut self, parent_id: ScopeId) -> result::Result<ScopeId, String> {
+    pub fn open_scope(&mut self, parent_id: ScopeId, allows_vars_access: bool) -> result::Result<ScopeId, String> {
         let parent = self.scope_store.get(&parent_id)
             .ok_or("Internal Error: can not get parent scope from scope_store")?;
-        let child = Scope::new_child(&parent);
+
+        let child = Scope::new_child(&parent, allows_vars_access);
         let child_id = *child.id();
         self.scope_store.insert(child_id, child);
-        self.borrow_checker.lock().unwrap().open_scope(&child_id)?;
+        self.borrow_checker
+            .lock().unwrap()
+            .open_scope(&child_id)?;
 
         Ok(child_id)
     }
@@ -242,13 +259,13 @@ impl MetaData {
         
         let parent = self.scope_store.get(id)
             .ok_or(format!("Internal error: scope not found"))?
-            .parent.unwrap();
+            .parent.as_ref().unwrap()
+            .id.clone();
         
         self.scope_store.remove(id);
         let delete_list = self.borrow_checker.lock().unwrap().close_scope(id)?;
         Ok(CloseScopeResult{delete_list, parent})
     }
-
 }
 
 fn new_scope_store() -> HashMap<ScopeId, Scope> {

@@ -1,6 +1,6 @@
-use std::io::Result;
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 
-use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentGenerics, soul_names::{NamesTypeModifiers, SOUL_NAMES}, soul_type::soul_type::SoulType, type_meta_data::{TypeMetaData}}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{current_context::current_context::CurrentGenerics, soul_names::{NamesTypeModifiers, SOUL_NAMES}, soul_type::soul_type::SoulType, type_meta_data::{TypeMetaData}}, tokenizer::token::TokenIterator};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArgumentInfo {

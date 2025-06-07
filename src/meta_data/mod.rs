@@ -7,7 +7,7 @@ pub mod scope_and_var;
 pub mod borrow_checker;
 pub mod type_meta_data;
 pub mod current_context;
-pub mod convert_soul_error;
+pub mod soul_error;
 
 pub mod type_store;
 mod c_string_store;

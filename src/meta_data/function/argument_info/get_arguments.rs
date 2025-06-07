@@ -1,5 +1,5 @@
-use std::io::{Error, Result};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::get_expression::get_expression::get_expression}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::check_name, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulError};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::get_expression::get_expression::get_expression}, meta_data::{current_context::current_context::CurrentContext, function::function_modifiers::FunctionModifiers, meta_data::MetaData, soul_names::check_name, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 use super::argument_info::ArgumentInfo;
 
 pub struct FunctionArguments {
@@ -57,11 +57,8 @@ impl StoreArgInfo {
     
     pub fn get_argument_info(&mut self, iter: &TokenIterator, function_modifiers: &Option<FunctionModifiers>) -> Result<ArgumentInfo> {
         
-        if let Some(modifiers) = function_modifiers {
-            
-            if modifiers.contains(FunctionModifiers::Literal | FunctionModifiers::Const) {
-                check_for_mutable_arg(iter, &self.arg_info)?;
-            }
+        if function_modifiers.is_some_and(|modifiers| modifiers.contains(FunctionModifiers::Literal | FunctionModifiers::Const)) {
+            check_for_mutable_arg(iter, &self.arg_info)?;
         }
 
         if self.arg_info.name.is_empty() {
@@ -73,7 +70,7 @@ impl StoreArgInfo {
             );
         }
 
-        if !self.arg_info.is_mutable {
+        if !self.arg_info.is_mutable && self.arg_info.soul_type.is_mutable() {
             self.arg_info.soul_type.add_modifier(TypeModifiers::Const)
                 .map_err(|msg| new_soul_error(iter.current(), format!("while trying to get argument from function\n{}", msg).as_str()))?;
         }
@@ -95,6 +92,7 @@ pub fn get_arguments(
     context: &mut CurrentContext,
     function_modifiers: Option<FunctionModifiers>,
     function_name: &str,
+    is_forward_declared: bool,
 ) -> Result<FunctionArguments> {
     let next_token = iter.peek()
         .ok_or(new_soul_error(iter.current(), "unexpeced end while trying to get arguments"))?;
@@ -158,7 +156,7 @@ pub fn get_arguments(
 
             let default_value_i = iter.current_index();
             let should_be_type = Some(&store_arg_info.arg_info.soul_type);
-            let expression = get_expression(iter, meta_data, context, &should_be_type, &vec![",", ")"])
+            let expression = get_expression(iter, meta_data, context, &should_be_type, is_forward_declared, &vec![",", ")"])
                 .map_err(|err| pass_err(
                     iter, 
                     function_name, 
@@ -237,7 +235,7 @@ fn err_wrong_default_type(
     string_builder: String, 
     is_type: &SoulType, 
     arg_type: &SoulType,
-) -> Error {
+) -> SoulError {
     new_soul_error(
         iter.current(), 
         format!(
@@ -249,12 +247,12 @@ fn err_wrong_default_type(
     )
 }
 
-fn err_arguments_out_of_bounds(iter: &mut TokenIterator, function_name: &str) -> Error {
+fn err_arguments_out_of_bounds(iter: &mut TokenIterator, function_name: &str) -> SoulError {
     new_soul_error(iter.current(), format!("unexpeced end while trying to get arguments of function: {}", function_name).as_str())
 }
 
-fn pass_err(iter: &TokenIterator, name: &str, err: Error) -> Error {
-    new_soul_error(iter.current(), format!("while trying to get arguments of function: {}\n{}", name, err.to_string()).as_str())
+fn pass_err(iter: &TokenIterator, name: &str, err: SoulError) -> SoulError {
+    pass_soul_error(iter.current(), format!("while trying to get arguments of function: '{}'", name).as_str(), &err)
 }
 
 

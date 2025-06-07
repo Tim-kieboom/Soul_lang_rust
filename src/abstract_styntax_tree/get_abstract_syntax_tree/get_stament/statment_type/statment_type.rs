@@ -14,6 +14,7 @@ pub enum StatmentType {
     FunctionCall,
     Return,
     Scope,
+    If
 }
 
 impl StatmentType {
@@ -30,6 +31,7 @@ impl StatmentType {
             IStatment::FunctionCall{..} => StatmentType::FunctionCall,
             IStatment::Scope{..} => StatmentType::Scope,
             IStatment::Return{..} => StatmentType::Return,
+            IStatment::If{..} => StatmentType::If,
         }
     }
 
@@ -46,6 +48,7 @@ impl fmt::Debug for StatmentType {
             Self::FunctionCall => write!(f, "FunctionCall"),
             Self::Return => write!(f, "Return"),
             Self::Scope => write!(f, "Scope"),
+            Self::If => write!(f, "If"),
         }
     }
 }

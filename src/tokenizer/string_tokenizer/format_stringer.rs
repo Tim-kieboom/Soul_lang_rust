@@ -1,5 +1,6 @@
-use std::{io::{Error, Result}, slice::Iter};
-use crate::{meta_data::convert_soul_error::convert_soul_error::new_soul_error, tokenizer::{file_line::FileLine, token::Token}};
+use std::slice::Iter;
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
+use crate::tokenizer::{file_line::FileLine, token::Token};
 
 const QUOTE: &str = "\"";
 const IN_STR_QUOTE: &str = "\\\"";
@@ -131,13 +132,13 @@ fn validate_format_argument(line: &FileLine, start_bracket: usize, i: usize) -> 
     Ok(())
 }
 
-fn err_emty_format_arg(line: &FileLine, offset: usize) -> Error {
+fn err_emty_format_arg(line: &FileLine, offset: usize) -> SoulError {
     let err_token = Token{text: String::new(), line_number: line.line_number as usize, line_offset: offset};
     new_soul_error(&err_token, "in format_string (so 'f\"...\"') format argument is empty")
 }
 
 
-fn err_string_in_format_arg(line: &FileLine, offset: usize) -> Error {
+fn err_string_in_format_arg(line: &FileLine, offset: usize) -> SoulError {
     let err_token = Token{text: String::new(), line_number: line.line_number as usize, line_offset: offset};
     new_soul_error(&err_token, "in format_string (so 'f\"...\"') can not contain a string literal as an argument")
 }

@@ -1,4 +1,5 @@
-use std::{io::Result, result};
+use std::{result};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
 use super::primitive_types::{DuckType, NumberCategory};
 use crate::meta_data::current_context::current_context::CurrentGenerics;
 use crate::tokenizer::tokenizer::SplitOn;
@@ -8,7 +9,6 @@ use crate::tokenizer::token::{Token, TokenIterator};
 use crate::meta_data::class_info::class_info::ClassInfo;
 use crate::meta_data::soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES};
 use super::type_checker::type_checker::get_primitive_type_from_literal;
-use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
 use super::{primitive_types::PrimitiveType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers};
 
 
@@ -322,7 +322,7 @@ impl SoulType {
             }
 
             iter.go_to_index(begin_index);
-            return Err(new_soul_error(iter.current(), format!("value: '{}' is not valid literal value\n {}", string_builder, err.to_string()).as_str()));
+            return Err(pass_soul_error(iter.current(), format!("value: '{}' is not valid literal value", string_builder).as_str(), &err));
         }
         let tuple = possible_tuple.unwrap();
 
@@ -732,7 +732,7 @@ fn get_literal_array(
                 
                 let c_string = type_meta_data.c_str_store.from_name(&iter.current().text);
                 if let None = c_string {
-                    return Err(new_soul_error(iter.current(), format!("while trying to get literal array\n {}", err).as_str()))
+                    return Err(pass_soul_error(iter.current(), format!("while trying to get literal array").as_str(), &err))
                 }
 
                 element_type = SoulType::from_modifiers(
@@ -748,8 +748,8 @@ fn get_literal_array(
             result_type.name = PrimitiveType::UntypedFloat.to_str().expect("Internal error: UntypedFloat.to_str() NotImpl").to_string()
         }
 
-        if let Err(err) = element_type.add_wrapper(TypeWrappers::Array) {
-            return Err(new_soul_error(iter.current(), format!("while trying to get literal array\n {}", err).as_str()))
+        if let Err(err_msg) = element_type.add_wrapper(TypeWrappers::Array) {
+            return Err(new_soul_error(iter.current(), format!("while trying to get literal array\n {}", err_msg).as_str()))
         }
 
         if has_soul_type {

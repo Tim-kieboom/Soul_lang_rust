@@ -1,4 +1,4 @@
-use std::io::Result;
+use crate::meta_data::soul_error::soul_error::Result;
 use super::{function_declaration::FunctionDeclaration, get_function_declaration::add_function_declaration};
 use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{class_info::access_level::AccesLevel, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, internal_functions::FIRST_FUNCTION_ID}, meta_data::MetaData, scope_and_var::scope::{Scope}, soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
@@ -12,7 +12,7 @@ fn try_data_simple_get_function(line: &str, meta_data: &mut MetaData) -> Result<
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     let mut iter = TokenIterator::new(tokens); 
 
-    Ok((add_function_declaration(&mut iter, meta_data, &mut context), (iter, context)))
+    Ok((add_function_declaration(&mut iter, meta_data, &mut context, false), (iter, context)))
 }
 
 fn try_simple_get_function(line: &str) -> Result<FunctionDeclaration> {
@@ -33,9 +33,10 @@ fn global_scope(meta_data: &MetaData) -> &Scope {
 #[test]
 fn test_get_function_main() {
     let array = SOUL_NAMES.get_name(NamesTypeWrapper::Array);
-    let const_ = SOUL_NAMES.get_name(NamesTypeModifiers::Constent);
     let str = SOUL_NAMES.get_name(NamesInternalType::String);
     let int = SOUL_NAMES.get_name(NamesInternalType::Int);
+
+    let literal = SOUL_NAMES.get_name(NamesTypeModifiers::Literal);
 
 
     const MAIN_1: &str = "main() {}";
@@ -72,9 +73,8 @@ fn test_get_function_main() {
 
 //----------------------------
 
-    let str_array = format!("{}{}", str, array);
-    let const_str_array = format!("{} {}{}", const_, str, array);
-    let main_args = format!("main({} args) {}", str_array, "{}"); // main(str[] args) {}
+    let lit_str_array = format!("{} {}{}", literal, str, array);
+    let main_args = format!("main({} args) {}", lit_str_array, "{}"); // main(str[] args) {}
 
     function = simple_get_function(&main_args);
     should_be = FunctionDeclaration::new(
@@ -83,7 +83,7 @@ fn test_get_function_main() {
         vec![
             ArgumentInfo::new_argument(
                 "args".to_string(), 
-                const_str_array.clone(), 
+                lit_str_array.clone(), 
                 false, 0
             )
         ], 
@@ -105,11 +105,12 @@ fn test_get_function_main() {
 
 //----------------------------
 
+    let str_array = format!("{}{}",str, array);
     let mut_args_main = format!("main(mut {} args) {}", str_array, "{}"); // main(mut str[] args) {}
 
     let res = try_simple_get_function(&mut_args_main);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_string(), format!("at 0:21; !!error!! function 'main' only allows 'main()' and 'main({})' as arguments", str_array));
+    assert_eq!(res.unwrap_err().to_string(), format!("at 0:21; !!error!! function 'main' only allows 'main()' and 'main({})' as arguments", lit_str_array));
 
 
 }

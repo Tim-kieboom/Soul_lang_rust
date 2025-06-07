@@ -1,8 +1,9 @@
 use std::collections::HashMap;
-use once_cell::sync::Lazy;
-use std::io::Result;
 use std::result;
+use once_cell::sync::Lazy;
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
 
+use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::tokenizer::token::Token;
 use crate::meta_data::meta_data::MetaData;
 use crate::meta_data::type_store::{ImplOperator, ImplOperators};
@@ -13,7 +14,6 @@ use crate::meta_data::soul_type::type_wrappers::TypeWrappers;
 use crate::meta_data::soul_type::type_modifiers::TypeModifiers;
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
 use super::get_function_call::get_function_call::get_function_call;
-use crate::meta_data::convert_soul_error::convert_soul_error::new_soul_error;
 use crate::abstract_styntax_tree::operator_type::{ExprOperatorType, ALL_OPERATORS};
 use crate::meta_data::soul_names::{NamesInternalType, NamesTypeWrapper, SOUL_NAMES};
 use crate::meta_data::current_context::current_context::{CurrentContext, CurrentGenerics};
@@ -43,12 +43,12 @@ static NEGATIVE_ONE_LITERAL: Lazy<IExpression> = Lazy::new(|| {
     )
 });
 
-#[allow(dead_code)]
 pub fn get_expression(
     iter: &mut TokenIterator, 
     meta_data: &mut MetaData, 
     context: &mut CurrentContext,
     should_be_type: &Option<&SoulType>,
+    is_forward_declared: bool,
     end_tokens: &Vec<&str>,
 ) -> Result<GetExpressionResult> {
     let mut result = MultiStamentResult::<IExpression>::new(IExpression::EmptyExpression());
@@ -60,6 +60,7 @@ pub fn get_expression(
     convert_expression(
         iter, meta_data, context, &mut stacks, 
         &mut result, should_be_type, end_tokens,
+        is_forward_declared,
     )?;
 
     while let Some(symbool) = stacks.symbool_stack.pop() {
@@ -125,6 +126,7 @@ fn convert_expression(
 
     should_be_type: &Option<&SoulType>,
     end_tokens: &Vec<&str>,
+    is_forward_declared: bool,
 ) -> Result<()> {
 
     let mut open_bracket_stack = 0i64;
@@ -170,7 +172,7 @@ fn convert_expression(
             convert_operator(iter, stacks, meta_data, context, result, should_be_type)?;
         }
         else if let Some(variable) = possible_variable {
-            convert_function(iter, stacks, meta_data, context, variable)?;
+            convert_variable(iter, stacks, meta_data, context, variable)?;
         }
         else if possible_literal.is_ok() {
             convert_literal(iter, stacks, meta_data, context, possible_literal)?;
@@ -199,21 +201,26 @@ fn is_ref(iter: &TokenIterator, stacks: &ExpressionStacks) -> bool {
     is_token_any_ref(iter.current()) && (stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty())
 }
 
-fn convert_function(
+fn convert_variable(
     iter: &mut TokenIterator, 
     stacks: &mut ExpressionStacks, 
     meta_data: &MetaData,
     context: &mut CurrentContext,
-    variable: &VarInfo,
+    _variable: (&VarInfo, ScopeId),
 ) -> Result<()> {
+    let (variable, scope_id) = _variable;
+
     if !variable.is_assigned() {
         return Err(new_soul_error(iter.current(), format!("'{}' can not be used before it is assigned", variable.name).as_str()));
     }
 
+    meta_data.check_variable_valid(&variable.name, &scope_id)
+        .map_err(|msg| new_soul_error(iter.current(), format!("while trying to use variable: '{}' in expression\n{}", variable.name, msg).as_str()))?;
+
     let var_type;
     match SoulType::from_stringed_type(&variable.type_name, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
         Ok(val) => var_type = val,
-        Err(err) => return Err(new_soul_error(iter.current(), format!("while trying to get type of variable '{}'\n'{}'", variable.name, err.to_string()).as_str())),
+        Err(err) => return Err(pass_soul_error(iter.current(), format!("while trying to get type of variable '{}'", variable.name).as_str(), &err)),
     }
 
     stacks.type_stack.push(var_type);
@@ -268,7 +275,7 @@ fn convert_function_call(
         if let Some(type_string) = &function_info.return_type {
             let begin_i = iter.current_index();
             return_type = SoulType::from_stringed_type(type_string, iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
-                .map_err(|err| new_soul_error(&iter[begin_i], format!("while trying to get return type of function call: '{}'\n{}", function_info.name, err.to_string()).as_str()))?;
+                .map_err(|err| pass_soul_error(&iter[begin_i], format!("while trying to get return type of function call: '{}'", function_info.name).as_str(), &err))?;
         } 
         else {
             return_type = SoulType::new_empty();
@@ -416,7 +423,7 @@ fn get_binairy_expression(
     stacks: &mut ExpressionStacks,
     operator_type: &ExprOperatorType
 ) -> Result<IExpression> {
-    assert!(!stacks.node_stack.is_empty(), "at: {}, Internal error while trying to get binaryExpression node_stack is empty", new_soul_error(iter.current(), ""));
+    assert!(!stacks.node_stack.is_empty(), "at: {}, Internal error while trying to get binaryExpression node_stack is empty", new_soul_error(iter.current(), "").to_string());
     let right = stacks.node_stack.pop().unwrap();
     let right_type = stacks.type_stack.pop().unwrap();
     if right_type.is_empty() {
@@ -616,7 +623,7 @@ fn get_negative_expression(
     let possible_variable = meta_data.try_get_variable(&iter.current().text, &context.current_scope_id);
     let mut result = MultiStamentResult::<IExpression>::new(IExpression::EmptyExpression());
 
-    if let Some(variable) = possible_variable {
+    if let Some((variable, _scope_id)) = possible_variable {
         let var_type = SoulType::from_stringed_type(
             &variable.type_name, 
             iter.current(), 

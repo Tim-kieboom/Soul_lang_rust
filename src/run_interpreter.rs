@@ -1,6 +1,6 @@
-use std::io::{self, Result, Write};
+use std::io::{self, Write};
 use itertools::Itertools;
-
+use crate::meta_data::soul_error::soul_error::Result;
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::AbstractSyntaxTree, get_abstract_syntax_tree::{get_abstract_syntax_tree::get_abstract_syntax_tree_line, get_stament::statment_type::statment_type::StatmentIterator}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData}, run_options::{run_options::RunOptions, show_output::ShowOutputs}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 pub fn run_interpreter(run_options: RunOptions) -> Result<()> {

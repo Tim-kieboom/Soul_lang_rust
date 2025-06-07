@@ -1,7 +1,7 @@
-use std::{collections::HashSet, io::{Error, Result}};
+use std::{collections::HashSet};
 use once_cell::sync::Lazy;
-
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::{get_forward_declared_initialize, get_initialize}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::{NamesOtherKeyWords, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::get_forward_declared_initialize}, meta_data::{current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::{NamesOtherKeyWords, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
 use super::statment_type::StatmentType;
 
@@ -38,11 +38,18 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         return Ok(StatmentType::CloseScope);
     }
 
-    if iter.current().text == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) {
-        traverse_to_end_statment(iter)?;
-        return Ok(StatmentType::Return);
+    match &iter.current().text {
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
+            traverse_to_end_statment(iter)?;
+            return Ok(StatmentType::Return);
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
+            traverse_to_end_statment(iter)?;
+            return Ok(StatmentType::If);
+        },
+        _ => (),
     }
-    
+
     let mut is_wrong_type = false;
     let begin_i = iter.current_index();
     let possible_type = SoulType::try_from_iterator(iter, &meta_data.type_meta_data, &context.current_generics, &mut is_wrong_type).ok();
@@ -103,7 +110,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             }
             else {
                 iter.go_to_index(begin_i);
-                let func_info = add_function_declaration(iter, meta_data, context)?;
+                let func_info = add_function_declaration(iter, meta_data, context, true)?;
                 *open_bracket_stack += 1;
                 if iter.next().is_none() {
                     return Err(err_out_of_bounds(iter));
@@ -221,7 +228,7 @@ fn get_initialize_info(iter: &mut TokenIterator, meta_data: &mut MetaData, conte
     Ok(StatmentType::Initialize{is_assigned, is_mutable, var})
 }
 
-fn err_out_of_bounds(iter: &TokenIterator) -> Error {
+fn err_out_of_bounds(iter: &TokenIterator) -> SoulError {
     new_soul_error(iter.current(), "unexpected end while trying to get stament")
 }
 

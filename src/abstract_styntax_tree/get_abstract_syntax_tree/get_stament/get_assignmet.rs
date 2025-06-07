@@ -1,5 +1,5 @@
-use std::io::Result;
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::ExprOperatorType}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::VarFlags, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::ExprOperatorType}, meta_data::{current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::VarFlags, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
 
 pub struct AssignmentResult {
     pub assignment: MultiStamentResult<IStatment>,
@@ -11,20 +11,22 @@ pub fn get_assignment(
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
     i_variable: IVariable,
+    in_initialize: bool,
 ) -> Result<AssignmentResult> {
-    // if matches!(i_variable, IVariable::MemberExpression { .. }) {
-    //     todo!("member not yet impl")
-    // }
-
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
 
     let symbool_index = iter.current_index();
     
     let var_type = SoulType::from_stringed_type(i_variable.get_type_name(), iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
-        .map_err(|err| new_soul_error(iter.current(), format!("error while trying to get type from variable of assignment\n{}", err.to_string()).as_str()))?;
+        .map_err(|err| pass_soul_error(iter.current(), format!("error while trying to get type from variable of assignment").as_str(), &err))?;
 
-    meta_data.try_get_variable(i_variable.get_name(), &context.current_scope_id)
-        .ok_or(new_soul_error(iter.current(), format!("variable: '{}' could not be found in scope", i_variable.get_name()).as_str()))?;
+    let is_forward_declared = meta_data.try_get_variable(i_variable.get_name(), &context.current_scope_id)
+        .ok_or(new_soul_error(iter.current(), format!("variable: '{}' could not be found in scope", i_variable.get_name()).as_str()))?
+        .0.is_forward_declared.clone();
+
+    if is_forward_declared && !in_initialize {
+        return Err(new_soul_error(iter.current(), format!("variable: '{}' has not been initialized yet", i_variable.get_name()).as_str()));
+    }
 
     is_symbool_allowed(&iter[symbool_index], &context, &var_type)?;
 
@@ -68,8 +70,8 @@ pub fn get_assignment(
     }
 
     let begin_i = iter.current_index();
-    let mut expression = get_expression(iter, meta_data, context, &Some(&var_type), &vec!["\n", ";"])
-        .map_err(|err| new_soul_error(&iter[begin_i], format!("while trying to get assignment expression\n{}", err.to_string()).as_str()))?;
+    let mut expression = get_expression(iter, meta_data, context, &Some(&var_type), is_forward_declared, &vec!["\n", ";"])
+        .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get assignment expression", &err))?;
 
     body_result.add_result(&expression.result);
     meta_data.try_get_variable_mut(i_variable.get_name(), &context.current_scope_id)

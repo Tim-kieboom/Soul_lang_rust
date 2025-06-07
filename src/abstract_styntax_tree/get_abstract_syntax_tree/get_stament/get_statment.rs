@@ -1,7 +1,6 @@
-use std::io::{Error, Result};
-
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
 use super::statment_type::statment_type::{StatmentIterator, StatmentType};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
 pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let statment_type;
@@ -18,25 +17,28 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
         StatmentType::CloseScope => Ok(MultiStamentResult::new(IStatment::CloseScope())),
         StatmentType::EmptyStatment => Ok(MultiStamentResult::new(IStatment::EmptyStatment())),
         StatmentType::Assignment => {
-            let variable = get_variable(iter, context, meta_data)?;
-            get_assignment(iter, meta_data, context, variable)
-                .map(|result| result.assignment)
-        },
+                let variable = get_variable(iter, context, meta_data)?;
+                get_assignment(iter, meta_data, context, variable, false)
+                    .map(|result| result.assignment)
+            },
         StatmentType::Initialize{..} => get_initialize(iter, meta_data, context),
         StatmentType::FunctionBody{..} => get_function_body(iter, statment_iter, meta_data, context),
         StatmentType::FunctionCall => {
-            let result = get_function_call(iter, meta_data, context)
-                .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value)));
+                let result = get_function_call(iter, meta_data, context)
+                    .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value)));
         
-            if iter.next().is_none() {
-                return Err(err_out_of_bounds(iter));
-            }
-            result
-        },
+                if iter.next().is_none() {
+                    return Err(err_out_of_bounds(iter));
+                }
+                result
+            },
         StatmentType::Scope => todo!(),
         StatmentType::Return => {
-            get_return(iter, context, meta_data)
-        },
+                get_return(iter, context, meta_data)
+            },
+        StatmentType::If => {
+                todo!()
+            },
     }
 }
 
@@ -73,7 +75,8 @@ fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data:
     let return_str = return_type.as_ref().unwrap();
     let return_type = SoulType::from_stringed_type(return_str, iter.current(), &meta_data.type_meta_data, &mut context.current_generics)?;    
 
-    let expression_result = get_expression(iter, meta_data, context, &Some(&return_type), &vec!["\n", ";"])?;
+    const IS_FORWARD_DECLARED: bool = false;
+    let expression_result = get_expression(iter, meta_data, context, &Some(&return_type), IS_FORWARD_DECLARED, &vec!["\n", ";"])?;
 
     if !return_type.is_convertable(&expression_result.is_type, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
         return Err(new_soul_error(iter.current(), format!("trying to return with a type: '{}' but can not be converted to function return type: '{}' ", expression_result.is_type.to_string(), return_str).as_str()));
@@ -102,10 +105,10 @@ fn get_variable(iter: &mut TokenIterator, context: &mut CurrentContext, meta_dat
         return Err(err_out_of_bounds(iter));
     }
 
-    Ok(IVariable::new_variable(&variable.name, &variable.type_name))
+    Ok(IVariable::new_variable(&variable.0.name, &variable.0.type_name))
 }
 
-fn err_out_of_bounds(iter: &TokenIterator) -> Error {
+fn err_out_of_bounds(iter: &TokenIterator) -> SoulError {
     new_soul_error(iter.current(), "unexpected end while trying to get stament")
 }
 

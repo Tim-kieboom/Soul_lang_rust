@@ -27,7 +27,7 @@ fn main() {
     }
     
     if let Err(err) = result {
-        eprintln!("{err}");
+        println!("{}", err.to_string());
     }
 }
 

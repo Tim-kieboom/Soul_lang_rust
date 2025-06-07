@@ -1,6 +1,7 @@
-use std::io::Result;
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
+
 use super::get_stament::statment_type::statment_type::{StatmentIterator, StatmentType};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::AbstractSyntaxTree, get_abstract_syntax_tree::get_stament::{get_statment::get_statment, statment_type::get_statment_types::get_statment_types}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesTypeModifiers, SOUL_NAMES}}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::AbstractSyntaxTree, get_abstract_syntax_tree::get_stament::{get_statment::get_statment, statment_type::get_statment_types::get_statment_types}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesTypeModifiers, SOUL_NAMES}}, tokenizer::token::TokenIterator};
 
 const GLOBAL_SCOPE: i64 = 0;
 
@@ -20,7 +21,7 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     
     iter.go_to_before_start();
 
-    println!("{:#?}", statments);
+    // println!("{:#?}", statments);
     
     let mut statment_iter = StatmentIterator::new(statments);
     let mut tree = AbstractSyntaxTree::new();
@@ -76,6 +77,10 @@ pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut T
 
 fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, statments: &mut Vec<StatmentType>, open_bracket_stack: &mut i64) -> Result<bool> {
 
+    fn is_global_scope(open_bracket_stack: &i64) -> bool {
+        *open_bracket_stack == GLOBAL_SCOPE
+    }
+
     if iter.current().text == "\n" {
 
         if iter.next().is_none() {
@@ -88,29 +93,34 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
         StatmentType::CloseScope => (),
         StatmentType::EmptyStatment => (),
         StatmentType::Assignment => {
-            if *open_bracket_stack == GLOBAL_SCOPE {
-                return Err(new_soul_error(iter.current(), "can not do an assignment in global scope"));
+                if is_global_scope(open_bracket_stack) {
+                    return Err(new_soul_error(iter.current(), "can not do an assignment in global scope"));
+                }
             }
-        }
         StatmentType::Initialize{is_mutable, is_assigned, var} => {
-            if *open_bracket_stack == GLOBAL_SCOPE {
-                if !*is_assigned {
-                    return Err(new_soul_error(iter.current(), format!("global variable: '{}' HAS TO BE assigned", var.get_name()).as_str()));
-                }
+                if is_global_scope(open_bracket_stack) {
+                    if !*is_assigned {
+                        return Err(new_soul_error(iter.current(), format!("global variable: '{}' HAS TO BE assigned", var.get_name()).as_str()));
+                    }
 
-                if *is_mutable {
-                    return Err(new_soul_error(iter.current(), format!("global variable: '{}' can not be mutable has to be '{}' or '{}'", var.get_name(), SOUL_NAMES.get_name(NamesTypeModifiers::Constent), SOUL_NAMES.get_name(NamesTypeModifiers::Literal)).as_str()));
+                    if *is_mutable {
+                        return Err(new_soul_error(iter.current(), format!("global variable: '{}' can not be mutable has to be '{}' or '{}'", var.get_name(), SOUL_NAMES.get_name(NamesTypeModifiers::Constent), SOUL_NAMES.get_name(NamesTypeModifiers::Literal)).as_str()));
+                    }
                 }
-            }
-        },
+            },
         StatmentType::FunctionBody{..} => (),
         StatmentType::FunctionCall => (),
         StatmentType::Scope => (),
         StatmentType::Return => {
-            if *open_bracket_stack == GLOBAL_SCOPE {
-                return Err(new_soul_error(iter.current(), "can not return in global scope"));
-            }
-        },
+                if is_global_scope(open_bracket_stack) {
+                    return Err(new_soul_error(iter.current(), "can not return in global scope"));
+                }
+            },
+        StatmentType::If => {
+                if is_global_scope(open_bracket_stack) {
+                    return Err(new_soul_error(iter.current(), "can not have is statment in global scope"));
+                }
+            },
     }
 
     statments.push(statment_type);

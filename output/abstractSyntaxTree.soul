@@ -18,22 +18,18 @@ Initialize(
 			Variable(Literal uint uintNumber) = Literal(Literal uint 1)
 		)
 	)
-FunctionBody(printSum( f64 a,  f64 b) int{
-	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_0__), Variable(const f64 a), Variable(Literal str __Soul_c_str_2__), Variable(const f64 b), Variable(Literal str __Soul_c_str_1__), BinaryExpression(Variable(const f64 a) + Variable(const f64 b), type: const f64), Variable(Literal str __Soul_c_str_0__)))))
-	})
-FunctionBody(main( str[] args) int{
+FunctionBody(main(Literal str[] args) int{
 	FunctionBody(sum( int a,  int b) int{
 	Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))
+	drop(b)
+	drop(a)
 	})
 	Initialize(
 		Assignment(
 			Variable(int num) = FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2)))
 		)
 	)
-	Initialize(
-		Assignment(
-			Variable(Literal int foo) = BinaryExpression(Literal(Literal untypedInt 1) + BinaryExpression(Literal(Literal untypedInt 1) ** Literal(Literal untypedInt 2), type: Literal untypedInt), type: Literal untypedInt)
-		)
-	)
-	FunctionCall(Println(Variable(Literal int foo)))
+	Return(Literal(int 0))
+	drop(num)
+	drop(args)
 	})

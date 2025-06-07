@@ -1,15 +1,15 @@
-use std::{collections::BTreeMap, io::{Error, Result}};
-
+use std::collections::BTreeMap;
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulError};
 use once_cell::sync::Lazy;
 
 use super::function_declaration::{get_func_names_access_level, FunctionDeclaration};
-use crate::{meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::get_arguments}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::token::TokenIterator};
+use crate::{meta_data::{current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::get_arguments}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::token::TokenIterator};
 
-static STR_ARRAY_TYPE_STRING: Lazy<String> = Lazy::new(||
+static LITERAL_STR_ARRAY_STRING: Lazy<String> = Lazy::new(||
     SoulType::from(
             SOUL_NAMES.get_name(NamesInternalType::String).to_string(), 
             vec![TypeWrappers::Array],
-            TypeModifiers::Const,
+            TypeModifiers::Literal,
             vec![],
     ).to_string()
 );
@@ -18,10 +18,11 @@ pub fn add_function_declaration(
     iter: &mut TokenIterator,
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
+    is_forward_declared: bool,
 ) -> Result<FunctionDeclaration> {
     let begin_index = iter.current_index();
 
-    let result = internal_function_declaration(iter, meta_data, context);
+    let result = internal_function_declaration(iter, meta_data, context, is_forward_declared);
     if result.is_err() {
         iter.go_to_index(begin_index); 
     }
@@ -33,6 +34,7 @@ fn internal_function_declaration(
     iter: &mut TokenIterator,
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
+    is_forward_declared: bool,
 ) -> Result<FunctionDeclaration> {
     let next_id = meta_data
         .scope_store
@@ -91,8 +93,8 @@ fn internal_function_declaration(
     }
 
     let old_index = iter.current_index();
-    let arguments = get_arguments(iter, meta_data, context, Some(function.modifiers), &function.name)
-        .map_err(|err| new_soul_error(&iter[old_index], format!("while trying to get function declaration: '{}'\n{}", function.name, err.to_string()).as_str()))?;
+    let arguments = get_arguments(iter, meta_data, context, Some(function.modifiers), &function.name, is_forward_declared)
+        .map_err(|err| pass_soul_error(&iter[old_index], format!("while trying to get function declaration: '{}'", function.name).as_str(), &err))?;
 
     if arguments.args.is_empty() && arguments.options.is_empty() {
         if iter.next().is_none() {
@@ -165,7 +167,7 @@ fn internal_function_declaration(
     else {
         let old_index = iter.current_index(); 
         meta_data.add_function(iter, context, function.clone())
-            .map_err(|err| new_soul_error(&iter[old_index], format!("while trying to get function\n{}", err.to_string()).as_str()))?;
+            .map_err(|err| pass_soul_error(&iter[old_index], "while trying to get function", &err))?;
     }
 
     if function.name == "main" {
@@ -178,11 +180,11 @@ fn internal_function_declaration(
             return Ok(function);
         }
         else if function.args.len() > 1 {
-            return Err(new_soul_error(iter.current(), "function 'main' only allows 'main()' and 'main(str[])' as arguments"));
+            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", LITERAL_STR_ARRAY_STRING.as_str()).as_str()));
         }
         
-        if function.args[0].value_type != STR_ARRAY_TYPE_STRING.as_str() {
-            return Err(new_soul_error(iter.current(), "function 'main' only allows 'main()' and 'main(str[])' as arguments"));
+        if function.args[0].value_type != LITERAL_STR_ARRAY_STRING.as_str() {
+            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", LITERAL_STR_ARRAY_STRING.as_str()).as_str()));
         }
     }
 
@@ -205,7 +207,7 @@ fn get_return_type(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
         .map(|return_type| return_type.to_string())
 }
 
-fn err_get_function_out_of_bounds(iter: &TokenIterator) -> Error {
+fn err_get_function_out_of_bounds(iter: &TokenIterator) -> SoulError {
     new_soul_error(iter.current(), "unexpeced end while trying to get function declaration")
 }
 

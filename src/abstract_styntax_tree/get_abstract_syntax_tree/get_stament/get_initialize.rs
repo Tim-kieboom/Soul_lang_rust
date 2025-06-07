@@ -1,5 +1,5 @@
-use std::io::Result;
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{convert_soul_error::convert_soul_error::new_soul_error, current_context::current_context::CurrentContext, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::check_name, soul_type::{primitive_types::{NumberCategory, PrimitiveType}, soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::check_name, soul_type::{primitive_types::{NumberCategory, PrimitiveType}, soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
 use super::get_assignmet::{get_assignment, AssignmentResult};
 
@@ -113,7 +113,9 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             var_is_forward_declared
         );
 
-        meta_data.add_to_scope(var_info, &context.current_scope_id);
+        meta_data.add_to_scope(var_info, &context.current_scope_id)
+            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))?;
+
         return Ok(body_result);
     }
 
@@ -135,8 +137,8 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
         }
 
         let begin_i = iter.current_index();
-        let mut expression = get_expression(iter, meta_data, context, &None, &vec![";", "\n"])
-            .map_err(|err| new_soul_error(&iter[begin_i], format!("while trying to get assignment of variable: '{}'\n{}", &iter[var_name_index].text, err.to_string()).as_str()))?;
+        let mut expression = get_expression(iter, meta_data, context, &None, is_forward_declared, &vec![";", "\n"])
+            .map_err(|err| pass_soul_error(&iter[begin_i], format!("while trying to get assignment of variable: '{}'", &iter[var_name_index].text).as_str(), &err))?;
 
         if expression.is_type.is_empty() {
             return Err(new_soul_error(iter.current(), format!("assignment type if variable: '{}' is of type 'none' which is not allowed", &iter[var_name_index].text).as_str()));
@@ -180,7 +182,8 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             var_is_forward_declared
         );
 
-        meta_data.add_to_scope(var_info, &context.current_scope_id);
+        meta_data.add_to_scope(var_info, &context.current_scope_id)
+            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))?;
 
         let variable = IVariable::Variable { 
             name: iter[var_name_index].text.clone(), 
@@ -211,9 +214,11 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             var_is_forward_declared
         );
 
-        meta_data.add_to_scope(var_info, &context.current_scope_id);
+        meta_data.add_to_scope(var_info, &context.current_scope_id)
+            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))?;
 
-        let AssignmentResult{assignment, is_type: _} = get_assignment(iter, meta_data, context, variable.clone())?;
+
+        let AssignmentResult{assignment, is_type: _} = get_assignment(iter, meta_data, context, variable.clone(), true)?;
         body_result.add_result(&assignment);
 
         body_result.value = IStatment::new_initialize(variable, Some(assignment.value));

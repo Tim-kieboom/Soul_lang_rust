@@ -1,5 +1,5 @@
-use std::{collections::{BTreeMap, HashMap}, io::Result};
-
+use std::{collections::{BTreeMap, HashMap}};
+use crate::meta_data::soul_error::soul_error::Result;
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, operator_type::{ExprOperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 use super::get_expression::{get_expression, GetExpressionResult};
@@ -16,15 +16,15 @@ fn simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>,
     let mut iter = get_iter(line, meta_data).unwrap();
 
     let end_tokens = vec![";"];
-    get_expression(&mut iter, meta_data, context, &should_be_type, &end_tokens)
-        .inspect_err(|msg| panic!("{:#?}", msg))
+    get_expression(&mut iter, meta_data, context, &should_be_type, false, &end_tokens)
+        .inspect_err(|msg| panic!("{}", msg.to_string()))
         .unwrap()
 }
 fn try_simple_get_expression_metadata(line: &str, should_be_type: Option<&SoulType>, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<GetExpressionResult> {
     let mut iter = get_iter(line, meta_data).unwrap();
 
     let end_tokens = vec![";"];
-    get_expression(&mut iter, meta_data, context, &should_be_type, &end_tokens)
+    get_expression(&mut iter, meta_data, context, &should_be_type, false, &end_tokens)
 }
 
 fn simple_get_expression(line: &str, should_be_type: Option<&SoulType>) -> GetExpressionResult {
@@ -344,7 +344,7 @@ fn test_get_expression_lit_bracked_as_end_token() {
     let mut iter = get_iter(LIT_INT, &mut meta_data).unwrap();
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, &vec![")"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, false, &vec![")"]).unwrap();
 
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_literal_expression(expr_result, "1", &lit_untyped_int_type);
@@ -361,25 +361,29 @@ fn test_get_expression_variable() {
     let mut meta_data = MetaData::new();
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
-    meta_data.add_to_global_scope(global_var.clone());
+    meta_data.add_to_global_scope(global_var.clone())
+        .inspect(|err| panic!("{:#?}", err))
+        .unwrap();
 
     
     const GLOBAL_VAR: &str = "global1;";
 
     let mut iter = get_iter(GLOBAL_VAR, &mut meta_data).unwrap();
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, &vec![";"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, false, &vec![";"]).unwrap();
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, &global_var.name, &global_var.type_name);
 
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id).unwrap();
-    meta_data.add_to_scope(scope_var.clone(), &context.current_scope_id);
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true).unwrap();
+    meta_data.add_to_scope(scope_var.clone(), &context.current_scope_id)
+        .inspect(|err| panic!("{:#?}", err))
+        .unwrap();
     
     const SCOPE_VAR: &str = "scope1;";
     iter = get_iter(SCOPE_VAR, &mut meta_data).unwrap();
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, &vec![";"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, false, &vec![";"]).unwrap();
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, &scope_var.name, &scope_var.type_name);
 }
@@ -642,7 +646,9 @@ fn test_get_expression_binary_expression_multiple_operators() {
     let mut global_var = VarInfo::new("var1".to_string(), SOUL_NAMES.get_name(NamesInternalType::Int).to_string());
     global_var.add_var_flag(VarFlags::IsAssigned);
 
-    meta_data.add_to_global_scope(global_var);
+    meta_data.add_to_global_scope(global_var)
+        .inspect(|err| panic!("{:#?}", err))
+        .unwrap();
 
     const BINARY_BRACKETS_VAR: &str = "(var1 + 2) * 3;";
     expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR, None, &mut meta_data, &mut context);
@@ -778,7 +784,9 @@ fn test_get_expression_ref_variable() {
     
     let mut meta_data = MetaData::new();
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
-    meta_data.add_to_global_scope(global_var.clone());
+    meta_data.add_to_global_scope(global_var.clone())
+        .inspect(|err| panic!("{:#?}", err))
+        .unwrap();
 
     
     const VAR_MUT_REF: &str = "&var;";
