@@ -18,39 +18,9 @@ Initialize(
 		Variable(Literal uint uintNumber) = Literal(Literal uint 1)
 	)
 )
-FunctionBody(testMove( int a) int{
-	Initialize(
-		Assignment(
-			Variable(int ab) = Literal(int 1)
-		)
-	)
-	Initialize(
-		Assignment(
-			Variable(int move) = Variable(int ab)
-		)
-	)
-	FunctionCall(
-		FunctionCall(Println(Variable(int ab))))
-	Return(
-		expression: Literal(int 0)
-	)
-	
-})
-
-FunctionBody(printSum( int a,  int b) int{
-	FunctionCall(
-		FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_0__), Variable(const int a), Variable(Literal str __Soul_c_str_2__), Variable(const int b), Variable(Literal str __Soul_c_str_1__), BinaryExpression(Variable(const int a) + Variable(const int b), type: const int), Variable(Literal str __Soul_c_str_0__))))))
-	Return(
-		expression: Literal(int 0)
-	)
-	
-})
-
 FunctionBody(main(Literal str[] args) int{
 	FunctionBody(sum( int a,  int b) int{
-		Return(
-			expression: BinaryExpression(Variable(const int a) + Variable(const int b), type: const int)
-		)
+		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))
 		
 	})
 	
@@ -64,17 +34,25 @@ FunctionBody(main(Literal str[] args) int{
 			Variable(int sec) = FunctionCall(sum(Variable(const int num), Literal(Literal untypedInt 2)))
 		)
 	)
-	FunctionCall(
-		FunctionCall(Println(Variable(const int num))))
+	FunctionCall(Println(Variable(const int num)))
+	If(BinaryExpression(Variable(const int num) == Literal(Literal untypedInt 3), type: bool){
+		FunctionCall(Println(Variable(Literal str __Soul_c_str_0__)))
+		
+	})
+	If(Literal(Literal bool true){
+		FunctionCall(Println(Variable(Literal str __Soul_c_str_1__)))
+		
+	})
+	Else({
+		FunctionCall(Println(Variable(Literal str __Soul_c_str_2__)))
+		
+	})
 	Initialize(
 		Assignment(
 			Variable(Literal int foo) = BinaryExpression(Literal(Literal untypedInt 1) + BinaryExpression(Literal(Literal untypedInt 1) ** Literal(Literal untypedInt 2), type: Literal untypedInt), type: Literal untypedInt)
 		)
 	)
-	FunctionCall(
-		FunctionCall(Println(Variable(Literal int foo))))
-	Return(
-		expression: Literal(int 0)
-	)
+	FunctionCall(Println(Variable(Literal int foo)))
+	Return(Literal(int 0))
 	
 })

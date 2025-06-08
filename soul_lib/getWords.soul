@@ -1,4 +1,4 @@
-main(str[] args) int {
+main(Literal str[] args) int {
     
     if args.Len() < 2 {
         Println("error file not given");

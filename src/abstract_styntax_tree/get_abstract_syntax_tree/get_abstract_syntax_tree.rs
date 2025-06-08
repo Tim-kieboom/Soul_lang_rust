@@ -1,19 +1,22 @@
-use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
+use once_cell::sync::Lazy;
+
+use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo, meta_data::{soul_error::soul_error::{new_soul_error, pass_soul_error, Result}, soul_names::NamesOtherKeyWords}};
 
 use super::get_stament::statment_type::statment_type::{StatmentIterator, StatmentType};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::AbstractSyntaxTree, get_abstract_syntax_tree::get_stament::{get_statment::get_statment, statment_type::get_statment_types::get_statment_types}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesTypeModifiers, SOUL_NAMES}}, tokenizer::token::TokenIterator};
 
 const GLOBAL_SCOPE: i64 = 0;
+static ELSE: Lazy<String> = Lazy::new(|| SOUL_NAMES.get_name(NamesOtherKeyWords::Else).to_string());
+static ELSE_IF: Lazy<String> = Lazy::new(|| format!("{} {}", SOUL_NAMES.get_name(NamesOtherKeyWords::Else), SOUL_NAMES.get_name(NamesOtherKeyWords::If)));
 
 pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
     println!("{:?}", iter.get_tokens_text().iter().enumerate().collect::<Vec<_>>());
-    
-    let mut statments = Vec::new();
-    let mut open_bracket_stack = GLOBAL_SCOPE;
+
+    let mut statment_type_info = StatmentTypeInfo::new(GLOBAL_SCOPE);
     loop {
-        let is_done = forward_declare(&mut iter, meta_data, &mut context, &mut statments, &mut open_bracket_stack)
+        let is_done = forward_declare(&mut iter, meta_data, &mut context, &mut statment_type_info)
             .map_err(|err| pass_soul_error(iter.current(), "while forward declaring", err))?;
 
         if is_done {
@@ -23,9 +26,9 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     
     iter.go_to_before_start();
 
-    println!("{:#?}", statments);
+    println!("{:#?}", statment_type_info.statment_types.iter().enumerate().map(|(i, el)| format!("{}.{:?}", i, el)).collect::<Vec<_>>());
     
-    let mut statment_iter = StatmentIterator::new(statments);
+    let mut statment_iter = StatmentIterator::new(statment_type_info.statment_types);
     let mut tree = AbstractSyntaxTree::new();
     loop {
 
@@ -43,20 +46,20 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     Ok(tree)
 }
 
-pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, context: &mut CurrentContext, meta_data: &mut MetaData, open_bracket_stack: &mut i64) -> Result<()> {
+pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData, statment_info: &mut StatmentTypeInfo) -> Result<()> {
     let begin_i = iter.current_index();
     
     loop {
-        let is_done = forward_declare(iter, meta_data, context, statment_iter.get_statments_mut(), open_bracket_stack)?;
+        let is_done = forward_declare(iter, meta_data, context, statment_info)?;
         if is_done {
             break;
         }
     }
 
     iter.go_to_index(begin_i);
-
+    let mut statment_iter = StatmentIterator::new(std::mem::take(&mut statment_info.statment_types));
     loop {  
-        let multi_statment = get_statment(iter, statment_iter, meta_data, context)?;
+        let multi_statment = get_statment(iter, &mut statment_iter, meta_data, context)?;
 
         tree.main_nodes.extend(multi_statment.before.into_iter().flatten());
         tree.main_nodes.push(multi_statment.value);
@@ -73,14 +76,16 @@ pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut T
             break;
         }
     }
+
+    statment_info.statment_types = statment_iter.get_consume_statments();
     
     Ok(())
 }
 
-fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, statments: &mut Vec<StatmentType>, open_bracket_stack: &mut i64) -> Result<bool> {
+fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, statment_info: &mut StatmentTypeInfo) -> Result<bool> {
 
-    fn is_global_scope(open_bracket_stack: &i64) -> bool {
-        *open_bracket_stack == GLOBAL_SCOPE
+    fn is_global_scope(statment_info: &StatmentTypeInfo) -> bool {
+        statment_info.open_bracket_stack == GLOBAL_SCOPE
     }
 
     if iter.current().text == "\n" {
@@ -90,17 +95,17 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
         }
     }
 
-    let statment_type = get_statment_types(iter, meta_data, context, open_bracket_stack)?;
+    let statment_type = get_statment_types(iter, meta_data, context, statment_info)?;
     match &statment_type {
-        StatmentType::CloseScope => (),
+        StatmentType::CloseScope{..} => (),
         StatmentType::EmptyStatment => (),
         StatmentType::Assignment => {
-                if is_global_scope(open_bracket_stack) {
+                if is_global_scope(statment_info) {
                     return Err(new_soul_error(iter.current(), "can not do an assignment in global scope"));
                 }
             }
         StatmentType::Initialize{is_mutable, is_assigned, var} => {
-                if is_global_scope(open_bracket_stack) {
+                if is_global_scope(statment_info) {
                     if !*is_assigned {
                         return Err(new_soul_error(iter.current(), format!("global variable: '{}' HAS TO BE assigned", var.get_name()).as_str()));
                     }
@@ -112,20 +117,26 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
             },
         StatmentType::FunctionBody{..} => (),
         StatmentType::FunctionCall => (),
-        StatmentType::Scope => (),
+        StatmentType::Scope{..} => (),
         StatmentType::Return => {
-                if is_global_scope(open_bracket_stack) {
+                if is_global_scope(statment_info) {
                     return Err(new_soul_error(iter.current(), "can not return in global scope"));
                 }
             },
-        StatmentType::If => {
-                if is_global_scope(open_bracket_stack) {
-                    return Err(new_soul_error(iter.current(), "can not have is statment in global scope"));
+        StatmentType::If{..} => {
+                if is_global_scope(statment_info) {
+                    return Err(new_soul_error(iter.current(), "can not have an if statment in global scope"));
                 }
+            },
+        StatmentType::Else{..} => {
+                check_else_statment(iter, statment_info, &ELSE)?;
+            },
+        StatmentType::ElseIf{..} => {
+                check_else_statment(iter, statment_info, &ELSE_IF)?;
             },
     }
 
-    statments.push(statment_type);
+    statment_info.statment_types.push(statment_type);
 
     if iter.next().is_none() {
         Ok(true)
@@ -135,6 +146,23 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
     }
 }
 
+fn check_else_statment(iter: &mut TokenIterator, statment_info: &StatmentTypeInfo, name: &str) -> Result<()> {
+    let statments = &statment_info.statment_types;
+    
+    if let StatmentType::CloseScope{begin_body_index} = statments[statments.len() - 1] {
+        match statments[begin_body_index] {
+            StatmentType::If {..} => (),
+            StatmentType::ElseIf {..} => (),
+
+            _ => return Err(new_soul_error(iter.current(), format!("can not have an {} statment without an if or else if statment first", name).as_str())),
+        }
+    }
+    else {
+        return Err(new_soul_error(iter.current(), format!("can not have an {} statment without an if or else if statment first", name).as_str()));
+    }
+
+    Ok(())
+} 
 
 
 

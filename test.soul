@@ -3,18 +3,22 @@ Literal gravity = 9.81
 const f32 float = 1
 Literal uint uintNumber = 1
 
-testMove(int a) int {
-	int ab = 1
-	move := ab
-	Println(ab)
-	return 0
-}
+// testMove(int a) int {
+// 	int ab = 1
+// 	move := ab
+// 	Println(ab)
+// 	return 0
+// }
 
-printSum(int a, int b) int {
-	Println(f"{a} + {b} = {a+b}")
-	return 0
-}
+// printSum(int a, int b) int {
+// 	Println(f"{a} + {b} = {a+b}")
+// 	return 0
+// }
 
+// wrong() {
+// 	if true {}
+// 	else {}
+// }
 
 main(Literal str[] args) int {
 	sum(int a, int b) int {
@@ -24,16 +28,23 @@ main(Literal str[] args) int {
 	const num = 1 + 2
 	sec := sum(num, 2)
 	Println(num)
-	// if num == 3 {
-	// 	Println("1 + 2 is 3 WOW!!!")
-	// }
-	 
 
+	if num == 3 {
+		Println("num == 3")
+	}
+	else if true {
+		Println("true == true")
+	}
+	else {
+		Println("else")
+	}
+	 
 	Literal foo = 1 + 1 ** 2
 	Println(foo)
 
 	return 0
 }
+
 
 
 

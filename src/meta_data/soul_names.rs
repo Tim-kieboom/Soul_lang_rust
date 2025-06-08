@@ -141,8 +141,7 @@ impl<'a> SoulNames<'a> {
 
         let other_keywords_names = HashMap::from([
             (NamesOtherKeyWords::If, "if"),
-            (NamesOtherKeyWords::Esle, "else"),
-            (NamesOtherKeyWords::ElseIf, "else if"),
+            (NamesOtherKeyWords::Else, "else"),
             
             (NamesOtherKeyWords::ForLoop, "for"),
             (NamesOtherKeyWords::InForLoop, "in"),
@@ -232,8 +231,7 @@ macro_rules! impl_soul_name_enum {
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum NamesOtherKeyWords {
     If,
-    Esle,
-    ElseIf,
+    Else,
 
     WhereLoop,
     ForLoop,

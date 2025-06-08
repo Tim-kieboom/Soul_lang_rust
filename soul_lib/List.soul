@@ -11,12 +11,13 @@ interface IList<T> typeof Iter<T>() {
     const @this::[](int begin, int end) T[]@
 }
 
-class List<T> typeof {
+class List<T> typeof IList<T>() {
     T[] buffer = []
     usize len = 0
 
     const Ctor(usize initialCapacity) {
-        Reserve(initialCapacity)
+        // unsafe is to be able to copy without default T
+        buffer = unsafe{ copy[initialCapacity] buffer }
     }
 
     const Ctor[](T[] init) { 
@@ -129,7 +130,8 @@ class List<T> typeof {
 }
 
 Test ListAssert() {
-    list := List<int>[]
+    list := List<int>(1)
+    list = List<int>[]
     listArrayCtor := List[1, 2, 3, 4, 5]
     Assert(list.IsEmpty())
     Assert_Equal(list.Len(), 0)

@@ -1,7 +1,4 @@
 use std::collections::BTreeMap;
-
-use itertools::Itertools;
-
 use super::operator_type::ExprOperatorType;
 use crate::{meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, soul_error::soul_error::SoulSpan, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::token::Token};
 
@@ -34,7 +31,9 @@ pub enum IStatment {
     FunctionCall{this: /*shouldBe_FunctionCall*/ IExpression, span: SoulSpan},
     Return{expression: Option<IExpression>, span: SoulSpan},
     Scope{body: Box<BodyNode>, span: SoulSpan},
-    If{condition: IExpression, body: Box<BodyNode>, span: SoulSpan}
+    If{condition: IExpression, body: Box<BodyNode>, span: SoulSpan},
+    Else{body: Box<BodyNode>, span: SoulSpan},
+    ElseIf{condition: IExpression, body: Box<BodyNode>, span: SoulSpan},
 } 
 
 #[derive(Debug, Clone, PartialEq)] 
@@ -56,12 +55,17 @@ impl BodyNode {
 
     pub fn to_string(&self, pretty_format: bool, tab: usize) -> String {
         let base_indent = format!("\n{}", "\t".repeat(tab));
+        let parent_indent = format!("\n{}", "\t".repeat((tab as i64-1).max(0) as usize));
 
         let mut result = String::new();
+        result.push('{');
+        result.push_str(&base_indent);
         for stmt in &self.statments {
             result.push_str(&stmt.internal_to_string(pretty_format, tab));
             result.push_str(&base_indent);
         }
+        result.push_str(&parent_indent);
+        result.push('}');
         result
     }
 }
@@ -76,84 +80,73 @@ impl IStatment {
             "\t".repeat(tab)
         }
 
-        let (join_char, child_join_char) = if pretty_format {
+        let (base_indent, child_indent) = if pretty_format {
             let base_indent = indent(tab);
             let child_indent = indent(tab + 1);
             (format!("\n{}", base_indent), format!("\n{}", child_indent))
-        } else {
+        } 
+        else {
             (String::new(), String::new())
         };
 
         match self {
             IStatment::EmptyStatment() => "EmptyStatment()".to_string(),
-
             IStatment::Assignment { variable, assign, span: _ } => format!(
-                "Assignment({}{} = {}{})",
-                child_join_char,
-                variable.to_string(),
-                assign.to_string(),
-                join_char
-            ),
-
-            IStatment::Initialize { variable, assignment, span: _ } => match assignment {
-                Some(expr) => format!(
-                    "Initialize({}{}{})",
-                    child_join_char,
-                    expr.internal_to_string(pretty_format, tab + 1),
-                    join_char
-                ),
-                None => format!(
-                    "Initialize({}variable: {}{})",
-                    child_join_char,
+                    "Assignment({}{} = {}{})",
+                    child_indent,
                     variable.to_string(),
-                    join_char
+                    assign.to_string(),
+                    base_indent
                 ),
-            },
-
+            IStatment::Initialize { variable, assignment, span: _ } => match assignment {
+                    Some(expr) => format!(
+                        "Initialize({}{}{})",
+                        child_indent,
+                        expr.internal_to_string(pretty_format, tab + 1),
+                        base_indent
+                    ),
+                    None => format!(
+                        "Initialize({}variable: {}{})",
+                        child_indent,
+                        variable.to_string(),
+                        base_indent
+                    ),
+                },
             IStatment::FunctionBody { func_info, body, span: _ } => format!(
-                "FunctionBody({}{}{}{}{}{}){}",
-                func_info.to_string(),
-                '{',
-                child_join_char,
-                body.to_string(pretty_format, tab + 1),
-                join_char,
-                '}',
-                join_char,
-            ),
-
-            IStatment::FunctionCall { this, span: _ } => format!(
-                "FunctionCall({}{})",
-                child_join_char,
-                this.to_string()
-            ),
-
-            IStatment::CloseScope() => "CloseScope()".to_string(),
-
-            IStatment::Scope { body, span: _ } => format!(
-                "Scope({}body: {}{})",
-                child_join_char,
-                body.to_string(pretty_format, tab + 1),
-                join_char
-            ),
-
-            IStatment::Return { expression, span: _ } => match expression {
-                Some(expr) => format!(
-                    "Return({}expression: {}{})",
-                    child_join_char,
-                    expr.to_string(),
-                    join_char
+                    "FunctionBody({}{}){}",
+                    func_info.to_string(),
+                    body.to_string(pretty_format, tab + 1),
+                    base_indent
                 ),
-                None => "Return()".to_string(),
-            },
-
+            IStatment::FunctionCall { this, span: _ } => this.to_string(),
+            IStatment::CloseScope() => "CloseScope()".to_string(),
+            IStatment::Scope { body, span: _ } => format!(
+                    "Scope({}{}{})",
+                    child_indent,
+                    body.to_string(pretty_format, tab + 1),
+                    base_indent
+                ),
+            IStatment::Return { expression, span: _ } => match expression {
+                    Some(expr) => format!(
+                        "Return({})",
+                        expr.to_string(),
+                    ),
+                    None => "Return()".to_string(),
+                },
             IStatment::If { condition, body, span: _ } => format!(
-                "If({}condition: {},{}body: {}{})",
-                child_join_char,
-                condition.to_string(),
-                child_join_char,
-                body.to_string(pretty_format, tab + 1),
-                join_char
-            ),
+                    "If({}{})",
+                    condition.to_string(),
+                    body.to_string(pretty_format, tab + 1),
+                ),
+            IStatment::Else { body, span:_ } =>  format!(
+                    "Else({})",
+                    body.to_string(pretty_format, tab + 1),
+                ),
+            IStatment::ElseIf { condition, body, span:_ } =>  format!(
+                    "ElseIf({}{})",
+                    condition.to_string(),
+                    body.to_string(pretty_format, tab + 1),
+                ),
         }
     }
 
@@ -188,6 +181,14 @@ impl IStatment {
 
     pub fn new_return(expression: Option<IExpression>, token: &Token) -> Self {
         Self::Return { expression, span: SoulSpan::from_token(token) }
+    }
+
+    pub fn new_if(condition: IExpression, body: BodyNode, token: &Token) -> Self {
+        Self::If { condition, body: Box::new(body), span: SoulSpan::from_token(token) }
+    }
+
+    pub fn new_else(body: BodyNode, token: &Token) -> Self {
+        Self::Else { body: Box::new(body), span: SoulSpan::from_token(token) }
     }
 }
 
@@ -366,8 +367,6 @@ impl AbstractSyntaxTree {
         }
     }
 }
-
-
 
 
 

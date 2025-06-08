@@ -59,7 +59,7 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
     
 
     meta_data.scope_store.get_mut(&context.current_scope_id).unwrap().vars = vars;
-    
+
     if iter.next_multiple(-1).is_none() {
         return Err(err_out_of_bounds(iter));
     }

@@ -1,5 +1,6 @@
 use std::{collections::HashSet};
 use once_cell::sync::Lazy;
+use crate::abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo;
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::get_forward_declared_initialize}, meta_data::{current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::{NamesOtherKeyWords, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
@@ -9,8 +10,11 @@ static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
 });
 
-///get statment type of soul before helper symbools are added
-pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, open_bracket_stack: &mut i64) -> Result<StatmentType> {
+pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, statment_info: &mut StatmentTypeInfo) -> Result<StatmentType> {
+    let statment_types = &mut statment_info.statment_types;
+    let open_bracket_stack = &mut statment_info.open_bracket_stack;
+    let scope_start_index = &mut statment_info.scope_start_index;
+    
     if iter.current().text == "\n" {
         
         if iter.next().is_none() {
@@ -23,10 +27,11 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         if iter.next().is_none() {
             return Err(err_out_of_bounds(iter));
         }
-        return Ok(StatmentType::Scope);
+        scope_start_index.push(statment_types.len());
+        return Ok(StatmentType::Scope{end_body_index: 0});
     }
     else if iter.current().text == "}" {
-        if *open_bracket_stack < 0 {
+        if *open_bracket_stack < 0 || scope_start_index.is_empty() {
             return Err(new_soul_error(iter.current(), "one of your scopes in not closed (you have a '{' without a '}')"));
         }
 
@@ -35,17 +40,40 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         }
         
         *open_bracket_stack -= 1;
-        return Ok(StatmentType::CloseScope);
+        let len = statment_types.len();
+
+        let start_index = scope_start_index.pop().unwrap();
+        statment_types[start_index].set_end_body_index(len);
+        return Ok(StatmentType::CloseScope{begin_body_index: start_index});
     }
 
     match &iter.current().text {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
-            traverse_to_end_statment(iter)?;
+            traverse_to_end(iter, &["\n", ";"])?;
             return Ok(StatmentType::Return);
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
-            traverse_to_end_statment(iter)?;
-            return Ok(StatmentType::If);
+            traverse_to_end(iter, &["{"])?;
+            *open_bracket_stack += 1;
+
+            scope_start_index.push(statment_types.len());
+            return Ok(StatmentType::If{end_body_index: 0});
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
+            
+            let is_else_if = iter.peek().is_some_and(|token| token.text == SOUL_NAMES.get_name(NamesOtherKeyWords::If));
+
+            traverse_to_end(iter, &["{"])?;
+            *open_bracket_stack += 1;
+
+            scope_start_index.push(statment_types.len());
+
+            return if is_else_if {
+                Ok(StatmentType::ElseIf{end_body_index: 0})
+            }
+            else {
+                Ok(StatmentType::Else{end_body_index: 0})
+            }
         },
         _ => (),
     }
@@ -115,8 +143,9 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
                 if iter.next().is_none() {
                     return Err(err_out_of_bounds(iter));
                 }
-                
-                return Ok(StatmentType::FunctionBody{func_info});
+
+                scope_start_index.push(statment_types.len());
+                return Ok(StatmentType::FunctionBody{func_info, end_body_index: 0});
             }          
         },
         _ => (),
@@ -126,18 +155,18 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         return Err(new_soul_error(next, format!("token invalid for statment: '{}'", next.text).as_str()));
     }
 
-    traverse_to_end_statment(iter)?;
+    traverse_to_end(iter, &["\n", ";"])?;
     return Ok(StatmentType::Assignment)
 }
 
-fn traverse_to_end_statment(iter: &mut TokenIterator) -> Result<()> {
+fn traverse_to_end(iter: &mut TokenIterator, end_tokens: &[&str]) -> Result<()> {
     loop {
         if iter.next().is_none() {
             break Err(new_soul_error(iter.current(), "unexpected end while trying to get assignment (add enter or ';')"));
         }
 
         let str = &iter.current().text;
-        if str == "\n" || str == ";" {
+        if end_tokens.iter().any(|token| token == str) {
             break Ok(());
         }
     }
