@@ -1,32 +1,80 @@
 Initialize(
-		Assignment(
-			Variable(const int number) = Literal(Literal untypedInt 1)
+	Assignment(
+		Variable(const int number) = Literal(Literal untypedInt 1)
 	)
 )
 Initialize(
-		Assignment(
-			Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
+	Assignment(
+		Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
 	)
 )
 Initialize(
-		Assignment(
-			Variable(const f32 float) = Literal(const f32 1)
+	Assignment(
+		Variable(const f32 float) = Literal(const f32 1)
 	)
 )
 Initialize(
-		Assignment(
-			Variable(Literal uint uintNumber) = Literal(Literal uint 1)
+	Assignment(
+		Variable(Literal uint uintNumber) = Literal(Literal uint 1)
 	)
 )
+FunctionBody(testMove( int a) int{
+	Initialize(
+		Assignment(
+			Variable(int ab) = Literal(int 1)
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(int move) = Variable(int ab)
+		)
+	)
+	FunctionCall(
+		FunctionCall(Println(Variable(int ab))))
+	Return(
+		expression: Literal(int 0)
+	)
+	
+})
+
+FunctionBody(printSum( int a,  int b) int{
+	FunctionCall(
+		FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_0__), Variable(const int a), Variable(Literal str __Soul_c_str_2__), Variable(const int b), Variable(Literal str __Soul_c_str_1__), BinaryExpression(Variable(const int a) + Variable(const int b), type: const int), Variable(Literal str __Soul_c_str_0__))))))
+	Return(
+		expression: Literal(int 0)
+	)
+	
+})
+
 FunctionBody(main(Literal str[] args) int{
-		FunctionBody(sum( int a,  int b) int{
-		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))
-		}: deletes(b, a))
-		Initialize(
+	FunctionBody(sum( int a,  int b) int{
+		Return(
+			expression: BinaryExpression(Variable(const int a) + Variable(const int b), type: const int)
+		)
+		
+	})
+	
+	Initialize(
 		Assignment(
 			Variable(const int num) = BinaryExpression(Literal(Literal untypedInt 1) + Literal(Literal untypedInt 2), type: Literal untypedInt)
+		)
 	)
-)
-		FunctionCall(Println(Variable(const int num)))
-		Return(Literal(int 0))
-		}: deletes(num, args))
+	Initialize(
+		Assignment(
+			Variable(int sec) = FunctionCall(sum(Variable(const int num), Literal(Literal untypedInt 2)))
+		)
+	)
+	FunctionCall(
+		FunctionCall(Println(Variable(const int num))))
+	Initialize(
+		Assignment(
+			Variable(Literal int foo) = BinaryExpression(Literal(Literal untypedInt 1) + BinaryExpression(Literal(Literal untypedInt 1) ** Literal(Literal untypedInt 2), type: Literal untypedInt), type: Literal untypedInt)
+		)
+	)
+	FunctionCall(
+		FunctionCall(Println(Variable(Literal int foo))))
+	Return(
+		expression: Literal(int 0)
+	)
+	
+})
