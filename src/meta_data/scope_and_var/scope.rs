@@ -140,7 +140,7 @@ impl Scope {
                 if i+1 > generic_defined.len() {
                     break;
                 }
-                
+
                 function_call_generics.insert(
                     name.clone(), 
                     DefinedGenric{define_type: generic_defined[i].clone(), generic: generic.clone()}

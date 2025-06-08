@@ -200,7 +200,7 @@ impl FunctionDeclaration {
                     .filter(|w| !arg_type.wrappers.contains(w))
                     .collect::<Vec<_>>();
                 
-                let define_modifiers = unchecked_type.modifiers & !arg_type.modifiers;
+                let define_modifiers = unchecked_type.modifiers ^ arg_type.modifiers;
                 
                 let mut define_type = SoulType::new(arg_type.name);
                 define_type.wrappers = define_wrappers;

@@ -1,13 +1,32 @@
+Initialize(
+		Assignment(
+			Variable(const int number) = Literal(Literal untypedInt 1)
+	)
+)
+Initialize(
+		Assignment(
+			Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
+	)
+)
+Initialize(
+		Assignment(
+			Variable(const f32 float) = Literal(const f32 1)
+	)
+)
+Initialize(
+		Assignment(
+			Variable(Literal uint uintNumber) = Literal(Literal uint 1)
+	)
+)
 FunctionBody(main(Literal str[] args) int{
+		FunctionBody(sum( int a,  int b) int{
+		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))
+		}: deletes(b, a))
 		Initialize(
 		Assignment(
 			Variable(const int num) = BinaryExpression(Literal(Literal untypedInt 1) + Literal(Literal untypedInt 2), type: Literal untypedInt)
 	)
 )
-		Initialize(
-		Assignment(
-			Variable(const int sec) = Variable(const int num)
-	)
-)
+		FunctionCall(Println(Variable(const int num)))
 		Return(Literal(int 0))
-		}: deletes(sec, num, args))
+		}: deletes(num, args))

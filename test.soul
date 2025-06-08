@@ -1,7 +1,7 @@
-// const number = 1
-// Literal gravity = 9.81
-// const f32 float = 1
-// Literal uint uintNumber = 1
+const number = 1
+Literal gravity = 9.81
+const f32 float = 1
+Literal uint uintNumber = 1
 
 // testMove(int a) int {
 // 	int ab = 1
@@ -17,13 +17,13 @@
 
 
 main(Literal str[] args) int {
-	// sum(int a, int b) int {
-	// 	return a + b
-	// }
+	sum(int a, int b) int {
+		return a + b
+	}
 
 	const num = 1 + 2
-	sec := u8(num)
-	// Println(num)
+	// sec := sum(num, 2)
+	Println(num)
 	// if num == 3 {
 	// 	Println("1 + 2 is 3 WOW!!!")
 	// }
