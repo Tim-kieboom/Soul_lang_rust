@@ -18,6 +18,11 @@ Initialize(
 		Variable(Literal uint uintNumber) = Literal(Literal uint 1)
 	)
 )
+Initialize(
+	Assignment(
+		Variable(const int[] array) = Literal(Literal untypedInt[] [1,2,3,4])
+	)
+)
 FunctionBody(main(Literal str[] args) int{
 	FunctionBody(sum( int a,  int b) int{
 		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))

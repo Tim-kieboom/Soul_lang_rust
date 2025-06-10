@@ -375,7 +375,7 @@ fn test_get_expression_variable() {
     check_variable_expression(expr_result, &global_var.name, &global_var.type_name);
 
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true).unwrap();
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true, false).unwrap();
     meta_data.add_to_scope(scope_var.clone(), &context.current_scope_id)
         .inspect(|err| panic!("{:#?}", err))
         .unwrap();

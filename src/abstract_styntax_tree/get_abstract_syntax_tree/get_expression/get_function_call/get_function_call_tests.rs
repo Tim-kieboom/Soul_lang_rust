@@ -390,7 +390,7 @@ fn test_get_function_call_in_child_scope() {
     let func_declr1 = "empty();";
     let empty_func = store_function(&func_declr1, &mut meta_data, &mut context);
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true)
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true, false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
@@ -425,7 +425,7 @@ fn test_get_function_call_in_child_scope() {
     let func_declr2 = "emptyInEmpty();";
     let empty_func2 = store_function(&func_declr2, &mut meta_data, &mut context);
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true)
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true, false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
@@ -446,7 +446,7 @@ fn test_get_function_call_in_child_scope() {
     );
 
 
-    let CloseScopeResult{delete_list:_, parent} = meta_data.close_scope(&context.current_scope_id)
+    let CloseScopeResult{delete_list:_, parent} = meta_data.close_scope(&context.current_scope_id, false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 

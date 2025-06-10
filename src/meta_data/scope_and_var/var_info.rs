@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use bitflags::bitflags;
 bitflags! {
     #[derive(Debug, Clone)]
@@ -22,6 +24,10 @@ pub struct VarInfo {
 impl VarInfo {
     pub fn new(name: String, type_name: String) -> Self {
         VarInfo {name, type_name, var_flags: VarFlags::Empty, is_forward_declared: false}
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("{} {}", self.type_name, self.name)
     }
 
     pub fn with_var_flag(name: String, type_name: String, flag: VarFlags, is_forward_declared: bool) -> Self {

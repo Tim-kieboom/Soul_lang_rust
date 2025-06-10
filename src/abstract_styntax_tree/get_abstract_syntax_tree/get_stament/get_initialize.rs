@@ -3,10 +3,10 @@ use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable
 
 use super::get_assignmet::{get_assignment, AssignmentResult};
 
-pub fn get_forward_declared_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
+pub fn get_forward_declared_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, forward_declared_bracket_stack: i64) -> Result<MultiStamentResult<IStatment>> {
     let begin_i = iter.current_index();
 
-    let result = internal_get_initialize(iter, meta_data, context, true);
+    let result = internal_get_initialize(iter, meta_data, context, Some(forward_declared_bracket_stack));
     if result.is_err() {
         iter.go_to_index(begin_i);
     }
@@ -17,7 +17,7 @@ pub fn get_forward_declared_initialize(iter: &mut TokenIterator, meta_data: &mut
 pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let begin_i = iter.current_index();
 
-    let result = internal_get_initialize(iter, meta_data, context, false);
+    let result = internal_get_initialize(iter, meta_data, context, None);
     if result.is_err() {
         iter.go_to_index(begin_i);
     }
@@ -25,7 +25,7 @@ pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, contex
     result
 }
 
-fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, var_is_forward_declared: bool)  -> Result<MultiStamentResult<IStatment>> {
+fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, forward_declared_bracket_stack: Option<i64>)  -> Result<MultiStamentResult<IStatment>> {
     
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
 
@@ -112,11 +112,10 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             iter[var_name_index].text.clone(), 
             var_type.to_string(),
             var_flags,
-            var_is_forward_declared
+            forward_declared_bracket_stack.is_some()
         );
 
-        meta_data.add_to_scope(var_info, &context.current_scope_id)
-            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))?;
+        add_to_scope(iter, meta_data, context, var_name_index, var_info)?;
 
         return Ok(body_result);
     }
@@ -181,11 +180,10 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             iter[var_name_index].text.to_string(), 
             expression.is_type.to_string(), 
             var_flags,
-            var_is_forward_declared
+            forward_declared_bracket_stack.is_some()
         );
 
-        meta_data.add_to_scope(var_info, &context.current_scope_id)
-            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))?;
+        add_to_scope(iter, meta_data, context, var_name_index, var_info)?;
 
         let variable = IVariable::Variable { 
             name: iter[var_name_index].text.clone(), 
@@ -216,12 +214,10 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             iter[var_name_index].text.to_string(), 
             var_type.to_string(), 
             var_flags,
-            var_is_forward_declared
+            forward_declared_bracket_stack.is_some()
         );
 
-        meta_data.add_to_scope(var_info, &context.current_scope_id)
-            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))?;
-
+        add_to_scope(iter, meta_data, context, var_name_index, var_info)?;
 
         let AssignmentResult{assignment, is_type: _} = get_assignment(iter, meta_data, context, variable.clone(), true)?;
         body_result.add_result(&assignment);
@@ -229,6 +225,11 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
         body_result.value = IStatment::new_initialize(variable, Some(assignment.value), iter.current());
         Ok(body_result)
     }
+}
+
+fn add_to_scope(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, var_name_index: usize, var_info: VarInfo) -> Result<()> {
+    meta_data.add_to_scope(var_info, &context.current_scope_id)
+        .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))
 }
 
 fn get_var_flags(var_type: &SoulType) -> VarFlags {

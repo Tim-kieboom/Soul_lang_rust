@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 
-use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo, meta_data::{soul_error::soul_error::{new_soul_error, pass_soul_error, Result}, soul_names::NamesOtherKeyWords}};
+use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo, meta_data::{borrow_checker::borrow_checker::BorrowCheckedTrait, soul_error::soul_error::{new_soul_error, pass_soul_error, Result}, soul_names::NamesOtherKeyWords}};
 
 use super::get_stament::statment_type::statment_type::{StatmentIterator, StatmentType};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::AbstractSyntaxTree, get_abstract_syntax_tree::get_stament::{get_statment::get_statment, statment_type::get_statment_types::get_statment_types}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesTypeModifiers, SOUL_NAMES}}, tokenizer::token::TokenIterator};
@@ -22,12 +22,12 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
         if is_done {
             break;
         }
-    }
-    
+    }    
     iter.go_to_before_start();
 
     println!("{:#?}", statment_type_info.statment_types.iter().enumerate().map(|(i, el)| format!("{}.{:?}", i, el)).collect::<Vec<_>>());
     
+    context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     let mut statment_iter = StatmentIterator::new(statment_type_info.statment_types);
     let mut tree = AbstractSyntaxTree::new();
     loop {
@@ -128,12 +128,8 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
                     return Err(new_soul_error(iter.current(), "can not have an if statment in global scope"));
                 }
             },
-        StatmentType::Else{..} => {
-                check_else_statment(iter, statment_info, &ELSE)?;
-            },
-        StatmentType::ElseIf{..} => {
-                check_else_statment(iter, statment_info, &ELSE_IF)?;
-            },
+        StatmentType::Else{..} => check_else_statment(iter, statment_info, &ELSE)?,
+        StatmentType::ElseIf{..} => check_else_statment(iter, statment_info, &ELSE_IF)?,
     }
 
     statment_info.statment_types.push(statment_type);

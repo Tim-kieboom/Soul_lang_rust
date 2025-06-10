@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use super::operator_type::ExprOperatorType;
-use crate::{meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, soul_error::soul_error::SoulSpan, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::token::Token};
+use crate::{meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, meta_data::MetaData, soul_error::soul_error::SoulSpan, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::token::Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IVariable {
@@ -46,6 +46,7 @@ pub struct BodyNode {
 #[derive(Debug, Clone)]
 pub struct AbstractSyntaxTree {
     pub main_nodes: Vec<IStatment>,
+    pub global_context: CurrentContext,
 }
 
 impl BodyNode {
@@ -364,6 +365,7 @@ impl AbstractSyntaxTree {
     pub fn new() -> Self {
         AbstractSyntaxTree {
             main_nodes: Vec::new(),
+            global_context: CurrentContext::new(MetaData::GLOBAL_SCOPE_ID),
         }
     }
 }

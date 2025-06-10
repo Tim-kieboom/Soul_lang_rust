@@ -1,10 +1,6 @@
-use once_cell::sync::Lazy;
-
 use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_body::get_body, meta_data::{soul_error::soul_error::{new_soul_error, Result, SoulError}, soul_names::NamesInternalType}};
 use super::statment_type::statment_type::{StatmentIterator, StatmentType};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
-
-static BOOL: Lazy<SoulType> = Lazy::new(|| SoulType::new(SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string()));
 
 pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let statment_type;

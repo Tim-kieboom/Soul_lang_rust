@@ -23,11 +23,10 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
     }
     
     if iter.current().text == "{" {
-        *open_bracket_stack += 1;
         if iter.next().is_none() {
             return Err(err_out_of_bounds(iter));
         }
-        scope_start_index.push(statment_types.len());
+        
         return Ok(StatmentType::Scope{end_body_index: 0});
     }
     else if iter.current().text == "}" {
@@ -54,9 +53,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
             traverse_to_end(iter, &["{"])?;
-            *open_bracket_stack += 1;
-
-            scope_start_index.push(statment_types.len());
+            open_body(iter, statment_info, meta_data, context, true)?;
             return Ok(StatmentType::If{end_body_index: 0});
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
@@ -64,9 +61,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             let is_else_if = iter.peek().is_some_and(|token| token.text == SOUL_NAMES.get_name(NamesOtherKeyWords::If));
 
             traverse_to_end(iter, &["{"])?;
-            *open_bracket_stack += 1;
-
-            scope_start_index.push(statment_types.len());
+            open_body(iter, statment_info, meta_data, context, true)?;
 
             return if is_else_if {
                 Ok(StatmentType::ElseIf{end_body_index: 0})
@@ -101,7 +96,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
 
         if symbool == "=" {
             iter.go_to_index(begin_i);
-            return Ok(get_initialize_info(iter, meta_data, context)?);
+            return Ok(get_initialize_info(iter, meta_data, context, statment_info.open_bracket_stack)?);
         }
     }
 
@@ -127,10 +122,10 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
     match next.text.as_str() {
         "=" => {
             if peek_i != 1 {
-                return Ok(get_initialize_info(iter, meta_data, context)?);
+                return Ok(get_initialize_info(iter, meta_data, context, statment_info.open_bracket_stack)?);
             }
         }
-        ":=" => return Ok(get_initialize_info(iter, meta_data, context)?),
+        ":=" => return Ok(get_initialize_info(iter, meta_data, context, statment_info.open_bracket_stack)?),
         "(" => {
             let begin_i = iter.current_index();
             if func_call_or_declaration(iter, meta_data, context)? == FUNCTION_CALL {
@@ -139,12 +134,11 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             else {
                 iter.go_to_index(begin_i);
                 let func_info = add_function_declaration(iter, meta_data, context, true)?;
-                *open_bracket_stack += 1;
                 if iter.next().is_none() {
                     return Err(err_out_of_bounds(iter));
                 }
 
-                scope_start_index.push(statment_types.len());
+                open_body(iter, statment_info, meta_data, context, false)?;
                 return Ok(StatmentType::FunctionBody{func_info, end_body_index: 0});
             }          
         },
@@ -170,6 +164,16 @@ fn traverse_to_end(iter: &mut TokenIterator, end_tokens: &[&str]) -> Result<()> 
             break Ok(());
         }
     }
+}
+
+fn open_body(iter: &TokenIterator, statment_info: &mut StatmentTypeInfo, meta_data: &mut MetaData, context: &mut CurrentContext, allows_vars_access: bool) -> Result<()> {
+    statment_info.open_bracket_stack += 1;
+    statment_info.scope_start_index.push(statment_info.statment_types.len());
+
+    context.current_scope_id = meta_data.open_scope(context.current_scope_id, allows_vars_access, true)
+        .map_err(|msg| new_soul_error(iter.current(), format!("while trying to open scope\n{}", msg).as_str()))?;
+
+    Ok(())
 }
 
 ///true = func_declaration, false = func_call
@@ -239,8 +243,8 @@ fn get_symbool_after_generic<'a>(iter: &'a mut TokenIterator, start_i: usize) ->
     }
 }
 
-fn get_initialize_info(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<StatmentType> {
-    let init = get_forward_declared_initialize(iter, meta_data, context)?;
+fn get_initialize_info(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, forward_declared_bracket_stack: i64) -> Result<StatmentType> {
+    let init = get_forward_declared_initialize(iter, meta_data, context, forward_declared_bracket_stack)?;
     let var;
     let is_mutable;
     let is_assigned;

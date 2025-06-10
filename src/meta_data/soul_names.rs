@@ -24,6 +24,10 @@ static ILLIGAL_SYMBOOLS: Lazy<HashSet<char>> = Lazy::new(|| HashSet::from([
 
 pub fn check_name(name: &str) -> result::Result<(), String> {
   
+    if name.starts_with("__") {
+        return Err(format!("name: '{}' can not begin wiht '__' ", name));
+    }
+
     if let Some(illigal_name) = SOUL_NAMES.iligal_names.get(name) {
         return Err(format!("name: '{}' is illigal\n\tilligal names: {:?}", illigal_name, SOUL_NAMES.iligal_names));
     }

@@ -39,7 +39,7 @@ impl<'a> IsFunctionResult<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionStore {
     pub from_id: HashMap<FunctionID, FunctionDeclaration>,
     pub to_id: HashMap<String, Vec<FunctionID>>,
@@ -47,6 +47,14 @@ pub struct FunctionStore {
 impl FunctionStore {
     pub fn new() -> Self {
         FunctionStore { from_id: HashMap::new(), to_id: HashMap::new() }
+    }
+
+    pub fn len(&self) -> usize {
+        self.from_id.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn add_function(&mut self, name: String, id: FunctionID, func: FunctionDeclaration) {
@@ -240,21 +248,24 @@ impl MetaData {
         scope.function_store.from_name(&get_methode_map_entry(name, &this_class.name)).is_some()
     }
 
-    pub fn open_scope(&mut self, parent_id: ScopeId, allows_vars_access: bool) -> result::Result<ScopeId, String> {
+    pub fn open_scope(&mut self, parent_id: ScopeId, allows_vars_access: bool, is_forward_declared: bool) -> result::Result<ScopeId, String> {
         let parent = self.scope_store.get(&parent_id)
             .ok_or("Internal Error: can not get parent scope from scope_store")?;
 
         let child = Scope::new_child(&parent, allows_vars_access);
         let child_id = *child.id();
         self.scope_store.insert(child_id, child);
-        self.borrow_checker
-            .lock().unwrap()
-            .open_scope(&child_id)?;
 
+        if is_forward_declared {
+            self.borrow_checker
+                .lock().unwrap()
+                .open_scope(&child_id)?;
+        }   
+        
         Ok(child_id)
     }
 
-    pub fn close_scope(&mut self, id: &ScopeId) -> result::Result<CloseScopeResult, String> {
+    pub fn close_scope(&mut self, id: &ScopeId, is_forward_declared: bool) -> result::Result<CloseScopeResult, String> {
         if *id == MetaData::GLOBAL_SCOPE_ID {
             return Err(format!("Internal error: can not close global scope"));
         }
@@ -265,7 +276,15 @@ impl MetaData {
             .id.clone();
         
         self.scope_store.remove(id);
-        let delete_list = self.borrow_checker.lock().unwrap().close_scope(id)?;
+        let delete_list = if is_forward_declared {
+            self.borrow_checker
+                .lock().unwrap()
+                .close_scope(id)?
+        } 
+        else {
+            Vec::new()
+        };
+
         Ok(CloseScopeResult{delete_list, parent})
     }
 }

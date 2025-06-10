@@ -88,7 +88,7 @@ impl SoulType {
         self.name = name;
     }
 
-    pub fn convert_typedef_to_original(&self, token: &Token, type_meta_data: &TypeMetaData, generics: &mut CurrentGenerics) -> Option<SoulType> {
+    pub fn convert_typedef_to_original(&self, token: &Token, type_meta_data: &TypeMetaData, generics: &CurrentGenerics) -> Option<SoulType> {
 
         if generics.scope_generics.contains_key(&self.name) {
             return Some(self.clone());
@@ -460,7 +460,7 @@ impl SoulType {
         str: &str, 
         token: &Token, 
         type_meta_data: &TypeMetaData, 
-        generics: &mut CurrentGenerics,
+        generics: &CurrentGenerics,
     ) -> Result<SoulType> {
         SoulType::internal_from_stringed_type(str, token, type_meta_data, generics)
     }
@@ -469,7 +469,7 @@ impl SoulType {
         str: &str, 
         token: &Token, 
         type_meta_data: &TypeMetaData, 
-        generics: &mut CurrentGenerics,
+        generics: &CurrentGenerics,
     ) -> Result<SoulType> {
         let tokens = get_type_tokens(str, token);
 

@@ -1,8 +1,7 @@
-use std::{env::args, time::Instant};
-
-use soul_lang_rust::{run_compiler::run_compiler, run_interpreter::run_interpreter, run_options::run_options::RunOptions};
-
 extern crate soul_lang_rust;
+
+use std::{env::args, time::Instant};
+use soul_lang_rust::{run_compiler::run_compiler, run_interpreter::run_interpreter, run_options::run_options::RunOptions};
 
 fn main() {
 

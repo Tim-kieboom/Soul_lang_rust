@@ -8,7 +8,7 @@ use crate::tokenizer::token::TokenIterator;
 
 use super::var_info::VarInfo;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ScopeId(pub u64);
 impl ScopeId {
     pub fn increment(&self) -> ScopeId {
@@ -16,10 +16,13 @@ impl ScopeId {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ScopeParentInfo {
     pub id: ScopeId,
     pub allows_vars_access: bool
 }
+
+#[derive(Debug, Clone)]
 pub struct Scope {
     id: ScopeId,
     pub parent: Option<ScopeParentInfo>,

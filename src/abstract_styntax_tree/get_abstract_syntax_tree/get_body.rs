@@ -21,7 +21,7 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         return Err(err_out_of_bounds(iter));
     }
 
-    let scope_id = meta_data.open_scope(old_context.current_scope_id, possible_function.is_none())
+    let scope_id = meta_data.open_scope(old_context.current_scope_id, possible_function.is_none(), false)
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add scope\n{}", msg).as_str()))?;
 
     let mut context = old_context.clone();
@@ -79,7 +79,7 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         body_node.statments.extend(multi_statment.after.into_iter().flatten());
     }
 
-    let CloseScopeResult{delete_list, parent:_} = meta_data.close_scope(&scope_id)
+    let CloseScopeResult{delete_list, parent:_} = meta_data.close_scope(&scope_id, false)
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to clode scope\n{}", msg).as_str()))?;
 
     body_node.delete_list = delete_list;
