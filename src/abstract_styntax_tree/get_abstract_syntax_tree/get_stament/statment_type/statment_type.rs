@@ -11,6 +11,10 @@ impl StatmentTypeInfo {
     pub fn new(open_bracket_stack: i64) -> Self {
         Self { statment_types: Vec::new(), scope_start_index: Vec::new(), open_bracket_stack }
     }
+
+    pub fn with_capacity(open_bracket_stack: i64, capacity: usize) -> Self {
+        Self { statment_types: Vec::with_capacity(capacity), scope_start_index: Vec::new(), open_bracket_stack }
+    }
 }
 
 #[derive(Clone, PartialEq)]

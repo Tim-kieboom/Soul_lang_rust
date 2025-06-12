@@ -4,6 +4,7 @@ use crate::{abstract_styntax_tree::abstract_styntax_tree::IStatment, meta_data::
 use super::{get_body::get_body, get_stament::statment_type::statment_type::StatmentIterator, multi_stament_result::MultiStamentResult};
 
 pub fn get_function_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
+    
     let function = add_function_declaration(iter, meta_data, context, false)?;
 
     if iter.next().is_none() {

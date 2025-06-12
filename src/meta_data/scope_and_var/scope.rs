@@ -1,5 +1,6 @@
 use crate::meta_data::soul_error::soul_error::Result;
 use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 use crate::meta_data::current_context::current_context::{CurrentContext, DefinedGenric};
 use crate::meta_data::function::argument_info::argument_info::ArgumentInfo;
 use crate::meta_data::meta_data::MetaData;
@@ -29,7 +30,7 @@ pub struct Scope {
     last_child_id: ScopeId,
     pub vars: BTreeMap<String, VarInfo>,
     pub function_store: FunctionStore,
-    next_function_id: FunctionID,
+    next_function_id: Arc<Mutex<FunctionID>>,
 } 
 
 impl Scope {
@@ -40,7 +41,7 @@ impl Scope {
             last_child_id: ScopeId(0),
             vars: BTreeMap::new(), 
             function_store: FunctionStore::new(),
-            next_function_id: FunctionID(0),
+            next_function_id: Arc::new(Mutex::new(FunctionID(0))),
         }
     }
 
@@ -52,7 +53,7 @@ impl Scope {
             last_child_id: child_id,
             vars: BTreeMap::new(), 
             function_store: FunctionStore::new(),
-            next_function_id: FunctionID(0),
+            next_function_id: parent.next_function_id.clone(),
         }
     }
 
@@ -67,6 +68,11 @@ impl Scope {
 
         let mut current_scope = self;
         while let Some(parent) = &current_scope.parent {
+
+            if !parent.allows_vars_access {
+                return None;
+            }
+
             current_scope = scopes.get(&parent.id)?;
             
             if let Some(var) = current_scope.vars.get(var_name) {
@@ -84,7 +90,7 @@ impl Scope {
         loop {
             let (found, parent) = {
                 let scope = scopes.get(&current_id)?;
-                (scope.vars.contains_key(var_name), scope.parent.as_ref().map(|info| info.id.clone()))
+                (scope.vars.contains_key(var_name), scope.parent.clone())
             };
 
             if found {
@@ -92,7 +98,11 @@ impl Scope {
             }
 
             if let Some(next_parent) = parent {
-                current_id = next_parent;
+                if !next_parent.allows_vars_access {
+                    break;
+                }
+
+                current_id = next_parent.id;
             } else {
                 break;
             }
@@ -114,9 +124,9 @@ impl Scope {
     }
 
     pub fn get_next_function_id(&mut self) -> FunctionID {
-        let id = self.next_function_id.clone();
-        self.next_function_id = FunctionID(self.next_function_id.0 + 1);
-        id
+        let id = self.next_function_id.lock().unwrap().0;
+        self.next_function_id.lock().unwrap().increment();
+        FunctionID(id)
     }
 
     pub fn try_get_function(
@@ -160,6 +170,7 @@ impl Scope {
 
         Ok(None)
     }
+
 }
 
 

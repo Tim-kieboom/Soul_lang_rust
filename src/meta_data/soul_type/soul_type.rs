@@ -1,14 +1,14 @@
-use std::{result};
-use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
-use super::primitive_types::{DuckType, NumberCategory};
-use crate::meta_data::current_context::current_context::CurrentGenerics;
-use crate::tokenizer::tokenizer::SplitOn;
+use std::result;
 use std::collections::HashMap;
+use crate::tokenizer::tokenizer::SplitOn;
 use crate::meta_data::type_meta_data::TypeMetaData;
 use crate::tokenizer::token::{Token, TokenIterator};
+use super::primitive_types::{DuckType, NumberCategory};
 use crate::meta_data::class_info::class_info::ClassInfo;
-use crate::meta_data::soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES};
 use super::type_checker::type_checker::get_primitive_type_from_literal;
+use crate::meta_data::current_context::current_context::CurrentGenerics;
+use crate::meta_data::soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result};
 use super::{primitive_types::PrimitiveType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers};
 
 
@@ -545,14 +545,17 @@ impl SoulType {
         Ok(soul_type)
     }
 
+    #[inline(always)]
     pub fn to_primitive_type(&self, type_meta_data: &TypeMetaData) -> PrimitiveType {
         PrimitiveType::from_str(&self.name, type_meta_data)
     }
 
+    #[inline(always)]
     pub fn is_untyped_type(&self, type_meta_data: &TypeMetaData) -> bool {
         self.to_primitive_type(type_meta_data).is_untyped_type()
     } 
 
+    #[inline(always)]
     pub fn to_class_info<'a>(&self, meta_data: &'a TypeMetaData) -> Option<&'a ClassInfo> {
         meta_data.class_store.get(&self.name)
     }
@@ -570,6 +573,7 @@ impl SoulType {
         }
     }
 
+    #[inline(always)]
     pub fn remove_modifier(&mut self, modifier: TypeModifiers) {
         self.modifiers.remove(modifier);
     }
@@ -616,14 +620,17 @@ impl SoulType {
         }
     }
 
+    #[inline(always)]
     pub fn is_literal(&self) -> bool {
         self.modifiers.contains(TypeModifiers::Literal)
     }
 
+    #[inline(always)]
     pub fn is_const(&self) -> bool {
         self.modifiers.contains(TypeModifiers::Const)
     }
 
+    #[inline(always)]
     pub fn is_any_ref(&self) -> bool {
         if self.wrappers.is_empty() {
             false
@@ -634,6 +641,7 @@ impl SoulType {
         }
     }
 
+    #[inline(always)]
     pub fn is_mut_ref(&self) -> bool {
         if self.wrappers.is_empty() {
             false
@@ -644,6 +652,7 @@ impl SoulType {
         }
     }
 
+    #[inline(always)]
     pub fn is_const_ref(&self) -> bool {
         if self.wrappers.is_empty() {
             false
@@ -654,6 +663,7 @@ impl SoulType {
         }
     }
 
+    #[inline(always)]
     pub fn get_type_child(&self) -> Option<SoulType> {
         if self.wrappers.is_empty() {
             None

@@ -72,6 +72,14 @@ impl FunctionStore {
         let ids = self.to_id.get(name)?;
         Some(ids.iter().map(|id| self.from_id.get(id).unwrap()).collect::<Vec<_>>()) 
     }
+
+    pub fn iter_names(&self) -> impl Iterator<Item = &String> {
+        self.to_id.keys()
+    }
+
+    pub fn iter_functions(&self) -> impl Iterator<Item = &FunctionDeclaration> {
+        self.from_id.values()
+    }
 }
 
 pub struct MetaData {
@@ -106,7 +114,7 @@ impl MetaData {
         }
 
         let id = func.id.clone();
-        let scope =self.scope_store.get_mut(&context.current_scope_id)
+        let scope =self.scope_store.get_mut(&context.get_current_scope_id())
             .ok_or(new_soul_error(iter.current(), "Internal error: scope not found"))?;
 
         scope.function_store.add_function(func.name.clone(), id, func);
@@ -178,7 +186,7 @@ impl MetaData {
         optionals: &Vec<ArgumentInfo>,
         generic_defined: Vec<String>
     ) -> Result<(ScopeId, FunctionID)> {   
-        let mut scope = self.scope_store.get(&context.current_scope_id).expect("Internal Error: scope_id could not be found");
+        let mut scope = self.scope_store.get(&context.get_current_scope_id()).expect("Internal Error: scope_id could not be found");
         let global_scope = self.scope_store.get(&MetaData::GLOBAL_SCOPE_ID).expect("Internal Error: global scope_id could not be found");
 
         if name == "__soul_format_string__" {
@@ -207,7 +215,7 @@ impl MetaData {
     }
 
     pub fn is_function<'a>(&'a self, name: &str, context: &CurrentContext) -> IsFunctionResult<'a> {
-        let mut scope = self.scope_store.get(&context.current_scope_id).expect("Internal Error: scope_id could not be found");
+        let mut scope = self.scope_store.get(&context.get_current_scope_id()).expect("Internal Error: scope_id could not be found");
         let global_scope = self.scope_store.get(&MetaData::GLOBAL_SCOPE_ID).expect("Internal Error: global scope_id could not be found");
 
         if let Some(in_class) = &context.in_class {
@@ -248,19 +256,26 @@ impl MetaData {
         scope.function_store.from_name(&get_methode_map_entry(name, &this_class.name)).is_some()
     }
 
-    pub fn open_scope(&mut self, parent_id: ScopeId, allows_vars_access: bool, is_forward_declared: bool) -> result::Result<ScopeId, String> {
-        let parent = self.scope_store.get(&parent_id)
+    pub fn open_scope(&mut self, context: &CurrentContext, allows_vars_access: bool, is_forward_declared: bool) -> result::Result<ScopeId, String> {
+        let parent = self.scope_store.get(&context.get_current_scope_id())
             .ok_or("Internal Error: can not get parent scope from scope_store")?;
 
-        let child = Scope::new_child(&parent, allows_vars_access);
-        let child_id = *child.id();
-        self.scope_store.insert(child_id, child);
-
+        let child_id;
         if is_forward_declared {
+            let child = Scope::new_child(&parent, allows_vars_access);
+            child_id = *child.id();
+            self.scope_store.insert(child_id, child);
+        }
+        else {
+            child_id = ScopeId(context.get_current_highest_id().0 + 1);
+            if !self.scope_store.contains_key(&child_id) {
+                return Err(format!("Internal error trying to openscope but next scope was not found"))
+            }
+
             self.borrow_checker
                 .lock().unwrap()
                 .open_scope(&child_id)?;
-        }   
+        }
         
         Ok(child_id)
     }
@@ -275,14 +290,14 @@ impl MetaData {
             .parent.as_ref().unwrap()
             .id.clone();
         
-        self.scope_store.remove(id);
-        let delete_list = if is_forward_declared {
-            self.borrow_checker
-                .lock().unwrap()
-                .close_scope(id)?
+        let delete_list;
+        if is_forward_declared {
+            delete_list = Vec::new();
         } 
         else {
-            Vec::new()
+            delete_list = self.borrow_checker
+                .lock().unwrap()
+                .close_scope(id)?;
         };
 
         Ok(CloseScopeResult{delete_list, parent})

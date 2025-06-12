@@ -5,12 +5,27 @@ id: 0 (
 	vars: (
 		Literal str __Soul_c_str_0__,
 		Literal str __Soul_c_str_1__,
-		Literal str __Soul_c_str_2__,
-		const int[] array,
-		const f32 float,
-		Literal f32 gravity,
-		const int number,
-		Literal uint uintNumber
+		Literal str __Soul_c_str_2__
+	),
+),
+id: 1 (
+	functions:(
+		sum( int a,  int b) int
+	),
+	vars: (
+		Literal str[] args,
+		Literal int foo,
+		const int num,
+		int sec
+	),
+),
+id: 2 (
+	functions:(
+		
+	),
+	vars: (
+		const int a,
+		const int b
 	),
 ),
 id: 3 (
@@ -18,7 +33,7 @@ id: 3 (
 		
 	),
 	vars: (
-		
+		int a
 	),
 ),
 id: 4 (
@@ -34,6 +49,14 @@ id: 5 (
 		
 	),
 	vars: (
-		Literal int foo
+		
+	),
+),
+id: 6 (
+	functions:(
+		
+	),
+	vars: (
+		
 	),
 ),

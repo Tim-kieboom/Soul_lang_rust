@@ -1,25 +1,14 @@
-const number = 1
-Literal gravity = 9.81
-const f32 float = 1
-Literal uint uintNumber = 1
-const array = [1, 2, 3, 4]
-
-// testMove(int a) int {
-// 	int ab = 1
-// 	move := ab
-// 	Println(ab)
-// 	return 0
-// }
-
-// printSum(int a, int b) int {
-// 	Println(f"{a} + {b} = {a+b}")
-// 	return 0
-// }
+// const number = 1
+// Literal gravity = 9.81
+// const f32 float = 1
+// Literal uint uintNumber = 1
+// const array = [1, 2, 3, 4]
 
 // wrong() {
 // 	if true {}
 // 	else {}
 // }
+
 
 
 main(Literal str[] args) int {
@@ -32,6 +21,12 @@ main(Literal str[] args) int {
 	Println(num)
 
 	if num == 3 {
+		
+		int a = 0
+		if true {
+			a = 1
+		}
+		
 		Println("num == 3")
 	}
 	else if true {

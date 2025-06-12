@@ -1,6 +1,5 @@
-use std::fmt::format;
-
 use bitflags::bitflags;
+
 bitflags! {
     #[derive(Debug, Clone)]
     pub struct VarFlags: u8 {

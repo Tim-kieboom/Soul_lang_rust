@@ -38,7 +38,7 @@ fn internal_function_declaration(
 ) -> Result<FunctionDeclaration> {
     let next_id = meta_data
         .scope_store
-        .get_mut(&context.current_scope_id)
+        .get_mut(&context.get_current_scope_id())
         .ok_or(new_soul_error(iter.current(), "Internal ewrror: scope not found"))?
         .get_next_function_id();
 
@@ -188,7 +188,7 @@ fn internal_function_declaration(
         }
     }
 
-    if let Some(function_overloads) = meta_data.scope_store.get(&context.current_scope_id)
+    if let Some(function_overloads) = meta_data.scope_store.get(&context.get_current_scope_id())
             .ok_or(new_soul_error(iter.current(), "Internal error: scope not found"))?
             .function_store.from_name(&function.name) 
     {

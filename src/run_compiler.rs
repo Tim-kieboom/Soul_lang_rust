@@ -1,10 +1,9 @@
+use std::time::Instant;
+use itertools::Itertools;
+use std::fs::{self, write};
 use crate::cpp_transpiller::transpiller::transpiller_to_cpp;
 use crate::meta_data::function::internal_functions::INTERNAL_FUNCTIONS;
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
-use std::fs::{self, write};
-use std::path::Path;
-use std::time::Instant;
-use itertools::Itertools;
 
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree::get_abstract_syntax_tree_file;
 use crate::meta_data::meta_data::MetaData;
@@ -91,7 +90,7 @@ pub fn run_compiler(run_options: RunOptions) -> Result<()> {
         let sorted_scopes = meta_data.scope_store.clone().into_iter().sorted_by_key(|(id, _)| *id);
         for (id, scope) in sorted_scopes {
             scope_string.push_str(format!("id: {} (\n\tfunctions:(\n\t\t", id.0.to_string()).as_str());
-            scope_string.push_str(&scope.function_store.from_id.iter().filter(|(id, _)| !INTERNAL_FUNCTIONS.iter().any(|func| func.id == **id)).map(|(_, func)| func.to_string()).join(",\n\t\t"));
+            scope_string.push_str(&scope.function_store.iter_functions().filter(|func| !INTERNAL_FUNCTIONS.iter().any(|internal| internal.id == func.id)).map(|func| func.to_string()).join(", \n\t\t"));
             scope_string.push_str("\n\t),\n\tvars: (\n\t\t");
             scope_string.push_str(&scope.vars.iter().map(|(_, var)| var.to_string()).join(",\n\t\t"));
             scope_string.push_str("\n\t),\n),\n");

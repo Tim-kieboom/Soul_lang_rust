@@ -353,6 +353,9 @@ fn test_get_expression_lit_bracked_as_end_token() {
 
 #[test]
 fn test_get_expression_variable() {
+    const ALLOWS_VARS_ACCESS: bool = true;
+    const IS_FORWARD_DECLARED: bool = true;
+    
     let mut global_var = VarInfo::new("global1".to_string(), SOUL_NAMES.get_name(NamesInternalType::Int).to_string());
     global_var.add_var_flag(VarFlags::IsAssigned);
     let mut scope_var = VarInfo::new("scope1".to_string(), SOUL_NAMES.get_name(NamesInternalType::Int).to_string());
@@ -362,7 +365,7 @@ fn test_get_expression_variable() {
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
     meta_data.add_to_global_scope(global_var.clone())
-        .inspect(|err| panic!("{:#?}", err))
+        .inspect_err(|err| panic!("{}", err))
         .unwrap();
 
     
@@ -370,20 +373,21 @@ fn test_get_expression_variable() {
 
     let mut iter = get_iter(GLOBAL_VAR, &mut meta_data).unwrap();
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, false, &vec![";"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, IS_FORWARD_DECLARED, &vec![";"]).unwrap();
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, &global_var.name, &global_var.type_name);
 
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true, false).unwrap();
-    meta_data.add_to_scope(scope_var.clone(), &context.current_scope_id)
-        .inspect(|err| panic!("{:#?}", err))
+    let new_id = meta_data.open_scope(&context, ALLOWS_VARS_ACCESS, IS_FORWARD_DECLARED).unwrap();
+    context.set_current_scope_id(new_id);
+    meta_data.add_to_scope(scope_var.clone(), &context.get_current_scope_id())
+        .inspect_err(|err| panic!("{:#?}", err))
         .unwrap();
     
     const SCOPE_VAR: &str = "scope1;";
     iter = get_iter(SCOPE_VAR, &mut meta_data).unwrap();
 
-    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, false, &vec![";"]).unwrap();
+    let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, IS_FORWARD_DECLARED, &vec![";"]).unwrap();
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, &scope_var.name, &scope_var.type_name);
 }
@@ -499,7 +503,7 @@ fn test_get_expression_binary_expression_single_str() {
     if let Err(err) = result {
         assert_eq!(
             &err.to_err_message(), 
-            format!("at 1:17; !!error!! while trying to parse binary expression: operator: '<' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
+            format!("at 1:19; !!error!! while trying to parse binary expression: operator: '<' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
         );
     }
     else {
@@ -514,7 +518,7 @@ fn test_get_expression_binary_expression_single_str() {
     if let Err(err) = result {
         assert_eq!(
             &err.to_err_message(), 
-            format!("at 1:17; !!error!! while trying to parse binary expression: operator: '*' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
+            format!("at 1:19; !!error!! while trying to parse binary expression: operator: '*' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
         );
     }
     else {
@@ -529,7 +533,7 @@ fn test_get_expression_binary_expression_single_str() {
     if let Err(err) = result {
         assert_eq!(
             &err.to_err_message(), 
-            format!("at 1:17; !!error!! while trying to parse binary expression: operator: '-' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
+            format!("at 1:19; !!error!! while trying to parse binary expression: operator: '-' is not allowed for type: '{}' allows: '[==, !=, +]'", lit_str_string).as_str(),
         );
     }
     else {
@@ -663,7 +667,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
     global_var.add_var_flag(VarFlags::IsAssigned);
 
     meta_data.add_to_global_scope(global_var)
-        .inspect(|err| panic!("{:#?}", err))
+        .inspect_err(|err| panic!("{:#?}", err))
         .unwrap();
 
     const BINARY_BRACKETS_VAR: &str = "(var1 + 2) * 3;";
@@ -815,7 +819,7 @@ fn test_get_expression_ref_variable() {
     let mut meta_data = MetaData::new();
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     meta_data.add_to_global_scope(global_var.clone())
-        .inspect(|err| panic!("{:#?}", err))
+        .inspect_err(|err| panic!("{:#?}", err))
         .unwrap();
 
     
@@ -951,12 +955,12 @@ fn test_get_expression_binary_expression_no_return_type() {
     const PRINTLN_BIN: &str = "Println() + 1;";
     let mut res = try_simple_get_expression(PRINTLN_BIN, None);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_err_message(), "at 1:11; !!error!! binairy expression: 'Literal(1, type: Literal untypedInt) + Println()' lefts type is 'none' which is not a valid type for binairy expressions");
+    assert_eq!(res.unwrap_err().to_err_message(), "at 1:13; !!error!! binairy expression: 'Literal(Literal untypedInt 1) + FunctionCall(Println())' lefts type is 'none' which is not a valid type for binairy expressions");
 
     const PRINTLN_INNER: &str = "Println(Print(1))";
     res = try_simple_get_expression(PRINTLN_INNER, None);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_err_message(), "at 1:16; !!error!! while trying to get functionCall of: 'Println'\nat 1:16; !!error!! argument number: 1, 'Print(Literal(1, type: Literal untypedInt))' is of type 'none', you can not have a 'none' type in an argument");
+    assert_eq!(res.unwrap_err().to_err_message(), "at 1:16; !!error!! while trying to get functionCall of: 'Println'\nat 1:16; !!error!! argument number: 1, 'FunctionCall(Print(Literal(Literal untypedInt 1)))' is of type 'none', you can not have a 'none' type in an argument");
 }
 
 #[test]

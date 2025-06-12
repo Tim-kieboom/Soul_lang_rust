@@ -28,7 +28,8 @@ impl CurrentGenerics {
 pub struct CurrentContext {
     pub rulesets: RuleSet,
     // this_ptr: Option<VarInfo>,
-    pub current_scope_id: ScopeId,
+    current_scope_id: ScopeId,
+    current_highest_id: ScopeId,
     pub in_class: Option<ClassInfo>,
     pub current_generics: CurrentGenerics,
     pub current_function: Option<FunctionDeclaration>,
@@ -39,11 +40,33 @@ impl CurrentContext {
         CurrentContext { 
             in_class: None, 
             current_scope_id, 
+            current_highest_id: current_scope_id,
             current_function: None,
             rulesets: RuleSet::Default, 
             current_generics: CurrentGenerics::new(),
         }
     }
+
+    pub fn get_current_scope_id(&self) -> ScopeId {
+        self.current_scope_id
+    }
+
+    pub fn get_current_highest_id(&self) -> ScopeId {
+        self.current_highest_id
+    }
+
+    pub fn set_current_scope_id(&mut self, id: ScopeId) {
+        self.current_scope_id = id;
+        if id.0 > self.current_highest_id.0 {
+            self.current_highest_id = id;
+        }
+    }
+
+    pub fn try_set_highest_id(&mut self, id: ScopeId) {
+        if id.0 > self.current_highest_id.0 {
+            self.current_highest_id = id;
+        }
+    } 
 }
 
 

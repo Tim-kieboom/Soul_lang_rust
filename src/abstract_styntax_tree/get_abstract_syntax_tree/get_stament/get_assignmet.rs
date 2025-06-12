@@ -20,7 +20,7 @@ pub fn get_assignment(
     let var_type = SoulType::from_stringed_type(i_variable.get_type_name(), iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
         .map_err(|err| pass_soul_error(iter.current(), format!("error while trying to get type from variable of assignment").as_str(), err))?;
 
-    let is_forward_declared = meta_data.try_get_variable(i_variable.get_name(), &context.current_scope_id)
+    let is_forward_declared = meta_data.try_get_variable(i_variable.get_name(), &context.get_current_scope_id())
         .ok_or(new_soul_error(iter.current(), format!("variable: '{}' could not be found in scope", i_variable.get_name()).as_str()))?
         .0.is_forward_declared.clone();
 
@@ -38,7 +38,7 @@ pub fn get_assignment(
     let decrement_symbool = SOUL_NAMES.get_name(NamesOperator::Decrement);
 
     if &iter[symbool_index].text == increment_symbool || &iter[symbool_index].text == decrement_symbool {
-        meta_data.try_get_variable_mut(i_variable.get_name(), &context.current_scope_id)
+        meta_data.try_get_variable_mut(i_variable.get_name(), &context.get_current_scope_id())
             .unwrap()
             .add_var_flag(VarFlags::IsAssigned);
 
@@ -76,7 +76,7 @@ pub fn get_assignment(
         .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get assignment expression", err))?;
 
     body_result.add_result(&expression.result);
-    meta_data.try_get_variable_mut(i_variable.get_name(), &context.current_scope_id)
+    meta_data.try_get_variable_mut(i_variable.get_name(), &context.get_current_scope_id())
         .unwrap()
         .add_var_flag(VarFlags::IsAssigned);
 

@@ -6,6 +6,11 @@ use crate::{meta_data::{class_info::access_level::{AccesLevel}, current_context:
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FunctionID(pub u32);
+impl FunctionID {
+    pub fn increment(&mut self) {
+        self.0 += 1
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
@@ -21,6 +26,7 @@ pub struct FunctionDeclaration {
 
     pub access_level: AccesLevel,
 }
+
 
 pub fn get_func_names_access_level(name: &str) -> AccesLevel {
     let is_first_letter_capital = name.chars().next().map_or(false, |ch| ch.is_uppercase());
@@ -81,6 +87,9 @@ impl FunctionDeclaration {
     pub fn to_string(&self) -> String {
         let mut string_builder = String::new();
         string_builder.push_str(self.modifiers.to_str());
+        if !string_builder.is_empty() {
+            string_builder.push(' ');
+        }
 
         string_builder.push_str(&self.name);
         self.generics_into_string(&mut string_builder);

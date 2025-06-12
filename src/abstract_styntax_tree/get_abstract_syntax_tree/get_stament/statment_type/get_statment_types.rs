@@ -11,6 +11,8 @@ static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
 });
 
 pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, statment_info: &mut StatmentTypeInfo) -> Result<StatmentType> {
+    const IS_FORWARD_DECLARED: bool = true;
+    
     let statment_types = &mut statment_info.statment_types;
     let open_bracket_stack = &mut statment_info.open_bracket_stack;
     let scope_start_index = &mut statment_info.scope_start_index;
@@ -53,7 +55,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
             traverse_to_end(iter, &["{"])?;
-            open_body(iter, statment_info, meta_data, context, true)?;
+            open_body(iter, statment_info, meta_data, context, IS_FORWARD_DECLARED)?;
             return Ok(StatmentType::If{end_body_index: 0});
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
@@ -61,7 +63,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             let is_else_if = iter.peek().is_some_and(|token| token.text == SOUL_NAMES.get_name(NamesOtherKeyWords::If));
 
             traverse_to_end(iter, &["{"])?;
-            open_body(iter, statment_info, meta_data, context, true)?;
+            open_body(iter, statment_info, meta_data, context, IS_FORWARD_DECLARED)?;
 
             return if is_else_if {
                 Ok(StatmentType::ElseIf{end_body_index: 0})
@@ -138,7 +140,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
                     return Err(err_out_of_bounds(iter));
                 }
 
-                open_body(iter, statment_info, meta_data, context, false)?;
+                open_body(iter, statment_info, meta_data, context, IS_FORWARD_DECLARED)?;
                 return Ok(StatmentType::FunctionBody{func_info, end_body_index: 0});
             }          
         },
@@ -170,8 +172,10 @@ fn open_body(iter: &TokenIterator, statment_info: &mut StatmentTypeInfo, meta_da
     statment_info.open_bracket_stack += 1;
     statment_info.scope_start_index.push(statment_info.statment_types.len());
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id, allows_vars_access, true)
+    let child_id = meta_data.open_scope(context, allows_vars_access, true)
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to open scope\n{}", msg).as_str()))?;
+
+    context.set_current_scope_id(child_id);
 
     Ok(())
 }

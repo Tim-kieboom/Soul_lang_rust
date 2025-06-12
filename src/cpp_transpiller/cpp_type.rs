@@ -11,9 +11,13 @@ impl CppType {
         
         let is_class = soul_type.is_class(&meta_data.type_meta_data.class_store);
         
-        let mut cpp_type = String::new(); 
+        let mut cpp_type = String::new();
         soul_modifier_to_cpp(&mut cpp_type, soul_type.modifiers);
-        cpp_type.push(' ');
+        if !cpp_type.is_empty() {
+            cpp_type.push(' ');
+        }
+
+        let mut last_part = String::new(); 
 
         let cpp_name = if is_class {
             &soul_type.name
@@ -22,12 +26,13 @@ impl CppType {
             soul_primitive_to_cpp(soul_type.to_primitive_type(&meta_data.type_meta_data))
         };
 
-        cpp_type.push_str(cpp_name);
-        cpp_type.push(' ');
+        last_part.push_str(cpp_name);
+        last_part.push(' ');
 
-        soul_wrappers_to_cpp(&mut cpp_type, &soul_type.wrappers);
-        cpp_type.push(' ');
+        soul_wrappers_to_cpp(&mut last_part, &soul_type.wrappers);
+        last_part.push(' ');
 
+        cpp_type.push_str(&last_part);
         Ok(Self(cpp_type))
     }
 

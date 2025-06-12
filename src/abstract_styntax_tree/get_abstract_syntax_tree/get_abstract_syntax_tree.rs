@@ -1,8 +1,6 @@
 use once_cell::sync::Lazy;
-
-use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo, meta_data::{borrow_checker::borrow_checker::BorrowCheckedTrait, soul_error::soul_error::{new_soul_error, pass_soul_error, Result}, soul_names::NamesOtherKeyWords}};
-
 use super::get_stament::statment_type::statment_type::{StatmentIterator, StatmentType};
+use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo, meta_data::{soul_error::soul_error::{new_soul_error, pass_soul_error, Result}, soul_names::NamesOtherKeyWords}};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::AbstractSyntaxTree, get_abstract_syntax_tree::get_stament::{get_statment::get_statment, statment_type::get_statment_types::get_statment_types}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{NamesTypeModifiers, SOUL_NAMES}}, tokenizer::token::TokenIterator};
 
 const GLOBAL_SCOPE: i64 = 0;
@@ -12,9 +10,22 @@ static ELSE_IF: Lazy<String> = Lazy::new(|| format!("{} {}", SOUL_NAMES.get_name
 pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
-    println!("{:?}", iter.get_tokens_text().iter().enumerate().collect::<Vec<_>>());
+    #[cfg(feature="dev_mode")]
+    println!(
+        "\ntokenizer:\n{:?}\n", 
+        iter.get_tokens_text()
+            .iter()
+            .enumerate()
+            .collect::<Vec<(usize, &&str)>>()
+    );
 
-    let mut statment_type_info = StatmentTypeInfo::new(GLOBAL_SCOPE);
+    let statment_count = iter
+        .ref_tokens().iter()
+        .filter(|token| token.text == "\n" || token.text == ";")
+        .count();
+
+    let mut statment_type_info = StatmentTypeInfo::with_capacity(GLOBAL_SCOPE, statment_count);
+
     loop {
         let is_done = forward_declare(&mut iter, meta_data, &mut context, &mut statment_type_info)
             .map_err(|err| pass_soul_error(iter.current(), "while forward declaring", err))?;
@@ -22,10 +33,42 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
         if is_done {
             break;
         }
-    }    
+    }
+
     iter.go_to_before_start();
 
-    println!("{:#?}", statment_type_info.statment_types.iter().enumerate().map(|(i, el)| format!("{}.{:?}", i, el)).collect::<Vec<_>>());
+    #[cfg(feature="dev_mode")]
+    println!(
+        "statment_types:\n{:#?}\n", 
+        statment_type_info.statment_types
+            .iter()
+            .enumerate()
+            .map(|(i, el)| format!("{}.{:?}", i, el))
+            .collect::<Vec<String>>()
+    );
+
+    #[cfg(feature="dev_mode")]
+    {
+        use itertools::Itertools;
+        use crate::meta_data::function::internal_functions::INTERNAL_FUNCTIONS;
+        println!(
+        "metaData.scopes (before parser):\n{:#?}\n",
+        meta_data.scope_store
+            .iter()
+            .sorted_by(|a, b| Ord::cmp(&a.0.0, &b.0.0))
+            .map(|(id, scope)| 
+                format!(
+                    "id: {}, funcs: {:?}, scopes: {:?}", 
+                    id.0,
+                    scope.function_store.iter_names()
+                        .filter(|name| !INTERNAL_FUNCTIONS.iter().any(|internal| &&internal.name == name))
+                        .collect::<Vec<_>>(),
+                    scope.vars.iter().map(|var| var.0).collect::<Vec<_>>(),
+                ),
+            )
+            .collect::<Vec<_>>()
+        );
+    }
     
     context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     let mut statment_iter = StatmentIterator::new(statment_type_info.statment_types);
@@ -50,7 +93,9 @@ pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut T
     let begin_i = iter.current_index();
     
     loop {
-        let is_done = forward_declare(iter, meta_data, context, statment_info)?;
+        let is_done = forward_declare(iter, meta_data, context, statment_info)
+            .map_err(|err| pass_soul_error(iter.current(), "while forward declaring", err))?;
+
         if is_done {
             break;
         }

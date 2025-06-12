@@ -63,7 +63,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
         return Err(new_soul_error(iter.current(), msg.as_str()));
     }
 
-    let possible_var = meta_data.scope_store.get(&context.current_scope_id)
+    let possible_var = meta_data.scope_store.get(&context.get_current_scope_id())
         .unwrap()
         .try_get_variable_current_scope_only(&iter[var_name_index].text);
    
@@ -73,7 +73,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
     };
 
     if is_forward_declared {
-        meta_data.scope_store.get_mut(&context.current_scope_id)
+        meta_data.scope_store.get_mut(&context.get_current_scope_id())
             .unwrap()
             .remove_variable_current_scope_only(&iter[var_name_index].text);
     }
@@ -228,7 +228,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
 }
 
 fn add_to_scope(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, var_name_index: usize, var_info: VarInfo) -> Result<()> {
-    meta_data.add_to_scope(var_info, &context.current_scope_id)
+    meta_data.add_to_scope(var_info, &context.get_current_scope_id())
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add variable: '{}' to scope\n{}", iter[var_name_index].text, msg).as_str()))
 }
 

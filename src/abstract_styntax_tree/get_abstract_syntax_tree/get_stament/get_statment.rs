@@ -12,13 +12,14 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
     if iter.next().is_none() {
         return Err(err_out_of_bounds(iter));
     }
-
+    
     match statment_type {
         StatmentType::CloseScope{..} => Ok(MultiStamentResult::new(IStatment::CloseScope())),
         StatmentType::EmptyStatment => Ok(MultiStamentResult::new(IStatment::EmptyStatment())),
         StatmentType::Assignment => {
+                const IS_INITIALIZE: bool = false;
                 let variable = get_variable(iter, context, meta_data)?;
-                get_assignment(iter, meta_data, context, variable, false)
+                get_assignment(iter, meta_data, context, variable, IS_INITIALIZE)
                     .map(|result| result.assignment)
             },
         StatmentType::Initialize{..} => get_initialize(iter, meta_data, context),
@@ -216,7 +217,7 @@ fn get_variable(iter: &mut TokenIterator, context: &mut CurrentContext, meta_dat
         return Err(new_soul_error(iter.current(), msg.as_str()));
     }
 
-    let scope = meta_data.scope_store.get(&context.current_scope_id)
+    let scope = meta_data.scope_store.get(&context.get_current_scope_id())
         .ok_or(new_soul_error(iter.current(), "Internal Error: could not get scope of: context.current_scope_id"))?;
 
     let variable = scope.try_get_variable(&var_name.text, &meta_data.scope_store)

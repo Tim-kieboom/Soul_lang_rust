@@ -12,7 +12,9 @@
                 "args": [
                     "build",
                     "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust"
+                    "--package=soul_lang_rust",
+                    "--features",
+                    "dev_mode"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",
@@ -35,7 +37,9 @@
                 "args": [
                     "build",
                     "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust"
+                    "--package=soul_lang_rust",
+                    "--features",
+                    "dev_mode"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",
@@ -61,7 +65,7 @@
                     "--bin=soul_lang_rust",
                     "--package=soul_lang_rust",
                     "--features",
-                    "throw_result"
+                    "throw_result,dev_mode"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",
@@ -88,7 +92,9 @@
                     "build",
                     "--release",
                     "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust"
+                    "--package=soul_lang_rust",
+                    "--features",
+                    "dev_mode"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",

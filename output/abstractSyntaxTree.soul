@@ -1,28 +1,3 @@
-Initialize(
-	Assignment(
-		Variable(const int number) = Literal(Literal untypedInt 1)
-	)
-)
-Initialize(
-	Assignment(
-		Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
-	)
-)
-Initialize(
-	Assignment(
-		Variable(const f32 float) = Literal(const f32 1)
-	)
-)
-Initialize(
-	Assignment(
-		Variable(Literal uint uintNumber) = Literal(Literal uint 1)
-	)
-)
-Initialize(
-	Assignment(
-		Variable(const int[] array) = Literal(Literal untypedInt[] [1,2,3,4])
-	)
-)
 FunctionBody(main(Literal str[] args) int{
 	FunctionBody(sum( int a,  int b) int{
 		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))
@@ -41,6 +16,17 @@ FunctionBody(main(Literal str[] args) int{
 	)
 	FunctionCall(Println(Variable(const int num)))
 	If(BinaryExpression(Variable(const int num) == Literal(Literal untypedInt 3), type: bool){
+		Initialize(
+			Assignment(
+				Variable(int a) = Literal(int 0)
+			)
+		)
+		If(Literal(Literal bool true){
+			Assignment(
+				Variable(int a) = Literal(int 1)
+			)
+			
+		})
 		FunctionCall(Println(Variable(Literal str __Soul_c_str_0__)))
 		
 	})

@@ -27,3 +27,4 @@ harness = false
 
 [features]
 throw_result = []
+dev_mode = []

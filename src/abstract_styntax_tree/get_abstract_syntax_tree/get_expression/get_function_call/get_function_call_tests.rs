@@ -390,9 +390,11 @@ fn test_get_function_call_in_child_scope() {
     let func_declr1 = "empty();";
     let empty_func = store_function(&func_declr1, &mut meta_data, &mut context);
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true, false)
+    let new_id = meta_data.open_scope(&context, true, false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
+
+    context.set_current_scope_id(new_id);
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
     const FUNC_CALL1: &str = "empty();";
@@ -425,10 +427,11 @@ fn test_get_function_call_in_child_scope() {
     let func_declr2 = "emptyInEmpty();";
     let empty_func2 = store_function(&func_declr2, &mut meta_data, &mut context);
 
-    context.current_scope_id = meta_data.open_scope(context.current_scope_id, true, false)
+    let new_id = meta_data.open_scope(&context, true, false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
+    context.set_current_scope_id(new_id);
     const FUNC_CALL2: &str = "emptyInEmpty();";
     function = simple_get_function_call(FUNC_CALL2, &mut meta_data, &mut context);
     should_be = MultiStamentResult::new(
@@ -446,11 +449,11 @@ fn test_get_function_call_in_child_scope() {
     );
 
 
-    let CloseScopeResult{delete_list:_, parent} = meta_data.close_scope(&context.current_scope_id, false)
+    let CloseScopeResult{delete_list:_, parent} = meta_data.close_scope(&context.get_current_scope_id(), false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
-    context.current_scope_id = parent;
+    context.set_current_scope_id(parent);
 
 }
 

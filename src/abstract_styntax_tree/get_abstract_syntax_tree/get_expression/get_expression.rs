@@ -133,9 +133,9 @@ fn convert_expression(
 
     let mut open_bracket_stack = 0i64;
     let mut ref_stack = Vec::new();
-    
+
     iter.next_multiple(-1);
-    let mut prev_token = Token{text: String::new(), line_number: 0, line_offset: 0};
+    let mut prev_token_index = iter.current_index();
     while iter.next().is_some() {
 		// for catching ')' as endToken, 
         // (YES there are 2 isEndToken() this is because of checkBrackets() mutates the iterator DONT REMOVE PLZ)
@@ -153,7 +153,7 @@ fn convert_expression(
             return Err(possible_literal.unwrap_err());
         }
 
-        let possible_variable = meta_data.try_get_variable(&iter.current().text, &context.current_scope_id);
+        let possible_variable = meta_data.try_get_variable(&iter.current().text, &context.get_current_scope_id());
         
         if is_end_token(iter.current(), end_tokens, open_bracket_stack) {
             return Ok(());
@@ -167,7 +167,7 @@ fn convert_expression(
             if operator_type == ExprOperatorType::Increment || 
                operator_type == ExprOperatorType::Decrement 
             {
-                let is_before = !meta_data.is_variable(&prev_token.text, &context.current_scope_id);
+                let is_before = !meta_data.is_variable(&iter[prev_token_index].text, &context.get_current_scope_id());
                 stacks.increment_info_stack.push(is_before);
             }
 
@@ -188,7 +188,7 @@ fn convert_expression(
         else {
             return Err(new_soul_error(iter.current(), format!("token: '{}' is not valid espression", iter.current().text).as_str()));
         }
-        prev_token = iter.current().clone();
+        prev_token_index = iter.current_index();
 
         if should_convert_to_ref(&ref_stack, stacks) {
             convert_to_ref(iter, &mut ref_stack, stacks, &meta_data, &mut context.current_generics)?;
@@ -199,10 +199,12 @@ fn convert_expression(
     Err(new_soul_error(iter.current(), "unexpected end while parsing expression"))
 }
 
+#[inline(always)]
 fn is_ref(iter: &TokenIterator, stacks: &ExpressionStacks) -> bool {
     is_token_any_ref(iter.current()) && (stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty())
 }
 
+#[inline(always)]
 fn convert_variable(
     iter: &mut TokenIterator, 
     stacks: &mut ExpressionStacks, 
@@ -233,6 +235,7 @@ fn convert_variable(
     Ok(())
 }
 
+#[inline(always)]
 fn convert_literal(
     iter: &mut TokenIterator, 
     stacks: &mut ExpressionStacks, 
@@ -264,6 +267,7 @@ fn convert_literal(
     Ok(())
 }
 
+#[inline(always)]
 fn convert_function_call(
     iter: &mut TokenIterator, 
     stacks: &mut ExpressionStacks, 
@@ -296,6 +300,7 @@ fn convert_function_call(
     Ok(())
 }
 
+#[inline(always)]
 fn convert_operator(
     iter: &mut TokenIterator, 
     stacks: &mut ExpressionStacks, 
@@ -627,7 +632,7 @@ fn get_negative_expression(
 
     let mut dummy = false;
     let possible_literal = SoulType::from_literal(iter, &meta_data.type_meta_data, &mut context.current_generics, *should_be_type, &mut dummy);
-    let possible_variable = meta_data.try_get_variable(&iter.current().text, &context.current_scope_id);
+    let possible_variable = meta_data.try_get_variable(&iter.current().text, &context.get_current_scope_id());
     let mut result = MultiStamentResult::<IExpression>::new(IExpression::EmptyExpression());
 
     if let Some((variable, _scope_id)) = possible_variable {
@@ -675,6 +680,7 @@ fn get_negative_expression(
     }
 }
 
+#[inline(always)]
 fn check_brackets(
     iterator: &mut TokenIterator, 
     stacks: &mut ExpressionStacks, 
@@ -700,6 +706,7 @@ fn check_brackets(
     false
 }
 
+#[inline(always)]
 fn is_end_token(token: &Token, end_tokens: &Vec<&str>, open_bracket_stack: i64) -> bool {
     end_tokens.iter().any(|str| str == &token.text) && is_valid_end_token(token, open_bracket_stack)
 }
@@ -723,6 +730,7 @@ impl ExpressionStacks {
 static DOUBLE_MUT_REF: Lazy<String> = Lazy::new(|| format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::MutRef), SOUL_NAMES.get_name(NamesTypeWrapper::MutRef)));
 static DOUBLE_CONST_REF: Lazy<String> = Lazy::new(|| format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef), SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef)));
 
+#[inline(always)]
 fn is_token_any_ref(token: &Token) -> bool {
     token.text == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) || 
     token.text == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) ||
@@ -730,18 +738,22 @@ fn is_token_any_ref(token: &Token) -> bool {
     token.text == DOUBLE_CONST_REF.as_str()
 }
 
+#[inline(always)]
 fn is_token_operator(token: &Token) -> bool {
     ExprOperatorType::from_str(&token.text) != ExprOperatorType::Invalid
 }
 
+#[inline(always)]
 fn is_negative_number(token: &Token, stacks: &ExpressionStacks) -> bool {
     token.text == "-" && (stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty())
 }
 
+#[inline(always)]
 fn should_convert_to_ref(to_ref: &Vec<String>, stacks: &ExpressionStacks) -> bool {
     !to_ref.is_empty() && !stacks.node_stack.is_empty()
 }
 
+#[inline(always)]
 fn is_valid_oparator(current_type: &SoulType, operator: &ExprOperatorType, type_meta_data: &TypeMetaData) -> result::Result<(), String> {
 
     let allowed_operators = get_allowed_expr_operators(current_type, type_meta_data)?;
@@ -760,6 +772,7 @@ fn is_valid_oparator(current_type: &SoulType, operator: &ExprOperatorType, type_
     Ok(())
 }
 
+#[inline(always)]
 fn get_allowed_expr_operators(current_type: &SoulType, type_meta_data: &TypeMetaData) -> result::Result<ImplOperators, String> {    
     let type_id = type_meta_data
         .type_store

@@ -37,6 +37,10 @@ impl TokenIterator {
         self.tokens
     } 
 
+    pub fn ref_tokens(&self) -> &Vec<Token> {
+        &self.tokens
+    } 
+
     pub fn get_tokens_text(&self) -> Vec<&str> {
         self.tokens.iter()
                    .map(|token| token.text.as_str())

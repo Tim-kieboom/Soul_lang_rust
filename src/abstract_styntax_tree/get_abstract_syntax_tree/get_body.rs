@@ -5,7 +5,7 @@ use crate::{abstract_styntax_tree::{abstract_styntax_tree::{BodyNode, IStatment}
 
 use super::get_stament::statment_type::statment_type::StatmentIterator;
 
-pub fn get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &CurrentContext, possible_function: Option<FunctionDeclaration>) -> Result<BodyNode> {
+pub fn get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &mut CurrentContext, possible_function: Option<FunctionDeclaration>) -> Result<BodyNode> {
     let begin_i = iter.current_index();
 
     let result = internal_get_body(iter, statment_iter, meta_data, old_context, possible_function);
@@ -16,19 +16,23 @@ pub fn get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, 
     result
 }
 
-fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &CurrentContext, possible_function: Option<FunctionDeclaration>) -> Result<BodyNode> {
+fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &mut CurrentContext, possible_function: Option<FunctionDeclaration>) -> Result<BodyNode> {
+    
+    
     if iter.next().is_none() {
         return Err(err_out_of_bounds(iter));
     }
 
-    let scope_id = meta_data.open_scope(old_context.current_scope_id, possible_function.is_none(), false)
+    let scope_id = meta_data.open_scope(old_context, possible_function.is_none(), false)
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add scope\n{}", msg).as_str()))?;
 
     let mut context = old_context.clone();
-    context.current_scope_id = scope_id;
+    context.set_current_scope_id(scope_id);
+
+    let is_function_body = possible_function.is_some();
 
     let vars = if let Some(function) = &possible_function {
-        function.args
+        let vars = function.args
             .iter()
             .map(|arg| (&arg.name, arg))
             .chain(function.optionals.iter())
@@ -44,7 +48,10 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
 
                 (name.clone(), VarInfo::with_var_flag(name.clone(), arg.value_type.clone(), var_flags, false))
             })
-            .collect::<BTreeMap<String, VarInfo>>()
+            .collect::<BTreeMap<String, VarInfo>>();
+
+        context.current_function = possible_function;
+        vars
     }
     else {
         BTreeMap::new()
@@ -55,10 +62,7 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
             .map_err(|msg| new_soul_error(iter.current(), format!("while adding argument: '{}' to scope\n{}", name, msg).as_str()))?;
     }
 
-    context.current_function = possible_function;
-    
-
-    meta_data.scope_store.get_mut(&context.current_scope_id).unwrap().vars = vars;
+    meta_data.scope_store.get_mut(&context.get_current_scope_id()).unwrap().vars = vars;
 
     if iter.next_multiple(-1).is_none() {
         return Err(err_out_of_bounds(iter));
@@ -83,12 +87,14 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to clode scope\n{}", msg).as_str()))?;
 
     body_node.delete_list = delete_list;
-    if let Some(function) = &body_node.context.current_function {
+    if is_function_body {
         
-        if !has_return && function.return_type.is_some() {
-            return Err(new_soul_error(iter.current(), format!("function: '{}' has return type but does not return anything", function.name).as_str()));
+        if !has_return && body_node.context.current_function.as_ref().is_some_and(|func| func.return_type.is_some()) {
+            return Err(new_soul_error(iter.current(), format!("function: '{}' has return type but does not return anything", body_node.context.current_function.unwrap().name).as_str()));
         }
-    }    
+    }
+
+    old_context.try_set_highest_id(body_node.context.get_current_highest_id());
 
     Ok(body_node)
 }
