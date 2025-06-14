@@ -1,5 +1,4 @@
 #pragma once
-#include "../soul_cppLibs.h"
 #include "soul_CompileConst_exp.hpp"
 #include "soul_CompileConst_log.hpp"
 #include <limits>

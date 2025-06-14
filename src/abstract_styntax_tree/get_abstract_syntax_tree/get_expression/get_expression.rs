@@ -53,7 +53,7 @@ pub fn get_expression(
     is_forward_declared: bool,
     end_tokens: &Vec<&str>,
 ) -> Result<GetExpressionResult> {
-    let mut result = MultiStamentResult::<IExpression>::new(IExpression::EmptyExpression());
+    let mut result = MultiStamentResult::<IExpression>::new(IExpression::EmptyExpression(SoulSpan::from_token(iter.current())));
     
 
     let begin_i = iter.current_index();
@@ -77,7 +77,7 @@ pub fn get_expression(
             panic!("Internal error: in getExpression nodeStack.IsEmpty() but typeStack is not");
         }
 
-        result.value = IExpression::EmptyExpression();
+        result.value = IExpression::EmptyExpression(SoulSpan::from_token(iter.current()));
         let none_type = SoulType::new(SOUL_NAMES.get_name(NamesInternalType::None).to_string());
         return Ok(GetExpressionResult{result, is_type: none_type});
     }
@@ -469,8 +469,8 @@ fn get_binairy_expression(
         return Ok(IExpression::new_increment(incr_variable, is_before, amount, iter.current()));         
     }
     else if operator_type == &ExprOperatorType::Not {
-        if let IExpression::EmptyExpression() = right {
-            return Err(new_soul_error(iter.current(), "right side of BinairyExpression is can not be empty"));
+        if let IExpression::EmptyExpression(span) = right {
+            return Err(new_soul_error(&Token{text: String::new(), line_number: span.line_number, line_offset: span.line_offset}, "right side of BinairyExpression is can not be empty"));
         }
 
         let mut bool_type = SoulType::new(SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string());
@@ -505,8 +505,8 @@ fn get_binairy_expression(
             ).as_str()
         ));
     }
-    if matches!(left, IExpression::EmptyExpression()) || 
-       matches!(right, IExpression::EmptyExpression()) 
+    if matches!(left, IExpression::EmptyExpression(_)) || 
+       matches!(right, IExpression::EmptyExpression(_)) 
     {
         return Err(new_soul_error(iter.current(), "one of the expressions in binairyExpression is empty"));
     }
@@ -633,7 +633,7 @@ fn get_negative_expression(
     let mut dummy = false;
     let possible_literal = SoulType::from_literal(iter, &meta_data.type_meta_data, &mut context.current_generics, *should_be_type, &mut dummy);
     let possible_variable = meta_data.try_get_variable(&iter.current().text, &context.get_current_scope_id());
-    let mut result = MultiStamentResult::<IExpression>::new(IExpression::EmptyExpression());
+    let mut result = MultiStamentResult::<IExpression>::new(IExpression::EmptyExpression(SoulSpan::from_token(iter.current())));
 
     if let Some((variable, _scope_id)) = possible_variable {
         let var_type = SoulType::from_stringed_type(
@@ -811,7 +811,6 @@ fn get_allowed_expr_operators(current_type: &SoulType, type_meta_data: &TypeMeta
 
     Ok(ImplOperators { operator: allowed_operators })
 }
-
 
 
 

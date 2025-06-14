@@ -86,7 +86,7 @@ pub fn check_convert_to_ref(
             IExpression::ConstRef { expression, span:_ } => expression_stack.push(&expression),
             IExpression::MutRef { expression, span:_ } => expression_stack.push(&expression),
             IExpression::DeRef { expression, span:_ } => expression_stack.push(&expression),
-            IExpression::EmptyExpression() => (),
+            IExpression::EmptyExpression(_) => (),
         };
     }
 
@@ -111,7 +111,7 @@ pub fn is_expression_literal(
             IExpression::Literal { type_name, .. } => {
                     return is_type_name_literal(type_name, token, meta_data, generics);
                 },
-            IExpression::EmptyExpression() => {
+            IExpression::EmptyExpression(_) => {
                     return Ok(true);
                 },
             IExpression::IVariable { this, span:_ } => {

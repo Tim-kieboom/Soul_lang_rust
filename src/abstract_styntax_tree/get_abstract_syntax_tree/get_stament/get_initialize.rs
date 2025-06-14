@@ -27,7 +27,7 @@ pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, contex
 
 fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, forward_declared_bracket_stack: Option<i64>)  -> Result<MultiStamentResult<IStatment>> {
     
-    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
+    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
 
     let err_out_of_bounds = |iter: &TokenIterator| {
         new_soul_error(iter.current(), "unexpected error while getting initialize variable")

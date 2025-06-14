@@ -48,6 +48,7 @@ fn internal_function_declaration(
         Vec::new(),
         true,
         next_id,
+        context.get_current_scope_id(),
     );
 
     loop {

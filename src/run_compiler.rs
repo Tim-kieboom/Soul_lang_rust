@@ -61,8 +61,12 @@ pub fn run_compiler(run_options: RunOptions) -> Result<()> {
     let start = Instant::now();
     let iter = TokenIterator::new(tokens);
     let tree;
+    let statment_iter;
     match get_abstract_syntax_tree_file(iter, &mut meta_data) {
-        Ok(val) => tree = val,
+        Ok(val) => {
+            tree = val.0;
+            statment_iter = val.1;
+        }
         Err(err) => {
             if run_options.show_times.contains(ShowTimes::SHOW_ABSTRACT_SYNTAX_TREE) {
                 println!("abstractSyntaxTree parser time: {:.2?}", start.elapsed());
@@ -101,7 +105,7 @@ pub fn run_compiler(run_options: RunOptions) -> Result<()> {
             .map_err(|err| new_soul_error(&new_token(), &err.to_string()))?;
     }
 
-    let cpp_file = transpiller_to_cpp(&meta_data, &tree)?;
+    let cpp_file = transpiller_to_cpp(&meta_data, &statment_iter, &tree)?;
     let file_path = "output/out.cpp";
     write(file_path, cpp_file)
         .map_err(|err| new_soul_error(&new_token(), &err.to_string()))?;

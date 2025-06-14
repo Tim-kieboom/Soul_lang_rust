@@ -1,6 +1,6 @@
 use core::fmt;
 use std::ops::Index;
-use crate::{abstract_styntax_tree::abstract_styntax_tree::{IStatment, IVariable}, meta_data::function::function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, tokenizer::token::Token};
+use crate::{abstract_styntax_tree::abstract_styntax_tree::{IStatment, IVariable}, meta_data::{function::function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, scope_and_var::scope::ScopeId}, tokenizer::token::Token};
 
 pub struct StatmentTypeInfo {
     pub statment_types: Vec<StatmentType>, 
@@ -26,7 +26,7 @@ pub enum StatmentType {
     Initialize{is_mutable: bool, is_assigned: bool, var: IVariable},
     FunctionBody{func_info: FunctionDeclaration, end_body_index: usize},
     FunctionCall,
-    Return,
+    Return{begin_body_index: usize},
     Scope{end_body_index: usize},
     If{end_body_index: usize},
     Else{end_body_index: usize},
@@ -39,14 +39,14 @@ impl StatmentType {
     ///this fn is to insure the StatmentType.variants == IStatment.variants
     fn _insure_impl(statment: IStatment) -> StatmentType {
         match statment {
-            IStatment::CloseScope() => StatmentType::CloseScope{begin_body_index: 0},
-            IStatment::EmptyStatment() => StatmentType::EmptyStatment,
+            IStatment::CloseScope(_) => StatmentType::CloseScope{begin_body_index: 0},
+            IStatment::EmptyStatment(_) => StatmentType::EmptyStatment,
             IStatment::Assignment{..} => StatmentType::Assignment,
             IStatment::Initialize{..} => StatmentType::Initialize{is_assigned:false, is_mutable:false, var: IVariable::new_variable("", "", &Token{line_number: 0, line_offset: 0, text: String::new()})},
-            IStatment::FunctionBody{..} => StatmentType::FunctionBody{func_info:FunctionDeclaration::new(String::new(), None, Vec::new(), false, FunctionID(0)), end_body_index: 0},
+            IStatment::FunctionBody{..} => StatmentType::FunctionBody{func_info:FunctionDeclaration::new(String::new(), None, Vec::new(), false, FunctionID(0), ScopeId(0)), end_body_index: 0},
             IStatment::FunctionCall{..} => StatmentType::FunctionCall,
             IStatment::Scope{..} => StatmentType::Scope{end_body_index: 0},
-            IStatment::Return{..} => StatmentType::Return,
+            IStatment::Return{..} => StatmentType::Return{begin_body_index: 0},
             IStatment::If{..} => StatmentType::If{end_body_index: 0},
             IStatment::Else{..} => StatmentType::Else{end_body_index: 0},
             IStatment::ElseIf{..} => StatmentType::ElseIf{end_body_index: 0},
@@ -55,7 +55,7 @@ impl StatmentType {
 
     pub fn set_end_body_index(&mut self, index: usize) {
         match self {
-            StatmentType::Return |
+            StatmentType::Return{..} |
             StatmentType::Assignment |
             StatmentType::FunctionCall |
             StatmentType::EmptyStatment |
@@ -81,7 +81,7 @@ impl fmt::Debug for StatmentType {
             Self::Initialize{..} => write!(f, "Initialize"),
             Self::FunctionBody{..} => write!(f, "FunctionBody"),
             Self::FunctionCall => write!(f, "FunctionCall"),
-            Self::Return => write!(f, "Return"),
+            Self::Return{..} => write!(f, "Return"),
             Self::Scope{..} => write!(f, "Scope"),
             Self::If{..} => write!(f, "If"),
             Self::Else{..} => write!(f, "Else"),

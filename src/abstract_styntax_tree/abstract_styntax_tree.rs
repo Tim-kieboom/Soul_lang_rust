@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use super::operator_type::ExprOperatorType;
-use crate::{meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, meta_data::MetaData, soul_error::soul_error::SoulSpan, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::token::Token};
+use crate::{meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, meta_data::MetaData, scope_and_var::scope::ScopeId, soul_error::soul_error::SoulSpan, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::token::Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IVariable {
@@ -18,13 +18,13 @@ pub enum IExpression {
     DeRef{expression: Box<IExpression>, span: SoulSpan},
     Increment{variable: IVariable, is_before: bool, amount: i8, span: SoulSpan},
     FunctionCall{args: Vec<IExpression>, generic_defines: BTreeMap<String, String>, function_info: Box<FunctionDeclaration>, span: SoulSpan},
-    EmptyExpression(),
+    EmptyExpression(SoulSpan),
 } 
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IStatment {
-    CloseScope(),
-    EmptyStatment(),
+    CloseScope(SoulSpan),
+    EmptyStatment(SoulSpan),
     Assignment{variable: IVariable, assign: IExpression, span: SoulSpan},
     Initialize{variable: IVariable, assignment: /*shouldBe_Assignment*/Option<Box<IStatment>>, span: SoulSpan},
     FunctionBody{func_info: FunctionDeclaration, body: Box<BodyNode>, span: SoulSpan},
@@ -41,6 +41,7 @@ pub struct BodyNode {
     pub statments: Vec<IStatment>,
     pub context: CurrentContext,
     pub delete_list: DeleteList,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +52,8 @@ pub struct AbstractSyntaxTree {
 
 impl BodyNode {
     pub fn new(context: CurrentContext) -> Self {
-        Self { statments: Vec::new(), context, delete_list: DeleteList::new() }
+        let scope_id = context.get_current_scope_id();
+        Self { statments: Vec::new(), context, delete_list: DeleteList::new(), scope_id }
     }
 
     pub fn to_string(&self, pretty_format: bool, tab: usize) -> String {
@@ -76,6 +78,22 @@ impl IStatment {
         self.internal_to_string(pretty_format, 0)
     }
 
+    pub fn get_span(&self) -> &SoulSpan {
+        match self {
+            IStatment::CloseScope(soul_span) => soul_span,
+            IStatment::EmptyStatment(soul_span) => soul_span,
+            IStatment::Assignment{span, ..} => span,
+            IStatment::Initialize{span, ..} => span,
+            IStatment::FunctionBody{span, ..} => span,
+            IStatment::FunctionCall{span, ..} => span,
+            IStatment::Return{span, ..} => span,
+            IStatment::Scope{span, ..} => span,
+            IStatment::If{span, ..} => span,
+            IStatment::Else{span, ..} => span,
+            IStatment::ElseIf{span, ..} => span,
+        }
+    }
+
     fn internal_to_string(&self, pretty_format: bool, tab: usize) -> String {
         fn indent(tab: usize) -> String {
             "\t".repeat(tab)
@@ -91,7 +109,7 @@ impl IStatment {
         };
 
         match self {
-            IStatment::EmptyStatment() => "EmptyStatment()".to_string(),
+            IStatment::EmptyStatment(_) => "EmptyStatment()".to_string(),
             IStatment::Assignment { variable, assign, span: _ } => format!(
                     "Assignment({}{} = {}{})",
                     child_indent,
@@ -120,7 +138,7 @@ impl IStatment {
                     base_indent
                 ),
             IStatment::FunctionCall { this, span: _ } => this.to_string(),
-            IStatment::CloseScope() => "CloseScope()".to_string(),
+            IStatment::CloseScope(_) => "CloseScope()".to_string(),
             IStatment::Scope { body, span: _ } => format!(
                     "Scope({}{}{})",
                     child_indent,
@@ -152,7 +170,7 @@ impl IStatment {
     }
 
     pub fn new_assignment(variable: IVariable, assign: IExpression, token: &Token) -> Self {
-        debug_assert!(!matches!(assign, IExpression::EmptyExpression()));
+        debug_assert!(!matches!(assign, IExpression::EmptyExpression(_)));
         Self::Assignment { variable, assign, span: SoulSpan::from_token(token)}
     }
 
@@ -304,6 +322,20 @@ impl IExpression {
         }
     }
 
+    pub fn get_span(&self) -> &SoulSpan {
+        match self {
+            IExpression::IVariable{span, ..} => span,
+            IExpression::BinairyExpression{span, ..} => span,
+            IExpression::Literal{span, ..} => span,
+            IExpression::ConstRef{span, ..} => span,
+            IExpression::MutRef{span, ..} => span,
+            IExpression::DeRef{span, ..} => span,
+            IExpression::Increment{span, ..} => span,
+            IExpression::FunctionCall{span, ..} => span,
+            IExpression::EmptyExpression(soul_span) => soul_span,
+        }
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             IExpression::IVariable { this, span:_ } => this.to_string(),
@@ -328,7 +360,7 @@ impl IExpression {
                     format!("{}{}", variable.to_string(), symbool)
                 }
             },
-            IExpression::EmptyExpression() => "EmptyExpression()".to_string(),
+            IExpression::EmptyExpression(_) => "EmptyExpression()".to_string(),
             IExpression::FunctionCall { args, generic_defines, function_info, span:_ } => {
                 let mut string_builder = String::new();
                 string_builder.push_str("FunctionCall(");

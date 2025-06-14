@@ -349,7 +349,7 @@ impl SoulType {
             list_type = should_type.clone();
         }
         
-        Ok((list_type, string_builder))
+        Ok((list_type, string_builder[1..string_builder.len()-1].to_owned()))
     }
 
     pub fn try_from_iterator<'a>(
@@ -689,7 +689,7 @@ fn get_literal_array(
     let mut skip_first_token = false;
     let mut has_soul_type = false;
 
-    let mut result_type = SoulType::new("<invalid>".to_string());
+    let mut result_type = SoulType::new(SOUL_NAMES.get_name(NamesInternalType::None).to_string());
     let possible_cast_type = SoulType::from_iterator(iter, type_meta_data, generics);
     if let Ok(mut cast_type) = possible_cast_type {
         
@@ -716,6 +716,10 @@ fn get_literal_array(
     if iter.current().text != ARRAY_START {
         return Err(new_soul_error(iter.current(), format!("Literal array should start with '{}'", ARRAY_START).as_str()));
     }
+
+    if iter.peek().is_some_and(|token| token.text == ARRAY_END) {
+        return Ok((result_type, skip_first_token));
+    } 
 
     *is_literal = true;
 

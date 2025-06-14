@@ -5,7 +5,7 @@ use crate::meta_data::current_context::current_context::{CurrentContext, Defined
 use crate::meta_data::function::argument_info::argument_info::ArgumentInfo;
 use crate::meta_data::meta_data::MetaData;
 use crate::meta_data::{function::function_declaration::function_declaration::FunctionID, meta_data::FunctionStore};
-use crate::tokenizer::token::TokenIterator;
+use crate::tokenizer::token::Token;
 
 use super::var_info::VarInfo;
 
@@ -132,7 +132,7 @@ impl Scope {
     pub fn try_get_function(
         &self,        
         name: &str,
-        iter: &TokenIterator, 
+        token: &Token, 
         meta_data: &MetaData,
         context: &mut CurrentContext, 
         args: &Vec<ArgumentInfo>, 
@@ -162,7 +162,7 @@ impl Scope {
 
             context.current_generics.function_call_defined_generics = Some(function_call_generics);
 
-            let comparable = function.are_arguments_compatible(iter, &args, &optionals, &meta_data.type_meta_data, &mut context.current_generics);
+            let comparable = function.are_arguments_compatible(token, &args, &optionals, &meta_data.type_meta_data, &mut context.current_generics);
             if comparable {
                 return Ok(Some(function.id));
             }

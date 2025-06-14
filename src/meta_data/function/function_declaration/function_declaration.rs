@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use itertools::Itertools;
 
-use crate::{meta_data::{class_info::access_level::{AccesLevel}, current_context::current_context::{CurrentGenerics, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_modifiers::FunctionModifiers}, soul_type::{generic::Generic, soul_type::SoulType}, type_meta_data::{TypeMetaData}}, tokenizer::token::TokenIterator};
+use crate::{meta_data::{class_info::access_level::AccesLevel, current_context::current_context::{CurrentGenerics, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_modifiers::FunctionModifiers}, scope_and_var::scope::ScopeId, soul_type::{generic::Generic, soul_type::SoulType}, type_meta_data::TypeMetaData}, tokenizer::token::Token};
 
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -25,6 +25,7 @@ pub struct FunctionDeclaration {
     pub id: FunctionID,
 
     pub access_level: AccesLevel,
+    pub in_scope_id: ScopeId,
 }
 
 
@@ -45,6 +46,7 @@ impl FunctionDeclaration {
         args: Vec<ArgumentInfo>, 
         is_forward_declared: bool,
         id: FunctionID,
+        in_scope_id: ScopeId,
     ) -> Self {
         let access_level = get_func_names_access_level(&name);
 
@@ -58,6 +60,7 @@ impl FunctionDeclaration {
             is_forward_declared,
             id,
             access_level,
+            in_scope_id,
         }
     }
 
@@ -68,6 +71,7 @@ impl FunctionDeclaration {
         is_forward_declared: bool,
         id: FunctionID,
         optionals: Vec<ArgumentInfo>,
+        in_scope_id: ScopeId,
     ) -> Self {
         let access_level = get_func_names_access_level(&name);
 
@@ -81,6 +85,7 @@ impl FunctionDeclaration {
             is_forward_declared,
             id,
             access_level,
+            in_scope_id,
         }
     }
 
@@ -107,7 +112,7 @@ impl FunctionDeclaration {
 
     pub fn are_arguments_compatible(
         &self, 
-        iter: &TokenIterator,
+        token: &Token,
         other_args: &Vec<ArgumentInfo>,
         other_optionals: &Vec<ArgumentInfo>,
         type_meta_data: &TypeMetaData,
@@ -124,8 +129,8 @@ impl FunctionDeclaration {
 
             let arg = &self.args[other_i];
 
-            self.check_for_implicate_generic(arg, iter, other_arg, type_meta_data, generics);
-            if let Err(_) = arg.are_compatible(iter, other_arg, type_meta_data, generics) {
+            self.check_for_implicate_generic(arg, token, other_arg, type_meta_data, generics);
+            if let Err(_) = arg.are_compatible(token, other_arg, type_meta_data, generics) {
                 return false;
             }
         } 
@@ -133,8 +138,8 @@ impl FunctionDeclaration {
         for other_arg in other_optionals {
             match self.optionals.get(&other_arg.name) {
                 Some(arg) => {
-                    self.check_for_implicate_generic(arg, iter, other_arg, type_meta_data, generics);
-                    if let Err(_) = arg.are_compatible(iter, other_arg, type_meta_data, generics) {
+                    self.check_for_implicate_generic(arg, token, other_arg, type_meta_data, generics);
+                    if let Err(_) = arg.are_compatible(token, other_arg, type_meta_data, generics) {
                         return false;
                     }
                 },
@@ -191,15 +196,15 @@ impl FunctionDeclaration {
     fn check_for_implicate_generic(
         &self, 
         arg: &ArgumentInfo,
-        iter: &TokenIterator,
+        token: &Token,
         other_arg: &ArgumentInfo,
         type_meta_data: &TypeMetaData,
         generics: &mut CurrentGenerics,
     ) {
-        let unchecked_type = SoulType::get_unchecked_from_stringed_type(&arg.value_type, iter.current(), type_meta_data, generics)
+        let unchecked_type = SoulType::get_unchecked_from_stringed_type(&arg.value_type,token, type_meta_data, generics)
             .expect("Internal error: Type not found");
 
-        let arg_type = SoulType::from_stringed_type(&other_arg.value_type, iter.current(), type_meta_data, generics)
+        let arg_type = SoulType::from_stringed_type(&other_arg.value_type, token, type_meta_data, generics)
             .expect("Internal error: Type not found");
 
         if let Some(generic) = self.generics.get(&unchecked_type.name) {

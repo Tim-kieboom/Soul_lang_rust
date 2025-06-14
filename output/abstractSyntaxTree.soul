@@ -1,5 +1,35 @@
+Initialize(
+	Assignment(
+		Variable(const int number) = Literal(Literal untypedInt 1)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(const f32 float) = Literal(const f32 1)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(Literal uint uintNumber) = Literal(Literal uint 1)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(const int[] array) = Literal(Literal untypedInt[] 1,2,3,4)
+	)
+)
 FunctionBody(main(Literal str[] args) int{
 	FunctionBody(sum( int a,  int b) int{
+		FunctionBody(foo( int a) int{
+			Return(Literal(int 0))
+			
+		})
+		
 		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int))
 		
 	})

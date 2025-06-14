@@ -193,12 +193,12 @@ impl MetaData {
             return Ok((MetaData::GLOBAL_SCOPE_ID, global_scope.function_store.from_name(name).unwrap()[0].id));
         }
 
-        if let Some(function_id) = global_scope.try_get_function(name, iter, self, context, args, optionals, &generic_defined)? {
+        if let Some(function_id) = global_scope.try_get_function(name, iter.current(), self, context, args, optionals, &generic_defined)? {
             return Ok((MetaData::GLOBAL_SCOPE_ID, function_id));
         }
 
         loop {
-            if let Some(function_id) = scope.try_get_function(name, iter, self, context, args, optionals, &generic_defined)? {
+            if let Some(function_id) = scope.try_get_function(name, iter.current(), self, context, args, optionals, &generic_defined)? {
                 return Ok((*scope.id(), function_id));
             }
 

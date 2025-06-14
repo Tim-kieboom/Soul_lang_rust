@@ -1,4 +1,4 @@
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::FunctionDeclaration}, meta_data::MetaData, soul_error::soul_error::{pass_soul_error, SoulError}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::FunctionDeclaration}, meta_data::MetaData, soul_error::soul_error::{pass_soul_error, SoulError, SoulSpan}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 use std::{collections::BTreeMap};
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 
@@ -29,7 +29,7 @@ pub fn get_function_call(
         pass_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'", function_name).as_str(), err)
     }
     
-    let mut statment_result = MultiStamentResult::new(IExpression::EmptyExpression());
+    let mut statment_result = MultiStamentResult::new(IExpression::EmptyExpression(SoulSpan::from_token(iter.current())));
     if iter.current().text == "main" {
         return Err(new_soul_error(iter.current(), "can not call 'main' function"));
     }
@@ -198,7 +198,7 @@ fn err_func_call_out_of_bounds(iter: &TokenIterator) -> SoulError {
 }
 
 fn get_argument_expression(arguments: Arguments, function: &FunctionDeclaration) -> Vec<IExpression> {
-    let mut expressions = vec![IExpression::EmptyExpression(); arguments.args.len() + function.optionals.len()];
+    let mut expressions = vec![IExpression::EmptyExpression(SoulSpan{line_number: 0, line_offset: 0}); arguments.args.len() + function.optionals.len()];
 
     for (_, arg) in &function.optionals {
         expressions[arg.arg_position as usize] = arg.default_value.clone().unwrap();

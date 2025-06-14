@@ -27,11 +27,9 @@ impl CppType {
         };
 
         last_part.push_str(cpp_name);
-        last_part.push(' ');
 
         soul_wrappers_to_cpp(&mut last_part, &soul_type.wrappers);
-        last_part.push(' ');
-
+        
         cpp_type.push_str(&last_part);
         Ok(Self(cpp_type))
     }

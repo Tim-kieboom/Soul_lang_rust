@@ -51,7 +51,11 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
     match &iter.current().text {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
             traverse_to_end(iter, &["\n", ";"])?;
-            return Ok(StatmentType::Return);
+            let len = statment_types.len();
+
+            let start_index = *scope_start_index.last().unwrap();
+            statment_types[start_index].set_end_body_index(len);
+            return Ok(StatmentType::Return{begin_body_index: start_index});
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
             traverse_to_end(iter, &["{"])?;

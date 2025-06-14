@@ -1,5 +1,5 @@
 #pragma once
-#include "../soul_cppLibs.h"
+#include "../soul_cppLibs.hpp"
 /*
 -------------- NON RECURSIVE NATURAL_LOG --------------
 

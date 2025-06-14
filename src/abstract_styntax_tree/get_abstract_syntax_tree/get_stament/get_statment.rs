@@ -1,4 +1,4 @@
-use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_body::get_body, meta_data::{soul_error::soul_error::{new_soul_error, Result, SoulError}, soul_names::NamesInternalType}};
+use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_body::get_body, meta_data::{soul_error::soul_error::{new_soul_error, Result, SoulError, SoulSpan}, soul_names::NamesInternalType}};
 use super::statment_type::statment_type::{StatmentIterator, StatmentType};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
@@ -14,8 +14,8 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
     }
     
     match statment_type {
-        StatmentType::CloseScope{..} => Ok(MultiStamentResult::new(IStatment::CloseScope())),
-        StatmentType::EmptyStatment => Ok(MultiStamentResult::new(IStatment::EmptyStatment())),
+        StatmentType::CloseScope{..} => Ok(MultiStamentResult::new(IStatment::CloseScope(SoulSpan::from_token(iter.current())))),
+        StatmentType::EmptyStatment => Ok(MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())))),
         StatmentType::Assignment => {
                 const IS_INITIALIZE: bool = false;
                 let variable = get_variable(iter, context, meta_data)?;
@@ -34,7 +34,7 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
                 result
             },
         StatmentType::Scope{..} => todo!(),
-        StatmentType::Return => get_return(iter, context, meta_data),
+        StatmentType::Return{..} => get_return(iter, context, meta_data),
         StatmentType::If{..} => get_if_statment(iter, statment_iter, context, meta_data),
         StatmentType::Else{..} => get_else_statment(iter, statment_iter, context, meta_data),
         StatmentType::ElseIf{..} => get_else_if_statment(iter, statment_iter, context, meta_data),
@@ -84,7 +84,7 @@ fn get_else_if_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIt
         return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
     }
     
-    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
+    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
     body_result.add_result(&expression_result.result);
     body_result.value = IStatment::new_if(expression_result.result.value, body, &iter[begin_i]);
     
@@ -156,7 +156,7 @@ fn get_if_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterato
         return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
     }
     
-    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment());
+    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
     body_result.add_result(&expression_result.result);
     body_result.value = IStatment::new_if(expression_result.result.value, body, &iter[begin_i]);
     
@@ -204,7 +204,7 @@ fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data:
         return Err(new_soul_error(iter.current(), format!("trying to return with a type: '{}' but can not be converted to function return type: '{}' ", expression_result.is_type.to_string(), return_str).as_str()));
     }
 
-    let mut result = MultiStamentResult::new(IStatment::EmptyStatment());
+    let mut result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
     result.add_result(&expression_result.result);
     result.value = IStatment::new_return(Some(expression_result.result.value), iter.current());
 

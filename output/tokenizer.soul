@@ -1,5 +1,13 @@
+const number = 1 
+Literal gravity = 9.81 
+const f32 float = 1 
+Literal uint uintNumber = 1 
+const array = [ 1 , 2 , 3 , 4 ] 
 main ( Literal str [] args ) int { 
 sum ( int a , int b ) int { 
+foo ( int a ) int { 
+return 0 
+} 
 return a + b 
 } 
 const num = 1 + 2 

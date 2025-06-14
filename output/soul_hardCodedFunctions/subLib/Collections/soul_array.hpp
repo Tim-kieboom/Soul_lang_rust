@@ -87,6 +87,11 @@ public:
     {
     }
 
+    __Soul_ARRAY__(T* buffer, size_t size_) 
+        : offset_(0), rawArray(buffer), size_(size_)
+    {
+    }
+
     constexpr T& operator[](int64_t index) noexcept
     {
         if (index < 0)
@@ -137,7 +142,7 @@ public:
 
     constexpr T& __soul_UNSAFE_at__(uint32_t index) noexcept
     {
-        return *( ((T*)rawArray.get()) + index + offset_ );
+        return *(rawArray + index + offset_ );
     }
 
     uint32_t size() const
@@ -152,22 +157,22 @@ public:
 
     __Soul_ARRAY_Iterator__<T> begin() 
     {
-        return __Soul_ARRAY_Iterator__<T>(rawArray.get() + offset_);
+        return __Soul_ARRAY_Iterator__<T>(rawArray + offset_);
     }
 
     __Soul_ARRAY_Iterator__<T> end()
     {
-        return __Soul_ARRAY_Iterator__<T>(rawArray.get() + size_);
+        return __Soul_ARRAY_Iterator__<T>(rawArray + size_);
     }
 
     __Soul_ARRAY_ConstIterator__<T> begin() const
     {
-        return __Soul_ARRAY_ConstIterator__<T>(rawArray.get() + offset_);
+        return __Soul_ARRAY_ConstIterator__<T>(rawArray + offset_);
     }
 
     __Soul_ARRAY_ConstIterator__<T> end() const
     {
-        return __Soul_ARRAY_ConstIterator__<T>(rawArray.get() + size_);
+        return __Soul_ARRAY_ConstIterator__<T>(rawArray + size_);
     }
 
     __Soul_ARRAY__<T> __soul_makeSpan_fail__(__Soul_Range__&& range) noexcept

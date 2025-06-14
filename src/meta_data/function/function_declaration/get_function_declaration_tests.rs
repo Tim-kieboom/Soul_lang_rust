@@ -47,7 +47,8 @@ fn test_get_function_main() {
         None, 
         vec![], 
         true, 
-        *FIRST_FUNCTION_ID
+        *FIRST_FUNCTION_ID,
+        MetaData::GLOBAL_SCOPE_ID,
     );
 
     assert!(function == should_be,
@@ -64,7 +65,8 @@ fn test_get_function_main() {
         Some(int.to_string()), 
         vec![], 
         true, 
-        *FIRST_FUNCTION_ID
+        *FIRST_FUNCTION_ID,
+        MetaData::GLOBAL_SCOPE_ID,
     );
 
     assert!(function == should_be,
@@ -88,7 +90,8 @@ fn test_get_function_main() {
             )
         ], 
         true, 
-        *FIRST_FUNCTION_ID
+        *FIRST_FUNCTION_ID,
+        MetaData::GLOBAL_SCOPE_ID,
     );
 
     assert!(function == should_be,
@@ -145,6 +148,7 @@ fn test_get_function_default() {
         ], 
         true, 
         *FIRST_FUNCTION_ID,
+        MetaData::GLOBAL_SCOPE_ID,
     );
 
     // sum(i32 one, i32 two) i32 {}
@@ -180,6 +184,7 @@ fn test_get_function_default() {
         ], 
         true, 
         *FIRST_FUNCTION_ID,
+        MetaData::GLOBAL_SCOPE_ID,
     );
 
     function = simple_get_function(&func1);
@@ -212,6 +217,7 @@ fn test_get_function_optional() {
                 0,
             )
         ], 
+        MetaData::GLOBAL_SCOPE_ID,
     );
 
 

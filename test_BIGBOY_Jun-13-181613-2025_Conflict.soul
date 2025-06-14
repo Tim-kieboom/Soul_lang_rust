@@ -7,15 +7,18 @@ const array = [1, 2, 3, 4]
 // wrong() {
 // 	if true {}
 // 	else {}
-//  int[] array2 = []
 // }
 
-main(Literal str[] args) int {
-	sum(int a, int b) int {
-		foo(int a) int {
-			return 0
-		}
+bar(int@ a) int {
+	return 0
+}
 
+foo(str@/*'@' DOESN'T WORK*/ name, int optional = 1) int {
+	return 1
+}
+
+main(str[]@ args) int {
+	sum(int a, int b) int {
 		return a + b
 	}
 
@@ -40,10 +43,14 @@ main(Literal str[] args) int {
 	}
 	 
 	Literal foo = 1 + 1 ** 2
-	Println(foo)
-
 	return 0
 }
+
+
+
+
+
+
 
 
 

@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
-use crate::meta_data::{class_info::access_level::AccesLevel, soul_names::{NamesInternalType, NamesTypeWrapper, NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED, SOUL_NAMES}, soul_type::generic::Generic};
+use crate::meta_data::{class_info::access_level::AccesLevel, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeWrapper, NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED, SOUL_NAMES}, soul_type::generic::Generic};
 
 use super::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, function_modifiers::FunctionModifiers};
 
@@ -37,6 +37,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: "Println".to_string(), 
@@ -55,6 +56,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: "Println".to_string(), 
@@ -66,6 +68,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: "__soul_format_string__".to_string(), 
@@ -86,6 +89,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: "Panic".to_string(), 
@@ -104,6 +108,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: "Panic".to_string(), 
@@ -115,6 +120,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: "__Soul_internal_length__".to_string(), 
@@ -134,6 +140,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: "__Soul_internal_length__".to_string(), 
@@ -152,6 +159,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: SOUL_NAMES.get_name(NamesInternalType::String).to_string(), 
@@ -170,6 +178,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: SOUL_NAMES.get_name(NamesInternalType::String).to_string(), 
@@ -188,6 +197,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
             name: SOUL_NAMES.get_name(NamesInternalType::String).to_string(), 
@@ -206,6 +216,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
     ];
 
@@ -222,6 +233,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         });
     }
 
@@ -244,6 +256,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
                 id: new_function_id(&mut current_id),
                 is_forward_declared: false,
                 access_level: AccesLevel::Public,
+                in_scope_id: MetaData::GLOBAL_SCOPE_ID,
             });
         }
 
@@ -264,6 +277,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         });
 
         functions.push(FunctionDeclaration{
@@ -283,6 +297,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         });
     }
     
@@ -304,6 +319,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         });
     }
 
@@ -325,6 +341,7 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             id: new_function_id(&mut current_id),
             is_forward_declared: false,
             access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         });
     }
     

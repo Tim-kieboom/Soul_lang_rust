@@ -7,7 +7,7 @@ const GLOBAL_SCOPE: i64 = 0;
 static ELSE: Lazy<String> = Lazy::new(|| SOUL_NAMES.get_name(NamesOtherKeyWords::Else).to_string());
 static ELSE_IF: Lazy<String> = Lazy::new(|| format!("{} {}", SOUL_NAMES.get_name(NamesOtherKeyWords::Else), SOUL_NAMES.get_name(NamesOtherKeyWords::If)));
 
-pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut MetaData) -> Result<AbstractSyntaxTree> {
+pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut MetaData) -> Result<(AbstractSyntaxTree, StatmentIterator)> {
     let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
     
     #[cfg(feature="dev_mode")]
@@ -86,7 +86,7 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
         }
     }
     
-    Ok(tree)
+    Ok((tree, statment_iter))
 }
 
 pub fn get_abstract_syntax_tree_line(tree: &mut AbstractSyntaxTree, iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData, statment_info: &mut StatmentTypeInfo) -> Result<()> {
@@ -163,7 +163,7 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
         StatmentType::FunctionBody{..} => (),
         StatmentType::FunctionCall => (),
         StatmentType::Scope{..} => (),
-        StatmentType::Return => {
+        StatmentType::Return{..} => {
                 if is_global_scope(statment_info) {
                     return Err(new_soul_error(iter.current(), "can not return in global scope"));
                 }

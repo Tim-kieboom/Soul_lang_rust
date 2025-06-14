@@ -1,6 +1,7 @@
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 
-use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{current_context::current_context::CurrentGenerics, soul_names::{NamesTypeModifiers, SOUL_NAMES}, soul_type::soul_type::SoulType, type_meta_data::{TypeMetaData}}, tokenizer::token::TokenIterator};
+use crate::tokenizer::token::Token;
+use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, meta_data::{current_context::current_context::CurrentGenerics, soul_names::{NamesTypeModifiers, SOUL_NAMES}, soul_type::soul_type::SoulType, type_meta_data::{TypeMetaData}}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArgumentInfo {
@@ -67,7 +68,7 @@ impl ArgumentInfo {
 
     pub fn are_compatible(
         &self, 
-        iter: &TokenIterator,
+        token: &Token,
         other: &ArgumentInfo,
         type_meta_data: &TypeMetaData,
         generics: &mut CurrentGenerics,
@@ -75,14 +76,14 @@ impl ArgumentInfo {
         
         if self.is_optional() != other.is_optional() {
             return Err(new_soul_error(
-                iter.current(), 
+                token, 
                 format!("argument not compatible because: arg: '{}' and arg: '{}' one is optional and the other is not", self.to_string(), other.to_string()).as_str()
             ));
         }
 
         let other_type = SoulType::from_stringed_type(
             &other.value_type, 
-            iter.current(), 
+            token, 
             type_meta_data, 
             generics,
         )
@@ -91,16 +92,16 @@ impl ArgumentInfo {
         
         let self_type = SoulType::from_stringed_type(
             &self.value_type, 
-            iter.current(), 
+            token, 
             type_meta_data, 
             generics,
         )
             .inspect_err(|err| panic!("Internal Error while trying to run are_compatible self_type from string failed err: {}", err.to_err_message()))
             .unwrap();
 
-        if !other_type.is_convertable(&self_type, iter.current(), type_meta_data, generics) {
+        if !other_type.is_convertable(&self_type, token, type_meta_data, generics) {
             return Err(new_soul_error(
-                iter.current(), 
+                token, 
                 format!("argument not compatible because: arg: '{}' and arg: '{}' have diffrent types", self.to_string(), other.to_string()).as_str())
             ); 
         }

@@ -73,7 +73,7 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
     loop {
         let multi_statment = get_statment(iter, statment_iter, meta_data, &mut body_node.context)?;
         match &multi_statment.value {
-            IStatment::CloseScope() => break,
+            IStatment::CloseScope(_) => break,
             IStatment::Return{..} => has_return = true,
             _ => (),
         }
