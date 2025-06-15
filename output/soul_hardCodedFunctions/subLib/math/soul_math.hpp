@@ -12,3 +12,14 @@ inline double log(double base, double x)
 {
     return std::log(base) / std::log(x);
 }
+
+
+
+
+
+
+
+
+
+
+

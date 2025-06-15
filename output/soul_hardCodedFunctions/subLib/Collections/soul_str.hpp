@@ -21,39 +21,42 @@ __Soul_STR__ __Soul_copy__(__Soul_STR__ other)
     return copyStr;
 }
 
-inline __Soul_STR__ toStr(const char* cppStr) 
+inline __Soul_STR__ str(const char* cppStr) 
 {
     return __Soul_STR__((char*)cppStr, strlen(cppStr));
 }
 
-inline __Soul_STR__ toStr(std::string cppStr) 
+inline __Soul_STR__ str(std::string cppStr) 
 {
-    return __Soul_STR__((char*)cppStr.c_str(), cppStr.length());
+    char* c_str = new char[cppStr.size()];
+    memcpy(c_str, cppStr.c_str(), cppStr.size());
+    return __Soul_STR__(c_str, cppStr.size());
 }
 
-inline __Soul_STR__ toStr(const bool value)
+inline __Soul_STR__ str(const bool value)
 {
     const char* strValue = value ? "true" : "false"; 
-    return toStr(strValue);
+    return str(strValue);
 }
 
-inline __Soul_STR__ toStr(std::stringstream& ss) 
+inline __Soul_STR__ str(std::stringstream& ss) 
 {
     auto string = ss.str();
     return __Soul_STR__((char*)string.c_str(), string.length());
 }
 
-inline __Soul_STR__ toStr(const char value)     { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const float value)    { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const double value)   { return toStr(std::to_string(value)); } 
-inline __Soul_STR__ toStr(const int16_t value)  { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const int32_t value)  { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const int64_t value)  { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const uint32_t value) { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const uint16_t value) { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const uint64_t value) { return toStr(std::to_string(value)); }
-inline __Soul_STR__ toStr(const int8_t value)   { return toStr(std::to_string((int16_t)value)); }
-inline __Soul_STR__ toStr(const uint8_t value)  { return toStr(std::to_string((uint16_t)value)); }
+inline __Soul_STR__ str()                     { return __Soul_ARRAY__<char>(); }
+inline __Soul_STR__ str(const char value)     { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const float value)    { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const double value)   { return str(std::to_string(value)); } 
+inline __Soul_STR__ str(const int16_t value)  { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const int32_t value)  { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const int64_t value)  { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const uint32_t value) { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const uint16_t value) { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const uint64_t value) { return str(std::to_string(value)); }
+inline __Soul_STR__ str(const int8_t value)   { return str(std::to_string((int16_t)value)); }
+inline __Soul_STR__ str(const uint8_t value)  { return str(std::to_string((uint16_t)value)); }
 
 std::ostream& operator<<(std::ostream& os, const __Soul_STR__& str) 
 {
@@ -102,7 +105,7 @@ inline __Soul_STR__ __soul_format_string__(Args&&... args)
 {
     std::stringstream ss;
     __soul__append_to_stream__(ss, std::forward<Args>(args)...);
-    return toStr(ss);
+    return str(ss);
 }
 
 inline const char* __Copy_To_C_Str__(__Soul_STR__& string) {

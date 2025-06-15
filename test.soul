@@ -1,46 +1,33 @@
+const ch = 'a'
 const number = 1
 Literal gravity = 9.81
 const f32 float = 1
 Literal uint uintNumber = 1
 const array = [1, 2, 3, 4]
 
-// wrong() {
-// 	if true {}
-// 	else {}
-//  int[] array2 = []
+wrong() {
+	// if true {}
+	// else {}
+	// int[] array2 = []
+	// mutNum := 1
+	// const d = mutNum + 2
+}
+
+// sum(f32 a, f32 b) int {
+// 	return f32(a) + int(b)
 // }
 
-main(Literal str[] args) int {
-	sum(int a, int b) int {
-		foo(int a) int {
-			return 0
-		}
+// type string typeof str
 
-		return a + b
-	}
+main(str[]@ args) int {
 
-	const num = 1 + 2
-	sec := sum(num, 2)
-	Println(num)
+	i32 num = 1
+	i32@ ref = @num
+	buffer := str()
 
-	if num == 3 {
-		
-		int a = 0
-		if true {
-			a = 1
-		}
-		
-		Println("num == 3")
-	}
-	else if true {
-		Println("true == true")
-	}
-	else {
-		Println("else")
-	}
-	 
-	Literal foo = 1 + 1 ** 2
-	Println(foo)
+	Print("input: ")
+	Input(&buffer)
+	Println(buffer)
 
 	return 0
 }

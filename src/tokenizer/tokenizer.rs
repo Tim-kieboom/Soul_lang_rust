@@ -1,19 +1,26 @@
 use regex::Regex;
+use std::io::BufRead;
 use super::token::Token;
 use once_cell::sync::Lazy;
-use std::io::{BufRead};
-use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 use super::file_line::FileLine;
 use crate::meta_data::meta_data::MetaData;
 use crate::meta_data::soul_names::{SoulNames, SOUL_NAMES};
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
 use super::comment_remover::comment_remover::remove_comment_file;
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 use crate::tokenizer::comment_remover::comment_remover::remove_comment_line;
 use crate::tokenizer::string_tokenizer::format_stringer::{format_str_file, format_str_line};
 use crate::meta_data::soul_type::type_checker::type_checker::get_primitive_type_from_literal;
 use crate::tokenizer::string_tokenizer::string_mapper::{rawstr_to_litstr_file, rawstr_to_litstr_line};
 
-static SPLIT_REGEX: Lazy<Regex> = Lazy::new(||SoulNames::str_vec_to_regex(&SOUL_NAMES.parse_tokens.iter().cloned().filter(|str| str != &".").collect::<Vec<_>>()));
+static SPLIT_REGEX: Lazy<Regex> = Lazy::new(||
+    SoulNames::str_vec_to_regex(
+        &SOUL_NAMES.parse_tokens
+            .iter()
+            .cloned()
+            .filter(|str| str != &".").collect::<Vec<_>>()
+    )
+);
 
 pub struct FileLineResult {
     pub source_file: Vec<FileLine>, 
@@ -116,26 +123,20 @@ fn get_tokens(line: FileLine, tokens: &mut Vec<Token>) -> Result<()> {
     let mut line_offset = 0;
     let mut last_is_forward_slash = false;
 
-    let mut last_was_semicolon = false;
-
     for (i, text) in splits.iter().enumerate() {
         if text.is_empty() || *text == " " || *text == "\t" {
             line_offset += text.len();
             continue;
         }
 
-        if *text == ";" {
-            last_was_semicolon = true;
-        }
-        else if last_was_semicolon && *text == "\n" {
+        if *text == ";" && 
+            !splits.get(i+1).is_some_and(|token| token != &"\n") 
+        {
             return Err(new_soul_error(&Token{
                 text: text.to_string(), 
                 line_number: line.line_number as usize, 
                 line_offset,
             }, "can not end a line on ';'"));
-        }
-        else {
-            last_was_semicolon = false;
         }
 
         if !needs_to_dot_tokenize(text) {

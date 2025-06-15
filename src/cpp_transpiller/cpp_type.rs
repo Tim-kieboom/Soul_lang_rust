@@ -44,9 +44,9 @@ fn soul_wrappers_to_cpp(string_builder: &mut String, wrappers: &Vec<TypeWrappers
     for wrap in wrappers {
         match wrap {
             TypeWrappers::Invalid => panic!("Internal Error in soul_wrappers_to_cpp() type is invalid"),
-            TypeWrappers::ConstRef => string_builder.push_str("&"),
-            TypeWrappers::MutRef => string_builder.push_str("&"),
-            TypeWrappers::Pointer => string_builder.push_str("&"),
+            TypeWrappers::ConstRef => string_builder.push_str(" const*"),
+            TypeWrappers::MutRef => string_builder.push_str("*"),
+            TypeWrappers::Pointer => string_builder.push_str("*"),
             TypeWrappers::Array => *string_builder = format!("__Soul_ARRAY__<{}>", string_builder),
         }
     }

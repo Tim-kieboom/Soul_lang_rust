@@ -5,7 +5,7 @@ use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, 
 
 use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::tokenizer::token::Token;
-use crate::meta_data::meta_data::MetaData;
+use crate::meta_data::meta_data::{MetaData, ProgramMemoryEntry};
 use crate::meta_data::type_store::{ImplOperator, ImplOperators};
 use crate::meta_data::type_meta_data::TypeMetaData;
 use crate::meta_data::soul_type::soul_type::SoulType;
@@ -191,7 +191,7 @@ fn convert_expression(
         prev_token_index = iter.current_index();
 
         if should_convert_to_ref(&ref_stack, stacks) {
-            convert_to_ref(iter, &mut ref_stack, stacks, &meta_data, &mut context.current_generics)?;
+            convert_to_ref(iter, &mut ref_stack, stacks, meta_data, &mut context.current_generics, should_be_type)?;
         }
 
     }
@@ -219,7 +219,7 @@ fn convert_variable(
         return Err(new_soul_error(iter.current(), format!("'{}' can not be used before it is assigned", variable.name).as_str()));
     }
 
-    if is_forward_declared {
+    if !is_forward_declared {
         meta_data.check_variable_valid(&variable.name, &scope_id)
             .map_err(|msg| new_soul_error(iter.current(), format!("while trying to use variable: '{}' in expression\n{}", variable.name, msg).as_str()))?;
     }
@@ -337,13 +337,14 @@ fn convert_to_ref(
     iter: &mut TokenIterator, 
     ref_stack: &mut Vec<String>, 
     stacks: &mut ExpressionStacks, 
-    meta_data: &MetaData, 
+    meta_data: &mut MetaData, 
     generics: &mut CurrentGenerics,
+    should_be_type: &Option<&SoulType>,
 ) -> Result<()> {
     debug_assert!(!ref_stack.is_empty());
 
     while let Some(to_ref) = ref_stack.pop() {
-        let expression = stacks.node_stack.pop().unwrap();
+        let mut expression = stacks.node_stack.pop().unwrap();
         
         let is_double;
         let ref_wrap;
@@ -372,6 +373,32 @@ fn convert_to_ref(
             }
         }
         else {
+            if let IExpression::Literal{value, type_name: _type_name, span} = &expression {
+
+                let type_name = if let Some(should_be) = should_be_type {
+                    &should_be.to_string()
+                }
+                else {
+                    _type_name
+                };
+
+                let token = Token{ text: String::new(), line_number: span.line_number, line_offset: span.line_offset };
+                let mut soul_type = SoulType::from_stringed_type(&type_name, &token, &meta_data.type_meta_data, &generics)?;
+                soul_type.add_modifier(TypeModifiers::Literal)
+                    .map_err(|err| new_soul_error(&token, format!("{}", err).as_str()))?;
+
+                let mem = ProgramMemoryEntry{value: value.clone(), type_name: soul_type.to_string()};
+                
+                expression = IExpression::new_literal(&mem.make_var_name(), &mem.type_name, &token);
+                meta_data.program_memory.insert(mem);
+            }
+            // else if let IExpression::FunctionCall{args, generic_defines, function_info, span} = &expression {
+                
+            // }
+            // else if let IExpression::BinairyExpression{left, operator_type, right, type_name, span} = &expression {
+            
+            // }
+
             refrence = IExpression::new_constref(expression, iter.current());
             if is_double {
                 refrence = IExpression::new_constref(refrence, iter.current());

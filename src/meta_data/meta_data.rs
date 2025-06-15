@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use std::{collections::HashMap, result, sync::{Arc, Mutex}};
+use std::{collections::{HashMap, HashSet}, result, sync::{Arc, Mutex}};
 use crate::{meta_data::borrow_checker::borrow_checker::{BorrowId, BorrowResult}, tokenizer::token::TokenIterator};
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::INTERNAL_FUNCTIONS}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
@@ -82,10 +82,22 @@ impl FunctionStore {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ProgramMemoryEntry {
+    pub value: String,
+    pub type_name: String,
+}
+impl ProgramMemoryEntry {
+    pub fn make_var_name(&self) -> String {
+        format!("__programMemory_{}_{}", self.type_name.replace(" ", "_"), self.value.replace(",", "_"))
+    }
+}
+
 pub struct MetaData {
     pub type_meta_data: TypeMetaData,
     pub scope_store: HashMap<ScopeId, Scope>,
     pub borrow_checker: Arc<Mutex<BorrowChecker>>,
+    pub program_memory: HashSet<ProgramMemoryEntry>,
 }
 
 const GLOBAL_SCOPE_ID: ScopeId = ScopeId(0);
@@ -101,6 +113,7 @@ impl MetaData {
             type_meta_data: TypeMetaData::new(), 
             scope_store: new_scope_store(),
             borrow_checker: borrow_checker,
+            program_memory: HashSet::new(),
         };
 
         this

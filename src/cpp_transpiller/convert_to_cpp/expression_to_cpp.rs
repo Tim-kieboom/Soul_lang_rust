@@ -114,14 +114,14 @@ fn deref_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &Me
 }
 
 fn ref_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
-    let (expression, _) = match expression {
+    let (inner, _) = match expression {
         IExpression::ConstRef{ expression, span } => (expression, span),
         IExpression::MutRef{ expression, span } => (expression, span),
         _ => return Err(new_soul_error(&token_from_span(expression.get_span()), "Internal error ref_to_cpp() called while statment is not MutRef or ConstRef")),
     };
 
     writer.push('&');
-    expression_to_cpp(writer, expression, meta_data, context, in_scope_id)?;
+    expression_to_cpp(writer, inner, meta_data, context, in_scope_id)?;
     Ok(())
 }
 

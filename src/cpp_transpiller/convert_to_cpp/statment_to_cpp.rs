@@ -201,7 +201,7 @@ fn function_body_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator
     writer.push_str(" {\n");
     if func_info.name == "main" && !func_info.args.is_empty() {
         let arg_name = &func_info.args[0].name;
-        writer.push_str(format!("auto __var_args = __Soul_ARRAY__<__Soul_ARRAY__<char>>(__SOUL_C_argsc);\nfor(int i = 0; i < __SOUL_C_argsc; i++){}\n\t__var_args[i] = toStr((const char*)__SOUL_C_argsv[i]);\n{}\nauto& {} = __var_args;", '{', '}', arg_name).as_str());
+        writer.push_str(format!("auto __var_args = __Soul_ARRAY__<__Soul_ARRAY__<char>>(__SOUL_C_argsc);\nfor(int i = 0; i < __SOUL_C_argsc; i++){}\n\t__var_args[i] = str((const char*)__SOUL_C_argsv[i]);\n{}\nauto const* {} = &__var_args;\n", '{', '}', arg_name).as_str());
     }
 
     for statment in body.statments.iter().filter(|stat| !matches!(stat, IStatment::FunctionBody{..})) {

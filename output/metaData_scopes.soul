@@ -1,12 +1,11 @@
 id: 0 (
 	functions:(
-		main(Literal str[] args) int
+		main(str[]@ args) int
 	),
 	vars: (
 		Literal str __Soul_c_str_0__,
-		Literal str __Soul_c_str_1__,
-		Literal str __Soul_c_str_2__,
 		const int[] array,
+		const char ch,
 		const f32 float,
 		Literal f32 gravity,
 		const int number,
@@ -15,61 +14,12 @@ id: 0 (
 ),
 id: 1 (
 	functions:(
-		sum( int a,  int b) int
-	),
-	vars: (
-		Literal str[] args,
-		Literal int foo,
-		const int num,
-		int sec
-	),
-),
-id: 2 (
-	functions:(
-		foo( int a) int
-	),
-	vars: (
-		const int a,
-		const int b
-	),
-),
-id: 3 (
-	functions:(
 		
 	),
 	vars: (
-		const int a
-	),
-),
-id: 4 (
-	functions:(
-		
-	),
-	vars: (
-		int a
-	),
-),
-id: 5 (
-	functions:(
-		
-	),
-	vars: (
-		
-	),
-),
-id: 6 (
-	functions:(
-		
-	),
-	vars: (
-		
-	),
-),
-id: 7 (
-	functions:(
-		
-	),
-	vars: (
-		
+		str[]@ args,
+		str buffer,
+		i32 num,
+		i32@ ref
 	),
 ),

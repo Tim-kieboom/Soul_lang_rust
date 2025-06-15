@@ -1,32 +1,17 @@
+const ch = 'a' 
 const number = 1 
 Literal gravity = 9.81 
 const f32 float = 1 
 Literal uint uintNumber = 1 
 const array = [ 1 , 2 , 3 , 4 ] 
-main ( Literal str [] args ) int { 
-sum ( int a , int b ) int { 
-foo ( int a ) int { 
-return 0 
+wrong ( ) { 
 } 
-return a + b 
-} 
-const num = 1 + 2 
-sec := sum ( num , 2 ) 
-Println ( num ) 
-if num == 3 { 
-int a = 0 
-if true { 
-a = 1 
-} 
-Println ( __Soul_c_str_0__ ) 
-} 
-else if true { 
-Println ( __Soul_c_str_1__ ) 
-} 
-else { 
-Println ( __Soul_c_str_2__ ) 
-} 
-Literal foo = 1 + 1 ** 2 
-Println ( foo ) 
+main ( str [] @ args ) int { 
+i32 num = 1 
+i32 @ ref = @ num 
+buffer := str ( ) 
+Print ( __Soul_c_str_0__ ) 
+Input ( & buffer ) 
+Println ( buffer ) 
 return 0 
 } 

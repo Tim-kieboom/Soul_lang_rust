@@ -9,7 +9,7 @@ pub fn get_primitive_type_from_literal(literal: &str) -> PrimitiveType {
     let number_type = get_number_from_literal(literal);
 
     let is_bool = literal == "true" || literal == "false";
-    let is_char = literal.len() > 2 && literal.chars().nth(0).unwrap() == '\'' && literal.chars().nth_back(1).unwrap() == '\'';
+    let is_char = literal.len() > 2 && literal.chars().nth(0).unwrap() == '\'' && literal.chars().last().unwrap() == '\'';
     let is_number = number_type != PrimitiveType::Invalid;
 
     if is_bool {

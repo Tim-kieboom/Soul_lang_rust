@@ -5,12 +5,12 @@ use once_cell::sync::Lazy;
 use super::function_declaration::{get_func_names_access_level, FunctionDeclaration};
 use crate::{meta_data::{current_context::{current_context::CurrentContext, rulesets::RuleSet}, function::{argument_info::{argument_info::ArgumentInfo, get_arguments::get_arguments}, function_modifiers::FunctionModifiers}, meta_data::MetaData, soul_names::{check_name, NamesInternalType, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::token::TokenIterator};
 
-static LITERAL_STR_ARRAY_STRING: Lazy<String> = Lazy::new(||
+static CONST_REF_STR_ARRAY_STRING: Lazy<String> = Lazy::new(||
     SoulType::from(
-            SOUL_NAMES.get_name(NamesInternalType::String).to_string(), 
-            vec![TypeWrappers::Array],
-            TypeModifiers::Literal,
-            vec![],
+        SOUL_NAMES.get_name(NamesInternalType::String).to_string(), 
+        vec![TypeWrappers::Array, TypeWrappers::ConstRef],
+        TypeModifiers::Default,
+        vec![],
     ).to_string()
 );
 
@@ -181,11 +181,11 @@ fn internal_function_declaration(
             return Ok(function);
         }
         else if function.args.len() > 1 {
-            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", LITERAL_STR_ARRAY_STRING.as_str()).as_str()));
+            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", CONST_REF_STR_ARRAY_STRING.as_str()).as_str()));
         }
         
-        if function.args[0].value_type != LITERAL_STR_ARRAY_STRING.as_str() {
-            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", LITERAL_STR_ARRAY_STRING.as_str()).as_str()));
+        if function.args[0].value_type != CONST_REF_STR_ARRAY_STRING.as_str() {
+            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", CONST_REF_STR_ARRAY_STRING.as_str()).as_str()));
         }
     }
 
