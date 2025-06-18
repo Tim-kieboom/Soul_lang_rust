@@ -1,7 +1,28 @@
-- impl borrow-checker
-- impl type traits
-- get_abstract_syntax_tree
-    - finish get_expression / test
+- fix 
+    - fix empty array bug 
+    - const T + T (impl autoCopy operator)
+- impl traits and operators
+- impl borrowCheck rules and autoCopy
+- impl extensionMethodes
+- impl type
+- impl struct
+- impl subfile system
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

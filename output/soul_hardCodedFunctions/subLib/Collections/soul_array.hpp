@@ -1,5 +1,26 @@
 #pragma once
-#include "soul_Range.hpp"
+#include "soul_copy.hpp"
+#include "../soul_panic.hpp"
+
+
+template<typename T>
+struct __Soul_ARRAY__;
+namespace __lib_soul_array_priv {
+    // Primary template: for non-template types
+    template<typename T>
+    struct add_const_recursive {
+        using type = std::add_const_t<T>;
+    };
+
+    // Specialization for __Soul_ARRAY__ types
+    template<typename T>
+    struct add_const_recursive<__Soul_ARRAY__<T>> {
+        using type = __Soul_ARRAY__<typename add_const_recursive<T>::type> const;
+    };
+
+    template<typename T>
+    using add_const_recursive_t = typename add_const_recursive<T>::type;
+}
 
 template<typename T>
 class __Soul_ARRAY_Iterator__
@@ -14,16 +35,17 @@ public:
     typedef T* pointer;
     typedef T& reference;
 
-    __Soul_ARRAY_Iterator__(T* ptr) 
+    constexpr __Soul_ARRAY_Iterator__(T* ptr) noexcept
         : ptr(ptr)
     {
     }
 
-    T& operator*() { return *ptr; }
+    constexpr T& operator*() noexcept { return *ptr; }
+    constexpr T* operator->() noexcept { return ptr; }
     __Soul_ARRAY_Iterator__& operator++() { ++ptr; return *this; }
     __Soul_ARRAY_Iterator__ operator++(int) { __Soul_ARRAY_Iterator__ tmp = *this; ++ptr; return tmp; }
-    bool operator!=(const __Soul_ARRAY_Iterator__& other) const { return ptr != other.ptr; }
-    bool operator==(const __Soul_ARRAY_Iterator__& other) const { return ptr == other.ptr; }
+    constexpr bool operator!=(const __Soul_ARRAY_Iterator__& other) const noexcept { return ptr != other.ptr; }
+    constexpr bool operator==(const __Soul_ARRAY_Iterator__& other) const noexcept { return ptr == other.ptr; }
 };
 
 template<typename T>
@@ -39,243 +61,119 @@ public:
     typedef const T* pointer;
     typedef const T& reference;
 
-    __Soul_ARRAY_ConstIterator__(const T* ptr)
+    constexpr __Soul_ARRAY_ConstIterator__(const T* ptr) noexcept
         : ptr(ptr)
     {
     }
 
-    const T& operator*() const { return *ptr; }
-    const T* operator->() const { return ptr; }
+    constexpr const T& operator*() const noexcept { return *ptr; }
+    constexpr const T* operator->() const noexcept { return ptr; }
     __Soul_ARRAY_ConstIterator__& operator++() { ++ptr; return *this; }
     __Soul_ARRAY_ConstIterator__ operator++(int) { __Soul_ARRAY_ConstIterator__ tmp = *this; ++ptr; return tmp; }
-    bool operator!=(const __Soul_ARRAY_ConstIterator__& other) const { return ptr != other.ptr; }
-    bool operator==(const __Soul_ARRAY_ConstIterator__& other) const { return ptr == other.ptr; }
-};
+    constexpr bool operator!=(const __Soul_ARRAY_ConstIterator__& other) const noexcept { return ptr != other.ptr; }
+    constexpr bool operator==(const __Soul_ARRAY_ConstIterator__& other) const noexcept { return ptr == other.ptr; }
+}; 
 
 template <typename T>
-class __Soul_ARRAY__
+struct __Soul_ARRAY__
 {
-private:
-    T* rawArray;
-    uint32_t offset_ = 0;
-    uint32_t size_ = 0;
+    /// if array is span then __f_spanPtr = __f_spanPtr + offset so can not be used for delete so use this ptr
+    T* __f_OGPtr = nullptr;
+    /// is arrayPtr + offset
+    T* __f_spanPtr = nullptr;
+    size_t __f_size = 0;
 
-public:
-
-    __Soul_ARRAY__() = default;
-    ~__Soul_ARRAY__() = default;
-
-    __Soul_ARRAY__(std::initializer_list<T> initList)
-        : offset_(0), size_(initList.size())
+    __Soul_ARRAY__(size_t size): __f_size(size) 
     {
-        rawArray = new T[size_];
-
-        uint32_t i = 0;
-        for (const T& el : initList)
-            rawArray[i++] = el;
+        __f_OGPtr = __f_spanPtr = new T[__f_size];
     }
 
-    __Soul_ARRAY__(uint32_t size_)
-        : offset_(0), size_(size_)
+    constexpr __Soul_ARRAY__() = default;
+    constexpr __Soul_ARRAY__(T* ptr, size_t size)
+        : __f_OGPtr(ptr), __f_spanPtr(ptr), __f_size(size) {}
+
+    constexpr __Soul_ARRAY__(T* OGptr, T* spanPtr, size_t size)
+        : __f_OGPtr(OGptr), __f_spanPtr(spanPtr), __f_size(size) {}
+
+    constexpr size_t __size() const noexcept
     {
-        if(size_ != 0)
-            rawArray = new T[size_];
+        return __f_size;
     }
 
-    __Soul_ARRAY__(__Soul_ARRAY__<T>* other, uint32_t start, uint32_t end)
-        : rawArray(other->rawArray), offset_(start), size_(end)
+    constexpr size_t __offset() const noexcept
     {
+        return (size_t)(__f_spanPtr - __f_OGPtr);
     }
 
-    __Soul_ARRAY__(T* buffer, size_t size_) 
-        : offset_(0), rawArray(buffer), size_(size_)
+    __Soul_ARRAY__<T> __clone() 
     {
+        T* arr = new T[__f_size];
+        std::copy(__f_spanPtr, __f_spanPtr + __f_size, arr);
+        return __Soul_ARRAY__(arr, __f_size);
     }
 
-    constexpr T& operator[](int64_t index) noexcept
+    constexpr T __get(size_t index) const noexcept 
+    {   
+        return __f_spanPtr[index];
+    }
+
+    constexpr T const* __get_constRef(size_t index) const noexcept
+    {   
+        return &__f_spanPtr[index];
+    }
+
+    constexpr T* __get_mutRef(size_t index) const noexcept
     {
-        if (index < 0)
-            index = index + size_;
+        return &__f_spanPtr[index];
+    }
 
-        index += offset_;
+    constexpr __Soul_ARRAY__<T> __new_span(size_t start, size_t end) const noexcept 
+    {
+        return __Soul_ARRAY__<T>{__f_OGPtr, __f_spanPtr+start, end - start};
+    }
+    
+    using AsConst = __lib_soul_array_priv::add_const_recursive_t<__Soul_ARRAY__<T>>;
 
-        if (index >= size_ || index < 0)
-        {
-            printf("!!ERROR!! index out of range\n");
-            exit(1);
+    void __free() {
+        if(__f_OGPtr != nullptr) {
+            delete[] __f_OGPtr;
         }
-
-        return rawArray[(uint32_t)index];
     }
 
-    __Soul_ARRAY__ operator+(__Soul_ARRAY__<T>& other)
-    {
-        int64_t thisSize = (this->size_ - this->offset_);
-        int64_t otherSize = (other.size_ - other.offset_);
-        int64_t newSize = thisSize + otherSize;
-        if(newSize <= 0)
-            return __Soul_ARRAY__();
-        
-        __Soul_ARRAY__ newStr(newSize);
-        for(int64_t i = 0; i < thisSize; i++)
-            newStr.__soul_UNSAFE_at__(i) = this->__soul_UNSAFE_at__(i);
-
-        for(int64_t i = 0; i < otherSize; i++)
-            newStr.__soul_UNSAFE_at__(i + thisSize) = other.__soul_UNSAFE_at__(i);
-
-        return newStr;
+    template <
+        typename U = T,
+        typename NonConstT = typename std::remove_const<U>::type,
+        typename std::enable_if<
+            std::is_const<U>::value && !std::is_same<U, NonConstT>::value,
+            int
+        >::type = 0
+    >
+    operator __Soul_ARRAY__<NonConstT>() const {
+        NonConstT* arr = new NonConstT[__f_size];
+        for (size_t i = 0; i < __f_size; ++i)
+            arr[i] = __f_spanPtr[i];
+        return __Soul_ARRAY__<NonConstT>(arr, __f_size);
     }
 
-    bool operator==(__Soul_ARRAY__<T>& other)
-    {
-        if((int64_t)(this->size_) - this->offset_ != (int64_t)(other.size_) - other.offset_)
-            return false;
+    using iterator = __Soul_ARRAY_Iterator__<T>;
+    using const_iterator = __Soul_ARRAY_ConstIterator__<T>;
 
-        for(uint32_t i = 0; i < this->size_; i++)
-        {    
-            if(this->__soul_UNSAFE_at__(i) != other.__soul_UNSAFE_at__(i))
-                return false;
-        }
+    constexpr iterator __begin() { return iterator(__f_spanPtr); }
+    constexpr iterator __end() { return iterator(__f_spanPtr + __f_size); }
 
-        return true;
-    }
-
-    constexpr T& __soul_UNSAFE_at__(uint32_t index) noexcept
-    {
-        return *(rawArray + index + offset_ );
-    }
-
-    uint32_t size() const
-    {
-        return size_;
-    }
-
-    uint32_t offset() const
-    {
-        return offset_;
-    }
-
-    __Soul_ARRAY_Iterator__<T> begin() 
-    {
-        return __Soul_ARRAY_Iterator__<T>(rawArray + offset_);
-    }
-
-    __Soul_ARRAY_Iterator__<T> end()
-    {
-        return __Soul_ARRAY_Iterator__<T>(rawArray + size_);
-    }
-
-    __Soul_ARRAY_ConstIterator__<T> begin() const
-    {
-        return __Soul_ARRAY_ConstIterator__<T>(rawArray + offset_);
-    }
-
-    __Soul_ARRAY_ConstIterator__<T> end() const
-    {
-        return __Soul_ARRAY_ConstIterator__<T>(rawArray + size_);
-    }
-
-    __Soul_ARRAY__<T> __soul_makeSpan_fail__(__Soul_Range__&& range) noexcept
-    {
-        switch(range.type)
-        {
-            case __Soul_Range__::RangeType::START:
-                return __soul_makeSpan_fail_start__(range.start);
-
-            case __Soul_Range__::RangeType::END:
-                return __soul_makeSpan_fail_end__(range.end);
-
-            default:
-            case __Soul_Range__::RangeType::START_END:
-                return __soul_makeSpan_fail_start_end__(range);
-        };
-    }
-
-private:
-    __Soul_ARRAY__<T> __soul_makeSpan_fail_start_end__(__Soul_Range__& range) noexcept
-    {
-        auto& start = range.start;
-        auto& end = range.end;
-
-        if (start < 0)
-            start = start + size_;
-
-        if (end < 0)
-            end = end + size_;
-
-        start += offset_;
-        end += offset_ + 1;
-
-        if (end < start)
-        {
-            printf("!!ERROR!! (start < end) while making arraySpan\n");
-            exit(1);
-        }
-
-        return __Soul_ARRAY__<T>(this, start, end);
-    }
-
-    __Soul_ARRAY__<T> __soul_makeSpan_fail_start__(int64_t start) noexcept
-    {
-        if (start < 0)
-            start = start + size_;
-
-        start += offset_;
-
-        if (size_ < start)
-        {
-            printf("!!ERROR!! (start < end) while making arraySpan\n");
-            exit(1);
-        }
-
-        return __Soul_ARRAY__<T>(this, start, size_);
-    }
-
-    __Soul_ARRAY__<T> __soul_makeSpan_fail_end__(int64_t end) noexcept
-    {
-        if (end < 0)
-            end = end + size_;
-
-        end += offset_ + 1;
-
-        if (end < offset_)
-        {
-            printf("!!ERROR!! (start < end) while making arraySpan\n");
-            exit(1);
-        }
-
-        return __Soul_ARRAY__<T>(this, offset_, end);
-    }
+    constexpr const_iterator __cbegin() const { return const_iterator(__f_spanPtr); }
+    constexpr const_iterator __cend() const { return const_iterator(__f_spanPtr + __f_size); }
 };
 
-template <typename T>
-inline uint64_t len(const __Soul_ARRAY__<T>& arr) 
-{
-    return arr.size(); 
-}
+constexpr size_t __stack_array_size(void const*) { return 0; }
 
-template <typename T, typename = void>
-inline T __Soul_copy__(T other) { return other; }
+template<typename T, size_t N>
+constexpr size_t __stack_array_size(const T (&)[N]) { return N; }
 
-template <typename K>
-inline __Soul_ARRAY__<K> __Soul_copy__(const __Soul_ARRAY__<K>& other)
-{
-    __Soul_ARRAY__<K> copyArray(other.size());
-    uint32_t i = 0;
-    for(const K& el : other)
-        copyArray.__soul_UNSAFE_at__(i++) = __Soul_copy__(el);
 
-    return copyArray;
-}
+#define __Soul_ARRAY_LiteralCtor__(elType, progmem) __Soul_ARRAY__<elType>::AsConst{progmem, (progmem == nullptr) ? 0 : __stack_array_size(progmem)}
 
-template <typename K>
-inline __Soul_ARRAY__<K> __Soul_copy__(__Soul_ARRAY__<K>& other, uint32_t capacity)
-{
-    __Soul_ARRAY__<K> copyArray(capacity);
 
-    int32_t size = (capacity <  other.size()) ? capacity : other.size();
-    for(uint32_t i = 0; i < size; i++)
-        copyArray.__soul_UNSAFE_at__(i) = __Soul_copy__(other.__soul_UNSAFE_at__(i));
 
-    return copyArray;
-}
+
+

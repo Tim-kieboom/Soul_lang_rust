@@ -1,5 +1,6 @@
 #pragma once
 #include "soul_CompileConst_math.hpp"	
+#include "soul_prim_cast.hpp"	
 
 #define constSqrt __Soul_CompileConst_math__::sqrt
 
@@ -12,14 +13,3 @@ inline double log(double base, double x)
 {
     return std::log(base) / std::log(x);
 }
-
-
-
-
-
-
-
-
-
-
-

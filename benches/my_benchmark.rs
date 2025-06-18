@@ -94,6 +94,7 @@ fn bench_hello_world_compiled(c: &mut Criterion) {
 				show_outputs: ShowOutputs::SHOW_NONE,
 				show_times: ShowTimes::SHOW_NONE,
 				is_garbage_collected: false,
+				pretty_cpp_code: false
 			})
 			.expect("error in compiler while running bench tests")
 		)

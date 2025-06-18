@@ -1,14 +1,17 @@
-const ch = 'a'
-const number = 1
-Literal gravity = 9.81
-const f32 float = 1
-Literal uint uintNumber = 1
+// const ch = 'a'
+// const number = 1
+// Literal gravity = 9.81
+// const f32 float = 1
+// Literal uint uintNumber = 1
+
 const array = [1, 2, 3, 4]
+const strarray = ["ello", "hoiu", "werg", "werg"]
 
 wrong() {
 	// if true {}
+	// else if false {}
 	// else {}
-	// int[] array2 = []
+	int[] array2 = []
 	// mutNum := 1
 	// const d = mutNum + 2
 }
@@ -20,14 +23,18 @@ wrong() {
 // type string typeof str
 
 main(str[]@ args) int {
+	
+	Println(args)
 
-	i32 num = 1
+	f := @1
+	num := i32(1)
 	i32@ ref = @num
 	buffer := str()
+	str@ refstr = @buffer
 
-	Print("input: ")
+	Print("foo ")
 	Input(&buffer)
-	Println(buffer)
+	Println(@buffer)
 
 	return 0
 }

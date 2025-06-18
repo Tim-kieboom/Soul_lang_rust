@@ -1,25 +1,35 @@
 id: 0 (
 	functions:(
-		main(str[]@ args) int
+		main(str[]@ args) int, 
+		wrong()
 	),
 	vars: (
 		Literal str __Soul_c_str_0__,
+		Literal str __Soul_c_str_1__,
+		Literal str __Soul_c_str_2__,
+		Literal str __Soul_c_str_3__,
 		const int[] array,
-		const char ch,
-		const f32 float,
-		Literal f32 gravity,
-		const int number,
-		Literal uint uintNumber
+		const str[] strarray
 	),
 ),
 id: 1 (
+	functions:(
+		main(str[]@ args) int
+	),
+	vars: (
+		int[] array2
+	),
+),
+id: 2 (
 	functions:(
 		
 	),
 	vars: (
 		str[]@ args,
 		str buffer,
+		int@ f,
 		i32 num,
-		i32@ ref
+		i32@ ref,
+		str@ refstr
 	),
 ),

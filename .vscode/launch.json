@@ -25,7 +25,8 @@
                 "run", 
                 "test.soul",
                 "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL"
+                "-showTime=SHOW_ALL",
+                "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -51,7 +52,8 @@
                 "test.soul",
                 "-isInterpreted",
                 "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL"
+                "-showTime=SHOW_ALL",
+                "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -76,7 +78,8 @@
                 "run", 
                 "test.soul",
                 "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL"
+                "-showTime=SHOW_ALL",
+                "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
@@ -105,7 +108,8 @@
                 "run", 
                 "test.soul",
                 "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL"
+                "-showTime=SHOW_ALL",
+                "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
         },
