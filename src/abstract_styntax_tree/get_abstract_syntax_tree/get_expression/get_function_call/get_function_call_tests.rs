@@ -27,7 +27,7 @@ fn try_simple_get_function_call(line: &str, meta_data: &mut MetaData, context: &
 
     println!("{:?}", iter.get_tokens_text().iter().enumerate().map(|(i, el)| (i, el)).collect::<Vec<_>>());
 
-    get_function_call(&mut iter, meta_data, context)
+    get_function_call(&mut iter, meta_data, context, false)
 }
 
 fn simple_get_function_call(line: &str, meta_data: &mut MetaData, context: &mut CurrentContext) -> MultiStamentResult<IExpression> {

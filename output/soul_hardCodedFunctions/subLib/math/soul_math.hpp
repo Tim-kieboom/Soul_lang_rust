@@ -1,6 +1,6 @@
 #pragma once
 #include "soul_CompileConst_math.hpp"	
-#include "soul_prim_cast.hpp"	
+#include "../soul_primitive_types.hpp"	
 
 #define constSqrt __Soul_CompileConst_math__::sqrt
 

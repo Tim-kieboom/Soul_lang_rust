@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use itertools::Itertools;
 
-use crate::{meta_data::{class_info::access_level::AccesLevel, current_context::current_context::{CurrentGenerics, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_modifiers::FunctionModifiers}, scope_and_var::scope::ScopeId, soul_type::{generic::Generic, soul_type::SoulType}, type_meta_data::TypeMetaData}, tokenizer::token::Token};
+use crate::{meta_data::{class_info::access_level::AccesLevel, current_context::current_context::{CurrentGenerics, DefinedGenric}, function::{argument_info::argument_info::ArgumentInfo, function_modifiers::FunctionModifiers}, scope_and_var::scope::ScopeId, soul_type::{generic::{Generic}, soul_type::SoulType, type_wrappers::TypeWrappers}, type_meta_data::TypeMetaData}, tokenizer::token::Token};
 
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -61,6 +61,21 @@ impl FunctionDeclaration {
             id,
             access_level,
             in_scope_id,
+        }
+    }
+
+    pub fn new_empty() -> Self {
+        Self { 
+            name: String::new(), 
+            return_type: None, 
+            args: Vec::new(), 
+            optionals: BTreeMap::new(), 
+            generics: BTreeMap::new(), 
+            modifiers: FunctionModifiers::Default, 
+            is_forward_declared: true, 
+            id: FunctionID(0), 
+            access_level: AccesLevel::Private, 
+            in_scope_id: ScopeId(0) 
         }
     }
 
@@ -210,9 +225,7 @@ impl FunctionDeclaration {
         if let Some(generic) = self.generics.get(&unchecked_type.name) {
 
             if !generics.is_function_call_defined_generic(&unchecked_type.name) {
-                let define_wrappers = unchecked_type.wrappers.into_iter()
-                    .filter(|w| !arg_type.wrappers.contains(w))
-                    .collect::<Vec<_>>();
+                let define_wrappers = get_delta_wrappers(&unchecked_type.wrappers, &arg_type.wrappers);
                 
                 let define_modifiers = unchecked_type.modifiers ^ arg_type.modifiers;
                 
@@ -226,6 +239,7 @@ impl FunctionDeclaration {
                     generic: generic.clone()
                 };
 
+
                 generics.function_call_defined_generics
                     .get_or_insert(BTreeMap::new())
                     .insert(unchecked_type.name, genric_define);
@@ -236,7 +250,26 @@ impl FunctionDeclaration {
 
 }
 
+fn get_delta_wrappers(wrappers1: &Vec<TypeWrappers>, warppers2: &Vec<TypeWrappers>) -> Vec<TypeWrappers> {
+    let mut arg_counts = HashMap::new();
+    for wrap in wrappers1 {
+        *arg_counts.entry(wrap).or_insert(0) += 1;
+    }
 
+    let mut result = Vec::new();
+    for wrap in warppers2 {
+
+        let count = arg_counts.entry(wrap).or_default();
+        if *count == 0 {
+            result.push(wrap.clone());
+        } 
+        else {
+            *count -= 1;
+        }
+    }
+
+    result
+}
 
 
 

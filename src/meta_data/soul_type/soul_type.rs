@@ -73,6 +73,10 @@ impl SoulType {
         self.modifiers = TypeModifiers::Default;
     }
 
+    pub fn is_none_type(&self) -> bool {
+        self.name == SOUL_NAMES.get_name(NamesInternalType::None)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.name.is_empty() && 
         self.wrappers.is_empty() && 
@@ -94,9 +98,16 @@ impl SoulType {
             return Some(self.clone());
         } 
         else if generics.function_call_defined_generics.as_ref().is_some_and(|store| store.contains_key(&self.name)) {
-            let define = generics.function_call_defined_generics.as_ref().unwrap().get(&self.name).unwrap();   
-            let defined_type = SoulType::from_stringed_type(&define.define_type.clone(), token, type_meta_data, generics)
+            let define = generics.function_call_defined_generics
+                .as_ref()?
+                .get(&self.name)?;
+
+            let mut defined_type = SoulType::from_stringed_type(&define.define_type.clone(), token, type_meta_data, generics)
                 .ok()?;
+
+            defined_type.wrappers.extend_from_slice(self.wrappers.as_slice());
+            defined_type.modifiers |= self.modifiers;
+
 
             return defined_type.convert_typedef_to_original(token, type_meta_data, generics);
         }
@@ -105,12 +116,15 @@ impl SoulType {
         let possible_typedef = type_meta_data.type_store.typedef_store.get(id);
         
         if let Some(typedef) = possible_typedef {
-            let type_result = SoulType::from_stringed_type(&typedef.from_stringed, token, type_meta_data, generics);
-            if let Err(_) = type_result {
-                return None;
-            }
+            let mut type_result = match SoulType::from_stringed_type(&typedef.from_stringed, token, type_meta_data, generics) {
+                Ok(val) => val,
+                Err(_) => return None,
+            };
 
-            Some(type_result.unwrap())
+            type_result.wrappers.extend_from_slice(self.wrappers.as_slice());
+            type_result.modifiers |= self.modifiers;
+
+            Some(type_result)
         } 
         else {
             Some(self.clone())
@@ -326,7 +340,7 @@ impl SoulType {
         }
         let tuple = possible_tuple.unwrap();
 
-        let (mut list_type, should_skip_first) = tuple;
+        let (mut list_type, should_skip_first, is_none_empty) = tuple;
         let mut offset = begin_index;
         let mut size = iter.current_index() - begin_index + 1;
         if should_skip_first {
@@ -340,8 +354,12 @@ impl SoulType {
             string_builder.push_str(current_text);
         }
 
+        list_type.add_modifier(TypeModifiers::Literal)
+            .map_err(|err| new_soul_error(iter.current(), format!("while trying to add Literal to array type\n{}", err).as_str()))?;
+
         if let Some(should_type) = should_be_type {
-            if !list_type.is_convertable(should_type, iter.current(), type_meta_data, generics) {
+            
+            if !is_none_empty && !list_type.is_convertable(should_type, iter.current(), type_meta_data, generics) {
                 iter.go_to_index(begin_index);
                 return Err(new_soul_error(iter.current(), format!("'{}' and '{}' are not compatible", list_type.to_string(), should_type.to_string()).as_str()));
             }
@@ -637,7 +655,7 @@ impl SoulType {
         } 
         else {
             self.wrappers.last()
-                         .is_some_and(|wrap| wrap == &TypeWrappers::ConstRef || wrap == &TypeWrappers::MutRef)
+                .is_some_and(|wrap| wrap == &TypeWrappers::ConstRef || wrap == &TypeWrappers::MutRef)
         }
     }
 
@@ -648,7 +666,7 @@ impl SoulType {
         } 
         else {
             self.wrappers.last()
-                         .is_some_and(|wrap| wrap == &TypeWrappers::MutRef)
+                .is_some_and(|wrap| wrap == &TypeWrappers::MutRef)
         }
     }
 
@@ -659,7 +677,7 @@ impl SoulType {
         } 
         else {
             self.wrappers.last()
-                         .is_some_and(|wrap| wrap == &TypeWrappers::ConstRef)
+                .is_some_and(|wrap| wrap == &TypeWrappers::ConstRef)
         }
     }
 
@@ -682,9 +700,10 @@ fn get_literal_array(
     type_meta_data: &TypeMetaData, 
     generics: &mut CurrentGenerics,
     is_literal: &mut bool,
-) -> Result<(SoulType, bool)> { 
+) -> Result<(SoulType, bool, bool)> { 
     const ARRAY_START: &str = "[";
     const ARRAY_END: &str = "]";
+    const ARRAY_EMPTY: &str = "[]";
     
     let mut skip_first_token = false;
     let mut has_soul_type = false;
@@ -712,13 +731,18 @@ fn get_literal_array(
             return Err(new_soul_error(iter.current(), "unexpeted end while parsing literal value"));
         }
     }
-    
-    if iter.current().text != ARRAY_START {
+
+    if iter.current().text == ARRAY_EMPTY {
+        let is_none_empty = result_type.is_none_type();
+        return Ok((result_type, skip_first_token, is_none_empty));
+    }
+    else if iter.current().text != ARRAY_START {
         return Err(new_soul_error(iter.current(), format!("Literal array should start with '{}'", ARRAY_START).as_str()));
     }
 
     if iter.peek().is_some_and(|token| token.text == ARRAY_END) {
-        return Ok((result_type, skip_first_token));
+        let is_none_empty = result_type.is_none_type();
+        return Ok((result_type, skip_first_token, is_none_empty));
     } 
 
     *is_literal = true;
@@ -735,7 +759,7 @@ fn get_literal_array(
             if result_type.name.is_empty() && should_be_type.is_some() {
                 result_type = should_be_type.unwrap().clone();
             }
-            return Ok((result_type, skip_first_token));
+            return Ok((result_type, skip_first_token, false));
         }
 
         let mut dummy = false;
@@ -788,7 +812,7 @@ fn get_literal_array(
         }
 
         if iter.current().text == ARRAY_END {
-            return Ok((result_type, skip_first_token));
+            return Ok((result_type, skip_first_token, false));
         }
         else if iter.current().text != "," {
             return Err(new_soul_error(iter.current(), format!("token '{}' is not allowed in literal array", iter.current().text).as_str()));

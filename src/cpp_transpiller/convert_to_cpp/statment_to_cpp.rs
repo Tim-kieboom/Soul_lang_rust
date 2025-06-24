@@ -1,5 +1,5 @@
 use itertools::Itertools;
-
+use crate::meta_data::borrow_checker::borrow_checker::DeleteList;
 use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::tokenizer::token::Token;
 use crate::cpp_transpiller::cpp_type::CppType;
@@ -15,19 +15,25 @@ use crate::{abstract_styntax_tree::abstract_styntax_tree::IStatment, cpp_transpi
 
 pub fn statment_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator, statment: &IStatment, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
     
+    writer.start_line();
+    
     match statment {
-        IStatment::Initialize{..} => initialize_to_cpp(writer, statment, meta_data, context, in_scope_id),
-        IStatment::CloseScope(_) => close_scope_to_cpp(writer, statment),
-        IStatment::EmptyStatment(_) => Ok(()),
-        IStatment::Assignment{..} => assignment_to_cpp(writer, statment, meta_data, context, in_scope_id),
-        IStatment::FunctionBody{..} => function_body_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id),
-        IStatment::FunctionCall{..} => function_call_to_cpp(writer, statment, meta_data, context, in_scope_id),
-        IStatment::Return{..} => return_to_cpp(writer, statment, meta_data, context, in_scope_id),
-        IStatment::Scope{..} => scope_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id),
-        IStatment::If{..} => if_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id),
-        IStatment::Else{..} => else_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id),
-        IStatment::ElseIf{..} => else_if_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id),
-    }
+        IStatment::Initialize{..} => initialize_to_cpp(writer, statment, meta_data, context, in_scope_id)?,
+        IStatment::CloseScope(_) => close_scope_to_cpp(writer, statment)?,
+        IStatment::EmptyStatment(_) => (),
+        IStatment::Assignment{..} => assignment_to_cpp(writer, statment, meta_data, context, in_scope_id)?,
+        IStatment::FunctionBody{..} => function_body_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id)?,
+        IStatment::FunctionCall{..} => function_call_to_cpp(writer, statment, meta_data, context, in_scope_id)?,
+        IStatment::Return{..} => return_to_cpp(writer, statment, meta_data, context, in_scope_id)?,
+        IStatment::Scope{..} => scope_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id)?,
+        IStatment::If{..} => if_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id)?,
+        IStatment::Else{..} => else_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id)?,
+        IStatment::ElseIf{..} => else_if_to_cpp(writer, statment_iter, statment, meta_data, context, in_scope_id)?,
+    };
+
+    writer.end_line();
+
+    Ok(())
 }
 
 pub fn function_declaration_to_cpp(writer: &mut CppWriter, func: &FunctionDeclaration, meta_data: &MetaData, context: &CurrentContext) -> Result<()> {
@@ -84,11 +90,15 @@ fn if_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator, statment:
 
     writer.push_str("if(");
     expression_to_cpp(writer, condition, meta_data, context, in_scope_id)?;
-    writer.push_str(") {\n");
+    writer.push_str(") {");
+    writer.end_line();
+    writer.push_tab();
     for statment in &body.statments {
         statment_to_cpp(writer, statment_iter, &statment, meta_data, context, in_scope_id)?;
     }
-    writer.push_str("}\n");
+    writer.pop_tab();
+    writer.start_line();
+    writer.push_str("}");
 
     Ok(())
 }
@@ -99,11 +109,16 @@ fn else_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator, statmen
         _ => return Err(new_soul_error(&token_from_span(statment.get_span()), "Internal error else_to_cpp() called while statment is not Else")),
     };
 
-    writer.push_str("else {\n");
+    writer.push_str("else {");
+    writer.end_line();
+    writer.push_tab();
     for statment in &body.statments {
         statment_to_cpp(writer, statment_iter, &statment, meta_data, context, in_scope_id)?;
     }
-    writer.push_str("}\n");
+    writer.pop_tab();
+    writer.start_line();
+    writer.push_str("}");
+    writer.end_line();
 
     Ok(())
 }
@@ -116,11 +131,16 @@ fn else_if_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator, stat
 
     writer.push_str("else if(");
     expression_to_cpp(writer, condition, meta_data, context, in_scope_id)?;
-    writer.push_str(") {\n");
+    writer.push_str(") {");
+    writer.end_line();
+    writer.push_tab();
     for statment in &body.statments {
         statment_to_cpp(writer, statment_iter, &statment, meta_data, context, in_scope_id)?;
     }
-    writer.push_str("}\n");
+    writer.pop_tab();
+    writer.start_line();
+    writer.push_str("}");
+    writer.end_line();
 
     Ok(())
 }
@@ -131,20 +151,27 @@ fn scope_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator, statme
         _ => return Err(new_soul_error(&token_from_span(statment.get_span()), "Internal error scope_to_cpp() called while statment is not Scope")),
     };
 
-    writer.push_str(" {\n");
+    writer.push_str(" {");
+    writer.end_line();
+    writer.push_tab();
     for statment in &body.statments {
         statment_to_cpp(writer, statment_iter, &statment, meta_data, context, in_scope_id)?;
     }
-    writer.push_str("}\n");
+    writer.pop_tab();
+    writer.start_line();
+    writer.push_str("}");
+    writer.end_line();
 
     Ok(())
 }
 
 fn return_to_cpp(writer: &mut CppWriter, statment: &IStatment, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
-    let (possible_expression, _) = match statment {
-        IStatment::Return{expression, span} => (expression, span),
+    let (possible_expression, delete_list, _) = match statment {
+        IStatment::Return{expression, delete_list, span} => (expression, delete_list, span),
         _ => return Err(new_soul_error(&token_from_span(statment.get_span()), "Internal error return_to_cpp() called while statment is not Return")),
     };
+
+    delete_list_to_cpp(writer, delete_list);
 
     writer.push_str(SOUL_NAMES.get_name(NamesOtherKeyWords::Return));
     writer.push(' ');
@@ -153,8 +180,24 @@ fn return_to_cpp(writer: &mut CppWriter, statment: &IStatment, meta_data: &MetaD
         expression_to_cpp(writer, expression, meta_data, context, in_scope_id)?;
     }
 
-    writer.push_str(";\n");
+    writer.push_str(";");
     Ok(())
+}
+
+fn delete_list_to_cpp(writer: &mut CppWriter, delete_list: &DeleteList) {
+    if delete_list.is_empty() {
+        return;
+    }
+
+    writer.end_line();
+    for delete in delete_list {
+        writer.start_line();
+        writer.push_str("__soul_free(");
+        writer.push_str(&delete);
+        writer.push_str(");");
+        writer.end_line();
+    }
+    writer.start_line();
 }
 
 fn function_call_to_cpp(writer: &mut CppWriter, statment: &IStatment, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
@@ -164,7 +207,7 @@ fn function_call_to_cpp(writer: &mut CppWriter, statment: &IStatment, meta_data:
     };
 
     expression_to_cpp(writer, this, meta_data, context, in_scope_id)?;
-    writer.push_str(";\n");
+    writer.push_str(";");
     Ok(())
 }
 
@@ -173,6 +216,8 @@ fn function_body_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator
         IStatment::FunctionBody{body, func_info, span} => (body, func_info, span),
         _ => return Err(new_soul_error(&token_from_span(func_body.get_span()), "Internal error function_body_to_cpp() called while statment is not FunctionBody")),
     };
+
+    writer.end_line();
 
     let function_bodys = body.statments
         .iter()
@@ -185,29 +230,44 @@ fn function_body_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator
 
         writer.push_str("namespace ");
         get_scope_namespace(writer, &body.scope_id);
-        writer.push_str("{\n");
+        writer.push_str("{");
+        writer.end_line();
+        writer.push_tab();
 
         let scope = meta_data.scope_store.get(&body.scope_id).unwrap();
         for (_, func) in scope.function_store.from_id.iter() {
+            writer.start_line();
             function_declaration_to_cpp(writer, func, meta_data, context)?;
-            writer.push_str(";\n");
+            writer.push_str(";");
         }
 
         function_body_to_cpp(writer, statment_iter, inner_function, meta_data, context, func_in_scope_id)?;
-        writer.push_str("}\n");
+        writer.pop_tab();
+        writer.start_line();
+        writer.push_str("}");
+        writer.end_line();
     }
-
+    
+    writer.start_line();
     function_declaration_to_cpp(writer, func_info, meta_data, context)?;
-    writer.push_str(" {\n");
+    writer.push_str(" {");
+    writer.end_line();
+    writer.push_tab();
     if func_info.name == "main" && !func_info.args.is_empty() {
         let arg_name = &func_info.args[0].name;
-        writer.push_str(format!("auto __var_args = __Soul_ARRAY__<__Soul_ARRAY__<char>>(__SOUL_C_argsc);\nfor(int i = 0; i < __SOUL_C_argsc; i++){}\n\t__var_args[i] = str((const char*)__SOUL_C_argsv[i]);\n{}\nauto const* {} = &__var_args;\n", '{', '}', arg_name).as_str());
+        writer.end_line();
+        writer.start_line();
+        writer.push_str(format!("auto __var_args = __Soul_ARRAY__<__Soul_ARRAY__<char>>(__SOUL_C_argsc); for(int i = 0; i < __SOUL_C_argsc; i++){} *__var_args.__get_mutRef(i) = str((const char*)__SOUL_C_argsv[i]); {} __Soul_ARRAY__<__Soul_ARRAY__<char>>* const {} = (__Soul_ARRAY__<__Soul_ARRAY__<char>>* const)&__var_args; ", '{', '}', arg_name).as_str());
+        writer.end_line();
     }
 
     for statment in body.statments.iter().filter(|stat| !matches!(stat, IStatment::FunctionBody{..})) {
         statment_to_cpp(writer, statment_iter, &statment, meta_data, context, in_scope_id)?;
     }
-    writer.push_str("}\n");
+    writer.pop_tab();
+    writer.start_line();
+    writer.push_str("}");
+    writer.end_line();
 
     Ok(())
 }
@@ -235,7 +295,7 @@ fn initialize_to_cpp(writer: &mut CppWriter, statment: &IStatment, meta_data: &M
         variable_to_cpp(writer, variable, meta_data, context)
             .map_err(|err| pass_soul_error(&token_from_span(span), "while trying to convert initialize", err))?;
 
-        writer.push_str(";\n");
+        writer.push_str(";");        
     }
 
 
@@ -254,7 +314,7 @@ fn assignment_to_cpp(writer: &mut CppWriter, assignment: &IStatment, meta_data: 
     writer.push_str(" = ");
 
     expression_to_cpp(writer, assign_expression, meta_data, context, in_scope_id)?;
-    writer.push_str(";\n");
+    writer.push_str(";");
 
     Ok(())
 }

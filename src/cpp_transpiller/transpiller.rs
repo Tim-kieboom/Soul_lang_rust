@@ -1,5 +1,7 @@
+use crate::meta_data::soul_type::type_modifiers::TypeModifiers;
 use crate::tokenizer::token::Token;
 use crate::cpp_transpiller::cpp_type::CppType;
+use crate::run_options::run_options::RunOptions;
 use crate::cpp_transpiller::cpp_writer::CppWriter;
 use crate::meta_data::soul_type::soul_type::SoulType;
 use crate::meta_data::function::internal_functions::INTERNAL_FUNCTIONS;
@@ -11,20 +13,27 @@ use crate::cpp_transpiller::convert_to_cpp::statment_to_cpp::{function_declarati
 use crate::{abstract_styntax_tree::abstract_styntax_tree::AbstractSyntaxTree, meta_data::meta_data::MetaData};
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentIterator;
 
-pub fn transpiller_to_cpp(meta_data: &MetaData, statment_iter: &StatmentIterator, abstract_syntax_tree: &AbstractSyntaxTree) -> Result<String> {
+pub fn transpiller_to_cpp(meta_data: &MetaData, statment_iter: &StatmentIterator, abstract_syntax_tree: &AbstractSyntaxTree, run_options: &RunOptions) -> Result<String> {
     
-    let mut writer = CppWriter::new();
+    let mut writer = CppWriter::new(run_options.pretty_cpp_code);
 
+    writer.start_line();
     writer.push_str("#include \"soul_hardCodedFunctions/soul_hardCodedFunctions.h\"\n");
+    writer.end_line();
 
 
     forward_declare_global_vars(&mut writer, meta_data, abstract_syntax_tree)?;
+    writer.end_line();
     declare_c_strs(&mut writer, meta_data);
+    writer.end_line();
     
     forward_declare_functions(&mut writer, meta_data, &abstract_syntax_tree.global_context)?;
+    writer.end_line();
 
     let context = &abstract_syntax_tree.global_context;
     forward_declare_program_memory(&mut writer, statment_iter, meta_data, &context)?;
+    writer.end_line();
+
     for statment in &abstract_syntax_tree.main_nodes {
         statment_to_cpp(&mut writer, statment_iter, statment, meta_data, context, MetaData::GLOBAL_SCOPE_ID)?;
     }
@@ -34,11 +43,21 @@ pub fn transpiller_to_cpp(meta_data: &MetaData, statment_iter: &StatmentIterator
 
 fn declare_c_strs(writer: &mut CppWriter, meta_data: &MetaData) {
     for (_, pair) in meta_data.type_meta_data.c_str_store.from_name_map() {
-        writer.push_str("constexpr auto ");
+        writer.start_line();
+        writer.push_str("constexpr char __temp");
         writer.push_str(&pair.name);
-        writer.push_str(" = __NEW_Soul_LITERAL_ARRAY_C_STR__(");
+        writer.push_str("[] = ");
         writer.push_str(&pair.c_str);
-        writer.push_str(");\n");
+        writer.push_str(";");
+        writer.end_line();
+
+        writer.start_line();
+        writer.push_str("constexpr __Soul_ARRAY__<char>::AsConst ");
+        writer.push_str(&pair.name);
+        writer.push_str(" = __Soul_ARRAY_LiteralCtor__(char, __temp");
+        writer.push_str(&pair.name);
+        writer.push_str(");");
+        writer.end_line();
     }
 }
 
@@ -46,12 +65,40 @@ fn forward_declare_program_memory(writer: &mut CppWriter, statment_iter: &Statme
     let token = Token{text: String::new(), line_number: 0, line_offset: 0};
     let span = SoulSpan{line_number: 0, line_offset: 0};
     
-    for mem in &meta_data.program_memory {
+    for (mem, id) in &meta_data.program_memory.store {
 
-        let variable = IVariable::Variable{name: mem.make_var_name(), type_name: mem.type_name.clone(), span: span.clone()};
-        let assignment = IStatment::new_assignment(variable.clone(), IExpression::new_literal(&mem.value, &mem.type_name, &token), &token);
-        let init = IStatment::new_initialize(variable, Some(assignment), &token);
-        statment_to_cpp(writer, statment_iter, &init, meta_data, context, MetaData::GLOBAL_SCOPE_ID)?;
+        if mem.is_array {
+            let mut soul_type = SoulType::from_stringed_type(&mem.type_name, &token, &meta_data.type_meta_data, &context.current_generics)?;
+            soul_type.remove_modifier(TypeModifiers::Const);
+            soul_type.add_modifier(TypeModifiers::Literal)
+                .map_err(|msg| new_soul_error(&token, &msg))?;
+
+            
+            if mem.value.is_empty() {
+                writer.start_line();
+                writer.push_str(CppType::from_soul_type(&soul_type, meta_data, context, &span)?.as_str());
+                writer.push_str("* ");
+                writer.push_str(&mem.make_var_name(*id));
+                writer.push_str(" = nullptr;");
+                writer.end_line();
+                continue;
+            }
+
+            writer.start_line();
+            writer.push_str(CppType::from_soul_type(&soul_type, meta_data, context, &span)?.as_str());
+            writer.push(' ');
+            writer.push_str(&mem.make_var_name(*id));
+            writer.push_str("[] = {");
+            writer.push_str(&mem.value);
+            writer.push_str("};");
+            writer.end_line();
+        }
+        else {
+            let variable = IVariable::Variable{name: mem.make_var_name(*id), type_name: mem.type_name.clone(), span: span.clone()};
+            let assignment = IStatment::new_assignment(variable.clone(), IExpression::new_literal(&mem.value, &mem.type_name, &token), &token)?;
+            let init = IStatment::new_initialize(variable, Some(assignment), &token);
+            statment_to_cpp(writer, statment_iter, &init, meta_data, context, MetaData::GLOBAL_SCOPE_ID)?;
+        }
     }
 
     Ok(())
@@ -69,11 +116,13 @@ fn forward_declare_global_vars(writer: &mut CppWriter, meta_data: &MetaData, abs
         }
         
         let cpp_type = CppType::from_soul_type(&soul_type, meta_data, &abstract_syntax_tree.global_context, &SoulSpan{line_number: 0, line_offset: 0})?;
+        writer.start_line();
         writer.push_str("extern ");
         writer.push_str(cpp_type.as_str());
         writer.push(' ');
         get_var_name(writer, &var.name);
-        writer.push_str(";\n");
+        writer.push_str(";");
+        writer.end_line();
     }
 
     Ok(())
@@ -89,8 +138,10 @@ fn forward_declare_functions(writer: &mut CppWriter, meta_data: &MetaData, conte
             continue;
         }
 
+        writer.start_line();
         function_declaration_to_cpp(writer, func, meta_data, context)?;
-        writer.push_str(";\n");
+        writer.push_str(";");
+        writer.end_line();
     }
 
     Ok(())

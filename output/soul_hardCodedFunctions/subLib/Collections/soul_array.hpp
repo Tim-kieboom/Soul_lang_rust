@@ -2,26 +2,6 @@
 #include "soul_copy.hpp"
 #include "../soul_panic.hpp"
 
-
-template<typename T>
-struct __Soul_ARRAY__;
-namespace __lib_soul_array_priv {
-    // Primary template: for non-template types
-    template<typename T>
-    struct add_const_recursive {
-        using type = std::add_const_t<T>;
-    };
-
-    // Specialization for __Soul_ARRAY__ types
-    template<typename T>
-    struct add_const_recursive<__Soul_ARRAY__<T>> {
-        using type = __Soul_ARRAY__<typename add_const_recursive<T>::type> const;
-    };
-
-    template<typename T>
-    using add_const_recursive_t = typename add_const_recursive<T>::type;
-}
-
 template<typename T>
 class __Soul_ARRAY_Iterator__
 {
@@ -132,11 +112,12 @@ struct __Soul_ARRAY__
         return __Soul_ARRAY__<T>{__f_OGPtr, __f_spanPtr+start, end - start};
     }
     
-    using AsConst = __lib_soul_array_priv::add_const_recursive_t<__Soul_ARRAY__<T>>;
+    using AsConst = __lib_soul_type_trait_priv::add_const_recursive_t<__Soul_ARRAY__<T>>;
 
     void __free() {
         if(__f_OGPtr != nullptr) {
             delete[] __f_OGPtr;
+            __f_size = 0;
         }
     }
 
@@ -170,10 +151,5 @@ constexpr size_t __stack_array_size(void const*) { return 0; }
 template<typename T, size_t N>
 constexpr size_t __stack_array_size(const T (&)[N]) { return N; }
 
-
 #define __Soul_ARRAY_LiteralCtor__(elType, progmem) __Soul_ARRAY__<elType>::AsConst{progmem, (progmem == nullptr) ? 0 : __stack_array_size(progmem)}
-
-
-
-
 

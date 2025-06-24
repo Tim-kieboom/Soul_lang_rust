@@ -26,7 +26,7 @@ pub fn get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, contex
 }
 
 fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext, forward_declared_bracket_stack: Option<i64>)  -> Result<MultiStamentResult<IStatment>> {
-    
+
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
 
     let err_out_of_bounds = |iter: &TokenIterator| {
@@ -69,7 +69,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
    
     let (already_exists, is_forward_declared) = match &possible_var {
         Some(var) => (true, var.is_forward_declared),
-        None => (false, false),
+        None => (false, true),
     };
 
     if is_forward_declared {
@@ -138,7 +138,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
         }
 
         let begin_i = iter.current_index();
-        let mut expression = get_expression(iter, meta_data, context, &None, is_forward_declared, &vec![";", "\n"])
+        let mut expression = get_expression(iter, meta_data, context, &None, forward_declared_bracket_stack.is_some(), &vec![";", "\n"])
             .map_err(|err| pass_soul_error(&iter[begin_i], format!("while trying to get assignment of variable: '{}'", &iter[var_name_index].text).as_str(), err))?;
 
         if expression.is_type.is_empty() {
@@ -193,7 +193,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
 
         body_result.value = IStatment::new_initialize(
             variable.clone(), 
-            Some(IStatment::new_assignment(variable, expression.result.value, iter.current())),
+            Some(IStatment::new_assignment(variable, expression.result.value, iter.current())?),
             iter.current()
         );
 

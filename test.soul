@@ -4,27 +4,32 @@
 // const f32 float = 1
 // Literal uint uintNumber = 1
 
-const array = [1, 2, 3, 4]
-const strarray = ["ello", "hoiu", "werg", "werg"]
+// const array = [1, 2, 3, 4]
+// const strarray = ["ello", "hoiu", "werg", "werg"]
 
-wrong() {
-	// if true {}
-	// else if false {}
-	// else {}
-	int[] array2 = []
-	// mutNum := 1
-	// const d = mutNum + 2
-}
+// wrong() {
+// 	mutNum := 1
+// 	// const d = mutNum + 2
+// 	return
+// }
 
-// sum(f32 a, f32 b) int {
-// 	return f32(a) + int(b)
+// const T[] Len<T>(this@) uint {
+// 	return __soul_internal_length__(this)
 // }
 
 // type string typeof str
 
 main(str[]@ args) int {
+	sum(int a, int b) int {
+		return a + b
+	}
+
+	argsLen := __soul_internal_length__(args)
 	
-	Println(args)
+	Println(f"args length: {argsLen} values: {args}")	
+
+	Println(f"hello world")
+	Println(f"1 + 2 = {sum(1, 2)}")
 
 	f := @1
 	num := i32(1)
@@ -38,11 +43,3 @@ main(str[]@ args) int {
 
 	return 0
 }
-
-
-
-
-
-
-
-

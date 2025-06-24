@@ -1,4 +1,4 @@
-use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_body::get_body, meta_data::{soul_error::soul_error::{new_soul_error, Result, SoulError, SoulSpan}, soul_names::NamesInternalType}};
+use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_body::get_body, meta_data::{borrow_checker::borrow_checker::BorrowCheckedTrait, soul_error::soul_error::{new_soul_error, Result, SoulError, SoulSpan}, soul_names::NamesInternalType}};
 use super::statment_type::statment_type::{StatmentIterator, StatmentType};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
@@ -12,7 +12,7 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
     if iter.next().is_none() {
         return Err(err_out_of_bounds(iter));
     }
-    
+
     match statment_type {
         StatmentType::CloseScope{..} => Ok(MultiStamentResult::new(IStatment::CloseScope(SoulSpan::from_token(iter.current())))),
         StatmentType::EmptyStatment => Ok(MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())))),
@@ -25,7 +25,7 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
         StatmentType::Initialize{..} => get_initialize(iter, meta_data, context),
         StatmentType::FunctionBody{..} => get_function_body(iter, statment_iter, meta_data, context),
         StatmentType::FunctionCall => {
-                let result = get_function_call(iter, meta_data, context)
+                let result = get_function_call(iter, meta_data, context, false)
                     .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value, iter.current())));
     
                 if iter.next().is_none() {
@@ -75,8 +75,11 @@ fn get_else_if_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIt
         return Err(new_soul_error(iter.current(), format!("else if statment condition needs to be of type '{}' is type '{}'", SOUL_NAMES.get_name(NamesInternalType::Boolean), expression_result.is_type.to_string()).as_str()));
     }
 
-    if iter.next().is_none() {
-        return Err(new_soul_error(iter.current(), "unexpected end while trying to get if statment body"));
+    if !iter.peek().is_some_and(|token| token.text == "}") {
+        
+        if iter.next().is_none() {
+            return Err(new_soul_error(iter.current(), "unexpected end while trying to get if statment body"));
+        }
     }
     
     let body = get_body(iter, statment_iter, meta_data, context, None)?;
@@ -109,8 +112,11 @@ fn get_else_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         return Err(new_soul_error(iter.current(), "else statment should start with '{'"));
     }
 
-    if iter.next().is_none() {
-        return Err(err_out_of_bounds(iter));
+    if !iter.peek().is_some_and(|token| token.text == "}") {
+        
+        if iter.next().is_none() {
+            return Err(new_soul_error(iter.current(), "unexpected end while trying to get if statment body"));
+        }
     }
 
     let body = get_body(iter, statment_iter, meta_data, context, None)?;
@@ -147,8 +153,11 @@ fn get_if_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterato
         return Err(new_soul_error(iter.current(), format!("if statment condition needs to be of type '{}' is type '{}'", SOUL_NAMES.get_name(NamesInternalType::Boolean), expression_result.is_type.to_string()).as_str()));
     }
 
-    if iter.next().is_none() {
-        return Err(new_soul_error(iter.current(), "unexpected end while trying to get if statment body"));
+    if !iter.peek().is_some_and(|token| token.text == "}") {
+        
+        if iter.next().is_none() {
+            return Err(new_soul_error(iter.current(), "unexpected end while trying to get if statment body"));
+        }
     }
     
     let body = get_body(iter, statment_iter, meta_data, context, None)?;
@@ -185,8 +194,19 @@ fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data:
             return Err(new_soul_error(iter.current(), "trying to return without a returnType while function has a return type"));
         }
 
+       let scope_id = meta_data.scope_store
+            .get(&context.get_current_scope_id())
+            .ok_or(new_soul_error(iter.current(), "Internal error could not get current scopeId"))?
+            .id();
+        
+        let delete_list = meta_data.borrow_checker
+            .lock()
+            .unwrap()
+            .get_current_deletes(scope_id)
+            .map_err(|msg| new_soul_error(iter.current(), format!("while trying to get borrowchecker::delete_list\n{}", msg).as_str()))?;
+
         return Ok(MultiStamentResult::new(
-            IStatment::new_return(None, iter.current())
+            IStatment::new_return(None, delete_list, iter.current())
         ));
     }
 
@@ -204,9 +224,20 @@ fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data:
         return Err(new_soul_error(iter.current(), format!("trying to return with a type: '{}' but can not be converted to function return type: '{}' ", expression_result.is_type.to_string(), return_str).as_str()));
     }
 
+    let scope_id = meta_data.scope_store
+        .get(&context.get_current_scope_id())
+        .ok_or(new_soul_error(iter.current(), "Internal error could not get current scopeId"))?
+        .id();
+    
+    let delete_list = meta_data.borrow_checker
+        .lock()
+        .unwrap()
+        .get_current_deletes(scope_id)
+        .map_err(|msg| new_soul_error(iter.current(), format!("while trying to get borrowchecker::delete_list\n{}", msg).as_str()))?;
+
     let mut result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
     result.add_result(&expression_result.result);
-    result.value = IStatment::new_return(Some(expression_result.result.value), iter.current());
+    result.value = IStatment::new_return(Some(expression_result.result.value), delete_list, iter.current());
 
     return Ok(result);
 }

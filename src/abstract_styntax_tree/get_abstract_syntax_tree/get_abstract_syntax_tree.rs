@@ -37,23 +37,24 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
 
     iter.go_to_before_start();
 
-    #[cfg(feature="dev_mode")]
-    println!(
-        "statment_types:\n{:#?}\n", 
-        statment_type_info.statment_types
-            .iter()
-            .enumerate()
-            .map(|(i, el)| format!("{}.{:?}", i, el))
-            .collect::<Vec<String>>()
-    );
 
     #[cfg(feature="dev_mode")]
     {
         use itertools::Itertools;
         use crate::meta_data::function::internal_functions::INTERNAL_FUNCTIONS;
+
         println!(
-        "metaData.scopes (before parser):\n{:#?}\n",
-        meta_data.scope_store
+            "statment_types:\n{:#?}\n", 
+            statment_type_info.statment_types
+            .iter()
+            .enumerate()
+            .map(|(i, el)| format!("{}.{:?}", i, el))
+            .collect::<Vec<String>>()
+        );
+
+        println!(
+            "metaData.scopes (before parser):\n{:#?}\n",
+            meta_data.scope_store
             .iter()
             .sorted_by(|a, b| Ord::cmp(&a.0.0, &b.0.0))
             .map(|(id, scope)| 
@@ -71,6 +72,7 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
     }
     
     context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+
     let mut statment_iter = StatmentIterator::new(statment_type_info.statment_types);
     let mut tree = AbstractSyntaxTree::new();
     loop {

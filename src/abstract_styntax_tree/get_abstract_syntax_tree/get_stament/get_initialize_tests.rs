@@ -32,7 +32,7 @@ fn test_initialize_default_typed() {
     let mut should_be = MultiStamentResult::new(
         IStatment::new_initialize(
             varaiable.clone(), 
-            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", int, &DUMMY_TOKEN), &DUMMY_TOKEN)),
+            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", int, &DUMMY_TOKEN), &DUMMY_TOKEN).inspect_err(|err| panic!("{:#?}", err)).unwrap()),
             &DUMMY_TOKEN
         )
     );
@@ -86,7 +86,7 @@ fn test_initialize_default_invered() {
     let should_be = MultiStamentResult::new(
         IStatment::new_initialize(
             varaiable.clone(), 
-            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN), &DUMMY_TOKEN)),
+            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN), &DUMMY_TOKEN).inspect_err(|err| panic!("{:#?}", err)).unwrap()),
             &DUMMY_TOKEN
         )
     );

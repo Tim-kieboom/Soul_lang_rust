@@ -67,11 +67,12 @@ pub fn get_assignment(
                 iter.current()
             ),
             iter.current()
-        );
+        )?;
         return Ok(AssignmentResult{is_type: var_type, assignment: body_result});
     }
 
     let begin_i = iter.current_index();
+
     let mut expression = get_expression(iter, meta_data, context, &Some(&var_type), is_forward_declared, &vec!["\n", ";"])
         .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get assignment expression", err))?;
 
@@ -88,12 +89,12 @@ pub fn get_assignment(
         }
     }
 
-    if !expression.is_type.is_convertable(&var_type, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
+    if !is_forward_declared && !expression.is_type.is_convertable(&var_type, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
         return Err(new_soul_error(iter.current(), format!("assignment type: '{}' is not compatible with variable type: '{}'", expression.is_type.to_string(), var_type.to_string()).as_str()));
     }
 
     expression.result.value = add_compount_assignment(&iter[symbool_index].text, &i_variable, expression.result.value);
-    body_result.value = IStatment::new_assignment(i_variable, expression.result.value, iter.current());
+    body_result.value = IStatment::new_assignment(i_variable, expression.result.value, iter.current())?;
     Ok(AssignmentResult{is_type: var_type, assignment: body_result})
 }
 

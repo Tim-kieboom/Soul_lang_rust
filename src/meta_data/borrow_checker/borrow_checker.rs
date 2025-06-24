@@ -87,6 +87,18 @@ pub trait BorrowCheckedTrait {
     /// # Errors
     /// Returns an error if the scope cannot be closed (e.g., not found).
     fn close_scope(&mut self, scope_id: &ScopeId) -> BorrowResult<DeleteList>;
+
+    /// gets current delete_list of scope, DOES NOT drop scope
+    ///
+    /// # Arguments
+    /// * `scope_id` - The identifier for the scope being closed.
+    ///
+    /// # Returns
+    /// A list of variable names that should be deleted or dropped.
+    ///
+    /// # Errors
+    /// Returns an error if failed to get delete_list (e.g., not found).
+    fn get_current_deletes(&mut self, scope_id: &ScopeId) -> BorrowResult<DeleteList>;
 } 
 
 pub struct BorrowChecker {
@@ -216,7 +228,39 @@ impl BorrowCheckedTrait for BorrowChecker {
             .filter_map(|(name, id)| filter_delete_list(name, id, self) )
             .collect::<BorrowResult<DeleteList>>()
     }
-    
+
+    fn get_current_deletes(&mut self, scope_id: &ScopeId) -> BorrowResult<DeleteList> {
+
+        let all_vars = self.borrow_store.get_scope(scope_id)
+            .ok_or(format!("Internal Error: tryed to remove scope: '{}' but scope not found", scope_id.0))?
+            .get_store()
+            .iter()
+            .map(|(name, id)| (name.clone(), id.clone())).collect::<Vec<_>>();
+
+
+        all_vars.into_iter()
+            .rev()
+            .filter_map(|(name, id)| {
+                    let var = match self.borrow_store.get_var_mut(&id) {
+                        Some(var) => var,
+                        None => return Some(Err(format!("Internal Error: var: '{}' not found", name))),
+                    };
+
+                    let parent = var.parent.clone();
+                    let valid = self.is_valid(&BorrowId(&name, scope_id)).is_ok();
+
+                    if parent.is_some() || !valid {
+                        return None;
+                    }
+
+                    match self.borrow_store.get_var(&id) {
+                        Some(_) => Some(Ok(name)),
+                        None => None,
+                    }
+            } )
+            .collect::<BorrowResult<DeleteList>>()
+    }
+
     fn is_valid(&self, owner: &BorrowId) -> BorrowResult<()> {
         let BorrowId(name, _) = *owner;
 
@@ -240,7 +284,7 @@ impl BorrowCheckedTrait for BorrowChecker {
     }
 
 }
- 
+
 fn filter_delete_list(name: String, id: VarId, this: &mut BorrowChecker) -> Option<Result<String, String>> {
     let var = match this.borrow_store.get_var_mut(&id) {
         Some(var) => var,

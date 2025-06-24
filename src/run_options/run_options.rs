@@ -12,6 +12,7 @@ pub struct RunOptions {
     pub is_compiled: bool,
     pub show_times: ShowTimes,
     pub show_outputs: ShowOutputs,
+    pub pretty_cpp_code: bool,
     pub is_garbage_collected: bool,
 } 
 
@@ -63,6 +64,14 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
                 Ok(())
             }) as ArgFunc
         ),
+        (
+            "-prettyCppCode",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                should_not_have_input(arg)?;
+                options.pretty_cpp_code = true;
+                Ok(())
+            }) as ArgFunc
+        ),
     ])
 });
 
@@ -75,6 +84,7 @@ impl RunOptions {
                 show_outputs: ShowOutputs::SHOW_NONE,
                 show_times: ShowTimes::SHOW_TOTAL,
                 is_garbage_collected: false,
+                pretty_cpp_code: false,
             };
 
             let args = _args.collect::<Vec<_>>();

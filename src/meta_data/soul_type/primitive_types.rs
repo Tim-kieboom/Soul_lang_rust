@@ -106,6 +106,8 @@ impl PrimitiveType {
             val if val == SOUL_NAMES.get_name(NamesInternalType::UntypedFloat) => PrimitiveType::UntypedFloat,
             val if val == SOUL_NAMES.get_name(NamesInternalType::Float32) => PrimitiveType::F32,
             val if val == SOUL_NAMES.get_name(NamesInternalType::Float64) => PrimitiveType::F64,
+            
+            val if val == SOUL_NAMES.get_name(NamesInternalType::None) => PrimitiveType::None,
 
             _ => PrimitiveType::Invalid,
         }

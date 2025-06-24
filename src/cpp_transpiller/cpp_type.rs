@@ -1,5 +1,5 @@
-use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulSpan};
 use crate::meta_data::soul_type::type_wrappers::TypeWrappers;
+use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulSpan};
 use crate::{meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_type::{primitive_types::PrimitiveType, soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::Token};
 
 pub struct CppType(pub String);
@@ -28,7 +28,7 @@ impl CppType {
 
         last_part.push_str(cpp_name);
 
-        soul_wrappers_to_cpp(&mut last_part, &soul_type.wrappers);
+        soul_wrappers_to_cpp(&mut last_part, &soul_type.modifiers, &soul_type.wrappers);
         
         cpp_type.push_str(&last_part);
         Ok(Self(cpp_type))
@@ -39,17 +39,31 @@ impl CppType {
     }
 }
 
-fn soul_wrappers_to_cpp(string_builder: &mut String, wrappers: &Vec<TypeWrappers>) {
-    
-    for wrap in wrappers {
-        match wrap {
+fn soul_wrappers_to_cpp(string_builder: &mut String, modifiers: &TypeModifiers, wrappers: &Vec<TypeWrappers>) {
+
+    for i in 0..wrappers.len() {
+        match wrappers[i] {
             TypeWrappers::Invalid => panic!("Internal Error in soul_wrappers_to_cpp() type is invalid"),
-            TypeWrappers::ConstRef => string_builder.push_str(" const*"),
-            TypeWrappers::MutRef => string_builder.push_str("*"),
-            TypeWrappers::Pointer => string_builder.push_str("*"),
-            TypeWrappers::Array => *string_builder = format!("__Soul_ARRAY__<{}>", string_builder),
+            TypeWrappers::ConstRef => string_builder.push_str("* const"),
+            TypeWrappers::MutRef => string_builder.push('*'),
+            TypeWrappers::Pointer => string_builder.push('*'),
+            TypeWrappers::Array => {
+                let is_next_constref = wrappers.get(i + 1)
+                    .map_or(false, |wp| matches!(wp, TypeWrappers::ConstRef));
+
+                let is_inmutable = modifiers.contains(TypeModifiers::Const) || modifiers.contains(TypeModifiers::Literal); 
+                if is_next_constref || is_inmutable {
+                    *string_builder = format!(
+                        "__Soul_ARRAY__<{}>::AsConst",
+                        string_builder
+                    );
+                } else {
+                    *string_builder = format!("__Soul_ARRAY__<{}>", string_builder);
+                }
+            }
         }
     }
+
 }
 
 fn soul_modifier_to_cpp(string_builder: &mut String, modifier: TypeModifiers) {

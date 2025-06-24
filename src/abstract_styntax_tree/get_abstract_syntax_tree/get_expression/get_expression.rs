@@ -135,6 +135,7 @@ fn convert_expression(
     let mut ref_stack = Vec::new();
 
     iter.next_multiple(-1);
+
     let mut prev_token_index = iter.current_index();
     while iter.next().is_some() {
 		// for catching ')' as endToken, 
@@ -180,7 +181,7 @@ fn convert_expression(
             convert_literal(iter, stacks, meta_data, context, possible_literal)?;
         }
         else if meta_data.is_function(&iter.current().text, context).is_none() {
-            convert_function_call(iter, stacks, meta_data, context, result)?;
+            convert_function_call(iter, stacks, meta_data, context, result, is_forward_declared)?;
         }
         else if iter.current().text == "\n" {
             continue;
@@ -215,7 +216,7 @@ fn convert_variable(
 ) -> Result<()> {
     let (variable, scope_id) = _variable;
 
-    if !variable.is_assigned() {
+    if !is_forward_declared && !variable.is_assigned() {
         return Err(new_soul_error(iter.current(), format!("'{}' can not be used before it is assigned", variable.name).as_str()));
     }
 
@@ -243,7 +244,16 @@ fn convert_literal(
     context: &mut CurrentContext,
     possible_literal: Result<(SoulType, String)>
 ) -> Result<()> {
-    let (literal_type, literal_value) = possible_literal.unwrap();
+    let (literal_type, mut literal_value) = possible_literal.unwrap();
+
+    if literal_type.is_array() {
+        let type_name = literal_type.get_type_child()
+            .ok_or(new_soul_error(iter.current(), format!("Internal error could not get child type of: {}", literal_type.to_string()).as_str()))?.to_string();
+
+        let entry = ProgramMemoryEntry::new(std::mem::take(&mut literal_value), type_name, true);
+        let id = meta_data.program_memory.insert(entry.clone());
+        literal_value = entry.make_var_name(id);
+    }
 
     let possible_original_type = literal_type.convert_typedef_to_original(
         iter.current(), 
@@ -274,12 +284,16 @@ fn convert_function_call(
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
     result: &mut MultiStamentResult<IExpression>,
+    is_forward_declared: bool,
 ) -> Result<()> {
-    let function_result = get_function_call(iter, meta_data, context)?;
+    let function_result = get_function_call(iter, meta_data, context, is_forward_declared)?;
     result.add_result(&function_result);
     let function_call = function_result.value;
 
-    if let IExpression::FunctionCall { function_info, .. } = &function_call {
+    if is_forward_declared {
+        ()
+    }
+    else if let IExpression::FunctionCall { function_info, .. } = &function_call {
         let return_type;
         if let Some(type_string) = &function_info.return_type {
             let begin_i = iter.current_index();
@@ -387,10 +401,18 @@ fn convert_to_ref(
                 soul_type.add_modifier(TypeModifiers::Literal)
                     .map_err(|err| new_soul_error(&token, format!("{}", err).as_str()))?;
 
-                let mem = ProgramMemoryEntry{value: value.clone(), type_name: soul_type.to_string()};
-                
-                expression = IExpression::new_literal(&mem.make_var_name(), &mem.type_name, &token);
-                meta_data.program_memory.insert(mem);
+                let mem = if !soul_type.is_array() {
+                    ProgramMemoryEntry::new(value.clone(), soul_type.to_string(), true)
+                }
+                else {
+                    let type_name = soul_type.get_type_child()
+                        .ok_or(new_soul_error(&token, format!("Internal error could not get child type of: {}", soul_type.to_string()).as_str()))?.to_string();
+                    
+                    ProgramMemoryEntry::new(value.clone(), type_name, true)
+                };
+
+                let id = meta_data.program_memory.insert(mem.clone());
+                expression = IExpression::new_literal(&mem.make_var_name(id), &mem.type_name, &token);
             }
             // else if let IExpression::FunctionCall{args, generic_defines, function_info, span} = &expression {
                 

@@ -1,23 +1,28 @@
 id: 0 (
 	functions:(
-		main(str[]@ args) int, 
-		wrong()
+		main(str[]@ args) int
 	),
 	vars: (
 		Literal str __Soul_c_str_0__,
 		Literal str __Soul_c_str_1__,
 		Literal str __Soul_c_str_2__,
 		Literal str __Soul_c_str_3__,
-		const int[] array,
-		const str[] strarray
+		Literal str __Soul_c_str_4__,
+		Literal str __Soul_c_str_5__
 	),
 ),
 id: 1 (
 	functions:(
-		main(str[]@ args) int
+		sum( int a,  int b) int
 	),
 	vars: (
-		int[] array2
+		str[]@ args,
+		uint argsLen,
+		str buffer,
+		int@ f,
+		i32 num,
+		i32@ ref,
+		str@ refstr
 	),
 ),
 id: 2 (
@@ -25,11 +30,7 @@ id: 2 (
 		
 	),
 	vars: (
-		str[]@ args,
-		str buffer,
-		int@ f,
-		i32 num,
-		i32@ ref,
-		str@ refstr
+		const int a,
+		const int b
 	),
 ),

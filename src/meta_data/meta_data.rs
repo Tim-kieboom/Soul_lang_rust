@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use std::{collections::{HashMap, HashSet}, result, sync::{Arc, Mutex}};
+use std::{collections::HashMap, result, sync::{Arc, Mutex}};
 use crate::{meta_data::borrow_checker::borrow_checker::{BorrowId, BorrowResult}, tokenizer::token::TokenIterator};
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::INTERNAL_FUNCTIONS}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
@@ -82,14 +82,39 @@ impl FunctionStore {
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Hash, Clone, Copy)]
+pub struct ProgramMemmoryId(pub usize);
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProgramMemoryEntry {
     pub value: String,
     pub type_name: String,
+    pub is_array: bool,
 }
 impl ProgramMemoryEntry {
-    pub fn make_var_name(&self) -> String {
-        format!("__programMemory_{}_{}", self.type_name.replace(" ", "_"), self.value.replace(",", "_"))
+    pub fn new(value: String, type_name: String, is_array: bool) -> Self {
+        Self { value, type_name, is_array }
+    } 
+
+    pub fn make_var_name(&self, id: ProgramMemmoryId) -> String {
+        format!("__programMemory_{}", id.0)
+    }
+}
+
+pub struct ProgramMemmory {
+    pub store: HashMap<ProgramMemoryEntry, ProgramMemmoryId>,
+    pub last_id: ProgramMemmoryId,
+}
+impl ProgramMemmory {
+    pub fn new() -> Self {
+        Self { store: HashMap::new(), last_id: ProgramMemmoryId(0) }
+    }
+
+    pub fn insert(&mut self, entry: ProgramMemoryEntry) -> ProgramMemmoryId {
+        let id = self.last_id;
+        self.last_id.0 += 1;
+        self.store.insert(entry, id);
+        return id;
     }
 }
 
@@ -97,7 +122,7 @@ pub struct MetaData {
     pub type_meta_data: TypeMetaData,
     pub scope_store: HashMap<ScopeId, Scope>,
     pub borrow_checker: Arc<Mutex<BorrowChecker>>,
-    pub program_memory: HashSet<ProgramMemoryEntry>,
+    pub program_memory: ProgramMemmory,
 }
 
 const GLOBAL_SCOPE_ID: ScopeId = ScopeId(0);
@@ -113,7 +138,7 @@ impl MetaData {
             type_meta_data: TypeMetaData::new(), 
             scope_store: new_scope_store(),
             borrow_checker: borrow_checker,
-            program_memory: HashSet::new(),
+            program_memory: ProgramMemmory::new(),
         };
 
         this
@@ -221,7 +246,7 @@ impl MetaData {
             else {
                 return Err(new_soul_error(
                     iter.current(), 
-                    format!("function: '{}' not found with given arguments", name).as_str()
+                    format!("function: '{}' not found with given arguments, args: {:?}, optionals: {:?}", name, args.iter().map(|arg| &arg.value_type).collect::<Vec<_>>(), optionals.iter().map(|arg| &arg.value_type).collect::<Vec<_>>()).as_str()
                 ));
             }
         }
@@ -284,10 +309,10 @@ impl MetaData {
             if !self.scope_store.contains_key(&child_id) {
                 return Err(format!("Internal error trying to openscope but next scope was not found"))
             }
-
+            
             self.borrow_checker
-                .lock().unwrap()
-                .open_scope(&child_id)?;
+            .lock().unwrap()
+            .open_scope(&child_id)?;
         }
         
         Ok(child_id)

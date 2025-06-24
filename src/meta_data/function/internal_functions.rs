@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
-use crate::meta_data::{class_info::access_level::AccesLevel, meta_data::MetaData, soul_names::{NamesInternalType, NamesTypeWrapper, NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED, SOUL_NAMES}, soul_type::{generic::Generic, soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}};
+use crate::meta_data::{class_info::access_level::AccesLevel, meta_data::MetaData, soul_names::{NamesInternalType, NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED, SOUL_NAMES}, soul_type::{generic::Generic, soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}};
 
 use super::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, function_modifiers::FunctionModifiers};
 
@@ -12,6 +12,7 @@ fn new_function_id(id: &mut u32) -> FunctionID {
 
 const ANY_T_NAME: &str = "T";
 static ANY_T_GENERIC: Lazy<(String, Generic)> = Lazy::new(|| (ANY_T_NAME.to_string(), Generic{type_name: ANY_T_NAME.to_string(), validater: None}));
+static ANY_T_ARRAY_CONSTREF_GENERIC: Lazy<(String, Generic)> = Lazy::new(|| (ANY_T_NAME.to_string(), Generic{type_name: ANY_T_NAME.to_string(), validater: None}));
 static STR_MUT_REF_STRING: Lazy<String> = Lazy::new(|| SoulType::from(SOUL_NAMES.get_name(NamesInternalType::String).to_string(), vec![TypeWrappers::MutRef], TypeModifiers::Default, vec![]).to_string());
 
 pub static FIRST_FUNCTION_ID: Lazy<FunctionID> = Lazy::new(|| {
@@ -124,38 +125,18 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
         FunctionDeclaration{
-            name: "__Soul_internal_length__".to_string(), 
+            name: "__soul_internal_length__".to_string(), 
             return_type: Some(SOUL_NAMES.get_name(NamesInternalType::Uint).to_string()),
             args: vec![
                 ArgumentInfo::new_argument(
                     /*name:*/     "array".to_string(), 
-                    /*type:*/     format!("{}{}", ANY_T_NAME, SOUL_NAMES.get_name(NamesTypeWrapper::Array)), 
-                    // just an Generic array ^^^
+                    /*type:*/     ANY_T_NAME.to_string(), 
                     /*is_mut:*/   false, 
                     /*position:*/ 0,
                 )
             ],
             optionals: BTreeMap::new(),
-            generics: BTreeMap::from([ANY_T_GENERIC.clone()]),
-            modifiers: FunctionModifiers::Const,
-            id: new_function_id(&mut current_id),
-            is_forward_declared: false,
-            access_level: AccesLevel::Public,
-            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
-        },
-        FunctionDeclaration{
-            name: "__Soul_internal_length__".to_string(), 
-            return_type: Some(SOUL_NAMES.get_name(NamesInternalType::Uint).to_string()),
-            args: vec![
-                ArgumentInfo::new_argument(
-                    /*name:*/     "array".to_string(), 
-                    /*type:*/     SOUL_NAMES.get_name(NamesInternalType::String).to_string(),
-                    /*is_mut:*/   false, 
-                    /*position:*/ 0,
-                )
-            ],
-            optionals: BTreeMap::new(),
-            generics: BTreeMap::new(),
+            generics: BTreeMap::from([ANY_T_ARRAY_CONSTREF_GENERIC.clone()]),
             modifiers: FunctionModifiers::Const,
             id: new_function_id(&mut current_id),
             is_forward_declared: false,

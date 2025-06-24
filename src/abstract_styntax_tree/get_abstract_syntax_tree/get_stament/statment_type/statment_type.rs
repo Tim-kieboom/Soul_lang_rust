@@ -18,7 +18,6 @@ impl StatmentTypeInfo {
 }
 
 #[derive(Clone, PartialEq)]
-#[repr(u32)]
 pub enum StatmentType {
     CloseScope{begin_body_index: usize},
     EmptyStatment,

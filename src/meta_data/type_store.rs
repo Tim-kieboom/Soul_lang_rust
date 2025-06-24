@@ -60,6 +60,12 @@ impl ImplOperator {
 pub struct ImplOperators {
     pub operator: BTreeSet<ImplOperator>,
 }
+impl ImplOperators {
+    pub fn new_empty() -> Self {
+        Self{operator: BTreeSet::new()}
+    }
+
+}
 
 #[derive(Debug, Clone)]
 pub struct TypeStore {
@@ -100,6 +106,10 @@ impl TypeStore {
 }
 
 fn add_internal_types(type_store: &mut TypeStore) {
+    let none_name = SOUL_NAMES.get_name(NamesInternalType::None).to_string();
+    let id = type_store.add_type(none_name, None).expect("unexpeced error from internal impl_primitive_type operators");
+    type_store.implemented_type_operators.insert(id, ImplOperators::new_empty());
+
     for number in NAMES_INTERNAL_TYPE_NUMBER {
         let number_name = SOUL_NAMES.get_name(number).to_string(); 
         let id = type_store.add_type(number_name, None).expect("unexpeced error from internal impl_primitive_type operators");

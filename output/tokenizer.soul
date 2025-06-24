@@ -1,17 +1,18 @@
-const ch = 'a' 
-const number = 1 
-Literal gravity = 9.81 
-const f32 float = 1 
-Literal uint uintNumber = 1 
-const array = [ 1 , 2 , 3 , 4 ] 
-wrong ( ) { 
-} 
 main ( str [] @ args ) int { 
-i32 num = 1 
+sum ( int a , int b ) int { 
+return a + b 
+} 
+argsLen := __soul_internal_length__ ( args ) 
+Println ( __soul_format_string__ ( __Soul_c_str_2__ , argsLen , __Soul_c_str_1__ , args , __Soul_c_str_0__ ) ) 
+Println ( __soul_format_string__ ( __Soul_c_str_3__ ) ) 
+Println ( __soul_format_string__ ( __Soul_c_str_4__ , sum ( 1 , 2 ) , __Soul_c_str_0__ ) ) 
+f := @ 1 
+num := i32 ( 1 ) 
 i32 @ ref = @ num 
 buffer := str ( ) 
-Print ( __Soul_c_str_0__ ) 
+str @ refstr = @ buffer 
+Print ( __Soul_c_str_5__ ) 
 Input ( & buffer ) 
-Println ( buffer ) 
+Println ( @ buffer ) 
 return 0 
 } 

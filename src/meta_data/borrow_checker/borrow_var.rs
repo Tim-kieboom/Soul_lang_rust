@@ -47,6 +47,10 @@ impl VarIdStore {
     pub fn consume_store(self) -> BTreeMap<String, VarId> {
         self.store
     }
+
+    pub fn get_store(&self) -> &BTreeMap<String, VarId> {
+        &self.store
+    }
 }
 
 #[derive(Debug)]
@@ -85,10 +89,6 @@ impl BorrowVarStore {
         self.vars.insert(next_id, borrow_var);
         Ok(next_id)
     }
-    
-    pub fn get_scope(&self, id: &ScopeId) -> Option<&VarIdStore> {
-        self.scope_store.get(id)
-    }
 
     pub fn get_var(&self, id: &VarId) -> Option<&BorrowVar> {
         self.vars.get(id)
@@ -96,6 +96,10 @@ impl BorrowVarStore {
 
     pub fn get_var_mut(&mut self, id: &VarId) -> Option<&mut BorrowVar> {
         self.vars.get_mut(id)
+    }
+
+    pub fn get_scope(&self, id: &ScopeId) -> Option<&VarIdStore> {
+        self.scope_store.get(id)
     }
 
     pub fn consume_scope(&mut self, id: &ScopeId) -> BorrowResult<VarIdStore> {

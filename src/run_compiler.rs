@@ -13,7 +13,7 @@ use crate::run_options::show_times::ShowTimes;
 use crate::tokenizer::token::{Token, TokenIterator};
 use crate::tokenizer::tokenizer::{raw_file_as_file_lines, read_as_file_lines, tokenize_file};
 
-pub fn run_compiler(run_options: RunOptions) -> Result<()> {
+pub fn run_compiler(mut run_options: RunOptions) -> Result<()> {
     let mut meta_data = MetaData::new();
 
     fs::create_dir_all("output")
@@ -21,7 +21,7 @@ pub fn run_compiler(run_options: RunOptions) -> Result<()> {
 
     let start = Instant::now();
     let file = if run_options.is_file_raw_str {
-        raw_file_as_file_lines(run_options.file_path)?
+        raw_file_as_file_lines(std::mem::take(&mut run_options.file_path))?
     }
     else {
         read_as_file_lines(&run_options.file_path)?
@@ -104,8 +104,15 @@ pub fn run_compiler(run_options: RunOptions) -> Result<()> {
         write(file_path, scope_string)
             .map_err(|err| new_soul_error(&new_token(), &err.to_string()))?;
     }
+    
+    let start = Instant::now();
+    let cpp_file = transpiller_to_cpp(&meta_data, &statment_iter, &tree, &run_options)?;
+    let duration = start.elapsed();
 
-    let cpp_file = transpiller_to_cpp(&meta_data, &statment_iter, &tree)?;
+    if run_options.show_times.contains(ShowTimes::SHOW_CPP_CONVERTION) {
+        println!("c++ converter time: {:.2?}", duration);
+    }
+
     let file_path = "output/out.cpp";
     write(file_path, cpp_file)
         .map_err(|err| new_soul_error(&new_token(), &err.to_string()))?;

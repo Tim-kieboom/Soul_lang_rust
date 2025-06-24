@@ -24,15 +24,13 @@ pub fn get_function_call(
     iter: &mut TokenIterator,
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
+    is_forward_declared: bool,
 ) -> Result<MultiStamentResult<IExpression>> {
     fn pass_err(err: SoulError, function_name: &str, iter: &TokenIterator) -> SoulError {
         pass_soul_error(iter.current(), format!("while trying to get functionCall of: '{}'", function_name).as_str(), err)
     }
     
     let mut statment_result = MultiStamentResult::new(IExpression::EmptyExpression(SoulSpan::from_token(iter.current())));
-    if iter.current().text == "main" {
-        return Err(new_soul_error(iter.current(), "can not call 'main' function"));
-    }
 
     let function_name_index = iter.current_index();
 
@@ -48,19 +46,27 @@ pub fn get_function_call(
     let generic_defines = get_generics(iter, meta_data, context)
         .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
 
-    let arguments = get_arguments(iter, meta_data, context)
-        .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
-    
-    let function_id = meta_data.try_get_function(&iter[function_name_index].text, iter, context, &arguments.args, &arguments.optionals, generic_defines)
+    let arguments = get_arguments(iter, meta_data, context, is_forward_declared)
         .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
 
-    let scope = meta_data.scope_store.get(&function_id.0)
-        .expect("Internal Error: scope_id could not be found");
 
-    let function = scope.function_store.from_id.get(&function_id.1)
-        .expect("Internal Error function id is not in function_store");
+    let (function, expressions) = if !is_forward_declared {
+        let function_id = meta_data.try_get_function(&iter[function_name_index].text, iter, context, &arguments.args, &arguments.optionals, generic_defines)
+            .map_err(|err| pass_err(err, &iter[function_name_index].text, iter))?;
 
-    let expressions = get_argument_expression(arguments, function);
+        let scope = meta_data.scope_store.get(&function_id.0)
+            .expect("Internal Error: scope_id could not be found");
+
+        let function = scope.function_store.from_id.get(&function_id.1)
+            .expect("Internal Error function id is not in function_store");
+
+        let expressions = get_argument_expression(arguments, function);
+        (function, expressions)
+    }
+    else {
+        (&FunctionDeclaration::new_empty(), Vec::new())
+    };
+
     statment_result.value = IExpression::new_funtion_call(function.clone(), expressions, BTreeMap::new(), iter.current());
 
     Ok(statment_result)   
@@ -118,6 +124,7 @@ fn get_arguments(
     iter: &mut TokenIterator, 
     meta_data: &mut MetaData, 
     context: &mut CurrentContext, 
+    is_forward_declared: bool,
 ) -> Result<Arguments> {
     
     if iter.current().text != "(" {
@@ -156,8 +163,7 @@ fn get_arguments(
         }
 
         let begin_i = iter.current_index();
-        const IS_FORWARD_DECLARED: bool = false;
-        let expr_result = get_expression(iter, meta_data, context, &None, IS_FORWARD_DECLARED, &vec![",", ")"])
+        let expr_result = get_expression(iter, meta_data, context, &None, is_forward_declared, &vec![",", ")"])
             .map_err(|err| pass_soul_error(&iter[begin_i], format!("at argument number: {}", arg.arg_position+1).as_str(), err))?;
 
         let (is_type, expression) = (expr_result.is_type, expr_result.result);

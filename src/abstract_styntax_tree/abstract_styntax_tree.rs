@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use super::operator_type::ExprOperatorType;
-use crate::{meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, meta_data::MetaData, scope_and_var::scope::ScopeId, soul_error::soul_error::SoulSpan, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::token::Token};
+use crate::meta_data::soul_error::soul_error::Result;
+use crate::{meta_data::{borrow_checker::borrow_checker::DeleteList, current_context::current_context::CurrentContext, function::function_declaration::function_declaration::FunctionDeclaration, meta_data::MetaData, scope_and_var::scope::ScopeId, soul_error::soul_error::{new_soul_error, SoulSpan}, soul_names::{NamesOperator, NamesTypeWrapper, SOUL_NAMES}}, tokenizer::token::Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum IVariable {
@@ -29,7 +30,7 @@ pub enum IStatment {
     Initialize{variable: IVariable, assignment: /*shouldBe_Assignment*/Option<Box<IStatment>>, span: SoulSpan},
     FunctionBody{func_info: FunctionDeclaration, body: Box<BodyNode>, span: SoulSpan},
     FunctionCall{this: /*shouldBe_FunctionCall*/ IExpression, span: SoulSpan},
-    Return{expression: Option<IExpression>, span: SoulSpan},
+    Return{expression: Option<IExpression>, delete_list: DeleteList, span: SoulSpan},
     Scope{body: Box<BodyNode>, span: SoulSpan},
     If{condition: IExpression, body: Box<BodyNode>, span: SoulSpan},
     Else{body: Box<BodyNode>, span: SoulSpan},
@@ -69,6 +70,12 @@ impl BodyNode {
         }
         result.push_str(&parent_indent);
         result.push('}');
+        result.push_str(".deletes(");
+        for delete in &self.delete_list {
+            result.push_str(delete);
+            result.push_str(",");
+        }
+        result.push_str(")");
         result
     }
 }
@@ -145,10 +152,11 @@ impl IStatment {
                     body.to_string(pretty_format, tab + 1),
                     base_indent
                 ),
-            IStatment::Return { expression, span: _ } => match expression {
+            IStatment::Return { expression, delete_list, span: _ } => match expression {
                     Some(expr) => format!(
-                        "Return({})",
+                        "Return({}, deletes({:?}))",
                         expr.to_string(),
+                        delete_list,
                     ),
                     None => "Return()".to_string(),
                 },
@@ -169,9 +177,13 @@ impl IStatment {
         }
     }
 
-    pub fn new_assignment(variable: IVariable, assign: IExpression, token: &Token) -> Self {
-        debug_assert!(!matches!(assign, IExpression::EmptyExpression(_)));
-        Self::Assignment { variable, assign, span: SoulSpan::from_token(token)}
+    pub fn new_assignment(variable: IVariable, assign: IExpression, token: &Token) -> Result<Self> {
+        if matches!(assign, IExpression::EmptyExpression(_)) {
+            Err(new_soul_error(token, "assignment is empty"))
+        }
+        else {
+            Ok(Self::Assignment { variable, assign, span: SoulSpan::from_token(token)})
+        }
     }
 
     pub fn new_initialize(variable: IVariable, assignment: Option<IStatment>, token: &Token) -> Self {
@@ -198,8 +210,8 @@ impl IStatment {
         Self::Scope { body: Box::new(body), span: SoulSpan::from_token(token) }
     }
 
-    pub fn new_return(expression: Option<IExpression>, token: &Token) -> Self {
-        Self::Return { expression, span: SoulSpan::from_token(token) }
+    pub fn new_return(expression: Option<IExpression>, delete_list: Vec<String>, token: &Token) -> Self {
+        Self::Return { expression, delete_list, span: SoulSpan::from_token(token) }
     }
 
     pub fn new_if(condition: IExpression, body: BodyNode, token: &Token) -> Self {

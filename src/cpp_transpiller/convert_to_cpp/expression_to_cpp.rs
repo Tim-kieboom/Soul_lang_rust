@@ -5,8 +5,10 @@ use crate::cpp_transpiller::cpp_type::CppType;
 use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::meta_data::soul_type::soul_type::SoulType;
 use crate::cpp_transpiller::namespace::get_scope_namespace;
+use crate::meta_data::soul_type::type_wrappers::TypeWrappers;
 use crate::meta_data::soul_type::type_modifiers::TypeModifiers;
 use crate::abstract_styntax_tree::operator_type::ExprOperatorType;
+use crate::abstract_styntax_tree::abstract_styntax_tree::IVariable;
 use crate::cpp_transpiller::convert_to_cpp::variable_to_cpp::variable_to_cpp;
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulSpan};
 use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, cpp_transpiller::cpp_writer::CppWriter, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData}};
@@ -114,11 +116,40 @@ fn deref_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &Me
 }
 
 fn ref_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
-    let (inner, _) = match expression {
-        IExpression::ConstRef{ expression, span } => (expression, span),
-        IExpression::MutRef{ expression, span } => (expression, span),
+    let (inner, span, is_const_ref) = match expression {
+        IExpression::ConstRef{ expression, span } => (expression, span, true),
+        IExpression::MutRef{ expression, span } => (expression, span, false),
         _ => return Err(new_soul_error(&token_from_span(expression.get_span()), "Internal error ref_to_cpp() called while statment is not MutRef or ConstRef")),
     };
+    
+    
+    if is_const_ref {
+        let type_name = get_expression_type_name(inner)?;
+        let soul_type = SoulType::from_stringed_type(&type_name, &token_from_span(span), &meta_data.type_meta_data, &context.current_generics)?;
+        let is_array = soul_type.is_array();
+
+        let mut child_type = if is_array {
+            soul_type.get_type_child()
+                .ok_or(new_soul_error(&token_from_span(span), "Internal error could not get array child type"))?
+        }
+        else {
+            soul_type
+        };
+
+        child_type.remove_modifier(TypeModifiers::Literal);
+
+        if is_array {
+            child_type.add_wrapper(TypeWrappers::Array)
+                .map_err(|msg| new_soul_error(&token_from_span(span), &msg))?;
+        }
+
+        child_type.add_wrapper(TypeWrappers::ConstRef)
+            .map_err(|msg| new_soul_error(&token_from_span(span), &msg))?;
+
+        writer.push('(');
+        writer.push_str(CppType::from_soul_type(&child_type, meta_data, context, span)?.as_str());
+        writer.push(')');
+    }
 
     writer.push('&');
     expression_to_cpp(writer, inner, meta_data, context, in_scope_id)?;
@@ -136,13 +167,13 @@ fn literal_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &
     if expression_type.is_array() {
         let mut element_type = expression_type.get_type_child()
             .ok_or(new_soul_error(&token_from_span(span), "could not get element type of array type"))?;
-        element_type.modifiers.remove(TypeModifiers::Literal);
+        element_type.remove_modifier(TypeModifiers::Literal);
 
-        writer.push_str("__NEW_Soul_LITERAL_ARRAY__<");
+        writer.push_str("__Soul_ARRAY_LiteralCtor__(");
         writer.push_str(CppType::from_soul_type(&element_type, meta_data, context, span)?.as_str());
         writer.push(',');
-        writer.push_str(value);
-        writer.push_str(">()");
+        writer.push_str(&value);
+        writer.push(')');
     }
     else {
         writer.push_str(value);
@@ -260,6 +291,27 @@ fn operator_to_cpp(writer: &mut CppWriter, op: &ExprOperatorType, for_type: &Sou
 
     Ok(())
 }
+
+fn get_expression_type_name<'a>(expression: &'a IExpression) -> Result<&'a String> {
+    match expression {
+        IExpression::IVariable{this, ..} => get_ivariable_type_name(this),
+        IExpression::BinairyExpression{type_name, ..} => Ok(type_name),
+        IExpression::Literal{type_name, ..} => Ok(type_name),
+        IExpression::ConstRef{expression, ..} => get_expression_type_name(expression),
+        IExpression::MutRef{expression, ..} => get_expression_type_name(expression),
+        IExpression::DeRef{expression, ..} => get_expression_type_name(expression),
+        IExpression::Increment{variable, ..} => get_ivariable_type_name(variable),
+        IExpression::FunctionCall{function_info, span, ..} => function_info.as_ref().return_type.as_ref().ok_or_else(|| new_soul_error(&token_from_span(span), "Internal error function call return type is none")),
+        IExpression::EmptyExpression(soul_span) => Err(new_soul_error(&token_from_span(soul_span), "Internal error EmptyExpression has not type")),
+    }
+}
+
+fn get_ivariable_type_name<'a>(variable: &'a IVariable) -> Result<&'a String> {
+    match variable {
+        IVariable::Variable{type_name, ..} => Ok(type_name),
+    }
+}
+
 
 fn token_from_span(span: &SoulSpan) -> Token {
     Token{line_number: span.line_number, line_offset: span.line_offset, text: String::new()}

@@ -1,6 +1,8 @@
 use std::{collections::HashSet};
 use once_cell::sync::Lazy;
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo;
+use crate::meta_data::scope_and_var::scope::ScopeId;
+use crate::meta_data::scope_and_var::var_info::{VarFlags, VarInfo};
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::get_forward_declared_initialize}, meta_data::{current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::{NamesOtherKeyWords, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
@@ -40,6 +42,8 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             return Err(err_out_of_bounds(iter));
         }
         
+        close_body(context);
+
         *open_bracket_stack -= 1;
         let len = statment_types.len();
 
@@ -59,7 +63,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
             traverse_to_end(iter, &["{"])?;
-            open_body(iter, statment_info, meta_data, context, IS_FORWARD_DECLARED)?;
+            open_body(iter, statment_info, meta_data, context, vec![], IS_FORWARD_DECLARED)?;
             return Ok(StatmentType::If{end_body_index: 0});
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
@@ -67,7 +71,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             let is_else_if = iter.peek().is_some_and(|token| token.text == SOUL_NAMES.get_name(NamesOtherKeyWords::If));
 
             traverse_to_end(iter, &["{"])?;
-            open_body(iter, statment_info, meta_data, context, IS_FORWARD_DECLARED)?;
+            open_body(iter, statment_info, meta_data, context, vec![], IS_FORWARD_DECLARED)?;
 
             return if is_else_if {
                 Ok(StatmentType::ElseIf{end_body_index: 0})
@@ -144,7 +148,13 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
                     return Err(err_out_of_bounds(iter));
                 }
 
-                open_body(iter, statment_info, meta_data, context, IS_FORWARD_DECLARED)?;
+                let args = func_info.args.iter().chain(func_info.optionals.iter().map(|(_name, arg)| arg)).map(|arg| {
+                    let var_flag = get_var_flags(&arg.value_type, &iter, meta_data, context)?;
+                    Ok(VarInfo::with_var_flag(arg.name.clone(), arg.value_type.clone(), var_flag, IS_FORWARD_DECLARED))
+                })
+                .collect::<Result<Vec<VarInfo>>>()?;
+
+                open_body(iter, statment_info, meta_data, context, args, IS_FORWARD_DECLARED)?;
                 return Ok(StatmentType::FunctionBody{func_info, end_body_index: 0});
             }          
         },
@@ -172,7 +182,7 @@ fn traverse_to_end(iter: &mut TokenIterator, end_tokens: &[&str]) -> Result<()> 
     }
 }
 
-fn open_body(iter: &TokenIterator, statment_info: &mut StatmentTypeInfo, meta_data: &mut MetaData, context: &mut CurrentContext, allows_vars_access: bool) -> Result<()> {
+fn open_body(iter: &TokenIterator, statment_info: &mut StatmentTypeInfo, meta_data: &mut MetaData, context: &mut CurrentContext, args: Vec<VarInfo>, allows_vars_access: bool) -> Result<()> {
     statment_info.open_bracket_stack += 1;
     statment_info.scope_start_index.push(statment_info.statment_types.len());
 
@@ -181,7 +191,16 @@ fn open_body(iter: &TokenIterator, statment_info: &mut StatmentTypeInfo, meta_da
 
     context.set_current_scope_id(child_id);
 
+    for arg in args {
+        meta_data.add_to_scope(arg, &context.get_current_scope_id())
+            .map_err(|msg| new_soul_error(iter.current(), format!("Internal Error failed to add arg to scope\n{}", msg).as_str()))?;
+    }
+
     Ok(())
+}
+
+fn close_body(context: &mut CurrentContext) {
+    context.set_current_scope_id(ScopeId(context.get_current_scope_id().0 - 1));
 }
 
 ///true = func_declaration, false = func_call
@@ -273,7 +292,19 @@ fn err_out_of_bounds(iter: &TokenIterator) -> SoulError {
     new_soul_error(iter.current(), "unexpected end while trying to get stament")
 }
 
+fn get_var_flags(var_type_name: &String, iter: &TokenIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<VarFlags> {
+    let var_type = SoulType::from_stringed_type(&var_type_name, iter.current(), &meta_data.type_meta_data, &context.current_generics)?;
 
+    let mut var_flags = VarFlags::Empty;
+    if var_type.is_mutable() {
+        var_flags |= VarFlags::IsMutable;
+    }
+    if var_type.is_literal() {
+        var_flags |= VarFlags::IsLiteral;
+    }
+
+    Ok(var_flags)
+}
 
 
 

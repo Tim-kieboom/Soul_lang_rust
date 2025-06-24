@@ -5,6 +5,7 @@ pub fn variable_to_cpp(writer: &mut CppWriter, variable: &IVariable, meta_data: 
     match variable {
         IVariable::Variable { name, type_name, span } => {
             let soul_type = SoulType::from_stringed_type(&type_name, &token_from_span(span), &meta_data.type_meta_data, &context.current_generics)?;
+
             writer.push_str(CppType::from_soul_type(&soul_type, meta_data, context, span)?.as_str());
             writer.push(' ');
             get_var_name(writer, &name);

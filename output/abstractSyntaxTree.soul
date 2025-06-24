@@ -1,27 +1,20 @@
-Initialize(
-	Assignment(
-		Variable(const int[] array) = Literal(Literal untypedInt[] __programMemory_4)
-	)
-)
-Initialize(
-	Assignment(
-		Variable(const str[] strarray) = Literal(Literal str[] __programMemory_5)
-	)
-)
-FunctionBody(wrong(){
+FunctionBody(main(str[]@ args) int{
+	FunctionBody(sum( int a,  int b) int{
+		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int), deletes(["b", "a"]))
+		
+	}.deletes(b,a,))
+	
 	Initialize(
 		Assignment(
-			Variable(int[] array2) = Literal(int[] __programMemory_6)
+			Variable(uint argsLen) = FunctionCall(__soul_internal_length__(Variable(str[]@ args)))
 		)
 	)
-	
-})
-
-FunctionBody(main(str[]@ args) int{
-	FunctionCall(Println(Variable(str[]@ args)))
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_2__), Variable(uint argsLen), Variable(Literal str __Soul_c_str_1__), Variable(str[]@ args), Variable(Literal str __Soul_c_str_0__)))))
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_3__)))))
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_4__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_0__)))))
 	Initialize(
 		Assignment(
-			Variable(int@ f) = @Literal(Literal untypedInt __programMemory_7)
+			Variable(int@ f) = @Literal(Literal untypedInt __programMemory_1)
 		)
 	)
 	Initialize(
@@ -44,9 +37,9 @@ FunctionBody(main(str[]@ args) int{
 			Variable(str@ refstr) = @Variable(str buffer)
 		)
 	)
-	FunctionCall(Print(Variable(Literal str __Soul_c_str_3__)))
+	FunctionCall(Print(Variable(Literal str __Soul_c_str_5__)))
 	FunctionCall(Input(&Variable(str buffer)))
 	FunctionCall(Println(@Variable(str buffer)))
-	Return(Literal(int 0))
+	Return(Literal(int 0), deletes(["refstr", "ref", "num", "f", "buffer", "argsLen", "args"]))
 	
-})
+}.deletes(refstr,ref,num,f,buffer,argsLen,args,))

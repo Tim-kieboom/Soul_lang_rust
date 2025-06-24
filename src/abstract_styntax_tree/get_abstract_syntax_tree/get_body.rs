@@ -1,6 +1,5 @@
 use std::{collections::BTreeMap};
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
-
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{BodyNode, IStatment}, get_abstract_syntax_tree::get_stament::get_statment::get_statment}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration}, meta_data::{CloseScopeResult, MetaData}, scope_and_var::var_info::{VarFlags, VarInfo}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
 use super::get_stament::statment_type::statment_type::StatmentIterator;
@@ -62,12 +61,10 @@ fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
             .map_err(|msg| new_soul_error(iter.current(), format!("while adding argument: '{}' to scope\n{}", name, msg).as_str()))?;
     }
 
-    meta_data.scope_store.get_mut(&context.get_current_scope_id()).unwrap().vars = vars;
-
     if iter.next_multiple(-1).is_none() {
         return Err(err_out_of_bounds(iter));
     }
-
+    
     let mut has_return = false;
     let mut body_node = BodyNode::new(context);
     loop {
