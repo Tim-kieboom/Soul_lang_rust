@@ -1,6 +1,6 @@
 use bitflags::bitflags;
 use std::{collections::HashMap, result, sync::{Arc, Mutex}};
-use crate::{meta_data::borrow_checker::borrow_checker::{BorrowId, BorrowResult}, tokenizer::token::TokenIterator};
+use crate::{meta_data::{borrow_checker::borrow_checker::{BorrowId, BorrowResult}, scope_and_var::scope::ScopeParentInfo}, tokenizer::token::TokenIterator};
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result};
 use super::{borrow_checker::borrow_checker::{BorrowCheckedTrait, BorrowChecker, DeleteList}, class_info::class_info::ClassInfo, current_context::current_context::CurrentContext, function::{argument_info::argument_info::ArgumentInfo, function_declaration::function_declaration::{FunctionDeclaration, FunctionID}, internal_functions::INTERNAL_FUNCTIONS}, scope_and_var::{scope::{Scope, ScopeId}, var_info::VarInfo}, type_meta_data::TypeMetaData};
 
@@ -295,7 +295,12 @@ impl MetaData {
     }
 
     pub fn open_scope(&mut self, context: &CurrentContext, allows_vars_access: bool, is_forward_declared: bool) -> result::Result<ScopeId, String> {
-        let parent = self.scope_store.get_mut(&context.get_current_scope_id())
+        let parent_id = self.scope_store.get(&context.get_current_scope_id())
+            .ok_or("Internal Error: can not get parent scope from scope_store")?
+            .parent.as_ref().map(|res| res.id)
+            .unwrap_or(context.get_current_scope_id());
+
+        let parent = self.scope_store.get_mut(&parent_id)
             .ok_or("Internal Error: can not get parent scope from scope_store")?;
 
         let child_id;

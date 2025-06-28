@@ -25,29 +25,29 @@ array() {
 	Println(array[0])
 }
 
-// whileArgs(str[]@ args) {
-// 	argsLen := __soul_internal_length__(args)
-// 	// i := 0
-// 	// while i++ < argsLen {
-// 	// 	Println("{i}.{args[i]}")
-// 	// }	
-// }
+whileArgs(str[]@ args) {
+	argsLen := __soul_internal_length__(args)
+	// i := 0
+	// while i++ < argsLen {
+	// 	Println("{i}.{args[i]}")
+	// }	
+}
 
-// ref() {
-// 	f := @1
-// 	num := i32(1)
-// 	i32@ ref = @num
-// 	buffer := str()
-// 	str@ refstr = @buffer
-// }
+ref() {
+	f := @1
+	num := i32(1)
+	i32@ ref = @num
+	buffer := str()
+	str@ refstr = @buffer
+}
 
-// printInput() {
-// 	buffer := str()
+printInput() {
+	buffer := str()
 
-// 	Print("foo ")
-// 	Input(&buffer)
-// 	Println(@buffer)
-// }
+	Print("foo ")
+	Input(&buffer)
+	Println(@buffer)
+}
 
 main(str[]@ args) int {
 	sum(int a, int b) int {

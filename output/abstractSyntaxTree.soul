@@ -25,13 +25,13 @@ Initialize(
 )
 Initialize(
 	Assignment(
-		Variable(const str[] strarray) = Literal(Literal str[] __programMemory_2)
+		Variable(const str[] strarray) = Literal(Literal str[] __programMemory_3)
 	)
 )
 FunctionBody(array(){
 	Initialize(
 		Assignment(
-			Variable(int[] array) = Literal(Literal untypedInt[] __programMemory_3)
+			Variable(int[] array) = Literal(Literal untypedInt[] __programMemory_4)
 		)
 	)
 	Initialize(
@@ -43,6 +43,56 @@ FunctionBody(array(){
 	
 }.deletes(second,array,))
 
+FunctionBody(whileArgs(str[]@ args){
+	Initialize(
+		Assignment(
+			Variable(uint argsLen) = FunctionCall(__soul_internal_length__(Variable(str[]@ args)))
+		)
+	)
+	
+}.deletes(argsLen,args,))
+
+FunctionBody(ref(){
+	Initialize(
+		Assignment(
+			Variable(int@ f) = @Literal(Literal untypedInt __programMemory_5)
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(i32 num) = FunctionCall(i32(Literal(Literal untypedInt 1)))
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(i32@ ref) = @Variable(i32 num)
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(str buffer) = FunctionCall(str())
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(str@ refstr) = @Variable(str buffer)
+		)
+	)
+	
+}.deletes(refstr,ref,num,f,buffer,))
+
+FunctionBody(printInput(){
+	Initialize(
+		Assignment(
+			Variable(str buffer) = FunctionCall(str())
+		)
+	)
+	FunctionCall(Print(Variable(Literal str __Soul_c_str_3__)))
+	FunctionCall(Input(&Variable(str buffer)))
+	FunctionCall(Println(@Variable(str buffer)))
+	
+}.deletes(buffer,))
+
 FunctionBody(main(str[]@ args) int{
 	FunctionBody(sum( int a,  int b) int{
 		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int), deletes(["b", "a"]))
@@ -50,8 +100,8 @@ FunctionBody(main(str[]@ args) int{
 	}.deletes(b,a,))
 	
 	FunctionCall(Println(Index(Variable(str[]@ args)[Literal(Literal untypedInt 0)], type: str[])))
-	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_3__)))))
-	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_5__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_4__)))))
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_4__)))))
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_6__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_5__)))))
 	FunctionCall(array())
 	Return(Literal(int 0), deletes(["args"]))
 	

@@ -9,13 +9,29 @@ array := [ 1 , 2 , 3 , 4 ]
 second := array [ 1 ] 
 Println ( array [ 0 ] ) 
 } 
+whileArgs ( str [] @ args ) { 
+argsLen := __soul_internal_length__ ( args ) 
+} 
+ref ( ) { 
+f := @ 1 
+num := i32 ( 1 ) 
+i32 @ ref = @ num 
+buffer := str ( ) 
+str @ refstr = @ buffer 
+} 
+printInput ( ) { 
+buffer := str ( ) 
+Print ( __Soul_c_str_3__ ) 
+Input ( & buffer ) 
+Println ( @ buffer ) 
+} 
 main ( str [] @ args ) int { 
 sum ( int a , int b ) int { 
 return a + b 
 } 
 Println ( args [ 0 ] ) 
-Println ( __soul_format_string__ ( __Soul_c_str_3__ ) ) 
-Println ( __soul_format_string__ ( __Soul_c_str_5__ , sum ( 1 , 2 ) , __Soul_c_str_4__ ) ) 
+Println ( __soul_format_string__ ( __Soul_c_str_4__ ) ) 
+Println ( __soul_format_string__ ( __Soul_c_str_6__ , sum ( 1 , 2 ) , __Soul_c_str_5__ ) ) 
 array ( ) 
 return 0 
 } 
