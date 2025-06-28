@@ -15,7 +15,7 @@ interface IList<T> typeof IIter<T> (
 class List<T> typeof IList<T> (
     T[] buffer,
     usize len { get; priv set; },
-)
+) 
 {
     Ctor();
     Ctor::[](T[] init) {

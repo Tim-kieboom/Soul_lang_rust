@@ -1,4 +1,4 @@
-interface IMap<K><V> {
+interface IMap<K><V> (
     type KeyValue
 
     Insert(K@ key, V value)
@@ -13,18 +13,20 @@ interface IMap<K><V> {
     this::As<KeyValue@>()
 
     Iter() IPullableMut<KeyValue>()
-}
+)
 
 class HashMap<K><V> typeof IMap<K>V() 
 where 
     K: this::Hash
-{
+(
     Literal usize DEFAULT_SIZE = 1500
 
     struct KeyValue(K key, V value)
     type Bucket typeof List<KeyValue>()
 
     Bucket[] buckets = []
+)
+{
 
     const Ctor() { 
         buckets = [DEFAULT_SIZE => []] 
@@ -100,13 +102,14 @@ where
 class HashMap_Iter<K, V> typeof IPullable<Output>()
 where 
     K: this::Hash
-{
+(
     type Output typeof HashMap<K>V::KeyValue()
     
     Bucket[] buckets
     usize outerIndex = 0
     usize innerIndex = 0
-
+)
+{
     Ctor(this.buckets) { }
 
     Pull() Op<Output> {

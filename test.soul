@@ -6,12 +6,6 @@ Literal uint uintNumber = 1
 
 const strarray = ["ello", "hoiu", "werg", "werg"]
 
-// wrong() {
-// 	mutNum := 1
-// 	// const d = mutNum + 2
-// 	return
-// }
-
 // const T[] Len<T>(this@) uint {
 // 	return __soul_internal_length__(this)
 // }
@@ -49,18 +43,31 @@ printInput() {
 	Println(@buffer)
 }
 
+
 main(str[]@ args) int {
 	sum(int a, int b) int {
 		return a + b
 	}
+
 	Println(args[0])
 	Println(f"hello world")
 	Println(f"1 + 2 = {sum(1, 2)}")
 
 	array()
-	// whileArgs(args)
-	// ref()
-	// printInput()
+	whileArgs(args)
+	ref()
+	printInput()
 
 	return 0
 }
+
+
+
+
+
+
+
+
+
+
+

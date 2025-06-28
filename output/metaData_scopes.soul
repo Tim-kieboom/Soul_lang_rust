@@ -2,8 +2,8 @@ id: 0 (
 	functions:(
 		printInput(), 
 		ref(), 
-		main(str[]@ args) int, 
 		array(), 
+		main(str[]@ args) int, 
 		whileArgs(str[]@ args)
 	),
 	vars: (
@@ -24,7 +24,7 @@ id: 0 (
 ),
 id: 1 (
 	functions:(
-		ref()
+		
 	),
 	vars: (
 		int[] array,
@@ -33,7 +33,7 @@ id: 1 (
 ),
 id: 2 (
 	functions:(
-		printInput()
+		
 	),
 	vars: (
 		str[]@ args,
@@ -42,7 +42,7 @@ id: 2 (
 ),
 id: 3 (
 	functions:(
-		main(str[]@ args) int
+		
 	),
 	vars: (
 		str buffer,

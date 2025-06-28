@@ -33,5 +33,8 @@ Println ( args [ 0 ] )
 Println ( __soul_format_string__ ( __Soul_c_str_4__ ) ) 
 Println ( __soul_format_string__ ( __Soul_c_str_6__ , sum ( 1 , 2 ) , __Soul_c_str_5__ ) ) 
 array ( ) 
+whileArgs ( args ) 
+ref ( ) 
+printInput ( ) 
 return 0 
 } 

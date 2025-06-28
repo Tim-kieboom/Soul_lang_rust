@@ -1,7 +1,6 @@
 use std::{collections::HashSet};
 use once_cell::sync::Lazy;
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo;
-use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::meta_data::scope_and_var::var_info::{VarFlags, VarInfo};
 use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::get_forward_declared_initialize}, meta_data::{current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::{NamesOtherKeyWords, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
@@ -42,7 +41,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             return Err(err_out_of_bounds(iter));
         }
         
-        close_body(context);
+        close_body(iter, &meta_data, context)?;
 
         *open_bracket_stack -= 1;
         let len = statment_types.len();
@@ -200,8 +199,16 @@ fn open_body(iter: &TokenIterator, statment_info: &mut StatmentTypeInfo, meta_da
     Ok(())
 }
 
-fn close_body(context: &mut CurrentContext) {
-    context.set_current_scope_id(ScopeId(context.get_current_scope_id().0 - 1));
+fn close_body(iter: &TokenIterator, meta_data: &MetaData, context: &mut CurrentContext) -> Result<()> {
+
+    let parent_id = meta_data.scope_store.get(&context.get_current_scope_id())
+        .ok_or(new_soul_error(iter.current(), format!("while trying to close scope\ncould not get current scope").as_str()))?
+        .parent.as_ref().map(|res| res.id)
+        .unwrap_or(context.get_current_scope_id());
+
+    context.set_current_scope_id(parent_id);
+
+    Ok(())
 }
 
 ///true = func_declaration, false = func_call

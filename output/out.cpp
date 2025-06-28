@@ -5,20 +5,20 @@ extern const float __var_float;
 extern const int number;
 extern const __Soul_ARRAY__<__Soul_ARRAY__<char>::AsConst>::AsConst strarray;
 
-constexpr char __temp__Soul_c_str_6__[] = "1 + 2 = ";
-constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_6__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_6__);
-constexpr char __temp__Soul_c_str_1__[] = "hoiu";
-constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_1__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_1__);
-constexpr char __temp__Soul_c_str_0__[] = "werg";
-constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_0__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_0__);
-constexpr char __temp__Soul_c_str_4__[] = "hello world";
-constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_4__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_4__);
 constexpr char __temp__Soul_c_str_3__[] = "foo ";
 constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_3__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_3__);
-constexpr char __temp__Soul_c_str_5__[] = "";
-constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_5__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_5__);
+constexpr char __temp__Soul_c_str_0__[] = "werg";
+constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_0__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_0__);
 constexpr char __temp__Soul_c_str_2__[] = "ello";
 constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_2__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_2__);
+constexpr char __temp__Soul_c_str_1__[] = "hoiu";
+constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_1__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_1__);
+constexpr char __temp__Soul_c_str_4__[] = "hello world";
+constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_4__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_4__);
+constexpr char __temp__Soul_c_str_5__[] = "";
+constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_5__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_5__);
+constexpr char __temp__Soul_c_str_6__[] = "1 + 2 = ";
+constexpr __Soul_ARRAY__<char>::AsConst __Soul_c_str_6__ = __Soul_ARRAY_LiteralCtor__(char, __temp__Soul_c_str_6__);
 
 void printInput();
 void ref();
@@ -26,8 +26,8 @@ void array();
 void whileArgs(__Soul_ARRAY__<__Soul_ARRAY__<char>>::AsConst* const args);
 
 constexpr int __programMemory_5[] = {1};
-constexpr int __programMemory_4[] = {1,2,3,4};
 constexpr __Soul_ARRAY__<char>::AsConst __programMemory_3[] = {__Soul_c_str_2__,__Soul_c_str_1__,__Soul_c_str_0__,__Soul_c_str_0__};
+constexpr int __programMemory_4[] = {1,2,3,4};
 
 const char ch = 'a';
 const int number = 1;
@@ -81,6 +81,9 @@ int main(int __SOUL_C_argsc, char** __SOUL_C_argsv) {
 	Println(__soul_format_string__(__Soul_c_str_4__));
 	Println(__soul_format_string__(__Soul_c_str_6__,__SOUL_ns_scp_5__::sum(1,2),__Soul_c_str_5__));
 	array();
+	whileArgs(args);
+	ref();
+	printInput();
 	
 	__soul_free(args);
 	return 0;

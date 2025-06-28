@@ -103,6 +103,9 @@ FunctionBody(main(str[]@ args) int{
 	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_4__)))))
 	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_6__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_5__)))))
 	FunctionCall(array())
+	FunctionCall(whileArgs(Variable(str[]@ args)))
+	FunctionCall(ref())
+	FunctionCall(printInput())
 	Return(Literal(int 0), deletes(["args"]))
 	
 }.deletes(args,))
