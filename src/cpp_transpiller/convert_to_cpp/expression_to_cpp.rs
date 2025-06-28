@@ -24,8 +24,24 @@ pub fn expression_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_
         IExpression::DeRef{..} => deref_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
         IExpression::Increment{..} => inrement_to_cpp(writer, expression, meta_data, context)?,
         IExpression::FunctionCall{..} => function_call_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
+        IExpression::Index{..} => index_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
         IExpression::EmptyExpression(_) => (),
     }
+
+    Ok(())
+}
+
+fn index_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
+    let (this, index) = match expression {
+        IExpression::Index{ this, index, return_type:_, span:_ } => (this, index),
+        _ => return Err(new_soul_error(&token_from_span(expression.get_span()), "Internal error index_to_cpp() called while statment is not Index")),
+    };
+
+    expression_to_cpp(writer, this, meta_data, context, in_scope_id)?;
+    
+    writer.push('[');
+    expression_to_cpp(writer, index, meta_data, context, in_scope_id)?;
+    writer.push(']');
 
     Ok(())
 }
@@ -33,7 +49,7 @@ pub fn expression_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_
 fn function_call_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
     let (args, function_info, generic_defines, span) = match expression {
         IExpression::FunctionCall{ args, function_info, generic_defines, span } => (args, function_info, generic_defines, span),
-        _ => return Err(new_soul_error(&token_from_span(expression.get_span()), "Internal error deref_to_cpp() called while statment is not DeRef")),
+        _ => return Err(new_soul_error(&token_from_span(expression.get_span()), "Internal error function_call_to_cpp() called while statment is not FunctionCall")),
     };
 
     if function_info.in_scope_id != MetaData::GLOBAL_SCOPE_ID {
@@ -301,6 +317,7 @@ fn get_expression_type_name<'a>(expression: &'a IExpression) -> Result<&'a Strin
         IExpression::MutRef{expression, ..} => get_expression_type_name(expression),
         IExpression::DeRef{expression, ..} => get_expression_type_name(expression),
         IExpression::Increment{variable, ..} => get_ivariable_type_name(variable),
+        IExpression::Index{this, ..} => get_expression_type_name(this),
         IExpression::FunctionCall{function_info, span, ..} => function_info.as_ref().return_type.as_ref().ok_or_else(|| new_soul_error(&token_from_span(span), "Internal error function call return type is none")),
         IExpression::EmptyExpression(soul_span) => Err(new_soul_error(&token_from_span(soul_span), "Internal error EmptyExpression has not type")),
     }

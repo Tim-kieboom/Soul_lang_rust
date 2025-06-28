@@ -92,19 +92,15 @@ struct __Soul_ARRAY__
         return __Soul_ARRAY__(arr, __f_size);
     }
 
-    constexpr T __get(size_t index) const noexcept 
-    {   
+    constexpr T& __get_unchecked(size_t index) const noexcept {
         return __f_spanPtr[index];
     }
 
-    constexpr T const* __get_constRef(size_t index) const noexcept
-    {   
-        return &__f_spanPtr[index];
-    }
-
-    constexpr T* __get_mutRef(size_t index) const noexcept
-    {
-        return &__f_spanPtr[index];
+    constexpr T& operator[](size_t index) const {
+        if (index >= __f_size) {
+            throw std::out_of_range("Index out of range");
+        }
+        return __get_unchecked(index);
     }
 
     constexpr __Soul_ARRAY__<T> __new_span(size_t start, size_t end) const noexcept 
@@ -145,7 +141,6 @@ struct __Soul_ARRAY__
     constexpr const_iterator __cbegin() const { return const_iterator(__f_spanPtr); }
     constexpr const_iterator __cend() const { return const_iterator(__f_spanPtr + __f_size); }
 };
-
 constexpr size_t __stack_array_size(void const*) { return 0; }
 
 template<typename T, size_t N>

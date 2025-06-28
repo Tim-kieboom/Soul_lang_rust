@@ -19,6 +19,7 @@ pub enum IExpression {
     DeRef{expression: Box<IExpression>, span: SoulSpan},
     Increment{variable: IVariable, is_before: bool, amount: i8, span: SoulSpan},
     FunctionCall{args: Vec<IExpression>, generic_defines: BTreeMap<String, String>, function_info: Box<FunctionDeclaration>, span: SoulSpan},
+    Index{this: Box<IExpression>, index: Box<IExpression>, return_type: String, span: SoulSpan},
     EmptyExpression(SoulSpan),
 } 
 
@@ -221,6 +222,7 @@ impl IStatment {
     pub fn new_else(body: BodyNode, token: &Token) -> Self {
         Self::Else { body: Box::new(body), span: SoulSpan::from_token(token) }
     }
+
 }
 
 impl IVariable {
@@ -263,7 +265,6 @@ impl IVariable {
 
 
 impl IExpression {
-    #[allow(dead_code)]
     pub fn new_variable(name: &str, type_name: &str, token: &Token) -> Self {
         IExpression::IVariable { 
             this: IVariable::new_variable(name, type_name, token),
@@ -271,7 +272,6 @@ impl IExpression {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_literal(value: &str, type_name: &str, token: &Token) -> Self {
         IExpression::Literal{
             value: value.to_string(), 
@@ -280,7 +280,6 @@ impl IExpression {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_increment(variable: IVariable, is_before: bool, amount: i8, token: &Token) -> Self {
         IExpression::Increment{
             variable, 
@@ -290,7 +289,6 @@ impl IExpression {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_binary_expression(left: IExpression, operator_type: ExprOperatorType, right: IExpression, type_name: &str, token: &Token) -> Self {
         IExpression::BinairyExpression{
             left: Box::new(left), 
@@ -300,7 +298,6 @@ impl IExpression {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_mutref(expression: IExpression, token: &Token) -> Self {
         IExpression::MutRef { 
             expression: Box::new(expression),
@@ -308,7 +305,6 @@ impl IExpression {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_constref(expression: IExpression, token: &Token) -> Self {
         IExpression::ConstRef { 
             expression: Box::new(expression),
@@ -316,7 +312,6 @@ impl IExpression {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_deref(expression: IExpression, token: &Token) -> Self {
         IExpression::DeRef { 
             expression: Box::new(expression),
@@ -324,7 +319,6 @@ impl IExpression {
         }
     }
 
-    #[allow(dead_code)]
     pub fn new_funtion_call(function_info: FunctionDeclaration, args: Vec<IExpression>, generic_defines: BTreeMap<String, String>, token: &Token) -> Self {
         IExpression::FunctionCall { 
             args, 
@@ -334,16 +328,26 @@ impl IExpression {
         }
     }
 
+    pub fn new_index(this: IExpression, index: IExpression, return_type: String, token: &Token) -> Self {
+        IExpression::Index { 
+            this: Box::new(this), 
+            index: Box::new(index), 
+            return_type, 
+            span: SoulSpan::from_token(token), 
+        } 
+    }
+
     pub fn get_span(&self) -> &SoulSpan {
         match self {
-            IExpression::IVariable{span, ..} => span,
-            IExpression::BinairyExpression{span, ..} => span,
+            IExpression::Index{span, ..} => span,
+            IExpression::DeRef{span, ..} => span,
+            IExpression::MutRef{span, ..} => span,
             IExpression::Literal{span, ..} => span,
             IExpression::ConstRef{span, ..} => span,
-            IExpression::MutRef{span, ..} => span,
-            IExpression::DeRef{span, ..} => span,
             IExpression::Increment{span, ..} => span,
+            IExpression::IVariable{span, ..} => span,
             IExpression::FunctionCall{span, ..} => span,
+            IExpression::BinairyExpression{span, ..} => span,
             IExpression::EmptyExpression(soul_span) => soul_span,
         }
     }
@@ -356,6 +360,7 @@ impl IExpression {
             IExpression::ConstRef { expression, span:_ } => format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef), expression.to_string()),
             IExpression::MutRef { expression, span:_ } => format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::MutRef), expression.to_string()),
             IExpression::DeRef { expression, span:_ } => format!("{}{}", SOUL_NAMES.get_name(NamesTypeWrapper::Pointer), expression.to_string()),
+            IExpression::Index { this, index, return_type , span:_ } => format!("Index({}[{}], type: {})", this.to_string(), index.to_string(), return_type.to_string()),
             IExpression::Increment { variable, is_before, amount, span:_ } => {
                 let symbool; 
                 if *amount < 0 {

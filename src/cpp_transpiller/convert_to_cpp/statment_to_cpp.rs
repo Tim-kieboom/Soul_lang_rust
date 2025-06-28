@@ -257,7 +257,7 @@ fn function_body_to_cpp(writer: &mut CppWriter, statment_iter: &StatmentIterator
         let arg_name = &func_info.args[0].name;
         writer.end_line();
         writer.start_line();
-        writer.push_str(format!("auto __var_args = __Soul_ARRAY__<__Soul_ARRAY__<char>>(__SOUL_C_argsc); for(int i = 0; i < __SOUL_C_argsc; i++){} *__var_args.__get_mutRef(i) = str((const char*)__SOUL_C_argsv[i]); {} __Soul_ARRAY__<__Soul_ARRAY__<char>>* const {} = (__Soul_ARRAY__<__Soul_ARRAY__<char>>* const)&__var_args; ", '{', '}', arg_name).as_str());
+        writer.push_str(format!("auto __var_args = __Soul_ARRAY__<__Soul_ARRAY__<char>>(__SOUL_C_argsc); for(int i = 0; i < __SOUL_C_argsc; i++){} __var_args[i] = str((const char*)__SOUL_C_argsv[i]); {} __Soul_ARRAY__<__Soul_ARRAY__<char>>* const {} = (__Soul_ARRAY__<__Soul_ARRAY__<char>>* const)&__var_args; ", '{', '}', arg_name).as_str());
         writer.end_line();
     }
 

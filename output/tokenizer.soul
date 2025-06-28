@@ -1,18 +1,21 @@
+const ch = 'a' 
+const number = 1 
+Literal gravity = 9.81 
+const f32 float = 1 
+Literal uint uintNumber = 1 
+const strarray = [ __Soul_c_str_2__ , __Soul_c_str_1__ , __Soul_c_str_0__ , __Soul_c_str_0__ ] 
+array ( ) { 
+array := [ 1 , 2 , 3 , 4 ] 
+second := array [ 1 ] 
+Println ( array [ 0 ] ) 
+} 
 main ( str [] @ args ) int { 
 sum ( int a , int b ) int { 
 return a + b 
 } 
-argsLen := __soul_internal_length__ ( args ) 
-Println ( __soul_format_string__ ( __Soul_c_str_2__ , argsLen , __Soul_c_str_1__ , args , __Soul_c_str_0__ ) ) 
+Println ( args [ 0 ] ) 
 Println ( __soul_format_string__ ( __Soul_c_str_3__ ) ) 
-Println ( __soul_format_string__ ( __Soul_c_str_4__ , sum ( 1 , 2 ) , __Soul_c_str_0__ ) ) 
-f := @ 1 
-num := i32 ( 1 ) 
-i32 @ ref = @ num 
-buffer := str ( ) 
-str @ refstr = @ buffer 
-Print ( __Soul_c_str_5__ ) 
-Input ( & buffer ) 
-Println ( @ buffer ) 
+Println ( __soul_format_string__ ( __Soul_c_str_5__ , sum ( 1 , 2 ) , __Soul_c_str_4__ ) ) 
+array ( ) 
 return 0 
 } 

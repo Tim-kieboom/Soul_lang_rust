@@ -1,22 +1,22 @@
-use std::collections::HashMap;
 use std::result;
 use once_cell::sync::Lazy;
-use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulSpan};
+use std::collections::HashMap;
 
-use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::tokenizer::token::Token;
-use crate::meta_data::meta_data::{MetaData, ProgramMemoryEntry};
-use crate::meta_data::type_store::{ImplOperator, ImplOperators};
 use crate::meta_data::type_meta_data::TypeMetaData;
+use crate::meta_data::scope_and_var::scope::ScopeId;
 use crate::meta_data::soul_type::soul_type::SoulType;
 use crate::meta_data::scope_and_var::var_info::VarInfo;
 use crate::meta_data::soul_type::type_wrappers::TypeWrappers;
 use crate::meta_data::soul_type::type_modifiers::TypeModifiers;
+use crate::meta_data::meta_data::{MetaData, ProgramMemoryEntry};
+use crate::meta_data::type_store::{ImplOperator, ImplOperators};
 use crate::meta_data::soul_type::primitive_types::PrimitiveType;
 use super::get_function_call::get_function_call::get_function_call;
 use crate::abstract_styntax_tree::operator_type::{ExprOperatorType, ALL_OPERATORS};
 use crate::meta_data::soul_names::{NamesInternalType, NamesTypeWrapper, SOUL_NAMES};
 use crate::meta_data::current_context::current_context::{CurrentContext, CurrentGenerics};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulSpan};
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::multi_stament_result::MultiStamentResult;
 use crate::{abstract_styntax_tree::abstract_styntax_tree::IExpression, tokenizer::token::TokenIterator};
 use crate::meta_data::soul_type::type_checker::type_checker::{check_convert_to_ref, duck_type_equals, is_expression_literal};
@@ -44,6 +44,8 @@ static NEGATIVE_ONE_LITERAL: Lazy<IExpression> = Lazy::new(|| {
         &Token{line_number: 0, line_offset: 0, text: String::new()},
     )
 });
+
+static UINT_TYPE: Lazy<SoulType> = Lazy::new(|| SoulType::new(SOUL_NAMES.get_name(NamesInternalType::Uint).to_string()));
 
 pub fn get_expression(
     iter: &mut TokenIterator, 
@@ -150,6 +152,7 @@ fn convert_expression(
 
         let mut is_literal = false;
         let possible_literal = SoulType::from_literal(iter, &meta_data.type_meta_data, &mut context.current_generics, *should_be_type, &mut is_literal);
+
         if is_literal && matches!(possible_literal, Err(_)) {
             return Err(possible_literal.unwrap_err());
         }
@@ -189,7 +192,40 @@ fn convert_expression(
         else {
             return Err(new_soul_error(iter.current(), format!("token: '{}' is not valid espression", iter.current().text).as_str()));
         }
+
         prev_token_index = iter.current_index();
+
+        if iter.peek().is_some_and(|token| token.text == "[") {
+            
+            let parent_type = stacks.type_stack.pop()
+                .ok_or(new_soul_error(iter.current(), "while trying to get index expression type_stack empty"))?;
+
+            if !parent_type.is_array() {
+                return Err(new_soul_error(iter.current(), format!("trying to index of type: '{}' but only array type can index", parent_type.to_string()).as_str()));
+            }
+
+            if iter.next_multiple(2).is_none() {
+                break;
+            }
+
+            let GetExpressionResult{is_type: index_type, result: index_expression} = get_expression(iter, meta_data, context, should_be_type, is_forward_declared, &vec!["]"])
+                .map_err(|err| pass_soul_error(iter.current(), "while trying to get index", err))?;
+
+            if !index_type.is_convertable(&UINT_TYPE, iter.current(), &meta_data.type_meta_data, &mut context.current_generics) {
+                return Err(new_soul_error(iter.current(), format!("index has to be of type: '{}' is_type: '{}'", UINT_TYPE.to_string(), index_type.to_string()).as_str()));
+            }
+
+            result.add_result(&index_expression);
+
+            let parent = stacks.node_stack.pop()
+                .ok_or(new_soul_error(iter.current(), "while trying to get index expression node_stack empty"))?;
+
+            let el_type = parent_type.get_type_child()
+                .ok_or(new_soul_error(iter.current(), format!("while trying to get index could not get child type of array_type: '{}'", parent_type.to_string()).as_str()))?;
+
+            stacks.node_stack.push(IExpression::new_index(parent, index_expression.value, el_type.to_string(), iter.current()));
+            stacks.type_stack.push(el_type);
+        }
 
         if should_convert_to_ref(&ref_stack, stacks) {
             convert_to_ref(iter, &mut ref_stack, stacks, meta_data, &mut context.current_generics, should_be_type)?;

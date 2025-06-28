@@ -2,9 +2,6 @@
 opt-level = 0
 debug = true
 
-[profile.release]
-debug = true
-
 [package]
 name = "soul_lang_rust"
 version = "0.1.0"

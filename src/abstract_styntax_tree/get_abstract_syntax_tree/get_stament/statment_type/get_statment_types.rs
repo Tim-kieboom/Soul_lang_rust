@@ -186,7 +186,8 @@ fn open_body(iter: &TokenIterator, statment_info: &mut StatmentTypeInfo, meta_da
     statment_info.open_bracket_stack += 1;
     statment_info.scope_start_index.push(statment_info.statment_types.len());
 
-    let child_id = meta_data.open_scope(context, allows_vars_access, true)
+    const IS_FORWARD_DECLARED: bool = true;
+    let child_id = meta_data.open_scope(context, allows_vars_access, IS_FORWARD_DECLARED)
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to open scope\n{}", msg).as_str()))?;
 
     context.set_current_scope_id(child_id);

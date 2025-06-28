@@ -1,45 +1,58 @@
+Initialize(
+	Assignment(
+		Variable(const char ch) = Literal(Literal char 'a')
+	)
+)
+Initialize(
+	Assignment(
+		Variable(const int number) = Literal(Literal untypedInt 1)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(const f32 float) = Literal(const f32 1)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(Literal uint uintNumber) = Literal(Literal uint 1)
+	)
+)
+Initialize(
+	Assignment(
+		Variable(const str[] strarray) = Literal(Literal str[] __programMemory_2)
+	)
+)
+FunctionBody(array(){
+	Initialize(
+		Assignment(
+			Variable(int[] array) = Literal(Literal untypedInt[] __programMemory_3)
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(int second) = Index(Variable(int[] array)[Literal(Literal untypedInt 1)], type: int)
+		)
+	)
+	FunctionCall(Println(Index(Variable(int[] array)[Literal(Literal untypedInt 0)], type: int)))
+	
+}.deletes(second,array,))
+
 FunctionBody(main(str[]@ args) int{
 	FunctionBody(sum( int a,  int b) int{
 		Return(BinaryExpression(Variable(const int a) + Variable(const int b), type: const int), deletes(["b", "a"]))
 		
 	}.deletes(b,a,))
 	
-	Initialize(
-		Assignment(
-			Variable(uint argsLen) = FunctionCall(__soul_internal_length__(Variable(str[]@ args)))
-		)
-	)
-	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_2__), Variable(uint argsLen), Variable(Literal str __Soul_c_str_1__), Variable(str[]@ args), Variable(Literal str __Soul_c_str_0__)))))
+	FunctionCall(Println(Index(Variable(str[]@ args)[Literal(Literal untypedInt 0)], type: str[])))
 	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_3__)))))
-	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_4__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_0__)))))
-	Initialize(
-		Assignment(
-			Variable(int@ f) = @Literal(Literal untypedInt __programMemory_1)
-		)
-	)
-	Initialize(
-		Assignment(
-			Variable(i32 num) = FunctionCall(i32(Literal(Literal untypedInt 1)))
-		)
-	)
-	Initialize(
-		Assignment(
-			Variable(i32@ ref) = @Variable(i32 num)
-		)
-	)
-	Initialize(
-		Assignment(
-			Variable(str buffer) = FunctionCall(str())
-		)
-	)
-	Initialize(
-		Assignment(
-			Variable(str@ refstr) = @Variable(str buffer)
-		)
-	)
-	FunctionCall(Print(Variable(Literal str __Soul_c_str_5__)))
-	FunctionCall(Input(&Variable(str buffer)))
-	FunctionCall(Println(@Variable(str buffer)))
-	Return(Literal(int 0), deletes(["refstr", "ref", "num", "f", "buffer", "argsLen", "args"]))
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_5__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_4__)))))
+	FunctionCall(array())
+	Return(Literal(int 0), deletes(["args"]))
 	
-}.deletes(refstr,ref,num,f,buffer,argsLen,args,))
+}.deletes(args,))

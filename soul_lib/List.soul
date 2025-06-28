@@ -12,10 +12,10 @@ interface IList<T> typeof IIter<T> (
     this::[](int begin, int end) T[]
 )
 
-struct List<T> typeof IList<T> (
-    priv T[] buffer,
-    usize len {Get() set()},
-) 
+class List<T> typeof IList<T> (
+    T[] buffer,
+    usize len { get; priv set; },
+)
 {
     Ctor();
     Ctor::[](T[] init) {
@@ -76,7 +76,7 @@ struct List<T> typeof IList<T> (
     }
 
     this::[](int index) T {
-        return buffer[..len][index]
+        return buffer[index]
     }
 
     this::[](int begin, int end) T[] {

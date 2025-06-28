@@ -174,18 +174,22 @@ fn internal_function_declaration(
     if function.name == "main" {
 
         if !function.optionals.is_empty() {
-            return Err(new_soul_error(iter.current(), "function 'main' only allows 'main()' and 'main(str[])' as arguments (optionals not allowed remove '= ...')"));
+            return Err(new_soul_error(iter.current(), "function 'main' only allows 'main()' and 'main(str[])' as arguments (optionals not allowed remove '<type> = ...')"));
         }
 
         if function.args.is_empty() {
             return Ok(function);
         }
         else if function.args.len() > 1 {
-            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", CONST_REF_STR_ARRAY_STRING.as_str()).as_str()));
+            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments, not: 'main({:?})'", CONST_REF_STR_ARRAY_STRING.as_str(), function.args.iter().map(|arg| &arg.value_type).collect::<Vec<_>>()).as_str()));
         }
         
         if function.args[0].value_type != CONST_REF_STR_ARRAY_STRING.as_str() {
-            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments", CONST_REF_STR_ARRAY_STRING.as_str()).as_str()));
+            return Err(new_soul_error(iter.current(), format!("function 'main' only allows 'main()' and 'main({})' as arguments, not: 'main({})'", CONST_REF_STR_ARRAY_STRING.as_str(), function.args[0].value_type).as_str()));
+        }
+
+        if function.args[0].is_mutable {
+            return Err(new_soul_error(iter.current(), format!("function 'main' does not allow mutable arguments, not: 'main(mut {})'", function.args[0].value_type).as_str()));
         }
     }
 

@@ -33,10 +33,9 @@ fn global_scope(meta_data: &MetaData) -> &Scope {
 #[test]
 fn test_get_function_main() {
     let array = SOUL_NAMES.get_name(NamesTypeWrapper::Array);
+    let const_ref = SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef);
     let str = SOUL_NAMES.get_name(NamesInternalType::String);
     let int = SOUL_NAMES.get_name(NamesInternalType::Int);
-
-    let literal = SOUL_NAMES.get_name(NamesTypeModifiers::Literal);
 
 
     const MAIN_1: &str = "main() {}";
@@ -75,8 +74,8 @@ fn test_get_function_main() {
 
 //----------------------------
 
-    let lit_str_array = format!("{} {}{}", literal, str, array);
-    let main_args = format!("main({} args) {}", lit_str_array, "{}"); // main(str[] args) {}
+    let lit_str_array = format!("{}{}{}",str, array, const_ref);
+    let main_args = format!("main({} args) {}", lit_str_array, "{}"); // main(str[]@ args) {}
 
     function = simple_get_function(&main_args);
     should_be = FunctionDeclaration::new(
@@ -108,12 +107,12 @@ fn test_get_function_main() {
 
 //----------------------------
 
-    let str_array = format!("{}{}",str, array);
-    let mut_args_main = format!("main(mut {} args) {}", str_array, "{}"); // main(mut str[] args) {}
+    let str_array = format!("{}{}{}",str, array, const_ref);
+    let mut_args_main = format!("main(mut {} args) {}", str_array, "{}"); // main(mut str[]@ args) {}
 
     let res = try_simple_get_function(&mut_args_main);
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().to_err_message(), format!("at 0:21; !!error!! function 'main' only allows 'main()' and 'main({})' as arguments", lit_str_array));
+    assert_eq!(res.unwrap_err().to_err_message(), format!("at 0:22; !!error!! function 'main' does not allow mutable arguments, not: 'main(mut str[]@)'"));
 
 
 }

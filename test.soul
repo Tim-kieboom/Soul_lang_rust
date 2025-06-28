@@ -1,11 +1,10 @@
-// const ch = 'a'
-// const number = 1
-// Literal gravity = 9.81
-// const f32 float = 1
-// Literal uint uintNumber = 1
+const ch = 'a'
+const number = 1
+Literal gravity = 9.81
+const f32 float = 1
+Literal uint uintNumber = 1
 
-// const array = [1, 2, 3, 4]
-// const strarray = ["ello", "hoiu", "werg", "werg"]
+const strarray = ["ello", "hoiu", "werg", "werg"]
 
 // wrong() {
 // 	mutNum := 1
@@ -19,27 +18,49 @@
 
 // type string typeof str
 
+array() {
+	array := [1,2,3,4]
+	second := array[1]
+	// array[0] = 200
+	Println(array[0])
+}
+
+// whileArgs(str[]@ args) {
+// 	argsLen := __soul_internal_length__(args)
+// 	// i := 0
+// 	// while i++ < argsLen {
+// 	// 	Println("{i}.{args[i]}")
+// 	// }	
+// }
+
+// ref() {
+// 	f := @1
+// 	num := i32(1)
+// 	i32@ ref = @num
+// 	buffer := str()
+// 	str@ refstr = @buffer
+// }
+
+// printInput() {
+// 	buffer := str()
+
+// 	Print("foo ")
+// 	Input(&buffer)
+// 	Println(@buffer)
+// }
+
 main(str[]@ args) int {
 	sum(int a, int b) int {
 		return a + b
 	}
-
-	argsLen := __soul_internal_length__(args)
-	
-	Println(f"args length: {argsLen} values: {args}")	
-
+	Println(args[0])
 	Println(f"hello world")
 	Println(f"1 + 2 = {sum(1, 2)}")
 
-	f := @1
-	num := i32(1)
-	i32@ ref = @num
-	buffer := str()
-	str@ refstr = @buffer
-
-	Print("foo ")
-	Input(&buffer)
-	Println(@buffer)
+	array()
+	// whileArgs(args)
+	// ref()
+	// printInput()
 
 	return 0
 }

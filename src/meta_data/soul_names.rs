@@ -157,6 +157,7 @@ impl<'a> SoulNames<'a> {
             (NamesOtherKeyWords::SwitchCase, "match"),
             (NamesOtherKeyWords::Typeof, "typeof"),
             (NamesOtherKeyWords::Type, "type"),
+            (NamesOtherKeyWords::Type, "deref"),
 
             (NamesOtherKeyWords::CopyData, "copy"),
             (NamesOtherKeyWords::Async, "async"),

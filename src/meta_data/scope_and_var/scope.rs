@@ -12,8 +12,8 @@ use super::var_info::VarInfo;
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ScopeId(pub u64);
 impl ScopeId {
-    pub fn increment(&self) -> ScopeId {
-        ScopeId(self.0 + 1)
+    pub fn increment(&mut self) {
+        self.0 += 1
     }
 }
 
@@ -45,12 +45,13 @@ impl Scope {
         }
     }
 
-    pub fn new_child(parent: &Scope, allows_vars_access: bool) -> Self {
-        let child_id = parent.last_child_id.increment();
+    pub fn new_child(parent: &mut Scope, allows_vars_access: bool) -> Self {
+        parent.last_child_id.increment();
+
         Scope { 
-            id: child_id, 
+            id: parent.last_child_id.clone(), 
             parent: Some(ScopeParentInfo { id: parent.id, allows_vars_access }), 
-            last_child_id: child_id,
+            last_child_id: parent.last_child_id.clone(),
             vars: BTreeMap::new(), 
             function_store: FunctionStore::new(),
             next_function_id: parent.next_function_id.clone(),

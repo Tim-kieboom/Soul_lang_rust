@@ -295,12 +295,12 @@ impl MetaData {
     }
 
     pub fn open_scope(&mut self, context: &CurrentContext, allows_vars_access: bool, is_forward_declared: bool) -> result::Result<ScopeId, String> {
-        let parent = self.scope_store.get(&context.get_current_scope_id())
+        let parent = self.scope_store.get_mut(&context.get_current_scope_id())
             .ok_or("Internal Error: can not get parent scope from scope_store")?;
 
         let child_id;
         if is_forward_declared {
-            let child = Scope::new_child(&parent, allows_vars_access);
+            let child = Scope::new_child(parent, allows_vars_access);
             child_id = *child.id();
             self.scope_store.insert(child_id, child);
         }

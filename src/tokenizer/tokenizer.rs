@@ -93,7 +93,6 @@ pub fn tokenize_file(source_file: Vec<FileLine>, estimated_token_count: u64, met
     Ok(tokens)
 }
 
-#[allow(dead_code)]
 pub fn tokenize_line(line: FileLine, line_index: usize, in_multi_line_commend: &mut bool, meta_data: &mut MetaData) -> Result<Vec<Token>> {
     if line.text.is_empty() {
         return Ok(Vec::new());

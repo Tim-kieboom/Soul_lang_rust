@@ -1,5 +1,6 @@
 id: 0 (
 	functions:(
+		array(), 
 		main(str[]@ args) int
 	),
 	vars: (
@@ -8,24 +9,33 @@ id: 0 (
 		Literal str __Soul_c_str_2__,
 		Literal str __Soul_c_str_3__,
 		Literal str __Soul_c_str_4__,
-		Literal str __Soul_c_str_5__
+		Literal str __Soul_c_str_5__,
+		const char ch,
+		const f32 float,
+		Literal f32 gravity,
+		const int number,
+		const str[] strarray,
+		Literal uint uintNumber
 	),
 ),
 id: 1 (
 	functions:(
-		sum( int a,  int b) int
+		
 	),
 	vars: (
-		str[]@ args,
-		uint argsLen,
-		str buffer,
-		int@ f,
-		i32 num,
-		i32@ ref,
-		str@ refstr
+		int[] array,
+		int second
 	),
 ),
 id: 2 (
+	functions:(
+		sum( int a,  int b) int
+	),
+	vars: (
+		str[]@ args
+	),
+),
+id: 3 (
 	functions:(
 		
 	),

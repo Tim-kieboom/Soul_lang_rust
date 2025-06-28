@@ -124,12 +124,12 @@ void __soul_array_parse__(const __Soul_ARRAY__<K>& array, __Soul_cpp_string& out
     int64_t lastIndex = array.__size() - 1;
     for (int64_t i = 0; i < lastIndex; i++)
     {
-        __soul_array_element_parse__(array.__get(i), out);
+        __soul_array_element_parse__(array[i], out);
         out += ", ";
     }
 
     if(lastIndex >= 0)
-        __soul_array_element_parse__(array.__get(lastIndex), out);
+        __soul_array_element_parse__(array[lastIndex], out);
 
     out.push_back(']');
 }

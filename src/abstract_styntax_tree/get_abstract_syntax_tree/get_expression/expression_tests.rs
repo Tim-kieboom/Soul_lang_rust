@@ -107,7 +107,7 @@ fn test_get_expression_lit_int() {
     let lit_int_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::Int).to_string(), TypeModifiers::Literal);
     let lit_untyped_int_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::UntypedInt).to_string(), TypeModifiers::Literal);
 
-    const LIT_INT: &str = "1;";
+    const LIT_INT: &str = "1;{}";
 
     let mut expr_result = simple_get_expression(LIT_INT, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -120,7 +120,7 @@ fn test_get_expression_lit_int() {
 
 
 
-    const LIT_MINUS_INT: &str = "-1;";
+    const LIT_MINUS_INT: &str = "-1;{}";
 
     expr_result = simple_get_expression(LIT_MINUS_INT, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -137,7 +137,7 @@ fn test_get_expression_lit_float() {
     let lit_f32_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::Float32).to_string(), TypeModifiers::Literal); 
     let lit_untyped_float_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::UntypedFloat).to_string(), TypeModifiers::Literal); 
 
-    const LIT_FLOAT: &str = "1.0;";
+    const LIT_FLOAT: &str = "1.0;{}";
 
     let mut expr_result = simple_get_expression(LIT_FLOAT, None);
 
@@ -163,7 +163,7 @@ fn test_get_expression_lit_float() {
         assert!(false, "expr_result should return 'literal': {:#?}", expr_result)
     }
 
-    const LIT_MINUS_FLOAT: &str = "-1.0;";
+    const LIT_MINUS_FLOAT: &str = "-1.0;{}";
 
     expr_result = simple_get_expression(LIT_MINUS_FLOAT, None);
 
@@ -199,7 +199,7 @@ fn test_get_expression_lit_binary() {
     
     let lit_i8_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::Int8).to_string(), TypeModifiers::Literal); 
     
-    const LIT_BINAIRY8: &str = "0b00000001;"; // is 1
+    const LIT_BINAIRY8: &str = "0b00000001;{}"; // is 1
 
     let mut expr_result = simple_get_expression(LIT_BINAIRY8, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -215,7 +215,7 @@ fn test_get_expression_lit_binary() {
     
     
     
-    const LIT_MINUS_BINAIRY8: &str = "-0b00000001;"; // is -1
+    const LIT_MINUS_BINAIRY8: &str = "-0b00000001;{}"; // is -1
 
     expr_result = simple_get_expression(LIT_MINUS_BINAIRY8, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -223,7 +223,7 @@ fn test_get_expression_lit_binary() {
 
 
     
-    const LIT_BINAIRY16: &str = "0b0000000100000001;"; // is 257
+    const LIT_BINAIRY16: &str = "0b0000000100000001;{}"; // is 257
 
     expr_result = simple_get_expression(LIT_BINAIRY16, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -231,7 +231,7 @@ fn test_get_expression_lit_binary() {
     
     
     
-    const LIT_BINAIRY32: &str = "0b00000001000000010000000100000001;"; // is 16843009
+    const LIT_BINAIRY32: &str = "0b00000001000000010000000100000001;{}"; // is 16843009
 
     expr_result = simple_get_expression(LIT_BINAIRY32, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -239,13 +239,13 @@ fn test_get_expression_lit_binary() {
 
 
 
-    const LIT_BINAIRY64: &str = "0b0000000100000001000000010000000100000001000000010000000100000001;"; // is 72340172838076673
+    const LIT_BINAIRY64: &str = "0b0000000100000001000000010000000100000001000000010000000100000001;{}"; // is 72340172838076673
 
     expr_result = simple_get_expression(LIT_BINAIRY64, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_literal_expression(expr_result, "0b0000000100000001000000010000000100000001000000010000000100000001", &lit_u64_type);
     
-    const LIT_TO_MANY_BITS: &str = "0b00000001000000010000000100000001000000010000000100000001000000011";
+    const LIT_TO_MANY_BITS: &str = "0b00000001000000010000000100000001000000010000000100000001000000011;{}";
     assert!(try_simple_get_expression(LIT_TO_MANY_BITS, None).is_err());
 
 }
@@ -259,7 +259,7 @@ fn test_get_expression_lit_hexdeciaml() {
     
     let lit_i8_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::Int8).to_string(), TypeModifiers::Literal); 
 
-    const LIT_HEX_8: &str = "0xf;";
+    const LIT_HEX_8: &str = "0xf;{}";
 
     let mut expr_result = simple_get_expression(LIT_HEX_8, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -269,7 +269,7 @@ fn test_get_expression_lit_hexdeciaml() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_literal_expression(expr_result, "0xf", &lit_u8_type);
 
-    const LIT_MINUS_HEX_8: &str = "-0xf;";
+    const LIT_MINUS_HEX_8: &str = "-0xf;{}";
 
     expr_result = simple_get_expression(LIT_MINUS_HEX_8, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -277,7 +277,7 @@ fn test_get_expression_lit_hexdeciaml() {
 
 
 
-    const LIT_HEX_16: &str = "0x1f;";
+    const LIT_HEX_16: &str = "0x1f;{}";
 
     expr_result = simple_get_expression(LIT_HEX_16, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -285,7 +285,7 @@ fn test_get_expression_lit_hexdeciaml() {
 
 
 
-    const LIT_HEX_32: &str = "0xf1fa;";
+    const LIT_HEX_32: &str = "0xf1fa;{}";
 
     expr_result = simple_get_expression(LIT_HEX_32, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -293,7 +293,7 @@ fn test_get_expression_lit_hexdeciaml() {
 
 
 
-    const LIT_HEX_64: &str = "0xead9cb0f;";
+    const LIT_HEX_64: &str = "0xead9cb0f;{}";
 
     expr_result = simple_get_expression(LIT_HEX_64, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -301,7 +301,7 @@ fn test_get_expression_lit_hexdeciaml() {
 
 
 
-    const LIT_HEX_TO_BIG: &str = "0xfffffffff;";
+    const LIT_HEX_TO_BIG: &str = "0xfffffffff;{}";
     assert!(try_simple_get_expression(LIT_HEX_TO_BIG, None).is_err());
 
 }
@@ -310,14 +310,14 @@ fn test_get_expression_lit_hexdeciaml() {
 fn test_get_expression_lit_string() {
     let lit_str_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::String).to_string(), TypeModifiers::Literal);
 
-    const LIT_STRING: &str = "\"string\";";
+    const LIT_STRING: &str = "\"string\";{}";
     let mut expr_result = simple_get_expression(LIT_STRING, None);
 
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, "__Soul_c_str_0__", &lit_str_type.to_string());
 
     
-    const LIT_STRING_2: &str = "\"string\\\"\";";
+    const LIT_STRING_2: &str = "\"string\\\"\";{}";
 
     expr_result = simple_get_expression(LIT_STRING_2, None);
 
@@ -325,7 +325,7 @@ fn test_get_expression_lit_string() {
     check_variable_expression(expr_result, "__Soul_c_str_0__", &lit_str_type.to_string());
 
     
-    const LIT_EMPTY_STRING: &str = "\"\";";
+    const LIT_EMPTY_STRING: &str = "\"\";{}";
 
     expr_result = simple_get_expression(LIT_EMPTY_STRING, None);
 
@@ -369,7 +369,7 @@ fn test_get_expression_variable() {
         .unwrap();
 
     
-    const GLOBAL_VAR: &str = "global1;";
+    const GLOBAL_VAR: &str = "global1;{}";
 
     let mut iter = get_iter(GLOBAL_VAR, &mut meta_data).unwrap();
 
@@ -384,7 +384,7 @@ fn test_get_expression_variable() {
         .inspect_err(|err| panic!("{:#?}", err))
         .unwrap();
     
-    const SCOPE_VAR: &str = "scope1;";
+    const SCOPE_VAR: &str = "scope1;{}";
     iter = get_iter(SCOPE_VAR, &mut meta_data).unwrap();
 
     let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, IS_FORWARD_DECLARED, &vec![";"]).unwrap();
@@ -397,7 +397,7 @@ fn test_get_expression_binary_expression_single_number() {
     let lit_untyped_int_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::UntypedInt).to_string(), TypeModifiers::Literal);
     let lit_bool_type = SoulType::from_modifiers(SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string(), TypeModifiers::Literal);
     
-    const BINARY_ADD: &str = "1 + 2;";
+    const BINARY_ADD: &str = "1 + 2;{}";
     
     let mut expr_result = simple_get_expression(BINARY_ADD, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -405,7 +405,7 @@ fn test_get_expression_binary_expression_single_number() {
     
 
 
-    const BINARY_POWER: &str = "1 ** 2;";
+    const BINARY_POWER: &str = "1 ** 2;{}";
 
     expr_result = simple_get_expression(BINARY_POWER, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -413,7 +413,7 @@ fn test_get_expression_binary_expression_single_number() {
 
 
 
-    const BINARY_LOG: &str = "1 log 2;";
+    const BINARY_LOG: &str = "1 log 2;{}";
 
     expr_result = simple_get_expression(BINARY_LOG, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -421,7 +421,7 @@ fn test_get_expression_binary_expression_single_number() {
 
 
 
-    const BINARY_ROOT: &str = "1 </ 2;";
+    const BINARY_ROOT: &str = "1 </ 2;{}";
 
     expr_result = simple_get_expression(BINARY_ROOT, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -429,7 +429,7 @@ fn test_get_expression_binary_expression_single_number() {
 
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new() };
-    const BINARY_EQ: &str = "1 == 2;";
+    const BINARY_EQ: &str = "1 == 2;{}";
 
     expr_result = simple_get_expression(BINARY_EQ, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -441,7 +441,7 @@ fn test_get_expression_binary_expression_single_number() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_LOGICAL_AND: &str = "true && true;";
+    const BINARY_LOGICAL_AND: &str = "true && true;{}";
 
     expr_result = simple_get_expression(BINARY_LOGICAL_AND, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -453,7 +453,7 @@ fn test_get_expression_binary_expression_single_number() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_BIT_AND: &str = "1 & 2;";
+    const BINARY_BIT_AND: &str = "1 & 2;{}";
 
     let expr_result = simple_get_expression(BINARY_BIT_AND, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -473,7 +473,7 @@ fn test_get_expression_binary_expression_single_str() {
     
     let lit_str_string = lit_str_type.to_string();
 
-    const BINARY_ADD_STRING: &str = "\"hello \" + \"world\";";
+    const BINARY_ADD_STRING: &str = "\"hello \" + \"world\";{}";
 
     let mut expr_result = simple_get_expression(BINARY_ADD_STRING, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -481,7 +481,7 @@ fn test_get_expression_binary_expression_single_str() {
 
 
 
-    const BINARY_EQ_STRING: &str = "\"hello \" == \"world\";";
+    const BINARY_EQ_STRING: &str = "\"hello \" == \"world\";{}";
 
     expr_result = simple_get_expression(BINARY_EQ_STRING, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -489,7 +489,7 @@ fn test_get_expression_binary_expression_single_str() {
 
 
     
-    const BINARY_NOT_EQ_STRING: &str = "\"hello \" != \"world\";";
+    const BINARY_NOT_EQ_STRING: &str = "\"hello \" != \"world\";{}";
 
     expr_result = simple_get_expression(BINARY_NOT_EQ_STRING, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -497,7 +497,7 @@ fn test_get_expression_binary_expression_single_str() {
 
 
 
-    const BINARY_ERROR_SMALLER_STRING: &str = "\"hello \" < \"world\";";
+    const BINARY_ERROR_SMALLER_STRING: &str = "\"hello \" < \"world\";{}";
 
     let result = try_simple_get_expression(BINARY_ERROR_SMALLER_STRING, None);
     if let Err(err) = result {
@@ -512,7 +512,7 @@ fn test_get_expression_binary_expression_single_str() {
 
 
 
-    const BINARY_ERROR_MUL_STRING: &str = "\"hello \" * \"world\";";
+    const BINARY_ERROR_MUL_STRING: &str = "\"hello \" * \"world\";{}";
 
     let result = try_simple_get_expression(BINARY_ERROR_MUL_STRING, None);
     if let Err(err) = result {
@@ -527,7 +527,7 @@ fn test_get_expression_binary_expression_single_str() {
 
 
 
-    const BINARY_ERROR_SUB_STRING: &str = "\"hello \" - \"world\";";
+    const BINARY_ERROR_SUB_STRING: &str = "\"hello \" - \"world\";{}";
 
     let result = try_simple_get_expression(BINARY_ERROR_SUB_STRING, None);
     if let Err(err) = result {
@@ -555,7 +555,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
     let int_string = int_type.to_string();
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
-    const BINARY_ADD: &str = "1 + 2 + 3;";
+    const BINARY_ADD: &str = "1 + 2 + 3;{}";
     let mut expr_result = simple_get_expression(BINARY_ADD, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -572,7 +572,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_ADD_FLOAT: &str = "1 + 2 + 3.0;";
+    const BINARY_ADD_FLOAT: &str = "1 + 2 + 3.0;{}";
     expr_result = simple_get_expression(BINARY_ADD_FLOAT, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -589,7 +589,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_ADD_FLOAT_2: &str = "1.0 + 2 + 3;";
+    const BINARY_ADD_FLOAT_2: &str = "1.0 + 2 + 3;{}";
     expr_result = simple_get_expression(BINARY_ADD_FLOAT_2, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -607,7 +607,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
     ));
 
 
-    const BINARY_MUL_ADD: &str = "1 * 2 + 3;";
+    const BINARY_MUL_ADD: &str = "1 * 2 + 3;{}";
     expr_result = simple_get_expression(BINARY_MUL_ADD, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -624,7 +624,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_ADD_MULL: &str = "1 + 2 * 3;";
+    const BINARY_ADD_MULL: &str = "1 + 2 * 3;{}";
     expr_result = simple_get_expression(BINARY_ADD_MULL, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -642,7 +642,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
     ));
 
 
-    const BINARY_BRACKETS: &str = "(1 + 2) * 3;";
+    const BINARY_BRACKETS: &str = "(1 + 2) * 3;{}";
     expr_result = simple_get_expression(BINARY_BRACKETS, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -670,7 +670,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
         .inspect_err(|err| panic!("{:#?}", err))
         .unwrap();
 
-    const BINARY_BRACKETS_VAR: &str = "(var1 + 2) * 3;";
+    const BINARY_BRACKETS_VAR: &str = "(var1 + 2) * 3;{}";
     expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -687,7 +687,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_BRACKETS_VAR_INCR: &str = "(var1++ + 2) * 3;";
+    const BINARY_BRACKETS_VAR_INCR: &str = "(var1++ + 2) * 3;{}";
 
     expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR_INCR, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -705,7 +705,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_BRACKETS_VAR_INCR2: &str = "(++var1 + 2) * 3;";
+    const BINARY_BRACKETS_VAR_INCR2: &str = "(++var1 + 2) * 3;{}";
 
     expr_result = simple_get_expression_metadata(BINARY_BRACKETS_VAR_INCR2, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -723,7 +723,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
         &DUMMY_TOKEN,
     ));
 
-    const BINARY_BRACKETS_BOOL: &str = "1 < 2 != true;";
+    const BINARY_BRACKETS_BOOL: &str = "1 < 2 != true;{}";
 
     expr_result = simple_get_expression_metadata(BINARY_BRACKETS_BOOL, None, &mut meta_data, &mut context);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
@@ -752,7 +752,7 @@ fn test_get_expression_ref_literal() {
     let lit_untyped_int_string = lit_untyped_int_type.to_string();
     let lit_bool_string = lit_bool_type.to_string();
     
-    const LIT_MUT_REF_ERROR: &str = "&1;";
+    const LIT_MUT_REF_ERROR: &str = "&1;{}";
     const EXPECTED_ERROR: &str = "at 1:1; !!error!! while trying to get ref expression '&1'\nis a literal type so can not be mutRef'ed (remove '&' use '@' instead)";
     let result = try_simple_get_expression(LIT_MUT_REF_ERROR, None);
     if let Err(err) = result {
@@ -763,45 +763,45 @@ fn test_get_expression_ref_literal() {
     }
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
-    const INT_CONST_REF: &str = "@1;";
+    const INT_CONST_REF: &str = "@1;{}";
     let mut expr_result = simple_get_expression(INT_CONST_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
-        IExpression::new_literal("1", &lit_untyped_int_string, &DUMMY_TOKEN), &DUMMY_TOKEN
+        IExpression::new_literal("__programMemory_0", &lit_untyped_int_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
-    const FLOAT_CONST_REF: &str = "@1.0;";
+    const FLOAT_CONST_REF: &str = "@1.0;{}";
     expr_result = simple_get_expression(FLOAT_CONST_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
-        IExpression::new_literal("1.0", &lit_untyped_float_string, &DUMMY_TOKEN), &DUMMY_TOKEN
+        IExpression::new_literal("__programMemory_0", &lit_untyped_float_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
-    const BOOL_CONST_REF: &str = "@true;";
+    const BOOL_CONST_REF: &str = "@true;{}";
     expr_result = simple_get_expression(BOOL_CONST_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
-        IExpression::new_literal("true", &lit_bool_string, &DUMMY_TOKEN), &DUMMY_TOKEN
+        IExpression::new_literal("__programMemory_0", &lit_bool_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
-    const BOOL_CONST_REF_REF: &str = "@@true;";
+    const BOOL_CONST_REF_REF: &str = "@@true;{}";
     expr_result = simple_get_expression(BOOL_CONST_REF_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_constref(
-            IExpression::new_literal("true", &lit_bool_string, &DUMMY_TOKEN),
+            IExpression::new_literal("__programMemory_0", &lit_bool_string, &DUMMY_TOKEN),
             &DUMMY_TOKEN,
         ),
         &DUMMY_TOKEN,
     ));
 
-    const BOOL_CONST_REF_REF_REF: &str = "@@@true;";
+    const BOOL_CONST_REF_REF_REF: &str = "@@@true;{}";
     expr_result = simple_get_expression(BOOL_CONST_REF_REF_REF, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_constref(
             IExpression::new_constref(
-                IExpression::new_literal("true", &lit_bool_string, &DUMMY_TOKEN),
+                IExpression::new_literal("__programMemory_0", &lit_bool_string, &DUMMY_TOKEN),
                 &DUMMY_TOKEN,
             ),
             &DUMMY_TOKEN,
@@ -824,13 +824,13 @@ fn test_get_expression_ref_variable() {
 
     
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
-    const VAR_MUT_REF: &str = "&var;";
+    const VAR_MUT_REF: &str = "&var;{}";
     let expr_result = simple_get_expression_metadata(VAR_MUT_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_mutref(
         IExpression::new_variable("var", &int_string, &DUMMY_TOKEN), &DUMMY_TOKEN
     ));
 
-    const VAR_MUT_REF_REF: &str = "&&var;";
+    const VAR_MUT_REF_REF: &str = "&&var;{}";
     let expr_result = simple_get_expression_metadata(VAR_MUT_REF_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_mutref(
         IExpression::new_mutref(
@@ -840,14 +840,14 @@ fn test_get_expression_ref_variable() {
         &DUMMY_TOKEN,
     ));
 
-    const VAR_CONST_REF: &str = "@var;";
+    const VAR_CONST_REF: &str = "@var;{}";
     let expr_result = simple_get_expression_metadata(VAR_CONST_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_variable("var", &int_string, &DUMMY_TOKEN),
         &DUMMY_TOKEN,
     ));
 
-    const VAR_CONST_REF_REF: &str = "@@var;";
+    const VAR_CONST_REF_REF: &str = "@@var;{}";
     let expr_result = simple_get_expression_metadata(VAR_CONST_REF_REF, None, &mut meta_data, &mut context);
     assert_eq_iexpression(expr_result, IExpression::new_constref(
         IExpression::new_constref(
@@ -881,7 +881,7 @@ fn test_get_expression_function_call() {
         .expect("u8(int) not found")).clone();
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
-    const INTERNAL_U8: &str = "u8(1);"; 
+    const INTERNAL_U8: &str = "u8(1);{}"; 
     let mut expr_result = simple_get_expression(INTERNAL_U8, None);
     assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
         u8_int_func.clone(),
@@ -890,7 +890,7 @@ fn test_get_expression_function_call() {
         &DUMMY_TOKEN,
     ));
 
-    const DOUBLE_INTERNAL_U8: &str = "u8(u8(1));"; 
+    const DOUBLE_INTERNAL_U8: &str = "u8(u8(1));{}"; 
     expr_result = simple_get_expression(DOUBLE_INTERNAL_U8, None);
     assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
         u8_int_func.clone(),
@@ -906,7 +906,7 @@ fn test_get_expression_function_call() {
         &DUMMY_TOKEN, 
     ));
 
-    const BIN_INTERNAL_U8: &str = "u8(1) + u8(2);"; 
+    const BIN_INTERNAL_U8: &str = "u8(1) + u8(2);{}"; 
     expr_result = simple_get_expression(BIN_INTERNAL_U8, None);
 
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
@@ -943,7 +943,7 @@ fn test_get_expression_binary_expression_no_return_type() {
         .unwrap();
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
-    const PRINTLN: &str = "Println();";
+    const PRINTLN: &str = "Println();{}";
     let expr_result = simple_get_expression(PRINTLN, None);
     assert_eq_iexpression(expr_result, IExpression::new_funtion_call(
         (*println_func).clone(),
@@ -952,7 +952,7 @@ fn test_get_expression_binary_expression_no_return_type() {
         &DUMMY_TOKEN, 
     ));
 
-    const PRINTLN_BIN: &str = "Println() + 1;";
+    const PRINTLN_BIN: &str = "Println() + 1;{}";
     let mut res = try_simple_get_expression(PRINTLN_BIN, None);
     assert!(res.is_err());
     assert_eq!(res.unwrap_err().to_err_message(), "at 1:13; !!error!! binairy expression: 'Literal(Literal untypedInt 1) + FunctionCall(Println())' lefts type is 'none' which is not a valid type for binairy expressions");
@@ -998,60 +998,60 @@ fn test_get_expression_lit_array() {
         Vec::new(),
     );
 
-    const LIT_UNTYPED_INT_ARRAY: &str = "[1,2,3,4,5,6,7];";
+    const LIT_UNTYPED_INT_ARRAY: &str = "[1,2,3,4,5,6,7];{}";
 
     let mut expr_result = simple_get_expression(LIT_UNTYPED_INT_ARRAY, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[1,2,3,4,5,6,7]", &lit_untyped_int_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_untyped_int_array_type);
 
 
-    const LIT_UNTYPED_INT_ARRAY_2: &str = "[1,2,3,4,5,6,7,];";
+    const LIT_UNTYPED_INT_ARRAY_2: &str = "[1,2,3,4,5,6,7,];{}";
 
     expr_result = simple_get_expression(LIT_UNTYPED_INT_ARRAY_2, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[1,2,3,4,5,6,7,]", &lit_untyped_int_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_untyped_int_array_type);
 
 
-    const LIT_INT_ARRAY: &str = "int[1,2,3,4,5];";
+    const LIT_INT_ARRAY: &str = "int[1,2,3,4,5];{}";
 
     expr_result = simple_get_expression(LIT_INT_ARRAY, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[1,2,3,4,5]", &lit_int_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_int_array_type);
     
 
-    const LIT_UNTYPED_FLOAT_ARRAY_1: &str = "[1.0,2.0,3.0,4.0,5.0];";
+    const LIT_UNTYPED_FLOAT_ARRAY_1: &str = "[1.0,2.0,3.0,4.0,5.0];{}";
 
     expr_result = simple_get_expression(LIT_UNTYPED_FLOAT_ARRAY_1, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[1.0,2.0,3.0,4.0,5.0]", &lit_untyped_float_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_untyped_float_array_type);
     
 
-    const LIT_UNTYPED_FLOAT_ARRAY_2: &str = "[1.0,2,3,4,5];";
+    const LIT_UNTYPED_FLOAT_ARRAY_2: &str = "[1.0,2,3,4,5];{}";
 
     expr_result = simple_get_expression(LIT_UNTYPED_FLOAT_ARRAY_2, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[1.0,2,3,4,5]", &lit_untyped_float_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_untyped_float_array_type);
 
 
-    const LIT_UNTYPED_FLOAT_ARRAY_3: &str = "[1,2.0,3,4,5];";
+    const LIT_UNTYPED_FLOAT_ARRAY_3: &str = "[1,2.0,3,4,5];{}";
 
     expr_result = simple_get_expression(LIT_UNTYPED_FLOAT_ARRAY_3, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[1,2.0,3,4,5]", &lit_untyped_float_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_untyped_float_array_type);
 
 
-    const LIT_F32_ARRAY: &str = "f32[1,2,3,4,5];";
+    const LIT_F32_ARRAY: &str = "f32[1,2,3,4,5];{}";
 
     expr_result = simple_get_expression(LIT_F32_ARRAY, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[1,2,3,4,5]", &lit_f32_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_f32_array_type);
 
 
-    const LIT_STR_ARRAY: &str = "[\"hello\", \"world\"];";
+    const LIT_STR_ARRAY: &str = "[\"hello\", \"world\"];{}";
     
     expr_result = simple_get_expression(LIT_STR_ARRAY, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
-    check_literal_expression(expr_result, "[__Soul_c_str_1__,__Soul_c_str_0__]", &lit_str_array_type);
+    check_literal_expression(expr_result, "__programMemory_0", &lit_str_array_type);
 }
 
 #[test]

@@ -3,6 +3,7 @@
     - str bug (convert_typedef removes wrappers and modifiers) {cm}
     - const T + T (impl autoCopy operator)
     - memory-program duplicate (__programMemory_1, __programMemory_2 == same value)
+- impl index 
 - impl for and while
     - while
     - for

@@ -69,6 +69,15 @@ pub fn check_convert_to_ref(
             IExpression::Increment { .. } => {
                     return Err(new_soul_error(token, "you can not refrence an increment expression"));
                 },
+            IExpression::Index { this, .. } => {
+                    if ref_wrap == &TypeWrappers::ConstRef {
+                        continue;
+                    }
+
+                    if is_expression_literal(this, token, meta_data, generics)? {
+                        return Err(err_literal_mut_refs(iter, format!("{:?}", this).as_str()))
+                    }
+                }
             IExpression::FunctionCall { function_info, .. } => {
                     if let Some(return_type) = &function_info.return_type {
                         if ref_wrap == &TypeWrappers::ConstRef {
@@ -126,6 +135,7 @@ pub fn is_expression_literal(
             IExpression::ConstRef { expression, span:_ } => expression_stack.push(&expression),
             IExpression::MutRef { expression, span:_ } => expression_stack.push(&expression),
             IExpression::DeRef { expression, span:_ } => expression_stack.push(&expression),
+            IExpression::Index { this:_, index:_, return_type, span:_ } => return is_type_name_literal(&return_type, token, meta_data, generics),
         };
     }
 
