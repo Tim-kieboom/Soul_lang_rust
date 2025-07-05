@@ -197,7 +197,7 @@ fn convert_expression(
 
         if iter.peek().is_some_and(|token| token.text == "[") {
             
-            let parent_type = stacks.type_stack.pop()
+            let mut parent_type = stacks.type_stack.pop()
                 .ok_or(new_soul_error(iter.current(), "while trying to get index expression type_stack empty"))?;
 
             if !parent_type.is_array() {
@@ -220,11 +220,16 @@ fn convert_expression(
             let parent = stacks.node_stack.pop()
                 .ok_or(new_soul_error(iter.current(), "while trying to get index expression node_stack empty"))?;
 
+            parent_type.remove_ref();
             let el_type = parent_type.get_type_child()
                 .ok_or(new_soul_error(iter.current(), format!("while trying to get index could not get child type of array_type: '{}'", parent_type.to_string()).as_str()))?;
 
             stacks.node_stack.push(IExpression::new_index(parent, index_expression.value, el_type.to_string(), iter.current()));
             stacks.type_stack.push(el_type);
+
+            if end_tokens.contains(&"]") {
+                return Ok(());
+            }
         }
 
         if should_convert_to_ref(&ref_stack, stacks) {
@@ -538,8 +543,8 @@ fn get_binairy_expression(
 
     if operator_type == &ExprOperatorType::Increment || operator_type == &ExprOperatorType::Decrement {
         let incr_variable;
-        if let IExpression::IVariable{this, span:_} = right {
-            incr_variable = this.clone();
+        if let IExpression::IVariable{..} = &right {
+            incr_variable = right;
         }
         else {
             return Err(new_soul_error(iter.current(), format!("you can not increment or decrement '{}' because you can only dso this for variables or members", right.to_string()).as_str()));
@@ -830,12 +835,17 @@ fn is_token_operator(token: &Token) -> bool {
 
 #[inline(always)]
 fn is_negative_number(token: &Token, stacks: &ExpressionStacks) -> bool {
-    token.text == "-" && (stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty())
+    token.text == "-" && no_operator_before(stacks)
 }
 
 #[inline(always)]
 fn should_convert_to_ref(to_ref: &Vec<String>, stacks: &ExpressionStacks) -> bool {
     !to_ref.is_empty() && !stacks.node_stack.is_empty()
+}
+
+#[inline(always)]
+fn no_operator_before(stacks: &ExpressionStacks) -> bool {
+    stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty()
 }
 
 #[inline(always)]

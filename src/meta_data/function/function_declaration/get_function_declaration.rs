@@ -129,10 +129,16 @@ fn internal_function_declaration(
             if type_name != SOUL_NAMES.get_name(NamesInternalType::Int) {
                 return Err(new_soul_error(
                     iter.current(), 
-                    format!("function: 'main' can only be on type or type: '{}'", SOUL_NAMES.get_name(NamesInternalType::Int)).as_str()
+                    format!("function: 'main' can only be type: '{}'", SOUL_NAMES.get_name(NamesInternalType::Int)).as_str()
                 ));
             }
-        } 
+        }
+        else {
+            return Err(new_soul_error(
+                iter.current(), 
+                format!("function: 'main' can only be type: '{}'", SOUL_NAMES.get_name(NamesInternalType::Int)).as_str()
+            ));
+        }
     }
 
     let possible_function_id = meta_data.try_get_function(

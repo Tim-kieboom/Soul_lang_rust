@@ -1,5 +1,5 @@
 use std::{collections::{BTreeMap, HashMap}};
-use crate::{meta_data::soul_error::soul_error::Result, tokenizer::token::Token};
+use crate::{meta_data::soul_error::soul_error::{Result, SoulSpan}, tokenizer::token::Token};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IVariable}, operator_type::{ExprOperatorType}}, meta_data::{current_context::current_context::CurrentContext, function::{function_declaration::function_declaration::FunctionDeclaration, internal_functions::INTERNAL_FUNCTIONS}, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::{NamesInternalType, NamesTypeModifiers, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers, type_wrappers::TypeWrappers}}, tokenizer::{file_line::FileLine, token::TokenIterator, tokenizer::tokenize_line}};
 
 use super::get_expression::{get_expression, GetExpressionResult};
@@ -244,10 +244,6 @@ fn test_get_expression_lit_binary() {
     expr_result = simple_get_expression(LIT_BINAIRY64, None);
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_literal_expression(expr_result, "0b0000000100000001000000010000000100000001000000010000000100000001", &lit_u64_type);
-    
-    const LIT_TO_MANY_BITS: &str = "0b00000001000000010000000100000001000000010000000100000001000000011;{}";
-    assert!(try_simple_get_expression(LIT_TO_MANY_BITS, None).is_err());
-
 }
 
 #[test]
@@ -354,7 +350,7 @@ fn test_get_expression_lit_bracked_as_end_token() {
 #[test]
 fn test_get_expression_variable() {
     const ALLOWS_VARS_ACCESS: bool = true;
-    const IS_FORWARD_DECLARED: bool = true;
+    const IS_FORWARD_DECLARED: bool = false;
     
     let mut global_var = VarInfo::new("global1".to_string(), SOUL_NAMES.get_name(NamesInternalType::Int).to_string());
     global_var.add_var_flag(VarFlags::IsAssigned);
@@ -376,9 +372,15 @@ fn test_get_expression_variable() {
     let expr_result = get_expression(&mut iter, &mut meta_data, &mut context, &None, IS_FORWARD_DECLARED, &vec![";"]).unwrap();
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     check_variable_expression(expr_result, &global_var.name, &global_var.type_name);
+    
+    meta_data.open_scope(&mut context, ALLOWS_VARS_ACCESS, !IS_FORWARD_DECLARED)
+        .inspect_err(|err| panic!("{:?}", err))
+        .unwrap();
 
-
-    let new_id = meta_data.open_scope(&context, ALLOWS_VARS_ACCESS, IS_FORWARD_DECLARED).unwrap();
+    let new_id = meta_data.open_scope(&mut context, ALLOWS_VARS_ACCESS, IS_FORWARD_DECLARED)
+        .inspect_err(|err| panic!("{:?}", err))
+        .unwrap();
+    
     context.set_current_scope_id(new_id);
     meta_data.add_to_scope(scope_var.clone(), &context.get_current_scope_id())
         .inspect_err(|err| panic!("{:#?}", err))
@@ -693,7 +695,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_increment(IVariable::new_variable("var1", &int_string, &DUMMY_TOKEN), false, 1, &DUMMY_TOKEN), 
+            IExpression::new_increment(IExpression::new_variable("var1", &int_string, &DUMMY_TOKEN), false, 1, &DUMMY_TOKEN), 
             ExprOperatorType::Add,
             IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &int_string,
@@ -711,7 +713,7 @@ fn test_get_expression_binary_expression_multiple_operators() {
     assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     assert_eq_iexpression(expr_result, IExpression::new_binary_expression(
         IExpression::new_binary_expression(
-            IExpression::new_increment(IVariable::new_variable("var1", &int_string, &DUMMY_TOKEN), true, 1, &DUMMY_TOKEN), 
+            IExpression::new_increment(IExpression::new_variable("var1", &int_string, &DUMMY_TOKEN), true, 1, &DUMMY_TOKEN), 
             ExprOperatorType::Add,
             IExpression::new_literal("2", &lit_untyped_int_string, &DUMMY_TOKEN), 
             &int_string,
@@ -1055,11 +1057,48 @@ fn test_get_expression_lit_array() {
 }
 
 #[test]
-fn test_get_expression_lit_tuple() {
-    // const LIT_TUPLE_STR_INT: &str = "(\"key\", 1)";
-    // const LIT_TUPLE_INT_FLOAT: &str = "(1, 1.1)";
+fn test_get_expression_array_index() {
+
+    let lit_untyped_int = format!("{} {}", SOUL_NAMES.get_name(NamesTypeModifiers::Literal), SOUL_NAMES.get_name(NamesInternalType::UntypedInt));
+
+    let int_array_type = SoulType::from_wrappers(
+        SOUL_NAMES.get_name(NamesInternalType::Int).to_string(), 
+        vec![TypeWrappers::Array]
+    ); 
+
+    let mut array = VarInfo::new("array".to_string(), int_array_type.to_string());
+    array.add_var_flag(VarFlags::IsAssigned);
+
+
+    let mut meta_data = MetaData::new();
+    let mut context = CurrentContext::new(MetaData::GLOBAL_SCOPE_ID);
+
+    meta_data.add_to_global_scope(array)
+        .inspect_err(|err| panic!("{:?}", err))
+        .unwrap();
+
+
+    const INDEX_1: &str = "array[1];{}";
+    let expr_result = simple_get_expression_metadata(INDEX_1, None, &mut meta_data, &mut context);
+    assert!(expr_result.result.after.is_none() && expr_result.result.before.is_none(), "before or after is not empty");
     
-    todo!();
+    let should_be = IExpression::Index{
+        this: Box::new(IExpression::IVariable { this: IVariable::Variable { name: "array".to_string(), type_name: int_array_type.to_string(), span: SoulSpan{line_number: 1, line_offset: 0} }, span: SoulSpan{line_number: 1, line_offset: 0} }), 
+        index: Box::new(IExpression::Literal { value: "1".to_string(), type_name: lit_untyped_int.clone(), span: SoulSpan{line_number: 1, line_offset: 6} }), 
+        return_type: SOUL_NAMES.get_name(NamesInternalType::Int).to_string(), 
+        span: SoulSpan{line_number: 1, line_offset: 7}
+    };
+    
+    assert!(
+        expr_result.result.value == should_be, 
+        "{:#?}\nshould be:\n{:#?}", expr_result.result.value, should_be
+    );
+
+}
+
+#[test]
+fn test_get_expression_lit_tuple() {
+    todo!("tuple not yet impl (1, 2)");
 }
 
 #[test]

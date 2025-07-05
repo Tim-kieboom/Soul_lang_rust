@@ -1,5 +1,5 @@
 use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulSpan};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::ExprOperatorType}, meta_data::{current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::VarFlags, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IExpression, IStatment}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}, operator_type::ExprOperatorType}, meta_data::{current_context::{current_context::CurrentContext, rulesets::RuleSet}, meta_data::MetaData, scope_and_var::var_info::VarFlags, soul_names::{NamesOperator, SOUL_NAMES}, soul_type::{primitive_types::DuckType, soul_type::SoulType}}, tokenizer::token::{Token, TokenIterator}};
 
 pub struct AssignmentResult {
     pub assignment: MultiStamentResult<IStatment>,
@@ -10,22 +10,19 @@ pub fn get_assignment(
     iter: &mut TokenIterator,
     meta_data: &mut MetaData,
     context: &mut CurrentContext,
-    i_variable: IVariable,
+    variable: IExpression,
     in_initialize: bool,
+    is_forward_declared: bool,
 ) -> Result<AssignmentResult> {
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
 
     let symbool_index = iter.current_index();
     
-    let var_type = SoulType::from_stringed_type(i_variable.get_type_name(), iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
+    let var_type = SoulType::from_stringed_type(variable.try_get_type_name().unwrap(), iter.current(), &meta_data.type_meta_data, &mut context.current_generics)
         .map_err(|err| pass_soul_error(iter.current(), format!("error while trying to get type from variable of assignment").as_str(), err))?;
 
-    let is_forward_declared = meta_data.try_get_variable(i_variable.get_name(), &context.get_current_scope_id())
-        .ok_or(new_soul_error(iter.current(), format!("variable: '{}' could not be found in scope", i_variable.get_name()).as_str()))?
-        .0.is_forward_declared.clone();
-
     if is_forward_declared && !in_initialize {
-        return Err(new_soul_error(iter.current(), format!("variable: '{}' has not been initialized yet", i_variable.get_name()).as_str()));
+        return Err(new_soul_error(iter.current(), format!("variable: '{}' has not been initialized yet", variable.try_get_name().unwrap()).as_str()));
     }
 
     is_symbool_allowed(&iter[symbool_index], &context, &var_type)?;
@@ -38,7 +35,7 @@ pub fn get_assignment(
     let decrement_symbool = SOUL_NAMES.get_name(NamesOperator::Decrement);
 
     if &iter[symbool_index].text == increment_symbool || &iter[symbool_index].text == decrement_symbool {
-        meta_data.try_get_variable_mut(i_variable.get_name(), &context.get_current_scope_id())
+        meta_data.try_get_variable_mut(variable.try_get_name().unwrap(), &context.get_current_scope_id())
             .unwrap()
             .add_var_flag(VarFlags::IsAssigned);
 
@@ -59,9 +56,9 @@ pub fn get_assignment(
         };
 
         body_result.value = IStatment::new_assignment(
-            i_variable.clone(), 
+            variable.clone(), 
             IExpression::new_increment(
-                i_variable, 
+                variable, 
                 false, 
                 increment_amount,
                 iter.current()
@@ -77,7 +74,7 @@ pub fn get_assignment(
         .map_err(|err| pass_soul_error(&iter[begin_i], "while trying to get assignment expression", err))?;
 
     body_result.add_result(&expression.result);
-    meta_data.try_get_variable_mut(i_variable.get_name(), &context.get_current_scope_id())
+    meta_data.try_get_variable_mut(variable.try_get_name().unwrap(), &context.get_current_scope_id())
         .unwrap()
         .add_var_flag(VarFlags::IsAssigned);
 
@@ -85,7 +82,7 @@ pub fn get_assignment(
 
         if !expression.is_type.is_mutable() && var_type.is_mutable() {
             let error_span = iter.get_tokens_text()[begin_i..iter.current_index()].join(" ");
-            return Err(new_soul_error(iter.current(), format!("variable: '{}' and expression: '{}' have diffrent mutabilitys", i_variable.get_name(), error_span).as_str()));
+            return Err(new_soul_error(iter.current(), format!("variable: '{}' and expression: '{}' have diffrent mutabilitys", variable.try_get_name().unwrap(), error_span).as_str()));
         }
     }
 
@@ -93,12 +90,12 @@ pub fn get_assignment(
         return Err(new_soul_error(iter.current(), format!("assignment type: '{}' is not compatible with variable type: '{}'", expression.is_type.to_string(), var_type.to_string()).as_str()));
     }
 
-    expression.result.value = add_compount_assignment(&iter[symbool_index].text, &i_variable, expression.result.value);
-    body_result.value = IStatment::new_assignment(i_variable, expression.result.value, iter.current())?;
+    expression.result.value = add_compount_assignment(&iter[symbool_index].text, &variable, expression.result.value);
+    body_result.value = IStatment::new_assignment(variable.clone(), expression.result.value, iter.current())?;
     Ok(AssignmentResult{is_type: var_type, assignment: body_result})
 }
 
-fn add_compount_assignment(symbool: &str, i_variable: &IVariable, expression: IExpression) -> IExpression {
+fn add_compount_assignment(symbool: &str, variable: &IExpression, expression: IExpression) -> IExpression {
     let op = match symbool {
         "=" => return expression,
         "+=" => ExprOperatorType::Add,
@@ -113,10 +110,10 @@ fn add_compount_assignment(symbool: &str, i_variable: &IVariable, expression: IE
     };
 
     IExpression::BinairyExpression { 
-        left: Box::new(IExpression::IVariable {this: i_variable.clone(), span: i_variable.get_span().clone()}), 
+        left: Box::new(variable.clone()), 
         operator_type: op, right: Box::new(expression), 
-        type_name: i_variable.get_type_name().clone(),
-        span: i_variable.get_span().clone()
+        type_name: variable.try_get_type_name().unwrap().clone(),
+        span: variable.get_span().clone()
     }
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "soul_copy.hpp"
 #include "../soul_panic.hpp"
+#include "soul_Range.hpp"
 
 template<typename T>
 class __Soul_ARRAY_Iterator__

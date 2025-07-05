@@ -22,6 +22,7 @@ pub enum StatmentType {
     CloseScope{begin_body_index: usize},
     EmptyStatment,
     Assignment,
+    TypeDef{new_type: String, from_type: String},
     Initialize{is_mutable: bool, is_assigned: bool, var: IVariable},
     FunctionBody{func_info: FunctionDeclaration, end_body_index: usize},
     FunctionCall,
@@ -30,6 +31,8 @@ pub enum StatmentType {
     If{end_body_index: usize},
     Else{end_body_index: usize},
     ElseIf{end_body_index: usize},
+    While{end_body_index: usize},
+    For{end_body_index: usize},
 }
 
 impl StatmentType {
@@ -41,6 +44,7 @@ impl StatmentType {
             IStatment::CloseScope(_) => StatmentType::CloseScope{begin_body_index: 0},
             IStatment::EmptyStatment(_) => StatmentType::EmptyStatment,
             IStatment::Assignment{..} => StatmentType::Assignment,
+            IStatment::TypeDef{..} => StatmentType::TypeDef{from_type: String::new(), new_type: String::new()},
             IStatment::Initialize{..} => StatmentType::Initialize{is_assigned:false, is_mutable:false, var: IVariable::new_variable("", "", &Token{line_number: 0, line_offset: 0, text: String::new()})},
             IStatment::FunctionBody{..} => StatmentType::FunctionBody{func_info:FunctionDeclaration::new(String::new(), None, Vec::new(), false, FunctionID(0), ScopeId(0)), end_body_index: 0},
             IStatment::FunctionCall{..} => StatmentType::FunctionCall,
@@ -49,23 +53,28 @@ impl StatmentType {
             IStatment::If{..} => StatmentType::If{end_body_index: 0},
             IStatment::Else{..} => StatmentType::Else{end_body_index: 0},
             IStatment::ElseIf{..} => StatmentType::ElseIf{end_body_index: 0},
+            IStatment::While{..} => StatmentType::While{end_body_index: 0},
+            IStatment::For{..} => StatmentType::For { end_body_index: 0 },
         }
     }
 
     pub fn set_end_body_index(&mut self, index: usize) {
         match self {
             StatmentType::Return{..} |
-            StatmentType::Assignment |
-            StatmentType::FunctionCall |
-            StatmentType::EmptyStatment |
+            StatmentType::TypeDef{..} |
+            StatmentType::Assignment{..} |
             StatmentType::CloseScope{..} |
-            StatmentType::Initialize{..} => panic!("Internal error trying to StatmentType::set_end_body_index() to: {:#?}", self),
+            StatmentType::Initialize{..} |
+            StatmentType::FunctionCall{..} |
+            StatmentType::EmptyStatment{..} => panic!("Internal error trying to StatmentType::set_end_body_index() to: {:#?}", self),
             
             StatmentType::FunctionBody{end_body_index, ..} => *end_body_index = index,  
             StatmentType::Scope { end_body_index } => *end_body_index = index,
             StatmentType::If { end_body_index } => *end_body_index = index,
             StatmentType::Else { end_body_index } => *end_body_index = index,
             StatmentType::ElseIf { end_body_index } => *end_body_index = index,
+            StatmentType::While { end_body_index } => *end_body_index = index,
+            StatmentType::For { end_body_index } => *end_body_index = index,
         }
     }
 
@@ -77,6 +86,7 @@ impl fmt::Debug for StatmentType {
             Self::CloseScope{..} => write!(f, "CloseScope"),
             Self::EmptyStatment => write!(f, "EmptyStatment"),
             Self::Assignment => write!(f, "Assignment"),
+            Self::TypeDef{..} => write!(f, "TypeDef"),
             Self::Initialize{..} => write!(f, "Initialize"),
             Self::FunctionBody{..} => write!(f, "FunctionBody"),
             Self::FunctionCall => write!(f, "FunctionCall"),
@@ -85,6 +95,8 @@ impl fmt::Debug for StatmentType {
             Self::If{..} => write!(f, "If"),
             Self::Else{..} => write!(f, "Else"),
             Self::ElseIf{..} => write!(f, "ElseIf"),
+            Self::While{..} => write!(f, "While"),
+            Self::For{..} => write!(f, "For"),
         }
     }
 }

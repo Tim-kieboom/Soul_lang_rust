@@ -2,7 +2,7 @@ use std::{collections::HashSet};
 use once_cell::sync::Lazy;
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentTypeInfo;
 use crate::meta_data::scope_and_var::var_info::{VarFlags, VarInfo};
-use crate::meta_data::soul_error::soul_error::{new_soul_error, Result, SoulError};
+use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulError};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::IStatment, get_abstract_syntax_tree::get_stament::get_initialize::get_forward_declared_initialize}, meta_data::{current_context::current_context::CurrentContext, function::function_declaration::get_function_declaration::add_function_declaration, meta_data::MetaData, soul_names::{NamesOtherKeyWords, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
 use super::statment_type::StatmentType;
@@ -51,6 +51,7 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
         return Ok(StatmentType::CloseScope{begin_body_index: start_index});
     }
 
+
     match &iter.current().text {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
             traverse_to_end(iter, &["\n", ";"])?;
@@ -59,6 +60,16 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
             let start_index = *scope_start_index.last().unwrap();
             statment_types[start_index].set_end_body_index(len);
             return Ok(StatmentType::Return{begin_body_index: start_index});
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => {
+            traverse_to_end(iter, &["{"])?;
+            open_body(iter, statment_info, meta_data, context, vec![], IS_FORWARD_DECLARED)?;
+            return Ok(StatmentType::While{end_body_index: 0});
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => {
+            traverse_to_end(iter, &["{"])?;
+            open_body(iter, statment_info, meta_data, context, vec![], IS_FORWARD_DECLARED)?;
+            return Ok(StatmentType::For{end_body_index: 0});
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
             traverse_to_end(iter, &["{"])?;
@@ -79,6 +90,35 @@ pub fn get_statment_types(iter: &mut TokenIterator, meta_data: &mut MetaData, co
                 Ok(StatmentType::Else{end_body_index: 0})
             }
         },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Type) => {
+            if iter.next().is_none() {
+                return Err(err_out_of_bounds(iter));
+            }
+
+            let type_name = iter.current().text.clone();
+            
+            if iter.next().is_none() {
+                return Err(err_out_of_bounds(iter));
+            }
+
+            if iter.current().text != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+                return Err(new_soul_error(iter.current(), format!("'{}' needs to be '{}' (type statment format is: '{} <newType> {} <oldType>')", iter.current().text, SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof), SOUL_NAMES.get_name(NamesOtherKeyWords::Type), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof)).as_str()))
+            }
+            
+            if iter.next().is_none() {
+                return Err(err_out_of_bounds(iter));
+            }
+
+            let from_type = SoulType::from_iterator(iter, &meta_data.type_meta_data, &context.current_generics)
+                .map_err(|err| pass_soul_error(iter.current(), "while trying to get type", err))?
+                .to_string();
+
+            meta_data.type_meta_data
+                .add_typedef(type_name.clone(), from_type.clone())
+                .map_err(|err| new_soul_error(iter.current(), format!("while trying to add new type\n{}", err).as_str()))?;
+            
+            return Ok(StatmentType::TypeDef{new_type: type_name, from_type});
+        }
         _ => (),
     }
 

@@ -1,16 +1,42 @@
 const ch = 'a' 
 const number = 1 
-Literal gravity = 9.81 
 const f32 float = 1 
+Literal gravity = 9.81 
 Literal uint uintNumber = 1 
 const strarray = [ __Soul_c_str_2__ , __Soul_c_str_1__ , __Soul_c_str_0__ , __Soul_c_str_0__ ] 
+type string typeof i32 
+ifs ( ) { 
+condition := 1 
+if condition == 1 { 
+int f = 1 
+condition = 1 
+Println ( condition ) 
+} 
+else if condition == 2 { 
+int f = 1 
+Println ( condition ) 
+} 
+else { 
+int f = 1 
+Println ( condition ) 
+} 
+} 
 array ( ) { 
 array := [ 1 , 2 , 3 , 4 ] 
-second := array [ 1 ] 
+uint index = 3 
+string name = 1 
+second := @ array [ 1 ] 
+second = @ array [ index ] 
+array [ 0 ] = 200 
 Println ( array [ 0 ] ) 
 } 
 whileArgs ( str [] @ args ) { 
 argsLen := __soul_internal_length__ ( args ) 
+i := - 1 
+lastIndex := int ( argsLen ) ; lastIndex -= 1 
+while i ++ < lastIndex { 
+Println ( __soul_format_string__ ( __Soul_c_str_3__ , i , __Soul_c_str_4__ , args [ uint ( i ) ] , __Soul_c_str_3__ ) ) 
+} 
 } 
 ref ( ) { 
 f := @ 1 
@@ -19,22 +45,24 @@ i32 @ ref = @ num
 buffer := str ( ) 
 str @ refstr = @ buffer 
 } 
-printInput ( ) { 
-buffer := str ( ) 
-Print ( __Soul_c_str_3__ ) 
-Input ( & buffer ) 
-Println ( @ buffer ) 
+Input ( mut str & buffer , str prefix = __Soul_c_str_3__ ) { 
+Print ( prefix ) 
+Input ( buffer ) 
 } 
 main ( str [] @ args ) int { 
 sum ( int a , int b ) int { 
 return a + b 
 } 
 Println ( args [ 0 ] ) 
-Println ( __soul_format_string__ ( __Soul_c_str_4__ ) ) 
-Println ( __soul_format_string__ ( __Soul_c_str_6__ , sum ( 1 , 2 ) , __Soul_c_str_5__ ) ) 
+Println ( __Soul_c_str_5__ ) 
+Println ( __soul_format_string__ ( __Soul_c_str_6__ , sum ( 1 , 2 ) , __Soul_c_str_3__ ) ) 
 array ( ) 
 whileArgs ( args ) 
 ref ( ) 
-printInput ( ) 
+buffer := str ( ) 
+Input ( & buffer , prefix : __Soul_c_str_7__ ) 
+Println ( buffer ) 
+ifs ( ) 
+EPrintln ( __Soul_c_str_8__ ) 
 return 0 
 } 

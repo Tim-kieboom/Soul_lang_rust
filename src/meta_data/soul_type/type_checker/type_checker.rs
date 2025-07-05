@@ -127,7 +127,7 @@ pub fn is_expression_literal(
                     return is_ivariable_literal(this, token, meta_data, generics);
                 },
             IExpression::Increment { variable, .. } => {
-                    return is_ivariable_literal(variable, token, meta_data, generics);
+                    return is_expression_literal(variable, token, meta_data, generics);
                 },
             IExpression::FunctionCall { function_info, .. } => {
                     return Ok(function_info.modifiers.contains(FunctionModifiers::Literal))

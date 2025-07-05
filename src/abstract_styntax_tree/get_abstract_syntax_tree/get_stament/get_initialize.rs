@@ -1,3 +1,4 @@
+use crate::abstract_styntax_tree::abstract_styntax_tree::IExpression;
 use crate::meta_data::soul_error::soul_error::{new_soul_error, pass_soul_error, Result, SoulSpan};
 use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::get_expression::get_expression, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, scope_and_var::var_info::{VarFlags, VarInfo}, soul_names::check_name, soul_type::{primitive_types::{NumberCategory, PrimitiveType}, soul_type::SoulType, type_modifiers::TypeModifiers}}, tokenizer::token::TokenIterator};
 
@@ -191,9 +192,10 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             span: SoulSpan::from_token(&iter[var_name_index])
         };
 
+        let variable_span = variable.get_span().clone();
         body_result.value = IStatment::new_initialize(
             variable.clone(), 
-            Some(IStatment::new_assignment(variable, expression.result.value, iter.current())?),
+            Some(IStatment::new_assignment(IExpression::IVariable{this: variable, span: variable_span}, expression.result.value, iter.current())?),
             iter.current()
         );
 
@@ -205,6 +207,11 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
             name: iter[var_name_index].text.clone(), 
             type_name: var_type.to_string(),
             span: SoulSpan::from_token(&iter[var_name_index])
+        };
+        
+        let variable_expr = IExpression::IVariable { 
+            this: variable.clone(),
+            span: SoulSpan::from_token(&iter[var_name_index]),
         };
 
         let mut var_flags = get_var_flags(&var_type);
@@ -219,7 +226,7 @@ fn internal_get_initialize(iter: &mut TokenIterator, meta_data: &mut MetaData, c
 
         add_to_scope(iter, meta_data, context, var_name_index, var_info)?;
 
-        let AssignmentResult{assignment, is_type: _} = get_assignment(iter, meta_data, context, variable.clone(), true)?;
+        let AssignmentResult{assignment, is_type: _} = get_assignment(iter, meta_data, context, variable_expr, true, is_forward_declared)?;
         body_result.add_result(&assignment);
 
         body_result.value = IStatment::new_initialize(variable, Some(assignment.value), iter.current());

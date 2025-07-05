@@ -28,11 +28,12 @@ fn test_initialize_default_typed() {
     let mut result = simple_initialize(&init1);
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
-    let mut varaiable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
+    let mut variable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
+    let variable_span = variable.get_span().clone();
     let mut should_be = MultiStamentResult::new(
         IStatment::new_initialize(
-            varaiable.clone(), 
-            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", int, &DUMMY_TOKEN), &DUMMY_TOKEN).inspect_err(|err| panic!("{:#?}", err)).unwrap()),
+            variable.clone(), 
+            Some(IStatment::new_assignment(IExpression::IVariable{this: variable, span: variable_span}, IExpression::new_literal("1", int, &DUMMY_TOKEN), &DUMMY_TOKEN).inspect_err(|err| panic!("{:#?}", err)).unwrap()),
             &DUMMY_TOKEN
         )
     );
@@ -47,10 +48,10 @@ fn test_initialize_default_typed() {
     
     result = simple_initialize(&init2);
 
-    varaiable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
+    variable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
     should_be = MultiStamentResult::new(
         IStatment::new_initialize(
-            varaiable.clone(), 
+            variable.clone(), 
             None,
             &DUMMY_TOKEN
         )
@@ -82,11 +83,12 @@ fn test_initialize_default_invered() {
     let result = simple_initialize(&init1);
 
     const DUMMY_TOKEN: Token = Token{line_number: 0, line_offset: 0, text: String::new()};
-    let varaiable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
+    let variable = IVariable::new_variable("foo", int, &DUMMY_TOKEN);
+    let variable_span = variable.get_span().clone();
     let should_be = MultiStamentResult::new(
         IStatment::new_initialize(
-            varaiable.clone(), 
-            Some(IStatment::new_assignment(varaiable, IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN), &DUMMY_TOKEN).inspect_err(|err| panic!("{:#?}", err)).unwrap()),
+            variable.clone(), 
+            Some(IStatment::new_assignment(IExpression::IVariable{this: variable, span: variable_span}, IExpression::new_literal("1", &lit_untyped_int, &DUMMY_TOKEN), &DUMMY_TOKEN).inspect_err(|err| panic!("{:#?}", err)).unwrap()),
             &DUMMY_TOKEN
         )
     );

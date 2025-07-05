@@ -27,7 +27,6 @@ pub struct ScopeParentInfo {
 pub struct Scope {
     id: ScopeId,
     pub parent: Option<ScopeParentInfo>,
-    last_child_id: ScopeId,
     pub vars: BTreeMap<String, VarInfo>,
     pub function_store: FunctionStore,
     next_function_id: Arc<Mutex<FunctionID>>,
@@ -38,20 +37,20 @@ impl Scope {
         Scope { 
             id: ScopeId(0), 
             parent: None, 
-            last_child_id: ScopeId(0),
             vars: BTreeMap::new(), 
             function_store: FunctionStore::new(),
             next_function_id: Arc::new(Mutex::new(FunctionID(0))),
         }
     }
 
-    pub fn new_child(parent: &mut Scope, allows_vars_access: bool) -> Self {
-        parent.last_child_id.increment();
+    pub fn new_child(parent: &mut Scope, allows_vars_access: bool, context: &mut CurrentContext) -> Self {
+        let mut new_scope_id = context.get_current_highest_id();
+        new_scope_id.increment();
+        context.try_set_highest_id(new_scope_id);
 
         Scope { 
-            id: parent.last_child_id.clone(), 
+            id: new_scope_id, 
             parent: Some(ScopeParentInfo { id: parent.id, allows_vars_access }), 
-            last_child_id: parent.last_child_id.clone(),
             vars: BTreeMap::new(), 
             function_store: FunctionStore::new(),
             next_function_id: parent.next_function_id.clone(),

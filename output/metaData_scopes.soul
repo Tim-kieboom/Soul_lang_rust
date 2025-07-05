@@ -1,10 +1,11 @@
 id: 0 (
 	functions:(
-		printInput(), 
-		ref(), 
-		array(), 
+		ifs(), 
 		main(str[]@ args) int, 
-		whileArgs(str[]@ args)
+		whileArgs(str[]@ args), 
+		array(), 
+		Input(mut str& buffer str prefix = Variable(Literal str __Soul_c_str_3__)), 
+		ref()
 	),
 	vars: (
 		Literal str __Soul_c_str_0__,
@@ -14,6 +15,8 @@ id: 0 (
 		Literal str __Soul_c_str_4__,
 		Literal str __Soul_c_str_5__,
 		Literal str __Soul_c_str_6__,
+		Literal str __Soul_c_str_7__,
+		Literal str __Soul_c_str_8__,
 		const char ch,
 		const f32 float,
 		Literal f32 gravity,
@@ -27,8 +30,7 @@ id: 1 (
 		
 	),
 	vars: (
-		int[] array,
-		int second
+		int condition
 	),
 ),
 id: 2 (
@@ -36,11 +38,56 @@ id: 2 (
 		
 	),
 	vars: (
-		str[]@ args,
-		uint argsLen
+		int f
 	),
 ),
 id: 3 (
+	functions:(
+		
+	),
+	vars: (
+		int f
+	),
+),
+id: 4 (
+	functions:(
+		
+	),
+	vars: (
+		int f
+	),
+),
+id: 5 (
+	functions:(
+		
+	),
+	vars: (
+		int[] array,
+		uint index,
+		string name,
+		int@ second
+	),
+),
+id: 6 (
+	functions:(
+		
+	),
+	vars: (
+		str[]@ args,
+		uint argsLen,
+		int i,
+		int lastIndex
+	),
+),
+id: 7 (
+	functions:(
+		
+	),
+	vars: (
+		
+	),
+),
+id: 8 (
 	functions:(
 		
 	),
@@ -52,23 +99,25 @@ id: 3 (
 		str@ refstr
 	),
 ),
-id: 4 (
+id: 9 (
 	functions:(
 		
 	),
 	vars: (
-		str buffer
+		str& buffer,
+		const str prefix
 	),
 ),
-id: 5 (
+id: 10 (
 	functions:(
 		sum( int a,  int b) int
 	),
 	vars: (
-		str[]@ args
+		str[]@ args,
+		str buffer
 	),
 ),
-id: 6 (
+id: 11 (
 	functions:(
 		
 	),

@@ -17,7 +17,7 @@ pub enum IExpression {
     ConstRef{expression: Box<IExpression>, span: SoulSpan},
     MutRef{expression: Box<IExpression>, span: SoulSpan},
     DeRef{expression: Box<IExpression>, span: SoulSpan},
-    Increment{variable: IVariable, is_before: bool, amount: i8, span: SoulSpan},
+    Increment{variable: Box<IExpression>, is_before: bool, amount: i8, span: SoulSpan},
     FunctionCall{args: Vec<IExpression>, generic_defines: BTreeMap<String, String>, function_info: Box<FunctionDeclaration>, span: SoulSpan},
     Index{this: Box<IExpression>, index: Box<IExpression>, return_type: String, span: SoulSpan},
     EmptyExpression(SoulSpan),
@@ -27,7 +27,8 @@ pub enum IExpression {
 pub enum IStatment {
     CloseScope(SoulSpan),
     EmptyStatment(SoulSpan),
-    Assignment{variable: IVariable, assign: IExpression, span: SoulSpan},
+    Assignment{variable: IExpression, assign: IExpression, span: SoulSpan},
+    TypeDef{type_name: String, from_type: String, span: SoulSpan},
     Initialize{variable: IVariable, assignment: /*shouldBe_Assignment*/Option<Box<IStatment>>, span: SoulSpan},
     FunctionBody{func_info: FunctionDeclaration, body: Box<BodyNode>, span: SoulSpan},
     FunctionCall{this: /*shouldBe_FunctionCall*/ IExpression, span: SoulSpan},
@@ -36,6 +37,8 @@ pub enum IStatment {
     If{condition: IExpression, body: Box<BodyNode>, span: SoulSpan},
     Else{body: Box<BodyNode>, span: SoulSpan},
     ElseIf{condition: IExpression, body: Box<BodyNode>, span: SoulSpan},
+    While{condition: IExpression, body: Box<BodyNode>, span: SoulSpan},
+    For{element: IExpression, collection: IExpression, body: Box<BodyNode>, span: SoulSpan},
 } 
 
 #[derive(Debug, Clone, PartialEq)] 
@@ -91,6 +94,7 @@ impl IStatment {
             IStatment::CloseScope(soul_span) => soul_span,
             IStatment::EmptyStatment(soul_span) => soul_span,
             IStatment::Assignment{span, ..} => span,
+            IStatment::TypeDef{span, ..} => span,
             IStatment::Initialize{span, ..} => span,
             IStatment::FunctionBody{span, ..} => span,
             IStatment::FunctionCall{span, ..} => span,
@@ -99,6 +103,8 @@ impl IStatment {
             IStatment::If{span, ..} => span,
             IStatment::Else{span, ..} => span,
             IStatment::ElseIf{span, ..} => span,
+            IStatment::While{span, ..} => span,
+            IStatment::For{span, ..} => span,
         }
     }
 
@@ -123,6 +129,13 @@ impl IStatment {
                     child_indent,
                     variable.to_string(),
                     assign.to_string(),
+                    base_indent
+                ),
+            IStatment::TypeDef {type_name, from_type, span: _ } => format!(
+                    "TypeDef({}{} typedef {}{})",
+                    child_indent,
+                    type_name,
+                    from_type,
                     base_indent
                 ),
             IStatment::Initialize { variable, assignment, span: _ } => match assignment {
@@ -175,10 +188,35 @@ impl IStatment {
                     condition.to_string(),
                     body.to_string(pretty_format, tab + 1),
                 ),
+            IStatment::While { condition, body, span:_ } =>  format!(
+                    "While({}{})",
+                    condition.to_string(),
+                    body.to_string(pretty_format, tab + 1),
+                ),
+            IStatment::For { element, collection, body, span:_ } =>  format!(
+                    "For({} in {}{})",
+                    element.to_string(),
+                    collection.to_string(),
+                    body.to_string(pretty_format, tab + 1),
+                ),
         }
     }
 
-    pub fn new_assignment(variable: IVariable, assign: IExpression, token: &Token) -> Result<Self> {
+    pub fn new_assignment(variable: IExpression, assign: IExpression, token: &Token) -> Result<Self> {
+        match variable {
+            IExpression::DeRef{..} | 
+            IExpression::MutRef{..} |
+            IExpression::Literal{..} |
+            IExpression::ConstRef{..} |
+            IExpression::Increment{..} |
+            IExpression::FunctionCall{..} |
+            IExpression::EmptyExpression(..) |
+            IExpression::BinairyExpression{..} => return Err(new_soul_error(token, format!("variable is invalid variant: '{}'", variable.get_variant_name()).as_str())),
+
+            IExpression::Index{..} |
+            IExpression::IVariable{..} => (),
+        }
+        
         if matches!(assign, IExpression::EmptyExpression(_)) {
             Err(new_soul_error(token, "assignment is empty"))
         }
@@ -221,6 +259,18 @@ impl IStatment {
 
     pub fn new_else(body: BodyNode, token: &Token) -> Self {
         Self::Else { body: Box::new(body), span: SoulSpan::from_token(token) }
+    }
+
+    pub fn new_while(condition: IExpression, body: BodyNode, token: &Token) -> Self {
+        Self::While { condition, body: Box::new(body), span: SoulSpan::from_token(token) }
+    }
+
+    pub fn new_for(element: IExpression, collection: IExpression, body: BodyNode, token: &Token) -> Self {
+        Self::For { element, collection, body: Box::new(body), span: SoulSpan::from_token(token) }
+    }
+
+    pub fn new_type_def(type_name: String, from_type: String, token: &Token) -> Self {
+        Self::TypeDef { type_name, from_type, span: SoulSpan::from_token(token) }
     }
 
 }
@@ -280,9 +330,9 @@ impl IExpression {
         }
     }
 
-    pub fn new_increment(variable: IVariable, is_before: bool, amount: i8, token: &Token) -> Self {
+    pub fn new_increment(variable: IExpression, is_before: bool, amount: i8, token: &Token) -> Self {
         IExpression::Increment{
-            variable, 
+            variable: Box::new(variable), 
             is_before, 
             amount,
             span: SoulSpan::from_token(token),
@@ -349,6 +399,51 @@ impl IExpression {
             IExpression::FunctionCall{span, ..} => span,
             IExpression::BinairyExpression{span, ..} => span,
             IExpression::EmptyExpression(soul_span) => soul_span,
+        }
+    }
+
+    pub fn try_get_name(&self) -> Option<&String> {
+        match self {
+            IExpression::Literal{..} => None,
+            IExpression::EmptyExpression(..) => None,
+            IExpression::BinairyExpression{..} => None,
+            IExpression::IVariable{this, ..} => Some(this.get_name()),
+            IExpression::Index{this, ..} => this.try_get_name(),
+            IExpression::DeRef{expression, ..} => expression.try_get_name(),
+            IExpression::MutRef{expression, ..} => expression.try_get_name(),
+            IExpression::ConstRef{expression, ..}=> expression.try_get_name(),
+            IExpression::Increment{variable, ..} => variable.try_get_name(),
+            IExpression::FunctionCall{function_info, ..} => Some(&function_info.name),
+        }
+    }
+
+    pub fn try_get_type_name(&self) -> Option<&String> {
+        match self {
+            IExpression::EmptyExpression(..) => None,
+            IExpression::Index{return_type, ..} => Some(return_type),
+            IExpression::Literal{type_name, ..} => Some(type_name),
+            IExpression::IVariable{this, ..} => Some(this.get_type_name()),
+            IExpression::DeRef{expression, ..} => expression.try_get_name(),
+            IExpression::MutRef{expression, ..} => expression.try_get_name(),
+            IExpression::BinairyExpression{type_name, ..} => Some(type_name),
+            IExpression::ConstRef{expression, ..}=> expression.try_get_name(),
+            IExpression::Increment{variable, ..} => variable.try_get_type_name(),
+            IExpression::FunctionCall{function_info, ..} => function_info.return_type.as_ref(),
+        }
+    }
+
+    pub fn get_variant_name(&self) -> &str {
+        match self {
+            IExpression::Index{..} => "Index",
+            IExpression::DeRef{..} => "DeRef",
+            IExpression::MutRef{..} => "MutRef",
+            IExpression::Literal{..} => "Literal",
+            IExpression::ConstRef{..} => "ConstRef",
+            IExpression::IVariable{..} => "IVariable",
+            IExpression::Increment{..} => "Increment",
+            IExpression::FunctionCall{..} => "FunctionCall",
+            IExpression::EmptyExpression(..) => "EmptyExpression",
+            IExpression::BinairyExpression{..} => "BinairyExpression",
         }
     }
 

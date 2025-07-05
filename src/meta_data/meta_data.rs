@@ -294,18 +294,32 @@ impl MetaData {
         scope.function_store.from_name(&get_methode_map_entry(name, &this_class.name)).is_some()
     }
 
-    pub fn open_scope(&mut self, context: &CurrentContext, allows_vars_access: bool, is_forward_declared: bool) -> result::Result<ScopeId, String> {
-        let parent_id = self.scope_store.get(&context.get_current_scope_id())
-            .ok_or("Internal Error: can not get parent scope from scope_store")?
-            .parent.as_ref().map(|res| res.id)
-            .unwrap_or(context.get_current_scope_id());
+/*
+metaData.scopes (before parser):
+[
+    "parent: None, id: 0, funcs: [\"whileArgs\", \"ref\", \"main\", \"ifs\", \"array\", \"printInput\"], scopes: [\"__Soul_c_str_0__\", \"__Soul_c_str_1__\", \"__Soul_c_str_2__\", \"__Soul_c_str_3__\", \"__Soul_c_str_4__\", \"__Soul_c_str_5__\", \"__Soul_c_str_6__\", \"ch\", \"float\", \"gravity\", \"number\", \"strarray\", \"uintNumber\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 1, funcs: [], scopes: [\"condition\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 2, funcs: [], scopes: [\"f\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 3, funcs: [], scopes: [\"f\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 4, funcs: [], scopes: [\"f\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 5, funcs: [], scopes: [\"array\", \"index\", \"second\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 6, funcs: [], scopes: [\"args\", \"argsLen\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 7, funcs: [], scopes: [\"buffer\", \"f\", \"num\", \"ref\", \"refstr\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 8, funcs: [], scopes: [\"buffer\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 9, funcs: [\"sum\"], scopes: [\"args\"]",
+    "parent: Some(ScopeParentInfo { id: ScopeId(0), allows_vars_access: true }), id: 10, funcs: [], scopes: [\"a\", \"b\"]",
+]
+*/
 
-        let parent = self.scope_store.get_mut(&parent_id)
-            .ok_or("Internal Error: can not get parent scope from scope_store")?;
+    pub fn open_scope(&mut self, context: &mut CurrentContext, allows_vars_access: bool, is_forward_declared: bool) -> result::Result<ScopeId, String> {
 
         let child_id;
         if is_forward_declared {
-            let child = Scope::new_child(parent, allows_vars_access);
+            let parent_id = context.get_current_scope_id();
+            let parent = self.scope_store.get_mut(&parent_id)
+                .ok_or("Internal Error: can not get parent scope from scope_store")?;
+
+            let child = Scope::new_child(parent, allows_vars_access, context);
             child_id = *child.id();
             self.scope_store.insert(child_id, child);
         }

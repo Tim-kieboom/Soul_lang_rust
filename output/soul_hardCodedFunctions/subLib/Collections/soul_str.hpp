@@ -1,9 +1,12 @@
 #pragma once
 #include "soul_array.hpp"
 #include "../soul_stdmem.hpp"
+#include "../soul_type_traits.hpp"
 
 using __Soul_STR__ = __Soul_ARRAY__<char>;
 using __Soul_LITERAL_STR__ = __Soul_ARRAY__<char>::AsConst;
+
+using str = __Type<__Soul_ARRAY__<char>>;
 
 template<typename K>
 constexpr bool __is_Soul_String_StringRef =

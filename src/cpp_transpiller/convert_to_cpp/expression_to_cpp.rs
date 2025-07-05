@@ -22,7 +22,7 @@ pub fn expression_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_
         IExpression::ConstRef{..} => ref_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
         IExpression::MutRef{..} => ref_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
         IExpression::DeRef{..} => deref_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
-        IExpression::Increment{..} => inrement_to_cpp(writer, expression, meta_data, context)?,
+        IExpression::Increment{..} => inrement_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
         IExpression::FunctionCall{..} => function_call_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
         IExpression::Index{..} => index_to_cpp(writer, expression, meta_data, context, in_scope_id)?,
         IExpression::EmptyExpression(_) => (),
@@ -32,12 +32,23 @@ pub fn expression_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_
 }
 
 fn index_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
-    let (this, index) = match expression {
-        IExpression::Index{ this, index, return_type:_, span:_ } => (this, index),
+    let (this, index, span) = match expression {
+        IExpression::Index{ this, index, return_type:_, span } => (this, index, span),
         _ => return Err(new_soul_error(&token_from_span(expression.get_span()), "Internal error index_to_cpp() called while statment is not Index")),
     };
 
+    let type_name = this.try_get_type_name()
+        .ok_or(new_soul_error(&token_from_span(span), format!("while trying to convert index could not get type_name of: {}", this.to_string()).as_str()))?;
+
+    let this_type = SoulType::from_stringed_type(&type_name, &token_from_span(span), &meta_data.type_meta_data, &context.current_generics)?;
+
+    if this_type.is_any_ref() {
+        writer.push_str("(*");
+    }
     expression_to_cpp(writer, this, meta_data, context, in_scope_id)?;
+    if this_type.is_any_ref() {
+        writer.push(')');
+    }
     
     writer.push('[');
     expression_to_cpp(writer, index, meta_data, context, in_scope_id)?;
@@ -90,13 +101,13 @@ fn generic_define_to_cpp(writer: &mut CppWriter, generic_defines: &BTreeMap<Stri
     Ok(())
 }
 
-fn inrement_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &MetaData, context: &CurrentContext) -> Result<()> {
+fn inrement_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: &MetaData, context: &CurrentContext, in_scope_id: ScopeId) -> Result<()> {
     let (amount, is_before, variable, span) = match expression {
         IExpression::Increment{ amount, is_before, variable, span } => (amount, is_before, variable, span),
         _ => return Err(new_soul_error(&token_from_span(expression.get_span()), "Internal error inrement_to_cpp() called while statment is not Increment")),
     };
 
-    let soul_type = SoulType::from_stringed_type(variable.get_type_name(), &token_from_span(span), &meta_data.type_meta_data, &context.current_generics)?;
+    let soul_type = SoulType::from_stringed_type(variable.try_get_type_name().unwrap(), &token_from_span(span), &meta_data.type_meta_data, &context.current_generics)?;
 
     if *is_before {
         if amount < &0 {
@@ -105,10 +116,10 @@ fn inrement_to_cpp(writer: &mut CppWriter, expression: &IExpression, meta_data: 
         else {            
             operator_to_cpp(writer, &ExprOperatorType::Increment, &soul_type, span)?;
         }
-        variable_to_cpp(writer, variable, meta_data, context)?;
+        variable_to_cpp(writer, variable.as_ref(), meta_data, context, in_scope_id, true)?;
     }
     else {
-        variable_to_cpp(writer, variable, meta_data, context)?;
+        variable_to_cpp(writer, variable.as_ref(), meta_data, context, in_scope_id, true)?;
         if amount < &0 {
             operator_to_cpp(writer, &ExprOperatorType::Decrement, &soul_type, span)?;
         }
@@ -252,6 +263,7 @@ fn is_operator_function(op: &ExprOperatorType) -> bool {
 
         ExprOperatorType::Pow |
         ExprOperatorType::Root |
+        ExprOperatorType::Range |
         ExprOperatorType::Log => true,
     }
 }
@@ -303,6 +315,9 @@ fn operator_to_cpp(writer: &mut CppWriter, op: &ExprOperatorType, for_type: &Sou
                 writer.push_str("log");
             }
         },
+        ExprOperatorType::Range => {
+            writer.push_str("__Range");
+        },
     }
 
     Ok(())
@@ -316,8 +331,8 @@ fn get_expression_type_name<'a>(expression: &'a IExpression) -> Result<&'a Strin
         IExpression::ConstRef{expression, ..} => get_expression_type_name(expression),
         IExpression::MutRef{expression, ..} => get_expression_type_name(expression),
         IExpression::DeRef{expression, ..} => get_expression_type_name(expression),
-        IExpression::Increment{variable, ..} => get_ivariable_type_name(variable),
-        IExpression::Index{this, ..} => get_expression_type_name(this),
+        IExpression::Increment{variable, ..} => get_expression_type_name(variable),
+        IExpression::Index{return_type, ..} => Ok(return_type),
         IExpression::FunctionCall{function_info, span, ..} => function_info.as_ref().return_type.as_ref().ok_or_else(|| new_soul_error(&token_from_span(span), "Internal error function call return type is none")),
         IExpression::EmptyExpression(soul_span) => Err(new_soul_error(&token_from_span(soul_span), "Internal error EmptyExpression has not type")),
     }

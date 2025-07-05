@@ -10,12 +10,12 @@ Initialize(
 )
 Initialize(
 	Assignment(
-		Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
+		Variable(const f32 float) = Literal(const f32 1)
 	)
 )
 Initialize(
 	Assignment(
-		Variable(const f32 float) = Literal(const f32 1)
+		Variable(Literal f32 gravity) = Literal(Literal untypedFloat 9.81)
 	)
 )
 Initialize(
@@ -28,6 +28,48 @@ Initialize(
 		Variable(const str[] strarray) = Literal(Literal str[] __programMemory_3)
 	)
 )
+TypeDef(
+	string typedef i32
+)
+FunctionBody(ifs(){
+	Initialize(
+		Assignment(
+			Variable(int condition) = Literal(Literal untypedInt 1)
+		)
+	)
+	If(BinaryExpression(Variable(int condition) == Literal(Literal untypedInt 1), type: bool){
+		Initialize(
+			Assignment(
+				Variable(int f) = Literal(int 1)
+			)
+		)
+		Assignment(
+			Variable(int condition) = Literal(int 1)
+		)
+		FunctionCall(Println(Variable(int condition)))
+		
+	}.deletes(f,))
+	If(BinaryExpression(Variable(int condition) == Literal(Literal untypedInt 2), type: bool){
+		Initialize(
+			Assignment(
+				Variable(int f) = Literal(int 1)
+			)
+		)
+		FunctionCall(Println(Variable(int condition)))
+		
+	}.deletes(f,))
+	Else({
+		Initialize(
+			Assignment(
+				Variable(int f) = Literal(int 1)
+			)
+		)
+		FunctionCall(Println(Variable(int condition)))
+		
+	}.deletes(f,))
+	
+}.deletes(condition,))
+
 FunctionBody(array(){
 	Initialize(
 		Assignment(
@@ -36,12 +78,28 @@ FunctionBody(array(){
 	)
 	Initialize(
 		Assignment(
-			Variable(int second) = Index(Variable(int[] array)[Literal(Literal untypedInt 1)], type: int)
+			Variable(uint index) = Literal(uint 3)
 		)
+	)
+	Initialize(
+		Assignment(
+			Variable(string name) = Literal(string 1)
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(int@ second) = @Index(Variable(int[] array)[Literal(Literal untypedInt 1)], type: int)
+		)
+	)
+	Assignment(
+		Variable(int@ second) = @Index(Variable(int[] array)[Variable(uint index)], type: int)
+	)
+	Assignment(
+		Index(Variable(int[] array)[Literal(Literal untypedInt 0)], type: int) = Literal(int 200)
 	)
 	FunctionCall(Println(Index(Variable(int[] array)[Literal(Literal untypedInt 0)], type: int)))
 	
-}.deletes(second,array,))
+}.deletes(second,name,index,array,))
 
 FunctionBody(whileArgs(str[]@ args){
 	Initialize(
@@ -49,8 +107,25 @@ FunctionBody(whileArgs(str[]@ args){
 			Variable(uint argsLen) = FunctionCall(__soul_internal_length__(Variable(str[]@ args)))
 		)
 	)
+	Initialize(
+		Assignment(
+			Variable(int i) = Literal(Literal untypedInt -1)
+		)
+	)
+	Initialize(
+		Assignment(
+			Variable(int lastIndex) = FunctionCall(int(Variable(uint argsLen)))
+		)
+	)
+	Assignment(
+		Variable(int lastIndex) = BinaryExpression(Variable(int lastIndex) - Literal(int 1), type: int)
+	)
+	While(BinaryExpression(Variable(int i)++ < Variable(int lastIndex), type: bool){
+		FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_3__), Variable(int i), Variable(Literal str __Soul_c_str_4__), Index(Variable(str[]@ args)[FunctionCall(uint(Variable(int i)))], type: str), Variable(Literal str __Soul_c_str_3__)))))
+		
+	}.deletes())
 	
-}.deletes(argsLen,args,))
+}.deletes(lastIndex,i,argsLen,args,))
 
 FunctionBody(ref(){
 	Initialize(
@@ -81,17 +156,11 @@ FunctionBody(ref(){
 	
 }.deletes(refstr,ref,num,f,buffer,))
 
-FunctionBody(printInput(){
-	Initialize(
-		Assignment(
-			Variable(str buffer) = FunctionCall(str())
-		)
-	)
-	FunctionCall(Print(Variable(Literal str __Soul_c_str_3__)))
-	FunctionCall(Input(&Variable(str buffer)))
-	FunctionCall(Println(@Variable(str buffer)))
+FunctionBody(Input(mut str& buffer str prefix = Variable(Literal str __Soul_c_str_3__)){
+	FunctionCall(Print(Variable(const str prefix)))
+	FunctionCall(Input(Variable(str& buffer)))
 	
-}.deletes(buffer,))
+}.deletes(prefix,buffer,))
 
 FunctionBody(main(str[]@ args) int{
 	FunctionBody(sum( int a,  int b) int{
@@ -99,13 +168,21 @@ FunctionBody(main(str[]@ args) int{
 		
 	}.deletes(b,a,))
 	
-	FunctionCall(Println(Index(Variable(str[]@ args)[Literal(Literal untypedInt 0)], type: str[])))
-	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_4__)))))
-	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_6__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_5__)))))
+	FunctionCall(Println(Index(Variable(str[]@ args)[Literal(Literal untypedInt 0)], type: str)))
+	FunctionCall(Println(Variable(Literal str __Soul_c_str_5__)))
+	FunctionCall(Println(FunctionCall(__soul_format_string__(Variable(Literal str __Soul_c_str_6__), FunctionCall(sum(Literal(Literal untypedInt 1), Literal(Literal untypedInt 2))), Variable(Literal str __Soul_c_str_3__)))))
 	FunctionCall(array())
 	FunctionCall(whileArgs(Variable(str[]@ args)))
 	FunctionCall(ref())
-	FunctionCall(printInput())
-	Return(Literal(int 0), deletes(["args"]))
+	Initialize(
+		Assignment(
+			Variable(str buffer) = FunctionCall(str())
+		)
+	)
+	FunctionCall(Input(&Variable(str buffer), Variable(Literal str __Soul_c_str_7__)))
+	FunctionCall(Println(Variable(str buffer)))
+	FunctionCall(ifs())
+	FunctionCall(EPrintln(Variable(Literal str __Soul_c_str_8__)))
+	Return(Literal(int 0), deletes(["buffer", "args"]))
 	
-}.deletes(args,))
+}.deletes(buffer,args,))

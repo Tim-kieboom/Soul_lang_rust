@@ -54,5 +54,5 @@
         "map": "cpp",
         "xtree": "cpp",
         "string_view": "cpp"
-    }
+    },
 }

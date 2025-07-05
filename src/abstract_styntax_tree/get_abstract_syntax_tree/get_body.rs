@@ -4,10 +4,10 @@ use crate::{abstract_styntax_tree::{abstract_styntax_tree::{BodyNode, IStatment}
 
 use super::get_stament::statment_type::statment_type::StatmentIterator;
 
-pub fn get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &mut CurrentContext, possible_function: Option<FunctionDeclaration>) -> Result<BodyNode> {
+pub fn get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &mut CurrentContext, possible_function: Option<FunctionDeclaration>, allow_vars_access: bool) -> Result<BodyNode> {
     let begin_i = iter.current_index();
 
-    let result = internal_get_body(iter, statment_iter, meta_data, old_context, possible_function);
+    let result = internal_get_body(iter, statment_iter, meta_data, old_context, possible_function, allow_vars_access);
     if result.is_err() {
         iter.go_to_index(begin_i);
     } 
@@ -15,14 +15,14 @@ pub fn get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, 
     result
 }
 
-fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &mut CurrentContext, possible_function: Option<FunctionDeclaration>) -> Result<BodyNode> {
+fn internal_get_body(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, old_context: &mut CurrentContext, possible_function: Option<FunctionDeclaration>, allow_vars_access: bool) -> Result<BodyNode> {
     
     
     if iter.next().is_none() {
         return Err(err_out_of_bounds(iter));
     }
 
-    let scope_id = meta_data.open_scope(old_context, possible_function.is_none(), false)
+    let scope_id = meta_data.open_scope(old_context, allow_vars_access, false)
         .map_err(|msg| new_soul_error(iter.current(), format!("while trying to add scope\n{}", msg).as_str()))?;
 
     let mut context = old_context.clone();

@@ -99,6 +99,8 @@ impl<'a> SoulNames<'a> {
             (NamesInternalType::UntypedFloat, "untypedFloat"),
             (NamesInternalType::Float32, "f32"),
             (NamesInternalType::Float64, "f64"),
+
+            (NamesInternalType::Range, "Range"),
         ]);
 
         let operator_names = HashMap::from([
@@ -126,6 +128,8 @@ impl<'a> SoulNames<'a> {
             (NamesOperator::BitWiseOr, "|"),
             (NamesOperator::BitWiseAnd, "&"),
             (NamesOperator::BitWiseXor, "^"),
+
+            (NamesOperator::Range, ":"),
         ]);
 
         let assign_symbools = HashMap::from([
@@ -149,7 +153,7 @@ impl<'a> SoulNames<'a> {
             
             (NamesOtherKeyWords::ForLoop, "for"),
             (NamesOtherKeyWords::InForLoop, "in"),
-            (NamesOtherKeyWords::WhereLoop, "where"),
+            (NamesOtherKeyWords::WhileLoop, "while"),
             (NamesOtherKeyWords::BreakLoop, "break"),
             (NamesOtherKeyWords::ContinueLoop, "continue"),
             (NamesOtherKeyWords::Return, "return"),
@@ -157,7 +161,6 @@ impl<'a> SoulNames<'a> {
             (NamesOtherKeyWords::SwitchCase, "match"),
             (NamesOtherKeyWords::Typeof, "typeof"),
             (NamesOtherKeyWords::Type, "type"),
-            (NamesOtherKeyWords::Type, "deref"),
 
             (NamesOtherKeyWords::CopyData, "copy"),
             (NamesOtherKeyWords::Async, "async"),
@@ -238,7 +241,7 @@ pub enum NamesOtherKeyWords {
     If,
     Else,
 
-    WhereLoop,
+    WhileLoop,
     ForLoop,
     InForLoop,
     ContinueLoop,
@@ -284,6 +287,8 @@ pub enum NamesOperator {
     BitWiseXor,
     LogicalOr,
     LogicalAnd,
+
+    Range,
 }
 impl_soul_name_enum!(NamesOperator, operator_names);
 
@@ -348,6 +353,8 @@ pub enum NamesInternalType {
     UntypedFloat,
     Float32,
     Float64,
+
+    Range,
 }
 impl_soul_name_enum!(NamesInternalType, internal_types);
 

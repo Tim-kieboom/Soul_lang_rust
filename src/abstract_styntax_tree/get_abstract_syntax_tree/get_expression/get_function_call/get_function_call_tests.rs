@@ -390,7 +390,7 @@ fn test_get_function_call_in_child_scope() {
     let func_declr1 = "empty();";
     let empty_func = store_function(&func_declr1, &mut meta_data, &mut context);
 
-    let new_id = meta_data.open_scope(&context, true, false)
+    let new_id = meta_data.open_scope(&mut context, true, false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
@@ -427,7 +427,7 @@ fn test_get_function_call_in_child_scope() {
     let func_declr2 = "emptyInEmpty();";
     let empty_func2 = store_function(&func_declr2, &mut meta_data, &mut context);
 
-    let new_id = meta_data.open_scope(&context, true, false)
+    let new_id = meta_data.open_scope(&mut context, true, false)
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 

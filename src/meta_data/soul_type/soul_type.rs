@@ -638,17 +638,14 @@ impl SoulType {
         }
     }
 
-    #[inline(always)]
     pub fn is_literal(&self) -> bool {
         self.modifiers.contains(TypeModifiers::Literal)
     }
 
-    #[inline(always)]
     pub fn is_const(&self) -> bool {
         self.modifiers.contains(TypeModifiers::Const)
     }
 
-    #[inline(always)]
     pub fn is_any_ref(&self) -> bool {
         if self.wrappers.is_empty() {
             false
@@ -659,7 +656,6 @@ impl SoulType {
         }
     }
 
-    #[inline(always)]
     pub fn is_mut_ref(&self) -> bool {
         if self.wrappers.is_empty() {
             false
@@ -670,7 +666,6 @@ impl SoulType {
         }
     }
 
-    #[inline(always)]
     pub fn is_const_ref(&self) -> bool {
         if self.wrappers.is_empty() {
             false
@@ -681,7 +676,6 @@ impl SoulType {
         }
     }
 
-    #[inline(always)]
     pub fn get_type_child(&self) -> Option<SoulType> {
         if self.wrappers.is_empty() {
             None
@@ -690,6 +684,16 @@ impl SoulType {
             let mut new_type = self.clone();
             new_type.wrappers.pop();
             Some(new_type)
+        }
+    }
+
+    pub fn remove_ref(&mut self) -> bool {
+        if self.is_any_ref() {
+            self.wrappers.pop();
+            true
+        }
+        else {
+            false
         }
     }
 }

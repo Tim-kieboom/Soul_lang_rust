@@ -13,12 +13,29 @@ use crate::cpp_transpiller::convert_to_cpp::statment_to_cpp::{function_declarati
 use crate::{abstract_styntax_tree::abstract_styntax_tree::AbstractSyntaxTree, meta_data::meta_data::MetaData};
 use crate::abstract_styntax_tree::get_abstract_syntax_tree::get_stament::statment_type::statment_type::StatmentIterator;
 
+const IGNORE_WARNGINGS: &str = 
+"#if defined(__clang__) && defined(__cplusplus)\n\
+#pragma clang diagnostic push\n\
+#pragma clang diagnostic ignored \"-Wparentheses-equality\"\n\
+#elif defined(__GNUC__) && !defined(__clang__) && defined(__cplusplus)\n\
+#pragma GCC diagnostic push\n\
+#pragma GCC diagnostic ignored \"-Wparentheses\"\n\
+#endif";
+
+const IGNORE_WARNGINGS_END: &str = 
+"#if defined(__clang__) && defined(__cplusplus)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__) && !defined(__clang__) && defined(__cplusplus)
+#pragma GCC diagnostic pop
+#endif";
+
 pub fn transpiller_to_cpp(meta_data: &MetaData, statment_iter: &StatmentIterator, abstract_syntax_tree: &AbstractSyntaxTree, run_options: &RunOptions) -> Result<String> {
     
     let mut writer = CppWriter::new(run_options.pretty_cpp_code);
 
     writer.start_line();
     writer.push_str("#include \"soul_hardCodedFunctions/soul_hardCodedFunctions.h\"\n");
+    writer.push_str(IGNORE_WARNGINGS);
     writer.end_line();
 
 
@@ -37,6 +54,8 @@ pub fn transpiller_to_cpp(meta_data: &MetaData, statment_iter: &StatmentIterator
     for statment in &abstract_syntax_tree.main_nodes {
         statment_to_cpp(&mut writer, statment_iter, statment, meta_data, context, MetaData::GLOBAL_SCOPE_ID)?;
     }
+
+    writer.push_str(IGNORE_WARNGINGS_END);
 
     Ok(writer.consume_to_string())
 }
@@ -95,7 +114,14 @@ fn forward_declare_program_memory(writer: &mut CppWriter, statment_iter: &Statme
         }
         else {
             let variable = IVariable::Variable{name: mem.make_var_name(*id), type_name: mem.type_name.clone(), span: span.clone()};
-            let assignment = IStatment::new_assignment(variable.clone(), IExpression::new_literal(&mem.value, &mem.type_name, &token), &token)?;
+            let variable_span = span.clone();
+            
+            let assignment = IStatment::new_assignment(
+                IExpression::IVariable{this: variable.clone(), span: variable_span}, 
+                IExpression::new_literal(&mem.value, &mem.type_name, &token), 
+                &token
+            )?;
+            
             let init = IStatment::new_initialize(variable, Some(assignment), &token);
             statment_to_cpp(writer, statment_iter, &init, meta_data, context, MetaData::GLOBAL_SCOPE_ID)?;
         }

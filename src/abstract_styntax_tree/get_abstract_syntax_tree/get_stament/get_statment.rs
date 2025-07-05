@@ -1,6 +1,6 @@
-use crate::{abstract_styntax_tree::get_abstract_syntax_tree::get_body::get_body, meta_data::{borrow_checker::borrow_checker::BorrowCheckedTrait, soul_error::soul_error::{new_soul_error, Result, SoulError, SoulSpan}, soul_names::NamesInternalType}};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::IExpression, get_abstract_syntax_tree::get_body::get_body}, meta_data::{borrow_checker::borrow_checker::BorrowCheckedTrait, soul_error::soul_error::{new_soul_error, Result, SoulError, SoulSpan}, soul_names::NamesInternalType}};
 use super::statment_type::statment_type::{StatmentIterator, StatmentType};
-use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment, IVariable}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
+use crate::{abstract_styntax_tree::{abstract_styntax_tree::{IStatment}, get_abstract_syntax_tree::{get_expression::{get_expression::get_expression, get_function_call::get_function_call::get_function_call}, get_function_body::get_function_body, get_stament::{get_assignmet::get_assignment, get_initialize::get_initialize}, multi_stament_result::MultiStamentResult}}, meta_data::{current_context::current_context::CurrentContext, meta_data::MetaData, soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES}, soul_type::soul_type::SoulType}, tokenizer::token::TokenIterator};
 
 pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, meta_data: &mut MetaData, context: &mut CurrentContext) -> Result<MultiStamentResult<IStatment>> {
     let statment_type;
@@ -13,19 +13,35 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
         return Err(err_out_of_bounds(iter));
     }
 
-    match statment_type {
+    const IS_FORWARD_DECLARED: bool = false;
+
+    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan{line_number: iter.current().line_number, line_offset: iter.current().line_offset}));
+    let mut statment = match statment_type {
         StatmentType::CloseScope{..} => Ok(MultiStamentResult::new(IStatment::CloseScope(SoulSpan::from_token(iter.current())))),
         StatmentType::EmptyStatment => Ok(MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())))),
         StatmentType::Assignment => {
                 const IS_INITIALIZE: bool = false;
-                let variable = get_variable(iter, context, meta_data)?;
-                get_assignment(iter, meta_data, context, variable, IS_INITIALIZE)
+
+                let variable = if iter.peek().is_some_and(|token| token.text == "[") {
+                    let res = get_expression(iter, meta_data, context, &None, IS_FORWARD_DECLARED, &vec!["]"])?;
+                    body_result.add_result(&res.result);
+                    if iter.next().is_none() {
+                        return Err(err_out_of_bounds(iter));
+                    }
+                    res.result.value
+                }
+                else {
+                    get_variable(iter, context, meta_data)?
+                };
+
+                get_assignment(iter, meta_data, context, variable, IS_INITIALIZE, IS_FORWARD_DECLARED)
                     .map(|result| result.assignment)
             },
+        StatmentType::TypeDef{..} => get_type_def(iter, context, meta_data),
         StatmentType::Initialize{..} => get_initialize(iter, meta_data, context),
         StatmentType::FunctionBody{..} => get_function_body(iter, statment_iter, meta_data, context),
         StatmentType::FunctionCall => {
-                let result = get_function_call(iter, meta_data, context, false)
+                let result = get_function_call(iter, meta_data, context, IS_FORWARD_DECLARED)
                     .map(|result_expr| MultiStamentResult::new(IStatment::new_function_call(result_expr.value, iter.current())));
     
                 if iter.next().is_none() {
@@ -38,7 +54,91 @@ pub fn get_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterat
         StatmentType::If{..} => get_if_statment(iter, statment_iter, context, meta_data),
         StatmentType::Else{..} => get_else_statment(iter, statment_iter, context, meta_data),
         StatmentType::ElseIf{..} => get_else_if_statment(iter, statment_iter, context, meta_data),
+        StatmentType::While{..} => get_while_statment(iter, statment_iter, context, meta_data),
+        StatmentType::For{..} => todo!(),
+    };
+    if let Ok(stat) = statment.as_mut() {
+        stat.add_result(&body_result);
     }
+    statment
+}
+
+fn get_type_def(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData) -> Result<MultiStamentResult<IStatment>> {
+    let begin_i = iter.current_index();
+    if iter.current().text != SOUL_NAMES.get_name(NamesOtherKeyWords::Type) {
+        return Err(new_soul_error(iter.current(), format!("Internal error: type Statment doesn't start with '{}'", SOUL_NAMES.get_name(NamesOtherKeyWords::Type)).as_str()));
+    }
+
+    if iter.next().is_none() {
+        return Err(err_out_of_bounds(iter));
+    }
+
+    let new_type = SoulType::from_iterator(iter, &meta_data.type_meta_data, &context.current_generics)?;
+    
+    if iter.next().is_none() {
+        return Err(err_out_of_bounds(iter));
+    }
+
+    if iter.current().text != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+        return Err(new_soul_error(iter.current(), format!("Internal error: '{}' should be {}", iter.current().text, SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof)).as_str()));
+    }
+
+    if iter.next().is_none() {
+        return Err(err_out_of_bounds(iter));
+    }
+
+    let from_type = SoulType::from_iterator(iter, &meta_data.type_meta_data, &context.current_generics)?;
+    
+    if iter.next().is_none() {
+        return Err(err_out_of_bounds(iter));
+    }
+
+    Ok(MultiStamentResult::new(IStatment::new_type_def(new_type.to_string(), from_type.to_string(), &iter[begin_i])))
+}
+
+fn get_while_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, context: &mut CurrentContext, meta_data: &mut MetaData) -> Result<MultiStamentResult<IStatment>> {
+    let begin_i = iter.current_index();
+    if iter.current().text != SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) {
+        return Err(new_soul_error(iter.current(), format!("Internal error: while Statment doesn't start with '{}'", SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop)).as_str()));
+    }
+    if context.current_function.is_none() {
+        return Err(new_soul_error(iter.current(), "trying to use while statment while not being in function"));
+    }
+
+    if iter.next().is_none() {
+        return Err(err_out_of_bounds(iter));
+    }
+
+    if iter.current().text == "{" {
+        return Err(new_soul_error(iter.current(), "no condition in while statment"));
+    }
+
+    const IS_FORWARD_DECLARED: bool = false;
+    let expression_result = get_expression(iter, meta_data, context, &None, IS_FORWARD_DECLARED, &vec!["{"])?;
+    
+    if expression_result.is_type.name != SOUL_NAMES.get_name(NamesInternalType::Boolean) || 
+       !expression_result.is_type.wrappers.is_empty() 
+    {
+        return Err(new_soul_error(iter.current(), format!("while statment condition needs to be of type '{}' is type '{}'", SOUL_NAMES.get_name(NamesInternalType::Boolean), expression_result.is_type.to_string()).as_str()));
+    }
+
+    if !iter.peek().is_some_and(|token| token.text == "}") {
+        
+        if iter.next().is_none() {
+            return Err(new_soul_error(iter.current(), "unexpected end while trying to get while statment body"));
+        }
+    }
+    
+    let body = get_body(iter, statment_iter, meta_data, context, None, true)?;
+    if iter.next().is_none() {
+        return Err(new_soul_error(iter.current(), "unexpected end while trying to get body"));
+    }
+    
+    let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
+    body_result.add_result(&expression_result.result);
+    body_result.value = IStatment::new_while(expression_result.result.value, body, &iter[begin_i]);
+    
+    Ok(body_result)
 }
 
 fn get_else_if_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterator, context: &mut CurrentContext, meta_data: &mut MetaData) -> Result<MultiStamentResult<IStatment>> {
@@ -82,9 +182,9 @@ fn get_else_if_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIt
         }
     }
     
-    let body = get_body(iter, statment_iter, meta_data, context, None)?;
+    let body = get_body(iter, statment_iter, meta_data, context, None, true)?;
     if iter.next().is_none() {
-        return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
+        return Err(new_soul_error(iter.current(), "unexpected end while trying to get body"));
     }
     
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
@@ -119,9 +219,9 @@ fn get_else_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentItera
         }
     }
 
-    let body = get_body(iter, statment_iter, meta_data, context, None)?;
+    let body = get_body(iter, statment_iter, meta_data, context, None, true)?;
     if iter.next().is_none() {
-        return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
+        return Err(new_soul_error(iter.current(), "unexpected end while trying to get body"));
     }
     
     Ok(MultiStamentResult::new(IStatment::new_else(body, &iter[begin_i])))
@@ -160,9 +260,9 @@ fn get_if_statment(iter: &mut TokenIterator, statment_iter: &mut StatmentIterato
         }
     }
     
-    let body = get_body(iter, statment_iter, meta_data, context, None)?;
+    let body = get_body(iter, statment_iter, meta_data, context, None, true)?;
     if iter.next().is_none() {
-        return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
+        return Err(new_soul_error(iter.current(), "unexpected end while trying to get body"));
     }
     
     let mut body_result = MultiStamentResult::new(IStatment::EmptyStatment(SoulSpan::from_token(iter.current())));
@@ -242,7 +342,7 @@ fn get_return(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data:
     return Ok(result);
 }
 
-fn get_variable(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData) -> Result<IVariable> {
+fn get_variable(iter: &mut TokenIterator, context: &mut CurrentContext, meta_data: &mut MetaData) -> Result<IExpression> {
     let var_name = iter.current();
     if let Err(msg) = check_name(&var_name.text) {
         return Err(new_soul_error(iter.current(), msg.as_str()));
@@ -258,12 +358,43 @@ fn get_variable(iter: &mut TokenIterator, context: &mut CurrentContext, meta_dat
         return Err(err_out_of_bounds(iter));
     }
 
-    Ok(IVariable::new_variable(&variable.0.name, &variable.0.type_name, iter.current()))
+    Ok(IExpression::new_variable(&variable.0.name, &variable.0.type_name, iter.current()))
 }
 
 fn err_out_of_bounds(iter: &TokenIterator) -> SoulError {
-    new_soul_error(iter.current(), "unexpected end while trying to get stament")
+    new_soul_error(iter.current(), "unexpected end while trying to get statment")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use std::{collections::{BTreeSet, HashMap}, result, sync::Arc};
-use crate::abstract_styntax_tree::{assign_type::AssignType, operator_type::{ExprOperatorType, ALL_OPERATORS, BOOLEAN_OPERATOR}};
+use crate::{abstract_styntax_tree::{assign_type::AssignType, operator_type::{ExprOperatorType, ALL_OPERATORS, BOOLEAN_OPERATOR}}};
 use super::{soul_names::{NamesInternalType, NAMES_INTERNAL_TYPE_NUMBER, SOUL_NAMES}, soul_type::{soul_type::SoulType, type_wrappers::{TypeWrappers, ALL_TYPE_WRAPPERS}}};
 
 static NO_DEFAULT_OPERATORS: Lazy<ImplOperators> = Lazy::new(|| {
@@ -149,7 +149,31 @@ fn add_internal_types(type_store: &mut TypeStore) {
 
     type_store.implemented_type_operators.insert(id, array_operators);
 
+
+    let range_operators: ImplOperators = ImplOperators{operator: BTreeSet::from([ExprOperatorType::Equals, ExprOperatorType::NotEquals].map(|op| ImplOperator::ExprOperatorType(op)))};
+
+    let range_name = SOUL_NAMES.get_name(NamesInternalType::Range).to_string();
+    let id = type_store.add_type(range_name, None).expect("unexpeced error from internal impl_primitive_type operators");
+
+    type_store.implemented_type_operators.insert(id, range_operators);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

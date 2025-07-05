@@ -22,6 +22,44 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
     let mut current_id = 0u32;
     let mut functions =  vec![
         FunctionDeclaration{
+            name: "EPrint".to_string(), 
+            return_type: None,
+            args: vec![
+                ArgumentInfo::new_argument(
+                    /*name:*/     "msg".to_string(), 
+                    /*type:*/     ANY_T_NAME.to_string(), 
+                    /*is_mut:*/   false, 
+                    /*position:*/ 0,
+                )
+            ],
+            optionals: BTreeMap::new(),
+            generics: BTreeMap::from([ANY_T_GENERIC.clone()]),
+            modifiers: FunctionModifiers::Const,
+            id: new_function_id(&mut current_id),
+            is_forward_declared: false,
+            access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
+        },
+        FunctionDeclaration{
+            name: "EPrintln".to_string(), 
+            return_type: None,
+            args: vec![
+                ArgumentInfo::new_argument(
+                    /*name:*/     "msg".to_string(), 
+                    /*type:*/     ANY_T_NAME.to_string(), 
+                    /*is_mut:*/   false, 
+                    /*position:*/ 0,
+                )
+            ],
+            optionals: BTreeMap::new(),
+            generics: BTreeMap::from([ANY_T_GENERIC.clone()]),
+            modifiers: FunctionModifiers::Const,
+            id: new_function_id(&mut current_id),
+            is_forward_declared: false,
+            access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
+        },
+        FunctionDeclaration{
             name: "Print".to_string(), 
             return_type: None,
             args: vec![
@@ -90,7 +128,31 @@ pub static INTERNAL_FUNCTIONS: Lazy<Vec<FunctionDeclaration>> = Lazy::new(|| {
             access_level: AccesLevel::Public,
             in_scope_id: MetaData::GLOBAL_SCOPE_ID,
         },
-        
+        FunctionDeclaration{
+            name: SOUL_NAMES.get_name(NamesInternalType::Range).to_string(), 
+            return_type: Some(SOUL_NAMES.get_name(NamesInternalType::Range).to_string()),
+            args: vec![
+                ArgumentInfo::new_argument(
+                    /*name:*/     "begin".to_string(), 
+                    /*type:*/     SOUL_NAMES.get_name(NamesInternalType::Uint).to_string(),
+                    /*is_mut:*/   false, 
+                    /*position:*/ 0,
+                ),
+                ArgumentInfo::new_argument(
+                    /*name:*/     "end".to_string(), 
+                    /*type:*/     SOUL_NAMES.get_name(NamesInternalType::Uint).to_string(),
+                    /*is_mut:*/   false, 
+                    /*position:*/ 0,
+                )
+            ],
+            optionals: BTreeMap::new(),
+            generics: BTreeMap::new(),
+            modifiers: FunctionModifiers::Default,
+            id: new_function_id(&mut current_id),
+            is_forward_declared: false,
+            access_level: AccesLevel::Public,
+            in_scope_id: MetaData::GLOBAL_SCOPE_ID,
+        },
         FunctionDeclaration{
             name: "__soul_format_string__".to_string(), 
             return_type: Some(SOUL_NAMES.get_name(NamesInternalType::String).to_string()),

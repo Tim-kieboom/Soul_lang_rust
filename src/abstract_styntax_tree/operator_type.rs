@@ -32,6 +32,8 @@ pub enum ExprOperatorType {
 
     Increment           = 20,
     Decrement           = 21,
+
+    Range               = 22,
 }
 
 impl ExprOperatorType {
@@ -61,6 +63,8 @@ impl ExprOperatorType {
             val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseAnd) => ExprOperatorType::BitWiseAnd,
             val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseXor) => ExprOperatorType::BitWiseXor,
             val if val == SOUL_NAMES.get_name(NamesOperator::LogicalOr) => ExprOperatorType::LogicalOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => ExprOperatorType::LogicalAnd,
+
             val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => ExprOperatorType::LogicalAnd,
             _ => ExprOperatorType::Invalid, // Default case for unrecognized strings
         }
@@ -94,6 +98,8 @@ impl ExprOperatorType {
 
             ExprOperatorType::Increment => SOUL_NAMES.get_name(NamesOperator::Increment),
             ExprOperatorType::Decrement => SOUL_NAMES.get_name(NamesOperator::Decrement),
+
+            ExprOperatorType::Range => SOUL_NAMES.get_name(NamesOperator::Range),
         }
     }
 
@@ -105,20 +111,21 @@ impl ExprOperatorType {
         match self {
             ExprOperatorType::Increment |
             ExprOperatorType::Decrement => 9,
-
+            
             ExprOperatorType::Not => 8,
-
+            
             ExprOperatorType::Log |
             ExprOperatorType::Pow |
             ExprOperatorType::Root => 7,
-
+            
             ExprOperatorType::Mul |
             ExprOperatorType::Div |
             ExprOperatorType::Modulo => 6,
-
+            
             ExprOperatorType::Add |
             ExprOperatorType::Sub => 5,
-
+            
+            ExprOperatorType::Range |
             ExprOperatorType::IsSmaller |
             ExprOperatorType::IsSmallerEquals |
             ExprOperatorType::IsBigger |
@@ -134,6 +141,7 @@ impl ExprOperatorType {
             ExprOperatorType::LogicalOr |
             ExprOperatorType::LogicalAnd => 1,
 
+
             ExprOperatorType::Invalid => 0,
         }
     }
@@ -145,24 +153,25 @@ impl ExprOperatorType {
             ExprOperatorType::Sub |
             ExprOperatorType::Mul |
             ExprOperatorType::Div |
-            ExprOperatorType::Modulo |
             ExprOperatorType::Pow |
-            ExprOperatorType::Root |
             ExprOperatorType::Log |
+            ExprOperatorType::Root |
+            ExprOperatorType::Range |
+            ExprOperatorType::Modulo |
             ExprOperatorType::BitWiseOr |
-            ExprOperatorType::BitWiseAnd |
             ExprOperatorType::Increment |
             ExprOperatorType::Decrement |
+            ExprOperatorType::BitWiseAnd |
             ExprOperatorType::BitWiseXor => false,
 
             ExprOperatorType::Not |
             ExprOperatorType::Equals |
+            ExprOperatorType::IsBigger |
             ExprOperatorType::NotEquals |
             ExprOperatorType::IsSmaller |
-            ExprOperatorType::IsSmallerEquals |
-            ExprOperatorType::IsBigger |
-            ExprOperatorType::IsBiggerEquals |
             ExprOperatorType::LogicalOr |
+            ExprOperatorType::IsBiggerEquals |
+            ExprOperatorType::IsSmallerEquals |
             ExprOperatorType::LogicalAnd => true,
         }
     }

@@ -20,7 +20,7 @@ pub fn get_function_body(iter: &mut TokenIterator, statment_iter: &mut StatmentI
         return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
     }
     
-    let function_body = get_body(iter, statment_iter, meta_data, context, Some(function.clone()))?;
+    let function_body = get_body(iter, statment_iter, meta_data, context, Some(function.clone()), false)?;
     if iter.next().is_none() {
         return Err(new_soul_error(iter.current(), "unexpected end while trying to get function body"));
     }

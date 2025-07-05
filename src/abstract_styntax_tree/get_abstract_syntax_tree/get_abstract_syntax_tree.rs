@@ -59,11 +59,12 @@ pub fn get_abstract_syntax_tree_file(mut iter: TokenIterator, meta_data: &mut Me
             .sorted_by(|a, b| Ord::cmp(&a.0.0, &b.0.0))
             .map(|(id, scope)| 
                 format!(
-                    "id: {}, funcs: {:?}, scopes: {:?}", 
+                    "parent: {:?}, id: {}, funcs: {:?}, scopes: {:?}", 
+                    scope.parent,
                     id.0,
                     scope.function_store.iter_names()
-                        .filter(|name| !INTERNAL_FUNCTIONS.iter().any(|internal| &&internal.name == name))
-                        .collect::<Vec<_>>(),
+                    .filter(|name| !INTERNAL_FUNCTIONS.iter().any(|internal| &&internal.name == name))
+                    .collect::<Vec<_>>(),
                     scope.vars.iter().map(|var| var.0).collect::<Vec<_>>(),
                 ),
             )
@@ -151,6 +152,7 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
                     return Err(new_soul_error(iter.current(), "can not do an assignment in global scope"));
                 }
             }
+        StatmentType::TypeDef{..} => (),
         StatmentType::Initialize{is_mutable, is_assigned, var} => {
                 if is_global_scope(statment_info) {
                     if !*is_assigned {
@@ -177,6 +179,8 @@ fn forward_declare(iter: &mut TokenIterator, meta_data: &mut MetaData, context: 
             },
         StatmentType::Else{..} => check_else_statment(iter, statment_info, &ELSE)?,
         StatmentType::ElseIf{..} => check_else_statment(iter, statment_info, &ELSE_IF)?,
+        StatmentType::While{..} => (),
+        StatmentType::For{..} => (),
     }
 
     statment_info.statment_types.push(statment_type);
