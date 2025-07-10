@@ -1,13 +1,12 @@
-pub mod utils;
-pub mod tokenizer;
-pub mod meta_data;
 pub mod run_options;
-pub mod run_compiler;
-pub mod run_interpreter;
-pub mod cpp_transpiller;
-pub mod abstract_styntax_tree;
+pub mod soul_names; 
+pub mod errors;
+pub mod utils;
+pub mod steps;
 
-#[cfg(test)]
-mod compiler_tests;
+
+
+
+
 
 

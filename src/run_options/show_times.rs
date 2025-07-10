@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use bitflags::bitflags;
 
 bitflags! {
@@ -7,18 +6,20 @@ bitflags! {
     pub struct ShowTimes: u8 {
         const SHOW_NONE = 0x0;
         const SHOW_TOTAL = 0b0000_0001;
+        const SHOW_SOURCE_READER = 0b0001_0000;
         const SHOW_TOKENIZER = 0b0000_0010;
-        const SHOW_ABSTRACT_SYNTAX_TREE = 0b0000_0100;
-        const SHOW_CPP_CONVERTION = 0b0000_1000;
+        const SHOW_PARSER = 0b0000_0100;
+        const SHOW_CODE_GENERATOR = 0b0000_1000;
         const SHOW_ALL = 0b1111_1111;
     }
 }
 
 const OPTIONS: &[(&str, ShowTimes)] = &[
     ("SHOW_TOTAL", ShowTimes::SHOW_TOTAL),
+    ("SHOW_SOURCE_READER", ShowTimes::SHOW_SOURCE_READER),
     ("SHOW_TOKENIZER", ShowTimes::SHOW_TOKENIZER),
-    ("SHOW_ABSTRACT_SYNTAX_TREE", ShowTimes::SHOW_ABSTRACT_SYNTAX_TREE),
-    ("SHOW_CPP_CONVERTION", ShowTimes::SHOW_CPP_CONVERTION)
+    ("SHOW_PARSER", ShowTimes::SHOW_PARSER),
+    ("SHOW_CODE_GENERATOR", ShowTimes::SHOW_CODE_GENERATOR)
 ];
 
 impl ShowTimes {

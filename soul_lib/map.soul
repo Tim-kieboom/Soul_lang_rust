@@ -1,4 +1,4 @@
-interface IMap<K><V> (
+interface IMap<K, V> (
     type KeyValue
 
     Insert(K@ key, V value)
@@ -10,36 +10,33 @@ interface IMap<K><V> (
 
     Keys() IPullable<K>
     Values() IPullable<V>
-    this::As<KeyValue@>()
 
-    Iter() IPullableMut<KeyValue>()
+    Iter() IPullableMut<KeyValue>
 )
 
-class HashMap<K><V> typeof IMap<K>V() 
+class HashMap<K, V> typeof IMap<K, V> 
 where 
-    K: this::Hash
-(
+    K: Hashable
+{
     Literal usize DEFAULT_SIZE = 1500
 
     struct KeyValue(K key, V value)
-    type Bucket typeof List<KeyValue>()
+    type Bucket typeof List<KeyValue>
 
     Bucket[] buckets = []
-)
-{
 
     const Ctor() { 
-        buckets = [DEFAULT_SIZE => []] 
+        buckets = [DEFAULT_SIZE => Bucket[]] 
     }
 
     const Ctor(usize initialSize) {
         Assert_Bigger(initialSize, 0, "initialSize for HashMap needs to be bigger then 0")
-        buckets = [initialSize => []]
+        buckets = [initialSize => Bucket[]]
     }
 
     Ctor<T>(T[] inserts)
     where 
-        T: typeof[IPullable<KeyValue>() | KeyValue[] | Bucket]
+        T: typeof[IntoIter<KeyValue>, KeyValue[], Bucket]
     {
         buckets = [DEFAULT_SIZE => Bucket[]] 
 
@@ -50,7 +47,7 @@ where
 
     Ctor<T>(usize initialSize, T[] inserts)
     where 
-        T: typeof[IPullable<KeyValue>() | KeyValue[] | Bucket]
+        T: typeof[IntoIter<KeyValue>, KeyValue[], Bucket]
     {
         Assert_Bigger(initialSize, 0, "initialSize for HashMap needs to be bigger then 0")
         buckets = [initialSize => Bucket[]] 
@@ -60,7 +57,7 @@ where
         }
     }
 
-    Insert(K@ key, V value) {
+    Insert(this&, K@ key, V value) {
         entry := &buckets[getIndex(key)]
         
         if entry.First(node => node.key == key) typeof Value(node) {
@@ -72,24 +69,20 @@ where
         buckets[index].Push(newNode)
     }
 
-    @Get(K@ key) KeyValue@ {
+    Get(this@, K@ key) KeyValue@ {
         entry := &buckets[getIndex(key)]
-        return entry.@First(node => node.key == key).except()
+        return entry.First(node => node.key == key).except()
     }
 
-    Keys() IPullable<K> {
+    Keys(this@) Iter<K> {
         return Iter().Flatten().Select(kv => kv.key)
     }
 
-    Values() IPullable<V> {
+    Values(this@) Iter<V> {
         return Iter().Flatten().Select(kv => kv.value)
     }
 
-    this::As<KeyValue@[]>() {
-        return @Iter().To()
-    }
-
-    Iter() IPullable<KeyValue>() {
+    Iter() Iter<KeyValue> {
         return HashMap_Iter<K, V>(buckets)
     }
 
@@ -101,7 +94,7 @@ where
 
 class HashMap_Iter<K, V> typeof IPullable<Output>()
 where 
-    K: this::Hash
+    K: Hashable
 (
     type Output typeof HashMap<K>V::KeyValue()
     

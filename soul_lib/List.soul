@@ -1,4 +1,4 @@
-interface IList<T> typeof IIter<T> (
+interface IList<T> typeof IIter<T> {
     Ctor::[](T[] init)
 
     Len(this@) usize
@@ -10,13 +10,12 @@ interface IList<T> typeof IIter<T> (
 
     this::[](int index) T
     this::[](int begin, int end) T[]
-)
+}
 
-class List<T> typeof IList<T> (
-    T[] buffer,
-    usize len { get; priv set; },
-) 
-{
+class List<T> typeof IList<T>() {
+    T[] buffer
+    usize len { get; priv set; }
+
     Ctor();
     Ctor::[](T[] init) {
         this.buffer = init

@@ -26,7 +26,8 @@
                 "test.soul",
                 "-showOutput=SHOW_ALL",
                 "-showTime=SHOW_ALL",
-                "-prettyCppCode"
+                "-prettyCppCode",
+                "-tabCharLen=4"
             ],
             "cwd": "${workspaceFolder}"
         },
