@@ -1,6 +1,6 @@
 use std::{collections::HashMap, iter::Peekable, str::Chars};
 
-use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResult};
+use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResponse};
 
 
 struct RemoveCommentInfo<'a> {
@@ -23,7 +23,7 @@ struct RemoveCommentInfo<'a> {
 }
 
 
-pub fn remove_comment(file_line: FileLine, in_multi_line_comment: &mut bool, result: &mut SourceFileResult) -> FileLine {
+pub fn remove_comment(file_line: FileLine, in_multi_line_comment: &mut bool, result: &mut SourceFileResponse) -> FileLine {
     let mut chars = file_line.line.chars().peekable();
 
     if file_line.line_number == 5 {
@@ -71,7 +71,7 @@ pub fn remove_comment(file_line: FileLine, in_multi_line_comment: &mut bool, res
     FileLine { line: info.new_line, line_number: file_line.line_number }
 }
 
-fn check_char<'a>(info: &mut RemoveCommentInfo<'a>, result: &mut SourceFileResult) {
+fn check_char<'a>(info: &mut RemoveCommentInfo<'a>, result: &mut SourceFileResponse) {
 
     if info.in_string {
         info.new_line.push(info.current);

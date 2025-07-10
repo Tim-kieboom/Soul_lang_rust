@@ -1,13 +1,13 @@
 use std::io::{BufRead, BufReader, Read};
 use crate::errors::soul_error::Result;
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, SoulErrorKind, SoulSpan}, soul_names::SOUL_NAMES, steps::{source_reader::{c_str::{c_str_to_lit_str::c_str_to_lit_str, format_stringer::format_string}, remove_comment::remove_comment::remove_comment}, step_interfaces::i_source_reader::{FileLine, SourceFileResult}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, SoulErrorKind, SoulSpan}, soul_names::SOUL_NAMES, steps::{source_reader::{c_str::{c_str_to_lit_str::c_str_to_lit_str, format_stringer::format_string}, remove_comment::remove_comment::remove_comment}, step_interfaces::i_source_reader::{FileLine, SourceFileResponse}}};
 
-pub fn read_source_file<R>(reader: BufReader<R>, tab_as_spaces: &str) -> Result<SourceFileResult> 
+pub fn read_source_file<R>(reader: BufReader<R>, tab_as_spaces: &str) -> Result<SourceFileResponse> 
 where 
     R: Read
 {
     let mut line_number = 1;
-    let mut source_result = SourceFileResult::new();
+    let mut source_result = SourceFileResponse::new();
     let mut in_multi_line_comment = false;
     for possible_line in reader.lines() {
         let line = possible_line

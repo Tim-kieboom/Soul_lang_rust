@@ -2,7 +2,7 @@ extern crate soul_lang_rust;
 
 use itertools::Itertools;
 use std::{fs::{write, File}, io::{BufReader, Read}, time::Instant};
-use soul_lang_rust::{errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{source_reader::source_reader::read_source_file, step_interfaces::{i_source_reader::SourceFileResult, i_tokenizer::TokenizeResult}, tokenizer::tokenizer::tokenize}};
+use soul_lang_rust::{errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{source_reader::source_reader::read_source_file, step_interfaces::{i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 fn main() {
 
@@ -22,7 +22,6 @@ fn compiler(run_option: RunOptions) -> Result<()> {
     let reader = get_file_reader(&run_option)?;
     let source_file = source_reader(reader, &run_option)?;
     let token_stream = tokenizer(source_file, &run_option)?;
-
     
     let duration = start.elapsed();
 
@@ -33,7 +32,7 @@ fn compiler(run_option: RunOptions) -> Result<()> {
     Ok(())
 }
 
-fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Result<SourceFileResult> {
+fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Result<SourceFileResponse> {
     let tab_as_spaces = " ".repeat(run_option.tab_char_len as usize);
     let source_file = read_source_file(reader, &tab_as_spaces)?;
     
@@ -55,7 +54,7 @@ fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Resu
     Ok(source_file)
 }
 
-fn tokenizer(source_file: SourceFileResult, run_option: &RunOptions) -> Result<TokenizeResult> {
+fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result<TokenizeResonse> {
     let token_stream = tokenize(source_file)?;
 
     if run_option.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {

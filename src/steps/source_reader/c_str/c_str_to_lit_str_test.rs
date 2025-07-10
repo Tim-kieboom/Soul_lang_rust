@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::{steps::{source_reader::c_str::c_str_to_lit_str::c_str_to_lit_str, step_interfaces::i_source_reader::{FileLine, SourceFileResult}}, utils::show_diff::show_str_diff};
+use crate::{steps::{source_reader::c_str::c_str_to_lit_str::c_str_to_lit_str, step_interfaces::i_source_reader::{FileLine, SourceFileResponse}}, utils::show_diff::show_str_diff};
 
 
 const TEST_FILE: &str = r#"
@@ -44,7 +44,7 @@ fn to_string(file_lines: Vec<FileLine>) -> String {
 fn does_c_str_to_lit_str_work() {
     let source_file = str_to_file_lines(TEST_FILE);
 
-    let mut source_result = SourceFileResult::new(); 
+    let mut source_result = SourceFileResponse::new(); 
 
     let mut results = Vec::new();
     for line in source_file {

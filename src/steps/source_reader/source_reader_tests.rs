@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::io::{BufReader, Cursor};
-use crate::{errors::soul_error::SoulError, steps::{source_reader::source_reader::read_source_file, step_interfaces::i_source_reader::SourceFileResult}, utils::show_diff::show_str_diff};
+use crate::{errors::soul_error::SoulError, steps::{source_reader::source_reader::read_source_file, step_interfaces::i_source_reader::SourceFileResponse}, utils::show_diff::show_str_diff};
 
 pub const TEST_FILE: &str = r#"
 sum(i32 one, i32 two) i32
@@ -59,7 +59,7 @@ main()
     }
 }"#;
 
-pub fn get_test_result() -> Result<SourceFileResult, SoulError> {
+pub fn get_test_result() -> Result<SourceFileResponse, SoulError> {
 	let amount_of_spaces_in_tab = 4;
 	let reader = BufReader::new(Cursor::new(TEST_FILE.as_bytes()));
 	

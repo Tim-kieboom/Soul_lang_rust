@@ -2,7 +2,7 @@ use std::slice::Iter;
 
 use crate::errors::soul_error::SoulSpan;
 
-pub struct TokenizeResult {
+pub struct TokenizeResonse {
     pub stream: TokenStream,
 }
 

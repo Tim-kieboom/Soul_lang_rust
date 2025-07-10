@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use once_cell::sync::Lazy;
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan};
 use crate::soul_names::SOUL_NAMES;
-use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResult};
-use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream, TokenizeResult};
+use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResponse};
+use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream, TokenizeResonse};
 use crate::utils::split_on::SplitOn;
 
 static SPLIT_VEC: Lazy<Vec<&'static str>> = Lazy::new(|| {
@@ -16,9 +16,9 @@ static SPLIT_VEC: Lazy<Vec<&'static str>> = Lazy::new(|| {
         .collect()
 });
 
-pub fn tokenize(mut source_result: SourceFileResult) -> Result<TokenizeResult> {
+pub fn tokenize(mut source_result: SourceFileResponse) -> Result<TokenizeResonse> {
     if source_result.source_file.is_empty() {
-        return Ok(TokenizeResult{stream: TokenStream::new(Vec::new())});
+        return Ok(TokenizeResonse{stream: TokenStream::new(Vec::new())});
     }
 
     let mut tokens = Vec::with_capacity(source_result.estimated_token_count);
@@ -28,10 +28,10 @@ pub fn tokenize(mut source_result: SourceFileResult) -> Result<TokenizeResult> {
         get_tokens(file_line, &mut tokens, &mut source_result)?;
     }
 
-    Ok(TokenizeResult{stream: TokenStream::new(tokens)})
+    Ok(TokenizeResonse{stream: TokenStream::new(tokens)})
 }
 
-fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut SourceFileResult) -> Result<()> {
+fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut SourceFileResponse) -> Result<()> {
     
     fn add_offset_with_gap(offset: usize, gap: i64) -> usize {
         if gap >= 0 {

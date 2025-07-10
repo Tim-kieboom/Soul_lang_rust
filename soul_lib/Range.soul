@@ -1,10 +1,9 @@
-typeEnum Float 				typeof[f32, f64]
+typeEnum Float              typeof[f32, f64]
 typeEnum Interger 			typeof[int, i8, i16, i32, i64]
 typeEnum Uinterger 			typeof[uint, u8, u16, u32, u64]
 
 typeEnum Number 			typeof[Interger, Uinterger, Float]
 typeEnum FloatLessNumber	typeof[Interger, Uinterger]
-
 
 class Range<T: Number> {
 	T start {Get; set;}

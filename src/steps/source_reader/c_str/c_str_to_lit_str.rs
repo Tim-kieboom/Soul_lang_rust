@@ -1,8 +1,8 @@
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan};
 use crate::steps::source_reader::c_str::format_stringer::indexesof_qoutes;
-use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResult};
+use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResponse};
 
-pub fn c_str_to_lit_str(mut file_line: FileLine, source_result: &mut SourceFileResult) -> Result<FileLine> {
+pub fn c_str_to_lit_str(mut file_line: FileLine, source_result: &mut SourceFileResponse) -> Result<FileLine> {
     let indexes = indexesof_qoutes(&file_line);
     
     if indexes.len() % 2 != 0 {

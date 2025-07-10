@@ -5,8 +5,6 @@ use std::env::Args;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
-use crate::errors::soul_error::new_soul_error;
-
 use super::show_times::ShowTimes;
 use super::show_output::ShowOutputs;
 
