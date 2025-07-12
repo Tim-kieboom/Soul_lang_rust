@@ -4,6 +4,9 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Serialize, Deserialize};
+use serde_json::Value;
+
+pub const FUNCTION_DECLARATION_ID: &str = "_@_<FunctionBody>";
 
 pub static SOUL_NAMES: Lazy<SoulNames> = Lazy::new(|| {
     SoulNames::new()
@@ -95,12 +98,8 @@ impl<'a> SoulNames<'a> {
             (NamesInternalType::Uint64, "u64"),
             
             (NamesInternalType::UntypedFloat, "untypedFloat"),
-            (NamesInternalType::Float8, "f8"),
-            (NamesInternalType::Float16, "f16"),
             (NamesInternalType::Float32, "f32"),
             (NamesInternalType::Float64, "f64"),
-
-            (NamesInternalType::Range, "Range"),
         ]);
 
         let operator_names = HashMap::from([
@@ -128,8 +127,6 @@ impl<'a> SoulNames<'a> {
             (NamesOperator::BitWiseOr, "|"),
             (NamesOperator::BitWiseAnd, "&"),
             (NamesOperator::BitWiseXor, "^"),
-
-            (NamesOperator::Range, ":"),
         ]);
 
         let assign_symbools = HashMap::from([
@@ -153,23 +150,14 @@ impl<'a> SoulNames<'a> {
             
             (NamesOtherKeyWords::ForLoop, "for"),
             (NamesOtherKeyWords::InForLoop, "in"),
-            (NamesOtherKeyWords::WhileLoop, "while"),
+            (NamesOtherKeyWords::WhereLoop, "where"),
             (NamesOtherKeyWords::BreakLoop, "break"),
             (NamesOtherKeyWords::ContinueLoop, "continue"),
             (NamesOtherKeyWords::Return, "return"),
 
-            (NamesOtherKeyWords::Struct, "struct"),
-            (NamesOtherKeyWords::Class, "class"),
-            (NamesOtherKeyWords::Union, "union"),
-            (NamesOtherKeyWords::TypeEnum, "typeEnum"),
-            (NamesOtherKeyWords::Enum, "enum"),
-
             (NamesOtherKeyWords::SwitchCase, "match"),
             (NamesOtherKeyWords::Typeof, "typeof"),
             (NamesOtherKeyWords::Type, "type"),
-            (NamesOtherKeyWords::Interface, "interface"),
-            (NamesOtherKeyWords::Trait, "trait"),
-            
 
             (NamesOtherKeyWords::CopyData, "copy"),
             (NamesOtherKeyWords::Async, "async"),
@@ -181,7 +169,7 @@ impl<'a> SoulNames<'a> {
 
         const BASE_TOKENS: &[&str] = &[
             ":=", ",", "[]", "[", "]", 
-            "(", ")", "{", "}", ":", "..", 
+            "(", ")", "{", "}", ":", 
             ";", "=", "\\", " ", "\t",
         ];
 
@@ -198,8 +186,8 @@ impl<'a> SoulNames<'a> {
 
         //this is so that the tokenizer takes priority over for example '**' over '*'
         parse_tokens = parse_tokens.into_iter()
-            .sorted_by(|a, b| Ord::cmp(&a.len(), &b.len()).reverse())
-            .collect();
+                                   .sorted_by(|a, b| Ord::cmp(&a.len(), &b.len()).reverse())
+                                   .collect();
 
         SoulNames {
             type_wappers,
@@ -235,7 +223,12 @@ macro_rules! impl_soul_name_enum {
     ($t:ty, $field:ident) => (
         impl<'a> SoulNameEnum<'a> for $t {
             fn get_name(&self, key_tokens: &SoulNames<'a>) -> Option<&'a str> {
-                key_tokens.$field.get(self).map(|v| &**v)
+                if let Some(val) = key_tokens.$field.get(self) {
+                    Some(val)
+                } 
+                else {
+                    None
+                }
             }
         }
     );
@@ -245,20 +238,12 @@ pub enum NamesOtherKeyWords {
     If,
     Else,
 
-    WhileLoop,
+    WhereLoop,
     ForLoop,
     InForLoop,
     ContinueLoop,
     BreakLoop,
     Return,
-
-    Struct,
-    Class,
-    Enum,
-    Union,
-    TypeEnum,    
-    Interface,
-    Trait,
 
     SwitchCase,
     Typeof,
@@ -299,8 +284,6 @@ pub enum NamesOperator {
     BitWiseXor,
     LogicalOr,
     LogicalAnd,
-
-    Range,
 }
 impl_soul_name_enum!(NamesOperator, operator_names);
 
@@ -363,12 +346,8 @@ pub enum NamesInternalType {
     Uint64,
     
     UntypedFloat,
-    Float8,
-    Float16,
     Float32,
     Float64,
-
-    Range,
 }
 impl_soul_name_enum!(NamesInternalType, internal_types);
 

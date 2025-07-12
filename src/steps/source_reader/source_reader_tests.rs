@@ -59,11 +59,15 @@ main()
     }
 }"#;
 
-pub fn get_test_result() -> Result<SourceFileResponse, SoulError> {
+pub fn get_test_source_reader(file: &str) -> Result<SourceFileResponse, SoulError> {
 	let amount_of_spaces_in_tab = 4;
-	let reader = BufReader::new(Cursor::new(TEST_FILE.as_bytes()));
+	let reader = BufReader::new(Cursor::new(file.as_bytes()));
 	
 	read_source_file(reader, &" ".repeat(amount_of_spaces_in_tab))
+}
+
+pub fn get_test_result() -> Result<SourceFileResponse, SoulError> {
+	get_test_source_reader(TEST_FILE)
 }
 
 #[test]

@@ -1,4 +1,4 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::SoulType, spanned::Spanned};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::soul_type::SoulType, spanned::Spanned};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;

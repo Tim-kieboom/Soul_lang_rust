@@ -1,6 +1,7 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, soul_type::{EnumVariant, SoulType, UnionVariant}, spanned::Spanned};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident, Literal}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned};
 
 pub type Statment = Spanned<StmtKind>;
+pub type DeleteList = String;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
@@ -37,61 +38,56 @@ pub enum StmtKind {
         body: Vec<Statment>,
     },
     Block(Vec<Statment>),
+    CloseBlock(Vec<DeleteList>),
+}
+
+impl StmtKind {
+    pub fn consume_as_global_kind(self) -> Option<GlobalKind> {
+        match self {
+            StmtKind::ClassDecl(decl) => Some(GlobalKind::ClassDecl(decl)),
+            StmtKind::StructDecl(decl) => Some(GlobalKind::StructDecl(decl)),
+            StmtKind::TraitDecl(decl) => Some(GlobalKind::TraitDecl(decl)),
+            StmtKind::TraitImpl(impl_block) => Some(GlobalKind::TraitImpl(impl_block)),
+            StmtKind::InterfaceDecl(decl) => Some(GlobalKind::InterfaceDecl(decl)),
+            StmtKind::FnDecl(decl) => Some(GlobalKind::FuncDecl(decl)),
+            StmtKind::ExtFnDecl(decl) => Some(GlobalKind::ExtFuncDecl(decl)),
+            StmtKind::VarDecl(decl) => Some(GlobalKind::VarDecl(decl)),
+            StmtKind::UnionDecl(decl) => Some(GlobalKind::UnionDecl(decl)),
+            StmtKind::EnumDecl(decl) => Some(GlobalKind::EnumDecl(decl)),
+            StmtKind::TypeEnumDecl(decl) => Some(GlobalKind::TypeEnumDecl(decl)),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InterfaceDecl {
-    pub signature: InterfaceSignature,
-    pub methods: Vec<FunctionSignature>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct InterfaceSignature {
     pub name: Ident,
+    pub methods: Vec<FunctionSignature>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TraitDecl {
-    pub signature: TraitSignature,
+    pub name: Ident,
     pub methods: Vec<FunctionSignature>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TraitSignature {
-    pub name: Ident,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct EnumDecl {
-    pub signature: EnumSignature,
+    pub name: Ident,
     pub variants: Vec<EnumVariant>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EnumSignature {
-    pub name: Ident,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct UnionDecl {
-    pub signature: UnionSignature,
+    pub name: Ident,
     pub variants: Vec<UnionVariant>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnionSignature {
-    pub name: Ident,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct TypeEnumDecl {
-    pub signature: TypeEnumSignature,
-    pub types: Vec<SoulType>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeEnumSignature {
     pub name: Ident,
+    pub types: Vec<SoulType>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -106,18 +102,23 @@ pub struct VariableDecl {
     pub name: Ident,
     pub ty: Option<SoulType>,
     pub initializer: Option<Box<Expression>>,
+    /// if 'foo := 1' and foo is not mutated yet lit_retention is Some and and is used instead of var
+    pub lit_retention: Option<Literal>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDecl {
     pub signature: FunctionSignature,
     pub body: Vec<Statment>,
+    ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
+    pub modifier: Modifier, 
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
     pub name: Ident,
-    pub receiver: Option<SoulType>, // Some() = an extension method
+    /// Some() = an extension method
+    pub receiver: Option<SoulType>, 
     pub params: Vec<Parameter>,
     pub return_type: Option<SoulType>,
 }
@@ -139,12 +140,14 @@ pub struct StructDecl {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassDecl {
-    pub name: Ident,
+    pub signature: ClassSignature,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
     pub methods: Vec<Spanned<FunctionSignature>>,
     pub implements: Vec<SoulType>,
 }
+
+pub type ClassSignature = Ident;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldDecl {
@@ -156,8 +159,10 @@ pub struct FieldDecl {
  
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldAccess {
-    pub get: Option<Visibility>, // None = use default (e.g. pub)
-    pub set: Option<Visibility>, // None = disallow set
+    /// None = use default (e.g. pub)
+    pub get: Option<Visibility>, 
+    // None = disallow set
+    pub set: Option<Visibility>, 
 }
 
 #[derive(Debug, Clone, PartialEq)]

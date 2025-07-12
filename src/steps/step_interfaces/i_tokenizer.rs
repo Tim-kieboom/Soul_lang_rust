@@ -47,6 +47,14 @@ impl TokenStream {
         &self.tokens[self.index.max(0) as usize]
     }
 
+    pub fn current_text(&self) -> &String {
+        &self.tokens[self.index.max(0) as usize].text
+    }
+
+    pub fn current_span(&self) -> SoulSpan {
+        self.tokens[self.index.max(0) as usize].span
+    }
+
     pub fn current_index(&self) -> usize {
         self.index.max(0) as usize
     }

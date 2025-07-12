@@ -18,6 +18,10 @@ pub enum SoulErrorKind {
 
     UnexpectedToken, // e.g., found ";" but expected "\n"
 
+    InvalidInContext,
+    InvalidType,
+
+    UnexpectedEnd,
 }
 
 #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
