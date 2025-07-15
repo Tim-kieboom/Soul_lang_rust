@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::TypeKind, statment::{ClassDecl, EnumDecl, FunctionDecl, GenericParam, InterfaceDecl, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableDecl}}, utils::push::Push};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::TypeKind, statment::{ClassDecl, EnumDecl, FnDecl, GenericParam, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableRef}}, utils::push::Push};
 
-pub type ScopeStack = InnerScopeBuilder<ScopeKind>;
+pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
 
 pub type Scope = InnerScope<Vec<ScopeKind>>;
@@ -46,6 +46,20 @@ impl ScopeBuilder {
     pub fn is_in_global(&self) -> bool {
         self.scopes.is_in_global()
     } 
+
+    ///only looks in current scope
+    pub fn flat_lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
+        self.scopes.flat_lookup(name)
+    }
+    
+    ///looks in current scope and parent scopes of ScopeVisibilty is All
+    pub fn lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
+        self.scopes.lookup(name)
+    }
+
+    pub fn insert(&mut self, name: String, kind: ScopeKind) {
+        self.scopes.insert_to_vec(name, kind)
+    }
 
     pub fn lookup_forwarded_type_kind(&self, name: &str) -> Option<&TypeKind> {
         let mut current_index = Some(self.scopes.current);
@@ -104,6 +118,16 @@ impl<T> InnerScopeBuilder<T> {
         self.current == Self::GLOBAL_SCOPE_INDEX
     } 
 
+    pub fn flat_lookup(&self, name: &str) -> Option<&T> {
+        let scope = &self.scopes[self.current];
+
+        if let Some(kinds) = scope.get(name) {
+            return Some(kinds);
+        }
+
+        None
+    }
+    
     pub fn lookup(&self, name: &str) -> Option<&T> {
         let mut current_index = Some(self.current);
 
@@ -186,13 +210,12 @@ pub enum ScopeVisibility {
 
 #[derive(Debug, Clone)]
 pub enum ScopeKind {
-    Invalid,
-    Variable(VariableDecl),
+    Invalid(),
+    Variable(VariableRef),
     Struct(StructDecl),
     Class(ClassDecl),
 
     Trait(TraitDecl),
-    Interface(InterfaceDecl),
 
     Functions(OverloadedFunctions),
 
@@ -206,7 +229,7 @@ pub enum ScopeKind {
 
 #[derive(Debug, Clone)]
 pub struct OverloadedFunctions {
-    pub functions: Vec<FunctionDecl>,
+    pub functions: Vec<FnDecl>,
 }
 
 

@@ -1,4 +1,5 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::soul_type::SoulType, spanned::Spanned};
+use itertools::Itertools;
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned}}}};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
@@ -11,23 +12,39 @@ pub enum ExprKind {
     Literal(Literal),
     Variable(Ident),
     TypeOf(TypeOfExpr),
-    Binary {
-        left: BoxExpr,
-        operator: BinOp,
-        right: BoxExpr,
-    },
-    Index {
-        collection: BoxExpr,
-        index: BoxExpr,
-    },
-    Unary {
-        operator: UnaryOp,
-        expression: BoxExpr,
-    },
-    Call {
-        callee: BoxExpr,
-        arguments: Vec<Arguments>,
-    },
+    Binary(BinaryExpr),
+    Index(Index),
+    Unary(UnaryExpr),
+    Call(FnCall),
+}
+
+impl ExprKind {
+    pub fn to_string(&self) -> String {
+        match self {
+            ExprKind::Literal(literal) => literal.to_string(),
+            ExprKind::Variable(ident) => ident.0.clone(),
+            ExprKind::TypeOf(type_of_expr) => type_of_expr.to_string(),
+            ExprKind::Binary(BinaryExpr{left, operator, right}) => format!("({} {} {})", left.node.to_string(), operator.node.to_str(), right.node.to_string()),
+            ExprKind::Index(Index{ collection, index }) => format!("{}[{}]", collection.node.to_string(), index.node.to_string()),
+            ExprKind::Unary(UnaryExpr{ operator, expression }) => {
+                match operator.node {
+                    UnaryOpKind::Incr{before_var} |
+                    UnaryOpKind::Decr{before_var} => {
+                        if before_var {
+                            format!("{} {}", operator.node.to_str(), expression.node.to_string())
+                        }
+                        else {
+                            format!("{} {}", expression.node.to_string(), operator.node.to_str())
+                        }
+                    }
+                    UnaryOpKind::Neg |
+                    UnaryOpKind::Not |
+                    UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string()),
+                }
+            },
+            ExprKind::Call(FnCall{callee, arguments}) => format!("{}({})", callee.node.to_string(), arguments.iter().map(|arg| arg.expression.node.to_string()).join(",")),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,6 +63,41 @@ pub enum TypeOfExpr {
     TypeEnum(Vec<SoulType>),
 }
 
+impl TypeOfExpr {
+    pub fn to_string(&self) -> String {
+        match self {
+            TypeOfExpr::Type(soul_type) => format!("typeof {}", soul_type.to_string()),
+            TypeOfExpr::VariantPattern { union_type, variant_name, binding } => format!("typeof {}.{}({})", union_type.to_string(), variant_name.0, binding.as_ref().map(|bind| bind.0.as_str()).unwrap_or("")),
+            TypeOfExpr::TypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnCall {
+    pub callee: BoxExpr,
+    pub arguments: Vec<Arguments>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Index {
+    pub collection: BoxExpr,
+    pub index: BoxExpr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnaryExpr {
+    pub operator: UnaryOp,
+    pub expression: BoxExpr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BinaryExpr {
+    pub left: BoxExpr,
+    pub operator: BinOp,
+    pub right: BoxExpr,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arguments {
     pub name: Option<Ident>,
@@ -55,18 +107,21 @@ pub struct Arguments {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Ident(pub String);
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Literal {
-    Int(i64),
-    Uint(u64),
-    Float(f64),
-    Bool(bool),
-    Str(String),
-    Array(Vec<Literal>),
+impl UnaryExpr {
+    pub fn consume_to_expression(self, span: SoulSpan) -> Expression {
+        Expression::new(ExprKind::Unary(self), span)
+    }
+}
+
+impl BinaryExpr {
+    pub fn consume_to_expression(self, span: SoulSpan) -> Expression {
+        Expression::new(ExprKind::Binary(self), span)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BinOpKind {
+    Invalid,
     Add, // +
     Sub, // -
     Mul, // *
@@ -74,9 +129,11 @@ pub enum BinOpKind {
     Log, // log
     Pow, // **
     Root, // </ 
+    Mod, // % 
 
     BitAnd, // &
     BitOr, // |
+    BitXor, // |
     
     LogAnd, // &&
     LogOr, // ||
@@ -90,11 +147,160 @@ pub enum BinOpKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnaryOpKind {
+    Invalid,
     Neg, // -
     Not, // !
     Incr{before_var: bool}, // ++
     Decr{before_var: bool}, // --
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum OperatorKind {
+    BinOp(BinOpKind),
+    UnaryOp(UnaryOpKind),
+}
+
+impl BinOpKind {
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            BinOpKind::Invalid => 0,
+            
+            BinOpKind::LogAnd |
+            BinOpKind::LogOr => 1,
+
+            BinOpKind::BitAnd |
+            BinOpKind::BitOr |
+            BinOpKind::BitXor => 2,
+
+            BinOpKind::Eq |
+            BinOpKind::NotEq => 3,
+
+            BinOpKind::Lt |
+            BinOpKind::Gt |
+            BinOpKind::Le |
+            BinOpKind::Ge => 4,
+
+            BinOpKind::Sub |
+            BinOpKind::Add => 5,
+            
+            BinOpKind::Mul |
+            BinOpKind::Div |
+            BinOpKind::Mod => 6,
+
+            BinOpKind::Log |
+            BinOpKind::Pow |
+            BinOpKind::Root => 7,
+        }
+    }
+}
+
+impl UnaryOpKind {
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            UnaryOpKind::Invalid => 0,
+            UnaryOpKind::Neg |
+            UnaryOpKind::Not => 8,
+            UnaryOpKind::Incr{..} |
+            UnaryOpKind::Decr{..} => 9,
+        }
+    }
+}
+
+impl OperatorKind {
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            OperatorKind::BinOp(bin_op_kind) => bin_op_kind.get_precedence(),
+            OperatorKind::UnaryOp(unary_op_kind) => unary_op_kind.get_precedence(),
+        }       
+    }
+}
+
+impl BinOpKind {
+    pub fn from_str(name: &str) -> Self {
+        match name {
+            val if val == SOUL_NAMES.get_name(NamesOperator::Equals) => Self::Eq,
+            val if val == SOUL_NAMES.get_name(NamesOperator::NotEquals) => Self::NotEq,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmaller) => Self::Le,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals) => Self::Lt,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsBigger) => Self::Ge,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals) => Self::Gt,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Addition) => Self::Add,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Subtract) => Self::Sub,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Multiple) => Self::Mul,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Divide) => Self::Div,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Modulo) => Self::Mod,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Power) => Self::Pow,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Root) => Self::Root,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Logarithm) => Self::Log,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseOr) => Self::BitOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseAnd) => Self::BitOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseXor) => Self::BitXor,
+            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalOr) => Self::LogOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => Self::LogAnd,
+            _ => Self::Invalid, 
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            Self::Eq      => SOUL_NAMES.get_name(NamesOperator::Equals),
+            Self::NotEq   => SOUL_NAMES.get_name(NamesOperator::NotEquals),
+            Self::Le      => SOUL_NAMES.get_name(NamesOperator::IsSmaller),
+            Self::Lt      => SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals),
+            Self::Ge      => SOUL_NAMES.get_name(NamesOperator::IsBigger),
+            Self::Gt      => SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals),
+            Self::Add     => SOUL_NAMES.get_name(NamesOperator::Addition),
+            Self::Sub     => SOUL_NAMES.get_name(NamesOperator::Subtract),
+            Self::Mul     => SOUL_NAMES.get_name(NamesOperator::Multiple),
+            Self::Div     => SOUL_NAMES.get_name(NamesOperator::Divide),
+            Self::Mod     => SOUL_NAMES.get_name(NamesOperator::Modulo),
+            Self::Pow     => SOUL_NAMES.get_name(NamesOperator::Power),
+            Self::Root    => SOUL_NAMES.get_name(NamesOperator::Root),
+            Self::Log     => SOUL_NAMES.get_name(NamesOperator::Logarithm),
+            Self::BitOr   => SOUL_NAMES.get_name(NamesOperator::BitWiseOr),
+            Self::BitAnd  => SOUL_NAMES.get_name(NamesOperator::BitWiseAnd),
+            Self::BitXor  => SOUL_NAMES.get_name(NamesOperator::BitWiseXor),
+            Self::LogOr   => SOUL_NAMES.get_name(NamesOperator::LogicalOr),
+            Self::LogAnd  => SOUL_NAMES.get_name(NamesOperator::LogicalAnd),
+            Self::Invalid => "<invalid>",
+        }
+    }
+
+
+}
+
+impl UnaryOpKind {
+    pub fn from_str(name: &str) -> Self {
+        match name {
+            "-" => Self::Neg,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Not) => Self::Not,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Increment) => Self::Incr{before_var: true},
+            val if val == SOUL_NAMES.get_name(NamesOperator::Decrement) => Self::Decr{before_var: true},
+            _ => Self::Invalid,
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            UnaryOpKind::Invalid => "<invalid>",
+            UnaryOpKind::Neg => "-",
+            UnaryOpKind::Not => "!",
+            UnaryOpKind::Incr{..} => "++",
+            UnaryOpKind::Decr{..} => "--",
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 

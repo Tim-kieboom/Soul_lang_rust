@@ -1,6 +1,7 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::{ClassDecl, EnumDecl, FunctionDecl, ImplBlock, InterfaceDecl, StmtKind, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableDecl}};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::{ClassDecl, EnumDecl, ExtFnDecl, FnDecl, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableRef}};
 
 
+#[derive(Debug, Clone)]
 pub struct AbstractSyntacTree {
     pub root: Vec<GlobalNode>,
 }
@@ -13,12 +14,11 @@ pub enum GlobalKind {
     StructDecl(StructDecl),
     
     TraitDecl(TraitDecl),
-    TraitImpl(ImplBlock),
-    InterfaceDecl(InterfaceDecl),
+    TraitImpl(TraitImpl),
     
-    FuncDecl(FunctionDecl),
-    ExtFuncDecl(FunctionDecl),
-    VarDecl(VariableDecl),
+    FuncDecl(FnDecl),
+    ExtFuncDecl(ExtFnDecl),
+    VarDecl(VariableRef),
     
     UnionDecl(UnionDecl),
     EnumDecl(EnumDecl),
@@ -32,7 +32,6 @@ impl GlobalKind {
             GlobalKind::StructDecl(decl) => StmtKind::StructDecl(decl),
             GlobalKind::TraitDecl(decl) => StmtKind::TraitDecl(decl),
             GlobalKind::TraitImpl(impl_block) => StmtKind::TraitImpl(impl_block),
-            GlobalKind::InterfaceDecl(decl) => StmtKind::InterfaceDecl(decl),
             GlobalKind::FuncDecl(decl) => StmtKind::FnDecl(decl),
             GlobalKind::ExtFuncDecl(decl) => StmtKind::ExtFnDecl(decl),
             GlobalKind::VarDecl(decl) => StmtKind::VarDecl(decl),

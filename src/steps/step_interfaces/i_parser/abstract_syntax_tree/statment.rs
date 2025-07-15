@@ -1,4 +1,6 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident, Literal}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned};
+use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
+
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -6,39 +8,66 @@ pub type DeleteList = String;
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
     ExprStmt(Expression),
-    VarDecl(VariableDecl),
+    VarDecl(VariableRef),
 
-    FnDecl(FunctionDecl),
-    ExtFnDecl(FunctionDecl),
+    FnDecl(FnDecl),
+    ExtFnDecl(ExtFnDecl),
 
     StructDecl(StructDecl),
     ClassDecl(ClassDecl),
     TraitDecl(TraitDecl),
-    InterfaceDecl(InterfaceDecl),
 
     EnumDecl(EnumDecl),
     UnionDecl(UnionDecl),
     TypeEnumDecl(TypeEnumDecl),
 
-    TraitImpl(ImplBlock),
+    TraitImpl(TraitImpl),
 
-    Return(Option<Expression>),
+    Return(Return),
 
-    Assignment {
-        target: Expression,
-        value: Expression
-    },
-    If {
-        condition: Expression,
-        then_branch: Vec<Statment>,
-        else_branch: Option<Vec<Statment>>,
-    },
-    While {
-        condition: Expression,
-        body: Vec<Statment>,
-    },
-    Block(Vec<Statment>),
-    CloseBlock(Vec<DeleteList>),
+    Assignment(Assignment),
+    If(IfDecl),
+    While(WhileDecl),
+    Block(Block),
+    CloseBlock(CloseBlock),
+}
+
+pub trait InStmtKind{fn to_stmt_kind(self) -> StmtKind;}
+macro_rules! impl_in_stmt_kind {
+    ($($variant:ident => $type:ty),* $(,)?) => { 
+        $(
+            impl InStmtKind for $type { 
+                fn to_stmt_kind(self) -> StmtKind {
+                    StmtKind::$variant(self)
+                }
+            }
+        )* 
+    }; 
+}
+impl_in_stmt_kind!(
+    ExprStmt => Expression, 
+    VarDecl => VariableRef, 
+    FnDecl => FnDecl, 
+    ExtFnDecl => ExtFnDecl, 
+    StructDecl => StructDecl, 
+    ClassDecl => ClassDecl, 
+    TraitDecl => TraitDecl, 
+    EnumDecl => EnumDecl, 
+    UnionDecl => UnionDecl, 
+    TypeEnumDecl => TypeEnumDecl, 
+    TraitImpl => TraitImpl, 
+    Return => Return,
+    Assignment => Assignment, 
+    If => IfDecl, 
+    While => WhileDecl,
+    Block => Block, 
+    CloseBlock => CloseBlock
+);
+
+impl Spanned<StmtKind> {
+    pub fn from_kind<T: InStmtKind>(value: T, span: SoulSpan) -> Statment {
+        Spanned::new(value.to_stmt_kind(), span)
+    }
 }
 
 impl StmtKind {
@@ -48,7 +77,6 @@ impl StmtKind {
             StmtKind::StructDecl(decl) => Some(GlobalKind::StructDecl(decl)),
             StmtKind::TraitDecl(decl) => Some(GlobalKind::TraitDecl(decl)),
             StmtKind::TraitImpl(impl_block) => Some(GlobalKind::TraitImpl(impl_block)),
-            StmtKind::InterfaceDecl(decl) => Some(GlobalKind::InterfaceDecl(decl)),
             StmtKind::FnDecl(decl) => Some(GlobalKind::FuncDecl(decl)),
             StmtKind::ExtFnDecl(decl) => Some(GlobalKind::ExtFuncDecl(decl)),
             StmtKind::VarDecl(decl) => Some(GlobalKind::VarDecl(decl)),
@@ -60,10 +88,39 @@ impl StmtKind {
     }
 }
 
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct InterfaceDecl {
-    pub name: Ident,
-    pub methods: Vec<FunctionSignature>,
+pub struct Block {
+    pub statments: Vec<Statment>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Return {
+    pub value: Option<Expression>
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CloseBlock {
+    pub delete_list: Vec<DeleteList>
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Assignment {
+    pub target: Expression,
+    pub value: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhileDecl {
+    pub condition: Expression,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfDecl {
+    pub condition: Expression,
+    pub then_branch: Block,
+    pub else_branch: Block,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -91,25 +148,52 @@ pub struct TypeEnumDecl {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ImplBlock {
+pub struct TraitImpl {
     pub trait_name: Ident,
     pub for_type: SoulType,
-    pub methods: Vec<FunctionDecl>,
+    pub methods: Vec<FnDecl>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VariableRef {
+    inner: Rc<RefCell<VariableDecl>>
+}
+
+impl VariableRef {
+    pub fn new(var: VariableDecl) -> Self {
+        Self { inner: Rc::new(RefCell::new(var)) }
+    }
+
+    pub fn borrow(&self) -> Ref<VariableDecl> {
+        self.inner.borrow()
+    } 
+
+    pub fn borrow_mut(&mut self) -> RefMut<VariableDecl> {
+        self.inner.borrow_mut()
+    } 
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariableDecl {
     pub name: Ident,
-    pub ty: Option<SoulType>,
+    pub ty: SoulType,
     pub initializer: Option<Box<Expression>>,
     /// if 'foo := 1' and foo is not mutated yet lit_retention is Some and and is used instead of var
     pub lit_retention: Option<Literal>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunctionDecl {
+pub struct FnDecl {
     pub signature: FunctionSignature,
-    pub body: Vec<Statment>,
+    pub body: Block,
+    ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
+    pub modifier: Modifier, 
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExtFnDecl {
+    pub signature: FunctionSignature,
+    pub body: Block,
     ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
     pub modifier: Modifier, 
 }
@@ -183,6 +267,23 @@ pub enum TypeConstraint {
     Interface(Ident),
     TypeEnum(Ident),
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

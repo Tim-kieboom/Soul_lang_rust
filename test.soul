@@ -14,34 +14,15 @@
 // sum(int a, int b) int {
 // 	return a + b
 // }
-interface Istr {}
-trait Strable {}
-struct StringData {}
-class String {}
-type stringGlobal typeof str
+
+struct Foo {
+	int field
+}
 
 main(str[]@ args) int {
-	type string1 typeof str
-	// innerSum(int a, int b) int {
-	// 	return a + b
-	// }
 
-	if true {
-		struct Foo {
-			type string3 typeof str
-		}
-	}
-	else {
-		type string4 typeof str
-		if true {
-			type string5 typeof str
-		}
-		else {
-			type string6 typeof str
-		}
-	}
+	json := JsonStr((field: 1, name: "foobar"))
 
-	add := 1 
 	Println("hello //world")
 	Println(f"hello world {0}")
 	Println(f"hello world {#0}")

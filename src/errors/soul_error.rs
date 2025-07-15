@@ -13,12 +13,16 @@ pub enum SoulErrorKind {
     InvalidEscapeSequence, // e.g., "\q" in a string
     EndingWithSemicolon, // if line ends with ';'
     UnmatchedParenthesis, // e.g., "(" without ")"
-
-    InvalidStringFormat, // if f"..." has incorrect argument
+    
+    WrongType,
 
     UnexpectedToken, // e.g., found ";" but expected "\n"
+    
+    NotFoundInScope,
 
+    InvalidStringFormat, // if f"..." has incorrect argument
     InvalidInContext,
+    InvalidName,
     InvalidType,
 
     UnexpectedEnd,
@@ -74,6 +78,10 @@ impl SoulError {
 
     pub fn get_kinds(&self) -> &Vec<SoulErrorKind> {
         &self.kinds
+    }    
+    
+    pub fn get_last_kind(&self) -> SoulErrorKind {
+        self.kinds[self.kinds.len()-1].clone()
     }
 
     fn insert(mut self, kind: SoulErrorKind, span: SoulSpan, msg: String) -> Self {

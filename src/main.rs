@@ -2,7 +2,8 @@ extern crate soul_lang_rust;
 
 use itertools::Itertools;
 use std::{fs::{write, File}, io::{BufReader, Read}, time::Instant};
-use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
+use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
+
 
 fn main() {
 
@@ -19,15 +20,13 @@ fn main() {
 fn compiler(run_option: RunOptions) -> Result<()> {
     let start = Instant::now(); 
 
-    let reader = get_file_reader(&run_option).main_err_pass("while trying to get file reader")?;
-    let source_response = source_reader(reader, &run_option).main_err_pass("in source_reader")?;
-    let token_response = tokenizer(source_response, &run_option).main_err_pass("in tokenizer")?;
-    let parse_response = parse_tokens(token_response).main_err_pass("in parser")?;
+    let reader = get_file_reader(&run_option).main_err_map("while trying to get file reader")?;
+    let source_response = source_reader(reader, &run_option).main_err_map("in source_reader")?;
+    let token_response = tokenizer(source_response, &run_option).main_err_map("in tokenizer")?;
+    let parse_response = parse_tokens(token_response).main_err_map("in parser")?;
     
-    let duration = start.elapsed();
-
     if run_option.show_times.contains(ShowTimes::SHOW_TOTAL) {
-        println!("Total time: {:.2?}", duration);
+        println!("Total time: {:.2?}", start.elapsed());
     }
 
     Ok(())
@@ -83,10 +82,10 @@ fn get_file_reader(run_option: &RunOptions) -> Result<BufReader<File>> {
     Ok(BufReader::new(file))
 }
 
-trait MainPass<T>{fn main_err_pass(self, msg: &str) -> Result<T>;}
-impl<T> MainPass<T> for Result<T> {
-    fn main_err_pass(self, msg: &str) -> Result<T> {
-        self.map_err(|child| pass_soul_error(*child.get_kinds().last().unwrap(), SoulSpan{line_number: 0, line_offset: 0}, msg, child))
+trait MainErrMap<T>{fn main_err_map(self, msg: &str) -> Result<T>;}
+impl<T> MainErrMap<T> for Result<T> {
+    fn main_err_map(self, msg: &str) -> Result<T> {
+        self.map_err(|child| pass_soul_error(SoulErrorKind::NoKind, SoulSpan{line_number: 0, line_offset: 0}, msg, child))
     }
 }
 

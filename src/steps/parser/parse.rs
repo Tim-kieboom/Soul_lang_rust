@@ -10,25 +10,29 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
     let mut tree = AbstractSyntacTree{root: Vec::new()};
     let mut stream = tokens.stream;
 
-    #[cfg(feature="dev_mode")]
-    println!( // this print is to be able to see what token is at what index because rust debugger suckss
-        "\ntokenizer:\n{:?}\n", 
-        stream
-            .iter()
-            .map(|token| token.text.as_str())
-            .enumerate()
-            .collect::<Vec<(usize, &str)>>()
-    );
 
     let type_stack = forward_declarde_type_stack(&mut stream)?;
     #[cfg(feature="dev_mode")]
-    println!(
-        "\nforward_declarde_type_stack\n{}\n", 
-        type_stack.scopes
-            .iter()
-            .map(|scope| format!("{}.{:#?}", scope.self_index, scope.symbols))
-            .join("\n-------------\n")
-    );
+    {
+        use itertools::Itertools;
+
+        println!( // this print is to be able to see what token is at what index because rust debugger suckss
+            "\ntokenizer:\n{:?}\n", 
+            stream
+                .iter()
+                .map(|token| token.text.as_str())
+                .enumerate()
+                .collect::<Vec<(usize, &str)>>()
+        );
+
+        // println!(
+        //     "\nforward_declarde_type_stack\n{}\n", 
+        //     type_stack.scopes
+        //         .iter()
+        //         .map(|scope| format!("{}.{:#?}", scope.self_index, scope.symbols))
+        //         .join("\n-------------\n")
+        // );
+    }
 
     let mut scopes = ScopeBuilder::new(type_stack);
     
@@ -40,6 +44,8 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
             break;
         }
     }
+
+    println!("{:#?}", tree);
 
     Ok(ParserResponse{tree, scopes})
 }

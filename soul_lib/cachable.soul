@@ -12,13 +12,15 @@ union Op<T> (
 	} 
 }
 
-union Res<T, E> (
+union Res<T, E> {
 	Ok(T),
 	Err(E),
-) 
-{
+} 
 
-	this::catch<T, E>(this@) bool {
+use Res<T, E> {
+
+	impl 
+	catch<T, E>(this@) bool {
 		return match *this {
 			Res<T, E>.Ok(..) => false
 			Res<T, E>.Err(..) => true

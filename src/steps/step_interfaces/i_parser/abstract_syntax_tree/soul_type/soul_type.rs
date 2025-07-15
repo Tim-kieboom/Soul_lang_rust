@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder};
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
@@ -19,16 +21,52 @@ impl SoulType {
     pub fn from_token_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Self> {
         let begin_index = stream.current_index();
 
-        let result = inner_from_token_stream(stream, scopes);
+        let mut dummy = false;
+        let result = inner_from_token_stream(stream, scopes, &mut dummy);
         if result.is_err() {
             stream.go_to_index(begin_index);
         }
 
         result
     }
+
+    pub fn try_from_token_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Self>> {
+        let begin_index = stream.current_index();
+
+        let mut is_wrong_type = false;
+        let result = inner_from_token_stream(stream, scopes, &mut is_wrong_type);
+        if result.is_err() {
+            stream.go_to_index(begin_index);
+        }
+
+        match is_wrong_type {
+            true => Some(result),
+            false => None,
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        if self.generics.is_empty() {
+            format!(
+                "{} {}{}",
+                self.modifier.to_str(),
+                self.base.to_string(),
+                self.wrapper.iter().map(|wrap| wrap.to_str()).join("")
+            )
+        }
+        else {
+            format!(
+                "{} {}<{}>{}",
+                self.modifier.to_str(),
+                self.base.to_string(),
+                self.generics.iter().map(|gene| gene.to_string()).join(","),
+                self.wrapper.iter().map(|wrap| wrap.to_str()).join("")
+            )
+        }
+    }
 }
 
-fn inner_from_token_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType> {
+fn inner_from_token_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder, is_wrong_type: &mut bool) -> Result<SoulType> {
     let mut soul_type = SoulType::new();
 
     let modi = Modifier::from_str(stream.current_text());
@@ -42,7 +80,11 @@ fn inner_from_token_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) 
     soul_type.base = get_type_kind(stream.current(), scopes)?;
 
     if stream.peek().is_some_and(|token| token.text == "<") {
-        get_generic_ctor(&mut soul_type, stream, scopes)?;
+        
+        if let Err(err) = get_generic_ctor(&mut soul_type, stream, scopes) {
+            *is_wrong_type = true;
+            return Err(err);
+        }
     }
 
     while let Some(token) = stream.next() {
@@ -67,7 +109,8 @@ fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: 
     }
 
     loop {
-        let ty = inner_from_token_stream(stream, scopes)
+        let mut dummy = true;
+        let ty = inner_from_token_stream(stream, scopes, &mut dummy)
             .map_err(|child| pass_soul_error(SoulErrorKind::InvalidType, stream.current_span(), "while trying to get type in generic ctor", child))?;
 
         soul_type.generics.push(ty);

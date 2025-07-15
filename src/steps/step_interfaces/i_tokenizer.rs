@@ -1,5 +1,4 @@
-use std::slice::Iter;
-
+use std::{ops::Index, slice::Iter};
 use crate::errors::soul_error::SoulSpan;
 
 pub struct TokenizeResonse {
@@ -102,6 +101,13 @@ impl TokenStream {
     }
 }
 
+impl Index<usize> for TokenStream {
+    type Output = Token;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.tokens[index]
+    }
+}
 
 
 

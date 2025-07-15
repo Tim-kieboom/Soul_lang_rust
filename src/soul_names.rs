@@ -76,6 +76,11 @@ impl<'a> SoulNames<'a> {
 
         let internal_types = HashMap::from([
             (NamesInternalType::Character, "char"),
+            (NamesInternalType::Character16, "char16"),
+            (NamesInternalType::Character32, "char32"),
+            (NamesInternalType::Character64, "char64"),
+
+
             (NamesInternalType::Boolean, "bool"),
             (NamesInternalType::String, "str"),
             (NamesInternalType::None, "none"),
@@ -344,6 +349,9 @@ impl_soul_name_enum!(NamesTypeModifiers, type_modifiers);
 #[derive(Debug, Sequence, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NamesInternalType {
     Character,
+    Character16,
+    Character32,
+    Character64,
     Boolean,
     String,
     None,
