@@ -1,3 +1,10 @@
+#[macro_export]
+macro_rules! assert_eq_show_diff {
+	($left:expr, $right:expr) => {
+		assert!($left == $right, "{}", $crate::show_str_diff(format!("{:#?}", $left).as_str(), format!("{:#?}", $right).as_str()))
+	};
+}
+
 pub fn show_str_diff(expected: &str, got: &str) -> String {
     
 	fn char_to_byte_idx(s: &str, char_idx: usize) -> usize {
@@ -18,12 +25,12 @@ pub fn show_str_diff(expected: &str, got: &str) -> String {
     let got_lines: Vec<_> = got.lines().collect();
     let max_lines = expected_lines.len().max(got_lines.len());
 
-    println!("Line  | {:<exp_shift_size$} | {:<got_shift_size$}", "Expected", "Got");
+	let mut lines = Vec::new();
+
+    lines.push(format!("Line  | {:<exp_shift_size$} | {:<got_shift_size$}", "Expected", "Got"));
     let exp_amount_minus = "-".repeat(exp_shift_size+2);
     let got_amount_minus = "-".repeat(got_shift_size+2);
-	println!("------+{}+{}", exp_amount_minus, got_amount_minus);
-
-	let mut lines = Vec::new();
+	lines.push(format!("------+{}+{}", exp_amount_minus, got_amount_minus));
 
     for i in 0..max_lines {
         let exp = expected_lines.get(i).unwrap_or(&"");

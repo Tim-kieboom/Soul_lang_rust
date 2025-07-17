@@ -1,7 +1,8 @@
 pub mod parse;
 pub mod literal;
-pub mod parse_statment;
-pub mod parse_expression;
+pub mod soul_type;
+pub mod get_statments;
+pub mod get_expressions;
 pub mod forward_type_stack;
 
 

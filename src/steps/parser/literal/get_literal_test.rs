@@ -1,5 +1,8 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
+use ordered_float::OrderedFloat;
+
+use crate::assert_eq_show_diff;
 use crate::errors::soul_error::{SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
@@ -25,7 +28,7 @@ fn test_parse_positive_integer() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
-    assert_eq!(result, Literal::Int(42));
+    assert_eq_show_diff!(result, Literal::Int(42));
 }
 
 #[test]
@@ -34,7 +37,7 @@ fn test_parse_negative_integer() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
-    assert_eq!(result, Literal::Int(-42));
+    assert_eq_show_diff!(result, Literal::Int(-42));
 }
 
 #[test]
@@ -43,7 +46,7 @@ fn test_parse_binary_integer() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
-    assert_eq!(result, Literal::Uint(170));
+    assert_eq_show_diff!(result, Literal::Uint(170));
 }
 
 #[test]
@@ -52,7 +55,7 @@ fn test_parse_hexidecimal_integer() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
-    assert_eq!(result, Literal::Uint(1047058));
+    assert_eq_show_diff!(result, Literal::Uint(1047058));
 }
 
 #[test]
@@ -61,7 +64,7 @@ fn test_invalid_hex_fails() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes);
     assert!(result.is_err());
-    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
+    assert_eq_show_diff!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
 }
 
 #[test]
@@ -78,7 +81,7 @@ fn test_parse_float() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
-    assert_eq!(result, Literal::Float(3.14));
+    assert_eq_show_diff!(result, Literal::Float(OrderedFloat(3.14)));
 }
 
 #[test]
@@ -89,13 +92,13 @@ fn test_parse_bool_true_false() {
     let lit_true = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(lit_true, Literal::Bool(true));
+    assert_eq_show_diff!(lit_true, Literal::Bool(true));
 
     stream = stream_from_strs(&["false"]);
     let lit_false = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(lit_false, Literal::Bool(false));
+    assert_eq_show_diff!(lit_false, Literal::Bool(false));
 }
 
 #[test]
@@ -105,12 +108,27 @@ fn test_parse_char() {
     let lit_char = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(lit_char, Literal::Char('x'));
+    assert_eq_show_diff!(lit_char, Literal::Char('x'));
 
     stream = stream_from_strs(&["'xx'"]);
     let result = Literal::from_stream(&mut stream, &mut scopes);
     assert!(result.is_err());
-    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
+    assert_eq_show_diff!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
+}
+
+#[test]
+fn test_parse_str() {
+    let mut stream = stream_from_strs(&["\"hello world\""]);
+    let mut scopes = dummy_scopes();
+    let lit_char = Literal::from_stream(&mut stream, &mut scopes)
+        .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
+
+    assert_eq!(lit_char, Literal::Str("hello world".into()));
+
+    stream = stream_from_strs(&["\"yutfuy"]);
+    let result = Literal::from_stream(&mut stream, &mut scopes);
+    assert!(result.is_err());
+    assert_eq_show_diff!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
 }
 
 #[test]
@@ -119,7 +137,7 @@ fn test_parse_array_same_type() {
     let mut scopes = dummy_scopes();
     let lit = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
-    assert_eq!(
+    assert_eq_show_diff!(
         lit,
         Literal::Array { ty: LiteralType::Int, values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)] }
     );
@@ -140,7 +158,7 @@ fn test_parse_2d_array_same_types() {
         ] 
     };
 
-    assert_eq!(
+    assert_eq_show_diff!(
         lit,
         should_be
     );
@@ -157,11 +175,11 @@ fn test_parse_2d_array_diffrent_numeric_types() {
         ty: LiteralType::Array(Box::new(LiteralType::Float)), 
         values: vec![
             Literal::Array { ty: LiteralType::Int, values: vec![Literal::Int(1), Literal::Uint(255), Literal::Int(3)] },
-            Literal::Array { ty: LiteralType::Float, values: vec![Literal::Float(1.0)] }
+            Literal::Array { ty: LiteralType::Float, values: vec![Literal::Float(ordered_float::OrderedFloat(1.0))] }
         ] 
     };
 
-    assert_eq!(
+    assert_eq_show_diff!(
         lit,
         should_be
     );
@@ -174,7 +192,7 @@ fn test_parse_2d_array_mismatched_type() {
     let lit = Literal::from_stream(&mut stream, &mut scopes);
     
     assert!(lit.is_err());
-    assert_eq!(lit.unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
+    assert_eq_show_diff!(lit.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
 }
 
 #[test]
@@ -184,9 +202,9 @@ fn test_parse_array_diffrent_numeric_types() {
     let lit = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(
+    assert_eq_show_diff!(
         lit,
-        Literal::Array{ty: LiteralType::Float, values: vec![Literal::Int(-1), Literal::Uint(1), Literal::Float(3.0)]}
+        Literal::Array{ty: LiteralType::Float, values: vec![Literal::Int(-1), Literal::Uint(1), Literal::Float(ordered_float::OrderedFloat(3.0))]}
     );
 }
 
@@ -197,14 +215,14 @@ fn test_array_type_mismatch() {
     let result = Literal::from_stream(&mut stream, &mut scopes);
     
     assert!(result.is_err(), "{:?}", result.unwrap());
-    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
+    assert_eq_show_diff!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
     
 
     stream = stream_from_strs(&["[", "'c'", ",", "true", "]"]);
     let result = Literal::from_stream(&mut stream, &mut scopes);
 
     assert!(result.is_err(), "{:?}", result.unwrap());
-    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
+    assert_eq_show_diff!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
 }
 
 #[test]
@@ -214,18 +232,18 @@ fn test_empty_array() {
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(
+    assert_eq_show_diff!(
         result,
-        Literal::Array{ty: LiteralType::Int, values: vec![]},
+        Literal::Array{ty: LiteralType::Int, values: vec![]}
     );
 
     stream = stream_from_strs(&["[", "]"]);
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(
+    assert_eq_show_diff!(
         result,
-        Literal::Array{ty: LiteralType::Int, values: vec![]},
+        Literal::Array{ty: LiteralType::Int, values: vec![]}
     );
 }
 
@@ -236,9 +254,41 @@ fn test_tuple_mixed() {
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(
+    assert_eq_show_diff!(
         result,
         Literal::new_tuple(vec![Literal::Int(1), Literal::Bool(true)])
+    );
+
+    stream = stream_from_strs(&[
+        "(",
+            "1", ",",
+            "0b1", ",",
+            "2.0", ",",
+            "true", ","
+            ,"\"string\"", ",",
+            "[",
+                "1", ",",
+                "2", ",",
+                "3"
+            ,"]",
+        ")", "\n"
+    ]);
+
+    let result = Literal::from_stream(&mut stream, &mut scopes)
+        .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
+    
+    assert_eq_show_diff!(
+        result,
+        Literal::Tuple{
+            values: vec![
+                Literal::Int(1), 
+                Literal::Uint(0b1), 
+                Literal::Float(OrderedFloat(2.0)), 
+                Literal::Bool(true),
+                Literal::Str("string".into()),
+                Literal::Array { ty: LiteralType::Int, values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)] }
+            ]
+        }
     );
 }
 
@@ -249,9 +299,9 @@ fn test_tuple_with_array() {
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-    assert_eq!(
+    assert_eq_show_diff!(
         result,
-        Literal::new_tuple(vec![Literal::new_array(vec![Literal::Int(1), Literal::Float(2.0)], &SoulSpan::new(0,0)).unwrap(), Literal::Bool(true)])
+        Literal::new_tuple(vec![Literal::new_array(vec![Literal::Int(1), Literal::Float(ordered_float::OrderedFloat(2.0))], &SoulSpan::new(0,0)).unwrap(), Literal::Bool(true)])
     );
 }
 
@@ -260,23 +310,36 @@ fn test_empty_tuple() {
     let mut stream = stream_from_strs(&["()"]);
     let mut scopes = dummy_scopes();
     let lit = Literal::from_stream(&mut stream, &mut scopes).unwrap();
-    assert_eq!(lit, Literal::new_tuple(vec![]));
+    assert_eq_show_diff!(lit, Literal::new_tuple(vec![]));
 
     stream = stream_from_strs(&["(", ")"]);
     let lit = Literal::from_stream(&mut stream, &mut scopes).unwrap();
-    assert_eq!(lit, Literal::new_tuple(vec![]));
+    assert_eq_show_diff!(lit, Literal::new_tuple(vec![]));
 }
 
 #[test]
 fn test_named_tuple() {
-    let mut stream = stream_from_strs(&["(", "name", ":", "true", ")"]);
+    let mut stream = stream_from_strs(&["(", "name", ":", "true", ",", "name2", ":", "1",  ")"]);
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes).unwrap();
 
-    let mut expected = HashMap::new();
+    let mut expected = BTreeMap::new();
     expected.insert(Ident("name".to_string()), Literal::Bool(true));
-
+    expected.insert(Ident("name2".to_string()), Literal::Int(1));
     assert_eq!(result, Literal::new_named_tuple(expected));
+
+    stream = stream_from_strs(&["(", "name1", ":", "1", ",", "name2", ":", "1.0", ",", ")", "\n"]);
+
+    let result = Literal::from_stream(&mut stream, &mut scopes).unwrap();
+    
+    let should_be = Literal::NamedTuple{
+        values: BTreeMap::from([
+            (Ident("name1".into()), Literal::Int(1)), 
+            (Ident("name2".into()), Literal::Float(OrderedFloat(1.0))), 
+        ])
+    };
+
+    assert_eq_show_diff!(should_be, result);
 }
 
 #[test]
@@ -285,7 +348,7 @@ fn test_mixed_named_unnamed_tuple_fails() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes);
     assert!(result.is_err());
-    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::InvalidType);
+    assert_eq_show_diff!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::InvalidType);
 }
 
 

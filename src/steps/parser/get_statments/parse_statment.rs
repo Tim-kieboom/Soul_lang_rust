@@ -1,5 +1,8 @@
-use once_cell::sync::Lazy;
 use std::collections::HashSet;
+
+use once_cell::sync::Lazy;
+
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind};
@@ -93,7 +96,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
 
     let begin_i = stream.current_index();
-    let possible_res_type = SoulType::try_from_token_stream(stream, scopes);
+    let possible_res_type = SoulType::try_from_stream(stream, scopes);
 
     if let Some(result_ty) = possible_res_type {
         if let Err(err) = result_ty {
@@ -129,7 +132,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
 
     let type_i = stream.current_index();
-    let peek_i: i64 = if SoulType::from_token_stream(stream, scopes).is_ok() {
+    let peek_i: i64 = if SoulType::from_stream(stream, scopes).is_ok() {
         stream.current_index() as i64 - type_i as i64
     }
     else {
@@ -143,10 +146,102 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
     stream.go_to_index(type_i);
 
+    let next_index = (stream.current_index() as i64 + peek_i) as usize;
+    
+    //check if next_index is valid index
+    stream.peek_multiple(peek_i).ok_or(err_out_of_bounds(stream))?;
 
+    match stream[next_index].text.as_str() {
+        "=" => {
+            //var decl
+        }
+        ":=" => {
+            //var decl
+        }
+        "(" => {
+            let begin_i = stream.current_index();
+            match func_call_or_declaration(stream, scopes)? {
+                FunctionKind::FunctionCall => {
 
+                },
+                FunctionKind::FunctionDecl => {
+                    stream.go_to_index(begin_i);
 
+                },
+            }
+        }
+        _ => (),
+    }
+
+    if !ASSIGN_SYMBOOLS_SET.iter().any(|symb| symb == &&stream[next_index].text) {
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span(), 
+            format!("token invalid for statment: '{}'", stream[next_index].text)
+        ));
+    }
+
+    //assignment
     todo!();
+}
+
+
+
+enum FunctionKind {
+    FunctionCall,
+    FunctionDecl
+}
+
+fn func_call_or_declaration(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionKind> {
+    go_to_symbool_after_brackets(stream, stream.current_index() + 1)?;
+
+    let is_curly_bracket = stream.current_text() == "{";
+
+    let possible_result = SoulType::try_from_stream(stream, scopes);
+    let is_type = possible_result.is_some();
+
+    if is_type || is_curly_bracket {
+        possible_result.unwrap()?;
+        Ok(FunctionKind::FunctionDecl)
+    }
+    else {
+        Ok(FunctionKind::FunctionCall)
+    }
+}
+
+fn go_to_symbool_after_brackets<'a>(stream: &mut TokenStream, start_i: usize) -> Result<()> {
+    if &stream[start_i].text != "(" {
+        return Err(new_soul_error(
+            SoulErrorKind::UnmatchedParenthesis,
+            stream.current_span(), 
+            "unexpected start while trying to get args (args is not opened add '(')",
+        ));
+    }
+
+    stream.go_to_index(start_i);
+    let mut stack = 1;
+
+    loop {
+        if stream.next().is_none() {
+            break Err(new_soul_error(
+                SoulErrorKind::UnmatchedParenthesis,
+                stream.current_span(), 
+                "unexpected end while trying to get args (args is not closed add ')')"
+            ));
+        }
+
+        if stream.current().text == "(" {
+            stack += 1;
+        }
+        else if stream.current().text == ")" {
+            stack -= 1;
+        }
+
+        if stack == 0 {
+            stream.next();
+            break Ok(());
+        }
+    }
 }
 
 fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<VariableRef> {
@@ -154,7 +249,7 @@ fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<V
         new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get initialization of variable")
     }
 
-    let possible_type = match SoulType::try_from_token_stream(stream, scopes) {
+    let possible_type = match SoulType::try_from_stream(stream, scopes) {
         Some(val) => Some(val?),
         None => None,
     };

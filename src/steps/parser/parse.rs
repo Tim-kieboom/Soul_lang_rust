@@ -1,7 +1,7 @@
 use crate::errors::soul_error::Result;
-use crate::steps::parser::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_tokenizer::TokenizeResonse;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
+use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::parser_response::ParserResponse;
 use crate::steps::parser::forward_type_stack::get_type_stack::forward_declarde_type_stack;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::AbstractSyntacTree;
@@ -49,6 +49,28 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
 
     Ok(ParserResponse{tree, scopes})
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

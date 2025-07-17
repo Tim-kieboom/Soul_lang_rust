@@ -154,21 +154,23 @@ pub struct TraitImpl {
     pub methods: Vec<FnDecl>,
 }
 
+pub type VariableRef = NodeRef<VariableDecl>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct VariableRef {
-    inner: Rc<RefCell<VariableDecl>>
+pub struct NodeRef<T> {
+    inner: Rc<RefCell<T>>
 }
 
-impl VariableRef {
-    pub fn new(var: VariableDecl) -> Self {
+impl<T> NodeRef<T> {
+    pub fn new(var: T) -> Self {
         Self { inner: Rc::new(RefCell::new(var)) }
     }
 
-    pub fn borrow(&self) -> Ref<VariableDecl> {
+    pub fn borrow(&self) -> Ref<T> {
         self.inner.borrow()
     } 
 
-    pub fn borrow_mut(&mut self) -> RefMut<VariableDecl> {
+    pub fn borrow_mut(&mut self) -> RefMut<T> {
         self.inner.borrow_mut()
     } 
 }

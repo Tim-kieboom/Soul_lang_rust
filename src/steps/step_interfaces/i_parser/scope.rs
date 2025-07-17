@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::TypeKind, statment::{ClassDecl, EnumDecl, FnDecl, GenericParam, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableRef}}, utils::push::Push};
+use std::collections::{BTreeMap, HashMap};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind, statment::{ClassDecl, EnumDecl, FnDecl, GenericParam, NodeRef, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableRef}}, utils::push::Push};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -11,7 +11,35 @@ pub type TypeScope = InnerScope<TypeKind>;
 pub struct ScopeBuilder {
     scopes: ScopeStack,
     types: Vec<TypeScope>,
+    pub global_literal: ProgramMemmory,
 }
+
+#[derive(Debug, Hash, Clone, Copy, )]
+pub struct ProgramMemmoryId(pub usize);
+
+
+#[derive(Debug, Clone)]
+pub struct ProgramMemmory {
+    pub store: BTreeMap<Literal, ProgramMemmoryId>,
+    pub last_id: ProgramMemmoryId,
+}
+impl ProgramMemmory {
+    pub fn new() -> Self {
+        Self { store: BTreeMap::new(), last_id: ProgramMemmoryId(0) }
+    }
+
+    pub fn insert(&mut self, entry: Literal) -> ProgramMemmoryId {
+        let id = self.last_id;
+        self.last_id.0 += 1;
+        self.store.insert(entry, id);
+        return id;
+    }
+
+    pub fn to_program_memory_name(this: &ProgramMemmoryId) -> Ident {
+        Ident(format!("__soul_mem_{}", this.0))
+    }
+}
+
 
 #[derive(Debug, Clone)]
 pub struct InnerScopeBuilder<T> {
@@ -32,7 +60,7 @@ pub struct InnerScope<T> {
 
 impl ScopeBuilder {
     pub fn new(type_stack: TypeScopeStack) -> Self {
-        Self { scopes: ScopeStack::new(), types: type_stack.scopes }
+        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes }
     }
 
     pub fn push(&mut self, parent_index: usize, scope_visability: ScopeVisibility) {
@@ -59,6 +87,10 @@ impl ScopeBuilder {
 
     pub fn insert(&mut self, name: String, kind: ScopeKind) {
         self.scopes.insert_to_vec(name, kind)
+    }    
+    
+    pub fn insert_global(&mut self, name: String, kind: ScopeKind) {
+        self.scopes.insert_global_to_vec(name, kind)
     }
 
     pub fn lookup_forwarded_type_kind(&self, name: &str) -> Option<&TypeKind> {
@@ -166,12 +198,33 @@ impl<T> InnerScopeBuilder<T> {
             .push(kind);
     }
 
+    pub fn insert_global(&mut self, name: String, kind: T) {
+        self.global_mut()
+            .symbols
+            .insert(name, kind);
+    }
+
+    pub fn insert_global_to_vec<V>(&mut self, name: String, kind: V) 
+    where 
+        T: Push<V> + Default
+    {
+        self.global_mut()
+            .symbols
+            .entry(name)
+            .or_default()
+            .push(kind);
+    }
+
     pub fn current(&self) -> &InnerScope<T> {
         &self.scopes[self.current]
     }
 
     pub fn current_mut(&mut self) -> &mut InnerScope<T> {
         &mut self.scopes[self.current]
+    }
+
+    pub fn global_mut(&mut self) -> &mut InnerScope<T> {
+        &mut self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
 }
 
@@ -226,11 +279,39 @@ pub enum ScopeKind {
     CurrentGeneric(GenericParam),
 }
 
+pub type OverloadedFunctions = NodeRef<Vec<FnDecl>>;
 
-#[derive(Debug, Clone)]
-pub struct OverloadedFunctions {
-    pub functions: Vec<FnDecl>,
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

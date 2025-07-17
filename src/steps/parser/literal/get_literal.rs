@@ -1,12 +1,13 @@
-use std::collections::HashMap;
-use crate::soul_names::check_name;
+use std::collections::BTreeMap;
+use ordered_float::OrderedFloat;
+
 use crate::steps::step_interfaces::i_tokenizer::Token;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::literal::Literal, parser_response::FromTokenStream, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
 impl FromTokenStream<Literal> for Literal {
-    fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Self>> {
+    fn try_from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<Self>> {
         let begin_i = stream.current_index();
 
         let possible_result = inner_from_stream(stream, scopes);
@@ -17,14 +18,24 @@ impl FromTokenStream<Literal> for Literal {
         possible_result
     }
     
-    fn from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Literal> {
+    fn from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal> {
         
-        inner_from_stream(stream, scopes)
-            .ok_or(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), "could not get literal"))?
+        let begin_i = stream.current_index();
+
+        let res = match inner_from_stream(stream, scopes) {
+            Some(val) => val,
+            None => Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), "could not get literal")),
+        };
+
+        if res.is_err() {
+            stream.go_to_index(begin_i);
+        }
+
+        res
     }
 }
 
-fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Literal>> {
+fn inner_from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<Literal>> {
 
     if stream.current_text() == "[" || stream.current_text() == "[]" {
         let array = get_array(stream, scopes);
@@ -38,7 +49,13 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Opt
     else if stream.current_text() == "(" || stream.current_text() == "()" {
         return pick_tuple(stream, scopes);
     }
-    
+    if stream.current_text().starts_with("\"") {
+        let string = get_string(stream.current_text());
+        if string.is_some() {
+            return string;
+        }
+    }
+
     let number = get_number(stream.current());
     if number.is_some() {
         return number;
@@ -58,7 +75,7 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Opt
 }
 
 #[inline]
-fn pick_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Literal>> {
+fn pick_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<Literal>> {
     
     if stream.peek_multiple(2).is_some_and(|token| token.text == ":") {
         
@@ -76,7 +93,16 @@ fn pick_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Res
     return None;
 }
 
-fn get_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Literal>> {
+fn get_string(text: &str) -> Option<Result<Literal>> {
+    if text.len() >= 2 && text.starts_with('\"') && text.ends_with('\"') {
+        Some(Ok(Literal::Str(text[1..text.len()-1].into())))
+    }
+    else {
+        None
+    }
+}
+
+fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<Literal>> {
     const TUPLE_START: &str = "(";
     const TUPLE_END: &str = ")";
     const TUPLE_EMPTY: &str = "()";
@@ -138,52 +164,20 @@ fn get_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Resu
     None
 }
 
-fn get_named_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Literal>> {
+fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<Literal>> {
     const TUPLE_START: &str = "(";
     const TUPLE_END: &str = ")";
 
-    fn err_out_of_bounds(stream: &mut TokenStream) -> SoulError {
-        new_soul_error(
-            SoulErrorKind::UnexpectedEnd, 
-            stream.current_span(), 
-            "unexpected end while parsing tuple"
-        )
-    }
-
-    let mut tuples = HashMap::new();
     if stream.current_text() != TUPLE_START {
         return None;
     }
 
 
-    let mut tuple_stack = 1;
+    let mut tuples = BTreeMap::new();
     while stream.next().is_some() {
 
-        if stream.current_text() == TUPLE_START {
-            tuple_stack += 1;
-
-            
-            if stream.next().is_none() {
-                return Some(Err(err_out_of_bounds(stream)));
-            }
-        }
-        else if stream.current_text() == TUPLE_END {
-            if tuple_stack == 0 {
-                return Some(Err(new_soul_error(
-                    SoulErrorKind::UnmatchedParenthesis, 
-                    stream.current_span(), 
-                    "closing ')' without opening one '('",
-                )))
-            }
-
-            tuple_stack -= 1;
-            if tuple_stack == 0 {
-                return Some(Ok(Literal::new_named_tuple(tuples)));
-            }
-            
-            if stream.next().is_none() {
-                return Some(Err(err_out_of_bounds(stream)));
-            }
+        if stream.current_text() == TUPLE_END {
+            return Some(Ok(Literal::new_named_tuple(tuples)));
         }
 
         if stream.peek().is_some_and(|token| token.text != ":") {
@@ -200,27 +194,39 @@ fn get_named_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Optio
         }
 
         let name_index = stream.current_index();
-        if let Err(msg) = check_name(stream.current_text()) {
-            return Some(Err(new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg)));
-        }
 
         if stream.next_multiple(2).is_none() {
-            return Some(Err(err_out_of_bounds(stream)));
+            break;
         }
 
         let literal = match Literal::try_from_stream(stream, scopes) {
             Some(val) => val.map_err(|err| return Some(Err::<Literal, SoulError>(err))).unwrap(),
             None => return None,
         };
-        
-        let name = Ident(stream[name_index].text.clone());
-        tuples.insert(name, literal);
+
+        tuples.insert(Ident(stream[name_index].text.clone()), literal);
+
+        if stream.next().is_none() {
+            break;
+        }
+
+        if stream.current_text() == TUPLE_END {
+            return Some(Ok(Literal::new_named_tuple(tuples)));
+        }
+        else if stream.current_text() != "," {
+            return Some(Err(new_soul_error(
+                SoulErrorKind::UnexpectedToken, 
+                stream.current_span(), 
+                format!("token '{}' is not allowed in literal tuples (should be ',')", stream.current_text())
+            )));
+        }
+
     }
 
     None
 }
 
-fn get_array(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Literal>> {
+fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<Literal>> {
     const ARRAY_START: &str = "[";
     const ARRAY_END: &str = "]";
     const ARRAY_EMPTY: &str = "[]";
@@ -332,7 +338,7 @@ fn get_number(token: &Token) -> Option<Result<Literal>> {
         .map(|val| Literal::Int(val));
 
     let float_res = token.text.parse::<f64>()
-        .map(|val| Literal::Float(val));
+        .map(|val| Literal::Float(OrderedFloat(val)));
     
     if let Ok(int) = int_res {
         return Some(Ok(int));

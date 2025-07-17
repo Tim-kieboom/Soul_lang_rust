@@ -1,22 +1,25 @@
 use itertools::Itertools;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
+use ordered_float::OrderedFloat;
 use crate::errors::soul_error::Result;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeSize};
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Literal {
     Int(i64),
     Uint(u64),
-    Float(f64),
+    Float(OrderedFloat<f64>),
     Bool(bool),
     Char(char),
     Str(String),
     Array{ty: LiteralType, values: Vec<Literal>},
-    Tuple{ty: LiteralType, values: Vec<Literal>},
-    NamedTuple{ty: LiteralType, values: HashMap<Ident, Literal>},
+    Tuple{values: Vec<Literal>},
+    NamedTuple{values: BTreeMap<Ident, Literal>},
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub enum LiteralType {
     Int,
     Uint,
@@ -26,7 +29,7 @@ pub enum LiteralType {
     Str,
     Array(Box<LiteralType>),
     Tuple(Vec<LiteralType>),
-    NamedTuple(HashMap<Ident, LiteralType>),
+    NamedTuple(BTreeMap<Ident, LiteralType>),
 }
 
 impl LiteralType {
@@ -96,34 +99,57 @@ impl LiteralType {
         
         self == other
     }
+
+    fn to_soul_type(&self) -> SoulType {
+        SoulType { modifier: Modifier::Literal, base: self.to_type_kind(), wrapper: vec![], generics: vec![] }
+    }
+
+    fn to_type_kind(&self) -> TypeKind {
+        match self {
+            LiteralType::Int => TypeKind::UntypedInt,
+            LiteralType::Uint => TypeKind::UntypedUint,
+            LiteralType::Float => TypeKind::UntypedFloat,
+            LiteralType::Bool => TypeKind::Bool,
+            LiteralType::Char => TypeKind::Char(TypeSize::Bit8),
+            LiteralType::Str => TypeKind::Str,
+            LiteralType::Array(ty) => ty.to_type_kind(),
+            LiteralType::Tuple(types) => TypeKind::Tuple(types.iter().map(|ty| ty.to_soul_type()).collect()),
+            LiteralType::NamedTuple(hash_map) => TypeKind::NamedTuple(hash_map.iter().map(|(name, ty)| (name.clone(), ty.to_soul_type())).collect()),
+        }
+    }
 }
 
 impl Literal {
+    pub fn to_soul_type(&self) -> SoulType {
+        self.get_literal_type().to_soul_type()
+    }
+
+    
     pub fn new_array(literals: Vec<Literal>, span: &SoulSpan) -> Result<Literal> {
         let mut common_ty = literals
-            .first()
-            .map(|v| v.get_literal_type())
-            .unwrap_or(LiteralType::Int);
-
-        for lit in &literals {
-            let next_ty = lit.get_literal_type();
-
-            if common_ty.is_compatible(&next_ty) {
-                common_ty = common_ty.max(next_ty);
-            } else {
-                return Err(new_soul_error(
-                    SoulErrorKind::WrongType, 
-                    *span, 
-                    format!("Incompatible array literal types: {:?} vs {:?}", common_ty, next_ty)
-                ));
-            }
+        .first()
+        .map(|v| v.get_literal_type())
+        .unwrap_or(LiteralType::Int);
+    
+    for lit in &literals {
+        let next_ty = lit.get_literal_type();
+        
+        if common_ty.is_compatible(&next_ty) {
+            common_ty = common_ty.max(next_ty);
+        } else {
+            return Err(new_soul_error(
+                SoulErrorKind::WrongType, 
+                *span, 
+                format!("Incompatible array literal types: {:?} vs {:?}", common_ty, next_ty)
+            ));
         }
-
+    }
+    
         Ok(Literal::Array { ty: common_ty, values: literals })
     }
 
     pub fn new_tuple(literals: Vec<Literal>) -> Literal {
-        let mut this = Literal::Tuple{ty: LiteralType::Int, values: literals};
+        let mut this = Literal::Tuple{values: literals};
         let lit_type = this.get_literal_type();
         if let Literal::Array{ty, ..} = &mut this {
             *ty = lit_type;
@@ -132,8 +158,8 @@ impl Literal {
         this
     }
 
-    pub fn new_named_tuple(literals: HashMap<Ident, Literal>) -> Literal {
-        let mut this = Literal::NamedTuple{ty: LiteralType::Int, values: literals};
+    pub fn new_named_tuple(literals: BTreeMap<Ident, Literal>) -> Literal {
+        let mut this = Literal::NamedTuple{values: literals};
         let lit_type = this.get_literal_type();
         if let Literal::Array{ty, ..} = &mut this {
             *ty = lit_type;
@@ -168,7 +194,7 @@ impl Literal {
             Literal::Str(_) => LiteralType::Str,
             Literal::Array{ty, .. } => LiteralType::Array(Box::new(ty.clone())),
             Literal::Tuple{values, .. } => LiteralType::Tuple(values.iter().map(|val| val.get_literal_type()).collect::<Vec<_>>()),
-            Literal::NamedTuple{values, .. } => LiteralType::NamedTuple(values.iter().map(|val| (val.0.clone(), val.1.get_literal_type())).collect::<HashMap<_,_>>()),
+            Literal::NamedTuple{values, .. } => LiteralType::NamedTuple(values.iter().map(|val| (val.0.clone(), val.1.get_literal_type())).collect::<BTreeMap<_,_>>()),
         }
     }
 
@@ -196,8 +222,8 @@ impl Literal {
             Literal::Char(_) => format!("Literal char"),
             Literal::Str(_) => format!("Literal str"),
             Literal::Array{ty, ..} => format!("Literal {}[]", ty.type_to_string()),
-            Literal::Tuple{ty, ..} => format!("Literal ({})", ty.type_to_string()),
-            Literal::NamedTuple{ty, ..} => format!("Literal ({})", ty.type_to_string()),
+            Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(",")),
+            Literal::NamedTuple{values} => format!("Literal ({})", values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(",")),
         }
     }
 
@@ -229,6 +255,19 @@ impl Literal {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

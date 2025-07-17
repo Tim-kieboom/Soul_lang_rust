@@ -9,42 +9,87 @@ pub type UnaryOp = Spanned<UnaryOpKind>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind {
+    Empty,
     Literal(Literal),
-    Variable(Ident),
+    Variable(Variable),
     TypeOf(TypeOfExpr),
     Binary(BinaryExpr),
     Index(Index),
     Unary(UnaryExpr),
     Call(FnCall),
+    ConstRef(BoxExpr),
+    MutRef(BoxExpr),
+    Deref(BoxExpr),
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Variable {
+    pub name: Ident,
+} 
 
 impl ExprKind {
     pub fn to_string(&self) -> String {
         match self {
+            ExprKind::Empty => "<EmptyExpression>".to_string(),
             ExprKind::Literal(literal) => literal.to_string(),
-            ExprKind::Variable(ident) => ident.0.clone(),
+            ExprKind::Variable(Variable{name}) => name.0.clone(),
             ExprKind::TypeOf(type_of_expr) => type_of_expr.to_string(),
             ExprKind::Binary(BinaryExpr{left, operator, right}) => format!("({} {} {})", left.node.to_string(), operator.node.to_str(), right.node.to_string()),
             ExprKind::Index(Index{ collection, index }) => format!("{}[{}]", collection.node.to_string(), index.node.to_string()),
             ExprKind::Unary(UnaryExpr{ operator, expression }) => {
-                match operator.node {
-                    UnaryOpKind::Incr{before_var} |
-                    UnaryOpKind::Decr{before_var} => {
-                        if before_var {
-                            format!("{} {}", operator.node.to_str(), expression.node.to_string())
+                    match operator.node {
+                        UnaryOpKind::Incr{before_var} |
+                        UnaryOpKind::Decr{before_var} => {
+                            if before_var {
+                                format!("{} {}", operator.node.to_str(), expression.node.to_string())
+                            }
+                            else {
+                                format!("{} {}", expression.node.to_string(), operator.node.to_str())
+                            }
                         }
-                        else {
-                            format!("{} {}", expression.node.to_string(), operator.node.to_str())
-                        }
+                        UnaryOpKind::Neg |
+                        UnaryOpKind::Not |
+                        UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string()),
                     }
-                    UnaryOpKind::Neg |
-                    UnaryOpKind::Not |
-                    UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string()),
-                }
-            },
-            ExprKind::Call(FnCall{callee, arguments}) => format!("{}({})", callee.node.to_string(), arguments.iter().map(|arg| arg.expression.node.to_string()).join(",")),
+                },
+            ExprKind::Call(FnCall{callee, name, generics, arguments}) => {
+                    let generics = if generics.is_empty() {
+                        String::new()
+                    }
+                    else {
+                        format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
+                    };
+    
+                    if let Some(methode) = callee {
+                        format!("{}.{}{}({})", methode.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
+                    }
+                    else {
+                        format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
+                    }
+                },
+            ExprKind::ConstRef(spanned) => format!("@{}", spanned.node.to_string()),
+            ExprKind::MutRef(spanned) => format!("&{}", spanned.node.to_string()),
+            ExprKind::Deref(spanned) => format!("*{}", spanned.node.to_string()),
         }
     }
+
+    pub fn is_any_ref(&self) -> bool {
+        match self {
+            ExprKind::Empty |
+            ExprKind::Call(..) |
+            ExprKind::Unary(..) |
+            ExprKind::Index(..) |
+            ExprKind::Deref(..) |
+            ExprKind::Binary(..) |
+            ExprKind::TypeOf(..) |
+            ExprKind::Literal(..) |
+            ExprKind::Variable(..) => false,
+
+            ExprKind::MutRef(..) |
+            ExprKind::ConstRef(..) => true,
+        }
+    }
+
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -75,7 +120,9 @@ impl TypeOfExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
-    pub callee: BoxExpr,
+    pub callee: Option<BoxExpr>,
+    pub name: Ident,
+    pub generics: Vec<SoulType>,
     pub arguments: Vec<Arguments>,
 }
 
@@ -98,13 +145,30 @@ pub struct BinaryExpr {
     pub right: BoxExpr,
 }
 
+impl BinaryExpr {
+    pub fn new(left: Expression, operator: BinOp, right: Expression) -> Self {
+        Self {left: Box::new(left), operator, right: Box::new(right)}
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Arguments {
     pub name: Option<Ident>,
     pub expression: Expression,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+impl Arguments {
+    pub fn to_string(&self) -> String {
+        if let Some(optional) = &self.name {
+            format!("{}: {}", optional.0, self.expression.node.to_string())
+        }
+        else {
+            self.expression.node.to_string()
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Ident(pub String);
 
 impl UnaryExpr {
@@ -158,6 +222,22 @@ pub enum UnaryOpKind {
 pub enum OperatorKind {
     BinOp(BinOpKind),
     UnaryOp(UnaryOpKind),
+}
+
+impl OperatorKind {
+    pub fn from_str(text: &str) -> Option<OperatorKind> {
+        let bin = BinOpKind::from_str(text);
+        if bin != BinOpKind::Invalid {
+            return Some(OperatorKind::BinOp(bin));
+        }
+
+        let unary = UnaryOpKind::from_str(text);
+        if unary != UnaryOpKind::Invalid {
+            return Some(OperatorKind::UnaryOp(unary));
+        }
+
+        None
+    }
 }
 
 impl BinOpKind {
