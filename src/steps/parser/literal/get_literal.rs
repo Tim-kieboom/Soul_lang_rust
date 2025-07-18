@@ -61,12 +61,12 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<
         return number;
     }
 
-    let boolean = get_bool(stream.current_text());
+    let boolean = get_bool(stream.current());
     if boolean.is_ok() {
         return boolean;
     }
 
-    let char = get_char(stream.current_text());
+    let char = get_char(stream.current());
     if char.is_ok() {
         return char;
     }
@@ -324,7 +324,7 @@ fn get_number(token: &Token) -> Result<Result<Literal>> {
     const HEXIDECIMAL: u32 = 16;
 
     if token.text.is_empty() {
-        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, span, msg));
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, token.span, "trying to get literal number but token is empty"));
     }
 
     // handle negative for hex/bin values (for decimal not needed)
@@ -333,7 +333,7 @@ fn get_number(token: &Token) -> Result<Result<Literal>> {
     if token.text.starts_with("0x") || token.text.starts_with("0x") {
         let hex_digits = &token.text[2..];
         
-        return Some(
+        return Ok(
             u64::from_str_radix(hex_digits, HEXIDECIMAL)
                 .map(|val| if is_neg {Literal::Int((val as i64)*-1)} else {Literal::Uint(val)})
                 .map_err(|child| new_soul_error(
@@ -346,7 +346,7 @@ fn get_number(token: &Token) -> Result<Result<Literal>> {
     else if token.text.starts_with("0b") {
         let bits = &token.text[2..];
         
-        return Some(
+        return Ok(
             u64::from_str_radix(bits, BINARY)
                 .map(|val| if is_neg {Literal::Int((val as i64)*-1)} else {Literal::Uint(val)})
                 .map_err(|child| new_soul_error(
@@ -364,13 +364,17 @@ fn get_number(token: &Token) -> Result<Result<Literal>> {
         .map(|val| Literal::Float(OrderedFloat(val)));
     
     if let Ok(int) = int_res {
-        return Some(Ok(int));
+        return Ok(Ok(int));
     }
     else if let Ok(float) = float_res {
-        return Some(Ok(float));
+        return Ok(Ok(float));
     }
 
-    None
+    Err(new_soul_error(
+        SoulErrorKind::InvalidType, 
+        token.span, 
+        format!("while trying ti get literal number\n{}", int_res.unwrap_err())
+    ))
 }
 
 

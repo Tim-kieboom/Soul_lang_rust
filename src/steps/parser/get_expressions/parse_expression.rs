@@ -1,7 +1,5 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_function_call::get_function_call, parse_variable::get_variable}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Index, OperatorKind, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, spanned::Spanned, statment::{VariableRef}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOpKind, ExprKind, Expression, Index, OperatorKind, UnaryOpKind, Variable}, literal::Literal, statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
-const ROUND_BRACKET_OPEN: SymboolKind = SymboolKind::Parenthesis(Parenthesis::RoundOpen);
-const ROUND_BRACKET_CLOSED: SymboolKind = SymboolKind::Parenthesis(Parenthesis::RoundClosed);
 const CLOSED_A_BRACKET: bool = true;
 
 pub fn get_expression(
@@ -105,7 +103,9 @@ fn convert_expression(
         }
         else {
 
-            try_get_special_error(stream, scopes, literal_begin)?;
+            if let Err(err) = try_get_special_error(stream, scopes, literal_begin) {
+                return Err(err);
+            }
 
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken,
@@ -313,7 +313,15 @@ fn add_index(
 }
 
 fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref: &VariableRef) -> Result<()> {
-    let variable = get_variable(stream, var_ref)?;
+    if var_ref.borrow().initializer.is_none() {
+        return Err(new_soul_error(
+            SoulErrorKind::InvalidInContext, 
+            stream.current_span(), 
+            format!("'{}' can not be used before it is assigned", var_ref.borrow().name.0)
+        ));
+    }
+
+    let variable = Variable{name: var_ref.borrow().name.clone()};
     
     if let Some(literal) = &var_ref.borrow().lit_retention {
         stacks.node_stack.push(Expression::new(ExprKind::Literal(literal.clone()), stream.current_span()));
@@ -337,106 +345,6 @@ fn try_get_variable<'a>(possible_scopes: &'a Option<&Vec<ScopeKind>>) -> Option<
                 None
             }
         })
-}
-
-fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
-    if stacks.node_stack.len() == 1 {
-        let first = stacks.symbool_stack.pop().map(|sy| sy.node);
-        let mut second = stacks.symbool_stack.pop();
-
-        if first != Some(ROUND_BRACKET_CLOSED) {
-            return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression first symbool is not ')'"));
-        }
-        else if second.is_none() {
-            return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is not None"));
-        }
-
-        match &second.as_ref().unwrap().node {
-            SymboolKind::BinOp(..) => return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is binary operator")),
-            SymboolKind::UnaryOp(unary) => {
-                let expr = get_unary_expression(&mut stacks.node_stack, unary.clone(), second.as_ref().unwrap().span)?;
-                stacks.node_stack.push(Expression::new(ExprKind::Unary(expr), second.as_ref().unwrap().span));
-                second = stacks.symbool_stack.pop();
-            },
-            SymboolKind::Parenthesis(..) =>(),
-        }
-
-        if !second.is_some_and(|sy| sy.node == ROUND_BRACKET_OPEN) {
-            return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is not None"));
-        }
-
-        return Ok(());
-    }
-
-    if !stacks.symbool_stack.pop().is_some_and(|symbool| symbool.node == ROUND_BRACKET_CLOSED) {
-        return Err(new_soul_error(
-            SoulErrorKind::UnmatchedParenthesis, 
-            stream.peek_multiple(-1).unwrap_or(stream.current()).span, 
-            "in 'getBracketBinairyExpression()': symoboolStack top is not ')'"
-        ));
-    }
-
-    while let Some(symbool) = stacks.symbool_stack.last() {
-        if symbool.node == ROUND_BRACKET_OPEN {
-            break;
-        }
-
-        if let SymboolKind::BinOp(bin_op) = &symbool.node {
-            let expr = get_binary_expression(&mut stacks.node_stack, bin_op.clone(), symbool.span)?
-                .consume_to_expression(symbool.span);
-
-            stacks.node_stack.push(expr);
-        }
-        else if let SymboolKind::UnaryOp(un_op) = &symbool.node {
-            let expr = get_unary_expression(&mut stacks.node_stack, un_op.clone(), symbool.span)?
-                .consume_to_expression(symbool.span);
-            
-            stacks.node_stack.push(expr);
-        }
-
-        stacks.symbool_stack.pop();
-    }
-
-    Ok(())
-}
-
-fn get_binary_expression(
-    node_stack: &mut Vec<Expression>,
-    bin_op: BinOpKind,
-    span: SoulSpan,
-) -> Result<BinaryExpr> {
-    let right = node_stack.pop()
-        .map(|expr| Box::new(expr))
-        .ok_or(new_soul_error(
-            SoulErrorKind::UnexpectedToken, 
-            span, 
-            format!("found binary operator '{}' but no expression", bin_op.to_str())
-        ))?;
-
-    let left = node_stack.pop()
-        .map(|expr| Box::new(expr))
-        .ok_or(new_soul_error(
-            SoulErrorKind::UnexpectedToken, 
-            span, 
-            format!("missing right expression in binary expression (so '{} {} <missing>')", right.node.to_string(), bin_op.to_str())
-        ))?;
-
-    Ok(BinaryExpr{left, operator: BinOp::new(bin_op, span), right})
-}
-
-fn get_unary_expression(
-    node_stack: &mut Vec<Expression>,
-    unary_op: UnaryOpKind,
-    span: SoulSpan, 
-) -> Result<UnaryExpr> {
-    let expr = node_stack.pop()
-        .ok_or(new_soul_error(
-            SoulErrorKind::UnexpectedToken, 
-            span, 
-            format!("found unary operator '{}' but no expression", unary_op.to_str())
-        ))?;
-    
-    Ok(UnaryExpr{operator: UnaryOp::new(unary_op, span), expression: Box::new(expr)})
 }
 
 fn traverse_brackets(
@@ -530,66 +438,6 @@ pub struct ExpressionStacks {
     pub node_stack: Vec<Expression>,
 }
 
-type Symbool = Spanned<SymboolKind>;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SymboolKind {
-    BinOp(BinOpKind),
-    UnaryOp(UnaryOpKind),
-    Parenthesis(Parenthesis),
-}
-
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Parenthesis {
-    RoundOpen,
-    RoundClosed,
-}
-
-impl SymboolKind {
-    pub fn from_str(name: &str) -> Option<Self> {
-        let bin_op = BinOpKind::from_str(name);
-        if bin_op != BinOpKind::Invalid {
-            return Some(Self::BinOp(bin_op));
-        }
-        
-        let un_op = UnaryOpKind::from_str(name);
-        if un_op != UnaryOpKind::Invalid {
-            return Some(Self::UnaryOp(un_op));
-        }
-
-        match name {
-            "(" => Some(ROUND_BRACKET_OPEN),
-            ")" => Some(ROUND_BRACKET_CLOSED),
-            _ => None
-        }
-    }
-
-    pub fn get_precedence(&self) -> u8 {
-        match self {
-            SymboolKind::Parenthesis(..) => 0,
-            SymboolKind::BinOp(bin_op_kind) => bin_op_kind.get_precedence(),
-            SymboolKind::UnaryOp(unary_op_kind) => unary_op_kind.get_precedence(),
-        }
-    }
-
-    fn consume_to_symbool(self, span: SoulSpan) -> Symbool {
-        Symbool::new(self, span)
-    }
-}
-
-impl ExpressionStacks {
-    pub fn new() -> Self {
-        Self { symbool_stack: vec![], ref_stack: vec![], node_stack: vec![] }
-    }
-}
-
-fn to_symbool(sy: OperatorKind, span: SoulSpan) -> Symbool {
-    match sy {
-        OperatorKind::BinOp(bin_op_kind) => Symbool::new(SymboolKind::BinOp(bin_op_kind), span),
-        OperatorKind::UnaryOp(unary_op_kind) => Symbool::new(SymboolKind::UnaryOp(unary_op_kind), span),
-    }
-}
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while parsing exprestion")

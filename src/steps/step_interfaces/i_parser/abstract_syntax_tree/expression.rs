@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use itertools::Itertools;
 use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned}}}};
 
@@ -17,9 +19,14 @@ pub enum ExprKind {
     Index(Index),
     Unary(UnaryExpr),
     Call(FnCall),
+    
     ConstRef(BoxExpr),
     MutRef(BoxExpr),
     Deref(BoxExpr),
+
+    Array(Vec<ExprKind>),
+    Tuple(Vec<ExprKind>),
+    NamedTuple(BTreeMap<Ident, ExprKind>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,7 +66,7 @@ impl ExprKind {
                     else {
                         format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
                     };
-    
+
                     if let Some(methode) = callee {
                         format!("{}.{}{}({})", methode.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
                     }
@@ -70,6 +77,9 @@ impl ExprKind {
             ExprKind::ConstRef(spanned) => format!("@{}", spanned.node.to_string()),
             ExprKind::MutRef(spanned) => format!("&{}", spanned.node.to_string()),
             ExprKind::Deref(spanned) => format!("*{}", spanned.node.to_string()),
+            ExprKind::Array(expr_kinds) => format!("[{}]", expr_kinds.iter().map(|expr| expr.to_string()).join(",")),
+            ExprKind::Tuple(expr_kinds) => format!("({})", expr_kinds.iter().map(|expr| expr.to_string()).join(",")),
+            ExprKind::NamedTuple(btree_map) => format!("({})", btree_map.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.to_string())).join(",")),
         }
     }
 
@@ -80,11 +90,14 @@ impl ExprKind {
             ExprKind::Unary(..) |
             ExprKind::Index(..) |
             ExprKind::Deref(..) |
-            ExprKind::Binary(..) |
+            ExprKind::Array(..) |
+            ExprKind::Tuple(..) |
             ExprKind::TypeOf(..) |
+            ExprKind::Binary(..) |
             ExprKind::Literal(..) |
-            ExprKind::Variable(..) => false,
-
+            ExprKind::Variable(..) |
+            ExprKind::NamedTuple(..) => false,
+            
             ExprKind::MutRef(..) |
             ExprKind::ConstRef(..) => true,
         }

@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Read};
 use crate::errors::soul_error::Result;
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, SoulErrorKind, SoulSpan}, soul_names::SOUL_NAMES, steps::{source_reader::{c_str::{c_str_to_lit_str::c_str_to_lit_str, format_stringer::format_string}, remove_comment::remove_comment::remove_comment}, step_interfaces::i_source_reader::{FileLine, SourceFileResponse}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, SoulErrorKind, SoulSpan}, soul_names::SOUL_NAMES, steps::{source_reader::{c_str::{format_stringer::format_string}, remove_comment::remove_comment::remove_comment}, step_interfaces::i_source_reader::{FileLine, SourceFileResponse}}};
 
 pub fn read_source_file<R>(reader: BufReader<R>, tab_as_spaces: &str) -> Result<SourceFileResponse> 
 where 
@@ -20,9 +20,6 @@ where
         file_line = remove_comment(file_line, &mut in_multi_line_comment, &mut source_result);
         file_line = format_string(file_line)
             .map_err(|err| pass_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(line_number, 0), "while trying to convert string_formaters", err))?;
-
-        file_line = c_str_to_lit_str(file_line, &mut source_result)
-            .map_err(|err| pass_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(line_number, 0), "while trying to convert strings", err))?;
 
         source_result.estimated_token_count += get_estimated_token_count(&file_line.line);
         line_number += 1;

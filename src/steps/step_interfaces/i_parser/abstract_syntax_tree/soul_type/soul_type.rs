@@ -14,6 +14,10 @@ impl SoulType {
     pub fn new() -> Self {
         Self{ modifier: Modifier::Default, base: TypeKind::None, wrapper: vec![], generics: vec![] }
     } 
+    
+    pub fn from_type_kind(base: TypeKind) -> Self {
+        Self{ modifier: Modifier::Default, base, wrapper: vec![], generics: vec![] }
+    }
 
     pub fn is_none_type(&self) -> bool {
         matches!(self.base, TypeKind::None)

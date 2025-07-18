@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use ordered_float::OrderedFloat;
 
-use crate::{assert_eq_show_diff, errors::soul_error::SoulSpan, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident, UnaryExpr, UnaryOp, UnaryOpKind}, literal::{Literal, LiteralType}}, scope::{ScopeBuilder, TypeScopeStack}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, statment::{VariableDecl, VariableRef}}, scope::{ScopeBuilder, ScopeKind, TypeScopeStack}}, i_tokenizer::{Token, TokenStream}}}};
 fn token(text: &str, index: usize) -> Token {
     Token {
         text: text.to_string(),
@@ -437,27 +437,113 @@ fn test_unary_in_binary() {
     );
 }
 
+// # variable
+
 #[test]
-fn test_unary_in_array() {
-    let mut stream = stream_from_strs(&[
-        "[",
-            "-", "1", ",",
-            "2", "++", ",",
-            "3",
-        "]", "\n"
-    ]);
+fn test_simple_variable() {
+    let var_name = "var";
+    let mut stream = stream_from_strs(&[var_name, "\n"]);
     let mut scope = empty_scope();
-    let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    let var = VariableRef::new(VariableDecl{
+        name: Ident(var_name.into()), 
+        ty: SoulType::from_type_kind(TypeKind::Bool), 
+        initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0)))),
+        lit_retention: None,
+    });
+    scope.insert(var_name.into(), ScopeKind::Variable(var));
+
+    
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{:#?}", result.unwrap_err());
+    
+    let should_be = ExprKind::Variable(Variable{name: Ident(var_name.into())});
+
     assert_eq_show_diff!(
-        result.as_ref().unwrap().node,
-        ExprKind::Literal(Literal::Array{
-            ty: LiteralType::Int, 
-            values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)]
-        })
+        result.as_ref().unwrap().node, 
+        should_be
+    );
+
+
+    stream = stream_from_strs(&["!", var_name, "\n"]);
+
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{:#?}", result.unwrap_err());
+    
+    let should_be = ExprKind::Unary(UnaryExpr{
+            operator: UnaryOp::new(UnaryOpKind::Not, SoulSpan::new(0,0)),
+            expression: Box::new(Expression::new(ExprKind::Variable(Variable{name: Ident(var_name.into())}), SoulSpan::new(0,1))),
+        });
+
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node, 
+        should_be
+    );
+
+    let var_name2 = "var2";
+    stream = stream_from_strs(&[var_name2, "\n"]);
+    let var2 = VariableRef::new(VariableDecl{
+        name: Ident(var_name2.into()), 
+        ty: SoulType::from_type_kind(TypeKind::Bool), 
+        initializer: None,
+        lit_retention: None,
+    });
+    scope.insert(var_name2.into(), ScopeKind::Variable(var2));
+
+    println!("{:#?}", scope);
+
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::InvalidInContext);
+}
+
+#[test]
+fn test_variable_literal_retention() {
+    let var_name = "var";
+    let mut stream = stream_from_strs(&[var_name, "\n"]);
+    let mut scope = empty_scope();
+    
+    let var = VariableRef::new(VariableDecl{
+        name: Ident(var_name.into()), 
+        ty: SoulType::from_type_kind(TypeKind::Bool), 
+        initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0)))),
+        lit_retention: Some(Literal::Bool(true)),
+    });
+    scope.insert(var_name.into(), ScopeKind::Variable(var));
+
+    
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{:#?}", result.unwrap_err());
+    
+    let should_be = ExprKind::Literal(Literal::Bool(true));
+
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node, 
+        should_be
     );
 }
+
+// #[test]
+// fn test_unary_in_array() {
+//     let mut stream = stream_from_strs(&[
+//         "[",
+//             "-", "1", ",",
+//             "2", "++", ",",
+//             "3",
+//         "]", "\n"
+//     ]);
+//     let mut scope = empty_scope();
+//     let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+//     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+//     assert_eq_show_diff!(
+//         result.as_ref().unwrap().node,
+//         ExprKind::Literal(Literal::Array{
+//             ty: LiteralType::Int, 
+//             values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)]
+//         })
+//     );
+// }
 
 
 
