@@ -152,11 +152,7 @@ fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<L
             return Some(Ok(Literal::new_tuple(tuples)));
         }
         else if stream.current_text() != "," {
-            return Some(Err(new_soul_error(
-                SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
-                format!("token '{}' is not allowed in literal tuples (should be ',')", stream.current_text())
-            )));
+            return None;
         }
 
     }
@@ -214,11 +210,7 @@ fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Re
             return Some(Ok(Literal::new_named_tuple(tuples)));
         }
         else if stream.current_text() != "," {
-            return Some(Err(new_soul_error(
-                SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
-                format!("token '{}' is not allowed in literal tuples (should be ',')", stream.current_text())
-            )));
+            return None;
         }
 
     }

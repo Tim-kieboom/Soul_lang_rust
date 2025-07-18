@@ -124,7 +124,7 @@ fn convert_expression(
 
 fn try_add_operator(
     stacks: &mut ExpressionStacks,
-    operator: OperatorKind,
+    mut operator: OperatorKind,
     span: SoulSpan
 ) -> Result<()> {
     fn last_precedence(stacks: &mut ExpressionStacks) -> u8 {
@@ -150,6 +150,12 @@ fn try_add_operator(
         };
 
         stacks.node_stack.push(expression);
+    }
+
+    if operator == OperatorKind::BinOp(BinOpKind::Sub) && 
+       is_minus_negative_unary(stacks) 
+    {
+        operator = OperatorKind::UnaryOp(UnaryOpKind::Neg)
     }
 
     stacks.symbool_stack.push(to_symbool(operator, span));
@@ -300,14 +306,33 @@ fn try_get_variable<'a>(possible_scopes: &'a Option<&Vec<ScopeKind>>) -> Option<
 fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
     if stacks.node_stack.len() == 1 {
         let first = stacks.symbool_stack.pop().map(|sy| sy.node);
-        let second = stacks.symbool_stack.pop().map(|sy| sy.node);
+        let mut second = stacks.symbool_stack.pop();
 
-        assert_eq!(first, Some(ROUND_BRACKET_CLOSED));
-        assert_eq!(second, Some(ROUND_BRACKET_OPEN));
+        if first != Some(ROUND_BRACKET_CLOSED) {
+            return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression first symbool is not ')'"));
+        }
+        else if second.is_none() {
+            return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is not None"));
+        }
+
+        match &second.as_ref().unwrap().node {
+            SymboolKind::BinOp(..) => return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is binary operator")),
+            SymboolKind::UnaryOp(unary) => {
+                let expr = get_unary_expression(&mut stacks.node_stack, unary.clone(), second.as_ref().unwrap().span)?;
+                stacks.node_stack.push(Expression::new(ExprKind::Unary(expr), second.as_ref().unwrap().span));
+                second = stacks.symbool_stack.pop();
+            },
+            SymboolKind::Parenthesis(..) =>(),
+        }
+
+        if !second.is_some_and(|sy| sy.node == ROUND_BRACKET_OPEN) {
+            return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is not None"));
+        }
+
         return Ok(());
     }
 
-    if stacks.symbool_stack.pop().is_none_or(|symbool| symbool.node != ROUND_BRACKET_CLOSED) {
+    if !stacks.symbool_stack.pop().is_some_and(|symbool| symbool.node == ROUND_BRACKET_CLOSED) {
         return Err(new_soul_error(
             SoulErrorKind::UnmatchedParenthesis, 
             stream.peek_multiple(-1).unwrap_or(stream.current()).span, 
@@ -404,6 +429,10 @@ fn traverse_brackets(
     }
 
     false
+}
+
+fn is_minus_negative_unary(stacks: &ExpressionStacks) -> bool {
+    stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty()
 }
 
 fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {

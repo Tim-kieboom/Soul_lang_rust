@@ -1,0 +1,50 @@
+
+Define Assert!($Expr:condition) {
+    if !$condition {
+        Panic(f"condition {$condition.litText} failed");
+    }
+}
+
+Define Assert!($Expr:condition, $[TokenTree; ","]:arguments) {
+    if !$condition {
+        Panic(f"condition {$condition.litText} failed {#$arguments.values.ToArray()}")
+    }
+}
+
+DefineBlock AddIntField {
+    (
+        $[#[$Meta]; "\n"]:$attrs
+        struct $Ident:$name $Op(<$[TokenTree; ","]:$gens>) {
+
+            $Op($[$Field:field; "\n"]:$fields)
+        }
+    )
+    {
+        $attrs[$attr => $attr $ln]
+        struct $name <$gens> {
+            $fields.Join(",")
+            , int field {Get; set;} = 1       
+        }
+
+        $name Ctor($fields[$field => $Argument(&field) ,]) {
+            return $name($fields[$field => $field.$Name : $field.$Name , ])
+        }
+    }
+}
+
+main() {
+    Assert!(true == true)
+    Assert!(true == true, "stuff and things")
+
+    AddIntField {
+        struct Foo {
+
+        }
+    }
+}
+
+
+
+
+
+
