@@ -65,7 +65,29 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
     let mut gaps = source_result.gaps.remove(&file_line.line_number)
         .unwrap_or(HashMap::new());
 
+    let mut in_string = false;
+    let mut string_token = String::new();
+    let mut string_span = SoulSpan::new(0,0,0);
     for (i, text) in splits.iter().enumerate() {
+        if *text == "\"" {
+            string_token.push_str(*text);
+            if in_string {
+                string_span.len = string_token.len();
+                tokens.push(Token{text: std::mem::take(&mut string_token), span: string_span});
+            }
+            else {
+                string_span = SoulSpan::new(file_line.line_number, line_offset, 0);
+            }
+
+            in_string = !in_string;
+            continue;
+        }
+
+        if in_string {
+            string_token.push_str(text);
+            continue;
+        }
+        
         if text.is_empty() || *text == " " || *text == "\t" {
             line_offset = add_offset_range(line_offset + text.len(), &mut gaps, line_offset);
             continue;
@@ -80,14 +102,14 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
         {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidEscapeSequence, 
-                SoulSpan::new(file_line.line_number, line_offset), 
+                SoulSpan::new(file_line.line_number, line_offset, text.len()), 
                 "can not end a line on ';'"
             ));
         }
 
         if !needs_to_dot_tokenize(text) {
             if *text != "\\" {
-                tokens.push(Token::new(text.to_string(), SoulSpan::new(file_line.line_number, line_offset)));
+                tokens.push(Token::new(text.to_string(), SoulSpan::new(file_line.line_number, line_offset, text.len())));
                 
                 line_offset = add_offset_range(line_offset + text.len(), &mut gaps, line_offset);
                 continue;
@@ -96,7 +118,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             if i != splits.len() -1 {
                 return Err(new_soul_error(
                     SoulErrorKind::UnexpectedToken, 
-                    SoulSpan::new(file_line.line_number, line_offset), 
+                    SoulSpan::new(file_line.line_number, line_offset, 1), 
                     "'\\' can only be placed at the end of a line"
                 ));
             }
@@ -114,7 +136,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
 
             tokens.push(Token::new(
                 split.to_string(),
-                SoulSpan::new(file_line.line_number, line_offset)
+                SoulSpan::new(file_line.line_number, line_offset, split.len())
             ));
 
             line_offset = add_offset_range(line_offset + text.len(), &mut gaps, line_offset);
@@ -122,7 +144,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             if j != last_index {
                 tokens.push(Token::new(
                     ".".to_string(), 
-                    SoulSpan::new(file_line.line_number, line_offset)
+                    SoulSpan::new(file_line.line_number, line_offset, split.len())
                 ));
                 line_offset = add_offset_range(line_offset + 1, &mut gaps, line_offset);
             }
@@ -132,7 +154,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
     if !tokens.is_empty() && !last_is_forward_slash {
         tokens.push(Token::new(
             "\n".to_string(), 
-            SoulSpan::new(file_line.line_number, line_offset)
+            SoulSpan::new(file_line.line_number, line_offset, 1)
         ));
     }
 

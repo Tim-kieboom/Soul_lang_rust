@@ -11,7 +11,9 @@ use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, TypeScopeStac
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Literal, LiteralType};
 
 fn token<T: Into<String>>(text: T) -> Token {
-    Token::new(text.into(), SoulSpan::new(0, 0))
+    let str = text.into();
+    let len = str.len();
+    Token::new(str, SoulSpan::new(0, 0,len))
 }
 
 fn stream_from_strs(tokens: &[&str]) -> TokenStream {
@@ -301,7 +303,7 @@ fn test_tuple_with_array() {
 
     assert_eq_show_diff!(
         result,
-        Literal::new_tuple(vec![Literal::new_array(vec![Literal::Int(1), Literal::Float(ordered_float::OrderedFloat(2.0))], &SoulSpan::new(0,0)).unwrap(), Literal::Bool(true)])
+        Literal::new_tuple(vec![Literal::new_array(vec![Literal::Int(1), Literal::Float(ordered_float::OrderedFloat(2.0))], &SoulSpan::new(0,0,7)).unwrap(), Literal::Bool(true)])
     );
 }
 

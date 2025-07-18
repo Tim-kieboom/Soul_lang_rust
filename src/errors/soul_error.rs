@@ -1,4 +1,6 @@
-use std::result;
+use std::{io::{BufRead, BufReader, Read}, result};
+
+use crate::utils::show_diff::{generate_highlighted_string, show_str_diff};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SoulErrorKind {
@@ -32,14 +34,15 @@ pub enum SoulErrorKind {
 pub struct SoulSpan {
     pub line_number: usize,
     pub line_offset: usize,
+    pub len: usize,
 }
 impl SoulSpan {
-    pub fn new(line_number: usize, line_offset: usize) -> Self {
-        Self { line_number, line_offset }
+    pub fn new(line_number: usize, line_offset: usize, len: usize) -> Self {
+        Self { line_number, line_offset, len }
     }
 
     pub fn eq(&self, other: &Self) -> bool {
-        self.line_number == other.line_number && self.line_offset == other.line_offset
+        self.line_number == other.line_number && self.line_offset == other.line_offset && self.len == other.len
     }
 }
 
@@ -94,6 +97,12 @@ impl SoulError {
     #[cfg(not(feature = "throw_result"))]
     pub fn to_err_message(&self) -> String {
         self.get_message()
+    }
+
+    pub fn to_highlighed_message<R: Read>(&self, reader: BufReader<R>) -> String {
+        let first_span = self.spans[0];
+        let line = reader.lines().nth(first_span.line_number-1).expect("soulspan linenumber not found in reader").expect("soulspan linenumber not found in reader");
+        generate_highlighted_string(&line, &[(first_span.line_offset, first_span.line_offset+first_span.len)])
     }
 
     #[cfg(feature = "throw_result")]

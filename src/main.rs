@@ -1,7 +1,7 @@
 extern crate soul_lang_rust;
 
 use itertools::Itertools;
-use std::{fs::{write, File}, io::{BufReader, Read}, time::Instant};
+use std::{fs::{write, File}, io::{BufRead, BufReader, Read}, time::Instant};
 use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 
@@ -12,12 +12,16 @@ fn main() {
         Err(msg) => {eprintln!("!!invalid compiler argument!!\n{msg}"); return;},
     };
 
-    if let Err(err) = compiler(run_option) {
-        eprintln!("{}", err.to_err_message());
+    if let Err(err) = compiler(&run_option) {
+        let reader = get_file_reader(&run_option).main_err_map("while trying to get file reader")
+            .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
+
+        eprintln!("{}\n", err.to_err_message());        
+        eprintln!("{}", err.to_highlighed_message(reader));        
     }
 }
 
-fn compiler(run_option: RunOptions) -> Result<()> {
+fn compiler(run_option: &RunOptions) -> Result<()> {
     let start = Instant::now(); 
 
     let reader = get_file_reader(&run_option).main_err_map("while trying to get file reader")?;
@@ -48,7 +52,7 @@ fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Resu
         contents.push_str("\n*/\n");
 
         write(file_path, contents)
-            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0), err.to_string()))?;
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
     }
 
     Ok(source_file)
@@ -66,7 +70,7 @@ fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result
             .join(" ");
 
         write(file_path, contents)
-            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0), err.to_string()))?;
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
     }   
 
     Ok(token_stream)
@@ -74,10 +78,10 @@ fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result
 
 fn get_file_reader(run_option: &RunOptions) -> Result<BufReader<File>> {
     std::fs::create_dir_all(format!("{}/steps", &run_option.output_dir))
-        .map_err(|err| new_soul_error(SoulErrorKind::ArgError, SoulSpan::new(0,0), &err.to_string()))?;
+        .map_err(|err| new_soul_error(SoulErrorKind::ArgError, SoulSpan::new(0,0,0), &err.to_string()))?;
 
     let file = File::open(&run_option.file_path)
-        .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0), format!("while trying to open file path: '{}'\n{}", &run_option.file_path, err.to_string())))?;
+        .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), format!("while trying to open file path: '{}'\n{}", &run_option.file_path, err.to_string())))?;
 
     Ok(BufReader::new(file))
 }
@@ -85,7 +89,7 @@ fn get_file_reader(run_option: &RunOptions) -> Result<BufReader<File>> {
 trait MainErrMap<T>{fn main_err_map(self, msg: &str) -> Result<T>;}
 impl<T> MainErrMap<T> for Result<T> {
     fn main_err_map(self, msg: &str) -> Result<T> {
-        self.map_err(|child| pass_soul_error(SoulErrorKind::NoKind, SoulSpan{line_number: 0, line_offset: 0}, msg, child))
+        self.map_err(|child| pass_soul_error(SoulErrorKind::NoKind, SoulSpan{line_number: 0, line_offset: 0, len: 0}, msg, child))
     }
 }
 

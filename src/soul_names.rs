@@ -187,7 +187,7 @@ impl<'a> SoulNames<'a> {
         const BASE_TOKENS: &[&str] = &[
             ":=", ",", "[]", "[", "]", 
             "(", ")", "{", "}", ":", "..", 
-            ";", "=", "\\", " ", "\t",
+            ";", "=", "\\", " ", "\t", "\"", "\\\"",
         ];
 
         let mut iligal_names = HashSet::<&str>::new();

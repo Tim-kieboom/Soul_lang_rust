@@ -6,7 +6,7 @@ use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, 
 fn token(text: &str, index: usize) -> Token {
     Token {
         text: text.to_string(),
-        span: SoulSpan { line_number: 0, line_offset: index },
+        span: SoulSpan { line_number: 0, line_offset: index, len: text.len() },
     }
 }
 
@@ -192,9 +192,9 @@ fn test_simple_binary() {
 
     let should_be = Expression::new(
         ExprKind::Binary(BinaryExpr::new(
-            Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0, 0)), 
+            Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0, 0, 1)), 
             BinOp::new(BinOpKind::Add, res.span), 
-            Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0, 2)), 
+            Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0, 2, 1)), 
         )),
         res.span
     );
@@ -209,9 +209,9 @@ fn test_simple_binary() {
 
     let should_be = Expression::new(
         ExprKind::Binary(BinaryExpr::new(
-            Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0, 0)), 
-            BinOp::new(BinOpKind::Eq, res.span), 
-            Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0, 2)), 
+            Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0, 0, 1)), 
+            BinOp::new(BinOpKind::Eq, SoulSpan::new(0, 1, 2)), 
+            Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0, 2, 1)), 
         )),
         res.span
     );
@@ -226,9 +226,9 @@ fn test_simple_binary() {
 
     let should_be = Expression::new(
         ExprKind::Binary(BinaryExpr::new(
-            Expression::new(ExprKind::Literal(Literal::Str("hello ".into())), SoulSpan::new(0, 0)), 
-            BinOp::new(BinOpKind::Add, res.span), 
-            Expression::new(ExprKind::Literal(Literal::Str("world".into())), SoulSpan::new(0, 2)), 
+            Expression::new(ExprKind::Literal(Literal::Str("hello ".into())), SoulSpan::new(0, 0, 13)), 
+            BinOp::new(BinOpKind::Add, SoulSpan::new(0, 2, 1)), 
+            Expression::new(ExprKind::Literal(Literal::Str("world".into())), SoulSpan::new(0, 2, 11)), 
         )),
         res.span
     );
@@ -245,15 +245,15 @@ fn test_multiple_binary() {
 
     // 1 + (2 * 3)
     let should_be = ExprKind::Binary(BinaryExpr::new(
-        Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,0)),
-        BinOp::new(BinOpKind::Add, SoulSpan::new(0,1)),
+        Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,0,1)),
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,1,1)),
         Expression::new(
             ExprKind::Binary(BinaryExpr::new(
-                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2)),
-                BinOp::new(BinOpKind::Mul, SoulSpan::new(0,3)),
-                Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,4)),
+                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2,1)),
+                BinOp::new(BinOpKind::Mul, SoulSpan::new(0,3,1)),
+                Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,4,1)),
             )),
-            SoulSpan::new(0,3)
+            SoulSpan::new(0,3,2)
         )
     ));
 
@@ -270,14 +270,14 @@ fn test_multiple_binary() {
     // (1 + 2) * 3
     let should_be = ExprKind::Binary(BinaryExpr::new(
         Expression::new(ExprKind::Binary(BinaryExpr::new(
-                Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1)), 
-                BinOp::new(BinOpKind::Add, SoulSpan::new(0, 2)), 
-                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0, 3)),
+                Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1,1)), 
+                BinOp::new(BinOpKind::Add, SoulSpan::new(0,2,1)), 
+                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,3,1)),
             )), 
-            SoulSpan::new(0, 2),
+            SoulSpan::new(0,2,2),
         ),
-        BinOp::new(BinOpKind::Mul, SoulSpan::new(0, 5)),
-        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0, 6)),
+        BinOp::new(BinOpKind::Mul, SoulSpan::new(0,5,1)),
+        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,6,1)),
     ));
 
     assert_eq_show_diff!(
@@ -292,15 +292,15 @@ fn test_multiple_binary() {
 
     // (1 + (2 * 3))
     let should_be = ExprKind::Binary(BinaryExpr::new(
-        Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1)),
-        BinOp::new(BinOpKind::Add, SoulSpan::new(0,2)),
+        Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1,1)),
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,2,1)),
         Expression::new(
             ExprKind::Binary(BinaryExpr::new(
-                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,3)),
-                BinOp::new(BinOpKind::Mul, SoulSpan::new(0,4)),
-                Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,5)),
+                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,3,1)),
+                BinOp::new(BinOpKind::Mul, SoulSpan::new(0,4,1)),
+                Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,5,1)),
             )),
-            SoulSpan::new(0,4)
+            SoulSpan::new(0,4,2)
         )
     ));
 
@@ -320,8 +320,8 @@ fn test_simple_unary() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
 
     let should_be = ExprKind::Unary(UnaryExpr{
-        operator: UnaryOp::new(UnaryOpKind::Not, SoulSpan::new(0,0)), 
-        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,1))),
+        operator: UnaryOp::new(UnaryOpKind::Not, SoulSpan::new(0,0,1)), 
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,1,4))),
     });
 
     assert_eq_show_diff!(
@@ -335,8 +335,8 @@ fn test_simple_unary() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
 
     let should_be = ExprKind::Unary(UnaryExpr{
-        operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,0)), 
-        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1))),
+        operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,0,1)), 
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1,1))),
     });
 
     assert_eq_show_diff!(
@@ -349,8 +349,8 @@ fn test_simple_unary() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
 
     let should_be = ExprKind::Unary(UnaryExpr{
-        operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,1)), 
-        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2))),
+        operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,1,1)), 
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2,1))),
     });
 
     assert_eq_show_diff!(
@@ -363,8 +363,8 @@ fn test_simple_unary() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
 
     let should_be = ExprKind::Unary(UnaryExpr{
-        operator: UnaryOp::new(UnaryOpKind::Incr{before_var: true}, SoulSpan::new(0,0)), 
-        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1))),
+        operator: UnaryOp::new(UnaryOpKind::Incr{before_var: true}, SoulSpan::new(0,0,2)), 
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1,1))),
     });
 
     assert_eq_show_diff!(
@@ -377,8 +377,8 @@ fn test_simple_unary() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
 
     let should_be = ExprKind::Unary(UnaryExpr{
-        operator: UnaryOp::new(UnaryOpKind::Incr{before_var: false}, SoulSpan::new(0,1)), 
-        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,0))),
+        operator: UnaryOp::new(UnaryOpKind::Incr{before_var: false}, SoulSpan::new(0,1,1)), 
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,0,2))),
     });
 
     assert_eq_show_diff!(
@@ -396,15 +396,15 @@ fn test_unary_in_binary() {
 
     let should_be = ExprKind::Binary(BinaryExpr::new(
         Expression::new(ExprKind::Unary(UnaryExpr{
-                operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,0)), 
-                expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1))),
+                operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,0,1)), 
+                expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1,1))),
             }), 
-            SoulSpan::new(0,0),
+            SoulSpan::new(0,0,2),
         ), 
-        BinOp::new(BinOpKind::Add, SoulSpan::new(0,2)), 
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,2,1)), 
         Expression::new(
             ExprKind::Literal(Literal::Int(8)), 
-            SoulSpan::new(0,3),
+            SoulSpan::new(0,3,1),
         ), 
     ));
 
@@ -419,15 +419,15 @@ fn test_unary_in_binary() {
 
     let should_be = ExprKind::Binary(BinaryExpr::new(
         Expression::new(ExprKind::Unary(UnaryExpr{
-                operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,1)), 
-                expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,2))),
+                operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,1,1)), 
+                expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,2,1))),
             }), 
-            SoulSpan::new(0,1),
+            SoulSpan::new(0,1,2),
         ), 
-        BinOp::new(BinOpKind::Add, SoulSpan::new(0,4)), 
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,4,1)), 
         Expression::new(
             ExprKind::Literal(Literal::Int(8)), 
-            SoulSpan::new(0,5),
+            SoulSpan::new(0,5,1),
         ), 
     ));
 
@@ -448,7 +448,7 @@ fn test_simple_variable() {
     let var = VariableRef::new(VariableDecl{
         name: Ident(var_name.into()), 
         ty: SoulType::from_type_kind(TypeKind::Bool), 
-        initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0)))),
+        initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0,var_name.len())))),
         lit_retention: None,
     });
     scope.insert(var_name.into(), ScopeKind::Variable(var));
@@ -471,8 +471,8 @@ fn test_simple_variable() {
     assert!(result.is_ok(), "{:#?}", result.unwrap_err());
     
     let should_be = ExprKind::Unary(UnaryExpr{
-            operator: UnaryOp::new(UnaryOpKind::Not, SoulSpan::new(0,0)),
-            expression: Box::new(Expression::new(ExprKind::Variable(Variable{name: Ident(var_name.into())}), SoulSpan::new(0,1))),
+            operator: UnaryOp::new(UnaryOpKind::Not, SoulSpan::new(0,0,1)),
+            expression: Box::new(Expression::new(ExprKind::Variable(Variable{name: Ident(var_name.into())}), SoulSpan::new(0,1,var_name.len()))),
         });
 
     assert_eq_show_diff!(
@@ -506,7 +506,7 @@ fn test_variable_literal_retention() {
     let var = VariableRef::new(VariableDecl{
         name: Ident(var_name.into()), 
         ty: SoulType::from_type_kind(TypeKind::Bool), 
-        initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0)))),
+        initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0,var_name.len())))),
         lit_retention: Some(Literal::Bool(true)),
     });
     scope.insert(var_name.into(), ScopeKind::Variable(var));
