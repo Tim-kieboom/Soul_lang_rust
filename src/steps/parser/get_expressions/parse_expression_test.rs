@@ -18,6 +18,8 @@ fn empty_scope() -> ScopeBuilder {
     ScopeBuilder::new(TypeScopeStack::new())
 }
 
+// # Literal
+
 #[test]
 fn test_simple_literal() {
     let mut stream = stream_from_strs(&["42", "\n"]);
@@ -177,6 +179,8 @@ fn test_complex_literal() {
 
 }
 
+// # Binary
+
 #[test]
 fn test_simple_binary() {
     let mut stream = stream_from_strs(&["1", "+", "2", "\n"]);
@@ -241,17 +245,17 @@ fn test_multiple_binary() {
 
     // 1 + (2 * 3)
     let should_be = ExprKind::Binary(BinaryExpr::new(
-            Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,0)),
-            BinOp::new(BinOpKind::Add, SoulSpan::new(0,1)),
-            Expression::new(
-                ExprKind::Binary(BinaryExpr::new(
-                    Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2)),
-                    BinOp::new(BinOpKind::Mul, SoulSpan::new(0,3)),
-                    Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,4)),
-                )),
-                SoulSpan::new(0,3)
-            )
-        ));
+        Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,0)),
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,1)),
+        Expression::new(
+            ExprKind::Binary(BinaryExpr::new(
+                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2)),
+                BinOp::new(BinOpKind::Mul, SoulSpan::new(0,3)),
+                Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,4)),
+            )),
+            SoulSpan::new(0,3)
+        )
+    ));
 
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
@@ -266,14 +270,14 @@ fn test_multiple_binary() {
     // (1 + 2) * 3
     let should_be = ExprKind::Binary(BinaryExpr::new(
         Expression::new(ExprKind::Binary(BinaryExpr::new(
-                Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,2)), 
-                BinOp::new(BinOpKind::Add, SoulSpan::new(0, 3)), 
+                Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1)), 
+                BinOp::new(BinOpKind::Add, SoulSpan::new(0, 2)), 
                 Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0, 3)),
             )), 
-            SoulSpan::new(0, 3),
+            SoulSpan::new(0, 2),
         ),
-        BinOp::new(BinOpKind::Mul, SoulSpan::new(0, 3)),
-        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0, 4)),
+        BinOp::new(BinOpKind::Mul, SoulSpan::new(0, 5)),
+        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0, 6)),
     ));
 
     assert_eq_show_diff!(
@@ -282,29 +286,31 @@ fn test_multiple_binary() {
     );
 
 
-    // stream = stream_from_strs(&["(","1", "+", "2", "*", "3", ")", "\n"]);
-    // let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    // assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    stream = stream_from_strs(&["(","1", "+", "2", "*", "3", ")", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
 
-    // // (1 + (2 * 3))
-    // let should_be = ExprKind::Binary(BinaryExpr::new(
-    //         Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,0)),
-    //         BinOp::new(BinOpKind::Add, SoulSpan::new(0,1)),
-    //         Expression::new(
-    //             ExprKind::Binary(BinaryExpr::new(
-    //                 Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2)),
-    //                 BinOp::new(BinOpKind::Mul, SoulSpan::new(0,3)),
-    //                 Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,4)),
-    //             )),
-    //             SoulSpan::new(0,3)
-    //         )
-    //     ));
+    // (1 + (2 * 3))
+    let should_be = ExprKind::Binary(BinaryExpr::new(
+        Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1)),
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,2)),
+        Expression::new(
+            ExprKind::Binary(BinaryExpr::new(
+                Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,3)),
+                BinOp::new(BinOpKind::Mul, SoulSpan::new(0,4)),
+                Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,5)),
+            )),
+            SoulSpan::new(0,4)
+        )
+    ));
 
-    // assert_eq_show_diff!(
-    //     result.as_ref().unwrap().node,
-    //     should_be
-    // );
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        should_be
+    );
 }
+
+// # Unary
 
 #[test]
 fn test_simple_unary() {
@@ -338,13 +344,41 @@ fn test_simple_unary() {
         should_be
     );
 
-    stream = stream_from_strs(&["(","-", "1", ")", "\n"]);
+    stream = stream_from_strs(&["(","-", "2", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
 
     let should_be = ExprKind::Unary(UnaryExpr{
         operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,1)), 
-        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,2))),
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2))),
+    });
+
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        should_be
+    );
+
+    stream = stream_from_strs(&["++", "1", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+
+    let should_be = ExprKind::Unary(UnaryExpr{
+        operator: UnaryOp::new(UnaryOpKind::Incr{before_var: true}, SoulSpan::new(0,0)), 
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1))),
+    });
+
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        should_be
+    );
+
+    stream = stream_from_strs(&["2", "++", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+
+    let should_be = ExprKind::Unary(UnaryExpr{
+        operator: UnaryOp::new(UnaryOpKind::Incr{before_var: false}, SoulSpan::new(0,1)), 
+        expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,0))),
     });
 
     assert_eq_show_diff!(
@@ -353,6 +387,77 @@ fn test_simple_unary() {
     );
 }
 
+#[test]
+fn test_unary_in_binary() {
+    let mut stream = stream_from_strs(&["-", "1", "+", "8", "\n"]);
+    let mut scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+
+    let should_be = ExprKind::Binary(BinaryExpr::new(
+        Expression::new(ExprKind::Unary(UnaryExpr{
+                operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,0)), 
+                expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,1))),
+            }), 
+            SoulSpan::new(0,0),
+        ), 
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,2)), 
+        Expression::new(
+            ExprKind::Literal(Literal::Int(8)), 
+            SoulSpan::new(0,3),
+        ), 
+    ));
+
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        should_be
+    );
+
+    stream = stream_from_strs(&["(", "-", "1", ")", "+", "8", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+
+    let should_be = ExprKind::Binary(BinaryExpr::new(
+        Expression::new(ExprKind::Unary(UnaryExpr{
+                operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,1)), 
+                expression: Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,2))),
+            }), 
+            SoulSpan::new(0,1),
+        ), 
+        BinOp::new(BinOpKind::Add, SoulSpan::new(0,4)), 
+        Expression::new(
+            ExprKind::Literal(Literal::Int(8)), 
+            SoulSpan::new(0,5),
+        ), 
+    ));
+
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        should_be
+    );
+}
+
+#[test]
+fn test_unary_in_array() {
+    let mut stream = stream_from_strs(&[
+        "[",
+            "-", "1", ",",
+            "2", "++", ",",
+            "3",
+        "]", "\n"
+    ]);
+    let mut scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExprKind::Literal(Literal::Array{
+            ty: LiteralType::Int, 
+            values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)]
+        })
+    );
+}
 
 
 

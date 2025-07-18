@@ -78,6 +78,7 @@ fn convert_expression(
             return Ok(());
         }
 
+        let literal_begin = stream.current_index();
         let possible_literal = try_get_literal(stream, stacks, scopes, &mut open_bracket_stack)?;
 
         let possible_scopes = scopes.lookup(stream.current_text());
@@ -89,7 +90,7 @@ fn convert_expression(
         else if is_ref(stream, stacks) {
             stacks.ref_stack.push(stream.current_text().clone());
         }
-        else if let Some(operator) = get_operator(stream) {
+        else if let Some(operator) = get_operator(stream, &stacks) {
             try_add_operator(stacks, operator, stream.current_span())?;
         }
         else if let Some(var_ref) = try_get_variable(&possible_scopes) {
@@ -103,10 +104,13 @@ fn convert_expression(
             stacks.node_stack.push(Expression::new(ExprKind::Call(function), stream.current_span()));
         }
         else {
+
+            try_get_special_error(stream, scopes, literal_begin)?;
+
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken,
                 stream.current_span(), 
-                format!("token: '{}' is not valid espression", stream.current_text())
+                format!("token: '{}' is not valid expression", stream.current_text())
             ));
         }
 
@@ -120,6 +124,38 @@ fn convert_expression(
     }   
 
     Err(err_out_of_bounds(stream))
+}
+
+fn try_get_special_error(stream: &mut TokenStream, scopes: &mut ScopeBuilder, literal_begin: usize) -> Result<()> {
+    let begin_i = stream.current_index();
+    
+    if stream.current_text() == "[" {
+        stream.go_to_index(literal_begin);
+        let result = Literal::from_stream(stream, scopes);
+        if let Err(err) = result {
+            return Err(pass_soul_error(
+                SoulErrorKind::UnexpectedToken,
+                stream.current_span(), 
+                "invalid array in expression",
+                err
+            ));
+        }
+    }
+    else if stream.current_text() == "(" {
+        stream.go_to_index(literal_begin);
+        let result = Literal::from_stream(stream, scopes);
+        if let Err(err) = result {
+            return Err(pass_soul_error(
+                SoulErrorKind::UnexpectedToken,
+                stream.current_span(), 
+                "invalid tuple in expression",
+                err
+            ));
+        }
+    }
+
+    stream.go_to_index(begin_i);
+    Ok(())
 }
 
 fn try_add_operator(
@@ -358,6 +394,7 @@ fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut ExpressionS
             stacks.node_stack.push(expr);
         }
 
+        stacks.symbool_stack.pop();
     }
 
     Ok(())
@@ -439,8 +476,31 @@ fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {
     !stacks.ref_stack.is_empty() && !stacks.node_stack.is_empty()
 }
 
-fn get_operator(stream: &TokenStream) -> Option<OperatorKind> {
-    OperatorKind::from_str(stream.current_text())
+fn get_operator(stream: &TokenStream, stacks: &ExpressionStacks) -> Option<OperatorKind> {
+    let mut op = OperatorKind::from_str(stream.current_text());
+    if op.is_none() || unary_is_before_expr(&op, stacks) {
+        return op;
+    }
+
+    let operator = op.as_mut().unwrap();
+    if let OperatorKind::UnaryOp(unary) = operator {
+
+        match unary {
+            UnaryOpKind::Incr{before_var} => *before_var = false,
+            UnaryOpKind::Decr{before_var} => *before_var = false,
+            _ => (),
+        }
+    }
+
+    op
+}
+
+fn unary_is_before_expr(op: &Option<OperatorKind>, stacks: &ExpressionStacks) -> bool {
+    op.is_none() || stacks.node_stack.is_empty() || !has_no_operators(stacks) 
+}
+
+fn has_no_operators(stacks: &ExpressionStacks) -> bool {
+    stacks.symbool_stack.is_empty() || stacks.symbool_stack.iter().all(|sy| matches!(sy.node, SymboolKind::Parenthesis(..)))
 }
 
 fn is_ref(stream: &TokenStream, stacks: &ExpressionStacks) -> bool {

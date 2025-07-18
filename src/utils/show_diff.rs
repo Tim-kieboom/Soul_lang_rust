@@ -1,5 +1,3 @@
-use regex::Replacer;
-
 #[macro_export]
 macro_rules! assert_eq_show_diff {
 	($left:expr, $right:expr) => {
