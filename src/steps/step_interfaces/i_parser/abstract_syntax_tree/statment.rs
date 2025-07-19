@@ -1,6 +1,6 @@
 use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
 
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -181,7 +181,7 @@ pub struct VariableDecl {
     pub ty: SoulType,
     pub initializer: Option<Box<Expression>>,
     /// if 'foo := 1' and foo is not mutated yet lit_retention is Some and and is used instead of var
-    pub lit_retention: Option<Literal>,
+    pub lit_retention: Option<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

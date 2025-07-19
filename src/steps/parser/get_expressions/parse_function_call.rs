@@ -39,6 +39,10 @@ pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
 
 fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Arguments>> {
 
+    if stream.current_text() == "()" {
+        return Ok(vec![]);
+    }
+
     if stream.current_text() != "(" {
         return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "function call should start with '('"))
     }
@@ -62,7 +66,7 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         let next = stream.peek()
             .ok_or(err_out_of_bounds(stream))?;
 
-        let optional_name = if next.text == ":" {
+        let optional_name = if next.text == "=" {
             let name = Ident(stream.current_text().clone());
             if stream.next_multiple(2).is_none() {
                 return Err(err_out_of_bounds(stream));

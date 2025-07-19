@@ -1,21 +1,6 @@
 use crate::errors::soul_error::Result;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, ExprKind, UnaryExpr, UnaryOp, UnaryOpKind};
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::{parse_expression::ExpressionStacks, symbool::{SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::abstract_syntax_tree::expression::{BinOpKind, BinaryExpr, Expression}, i_tokenizer::TokenStream}}};
-
-pub fn get_unary_expression(
-    node_stack: &mut Vec<Expression>,
-    unary_op: UnaryOpKind,
-    span: SoulSpan, 
-) -> Result<UnaryExpr> {
-    let expr = node_stack.pop()
-        .ok_or(new_soul_error(
-            SoulErrorKind::UnexpectedToken, 
-            span, 
-            format!("found unary operator '{}' but no expression", unary_op.to_str())
-        ))?;
-    
-    Ok(UnaryExpr{operator: UnaryOp::new(unary_op, span), expression: Box::new(expr)})
-}
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, UnaryExpr, UnaryOp};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::{parse_expression::ExpressionStacks, symbool::{SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::abstract_syntax_tree::expression::{BinaryExpr, Expression}, i_tokenizer::TokenStream}}};
 
 pub fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
     if stacks.node_stack.len() == 1 {
@@ -32,8 +17,8 @@ pub fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut Express
         match &second.as_ref().unwrap().node {
             SymboolKind::BinOp(..) => return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is binary operator")),
             SymboolKind::UnaryOp(unary) => {
-                let expr = get_unary_expression(&mut stacks.node_stack, unary.clone(), second.as_ref().unwrap().span)?;
-                stacks.node_stack.push(Expression::new(ExprKind::Unary(expr), second.as_ref().unwrap().span));
+                let expr = get_unary_expression(&mut stacks.node_stack, UnaryOp::new(unary.clone(), second.as_ref().unwrap().span), second.as_ref().unwrap().span)?;
+                stacks.node_stack.push(expr);
                 second = stacks.symbool_stack.pop();
             },
             SymboolKind::Parenthesis(..) =>(),
@@ -60,14 +45,12 @@ pub fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut Express
         }
 
         if let SymboolKind::BinOp(bin_op) = &symbool.node {
-            let expr = get_binary_expression(&mut stacks.node_stack, bin_op.clone(), symbool.span)?
-                .consume_to_expression(symbool.span);
-
+            let expr = get_binary_expression(&mut stacks.node_stack, BinOp::new(bin_op.clone(), symbool.span), symbool.span)?;
+                
             stacks.node_stack.push(expr);
         }
         else if let SymboolKind::UnaryOp(un_op) = &symbool.node {
-            let expr = get_unary_expression(&mut stacks.node_stack, un_op.clone(), symbool.span)?
-                .consume_to_expression(symbool.span);
+            let expr = get_unary_expression(&mut stacks.node_stack, UnaryOp::new(un_op.clone(), symbool.span), symbool.span)?;
             
             stacks.node_stack.push(expr);
         }
@@ -80,15 +63,15 @@ pub fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut Express
 
 pub fn get_binary_expression(
     node_stack: &mut Vec<Expression>,
-    bin_op: BinOpKind,
+    bin_op: BinOp,
     span: SoulSpan,
-) -> Result<BinaryExpr> {
+) -> Result<Expression> {
     let right = node_stack.pop()
         .map(|expr| Box::new(expr))
         .ok_or(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
             span, 
-            format!("found binary operator '{}' but no expression", bin_op.to_str())
+            format!("found binary operator '{}' but no expression", bin_op.node.to_str())
         ))?;
 
     let left = node_stack.pop()
@@ -96,13 +79,28 @@ pub fn get_binary_expression(
         .ok_or(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
             span, 
-            format!("missing right expression in binary expression (so '{} {} <missing>')", right.node.to_string(), bin_op.to_str())
+            format!("missing right expression in binary expression (so '{} {} <missing>')", right.node.to_string(), bin_op.node.to_str())
         ))?;
 
-    Ok(BinaryExpr{left, operator: BinOp::new(bin_op, span), right})
+    let new_span = left.span.combine(&bin_op.span).combine(&right.span);
+    Ok(BinaryExpr{left, operator: bin_op, right}.consume_to_expression(new_span))
 }
 
-
+pub fn get_unary_expression(
+    node_stack: &mut Vec<Expression>,
+    unary_op: UnaryOp,
+    span: SoulSpan, 
+) -> Result<Expression> {
+    let expr = node_stack.pop()
+        .ok_or(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            span, 
+            format!("found unary operator '{}' but no expression", unary_op.node.to_str())
+        ))?;
+    
+    let new_span = expr.span.combine(&unary_op.span);
+    Ok(UnaryExpr{operator: unary_op, expression: Box::new(expr)}.consume_to_expression(new_span))
+}
 
 
 

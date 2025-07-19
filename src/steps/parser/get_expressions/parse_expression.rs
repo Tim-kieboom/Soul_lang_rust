@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOpKind, ExprKind, Expression, Index, OperatorKind, UnaryOpKind, Variable}, literal::Literal, statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Index, OperatorKind, UnaryOp, UnaryOpKind, Variable}, literal::Literal, statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -19,14 +19,8 @@ pub fn get_expression(
     while let Some(operator) = stacks.symbool_stack.pop() {
 
         let expression = match operator.node {
-            SymboolKind::BinOp(bin_op_kind) => Expression::new(
-                ExprKind::Binary(get_binary_expression(&mut stacks.node_stack, bin_op_kind, operator.span)?), 
-                operator.span
-            ),
-            SymboolKind::UnaryOp(unary_op_kind) => Expression::new(
-                ExprKind::Unary(get_unary_expression(&mut stacks.node_stack, unary_op_kind, operator.span)?), 
-                operator.span
-            ),
+            SymboolKind::BinOp(bin_op_kind) => get_binary_expression(&mut stacks.node_stack, BinOp::new(bin_op_kind, operator.span), operator.span)?,
+            SymboolKind::UnaryOp(unary_op_kind) => get_unary_expression(&mut stacks.node_stack, UnaryOp::new(unary_op_kind, operator.span), operator.span)?,
             SymboolKind::Parenthesis(..) => stacks.node_stack.pop().unwrap(),
         };
 
@@ -174,14 +168,8 @@ fn try_add_operator(
     {
         let operator = stacks.symbool_stack.pop().unwrap();
         let expression = match operator.node {
-            SymboolKind::BinOp(bin_op_kind) => Expression::new(
-                ExprKind::Binary(get_binary_expression(&mut stacks.node_stack, bin_op_kind, operator.span)?), 
-                operator.span
-            ),
-            SymboolKind::UnaryOp(unary_op_kind) => Expression::new(
-                ExprKind::Unary(get_unary_expression(&mut stacks.node_stack, unary_op_kind, operator.span)?), 
-                operator.span
-            ),
+            SymboolKind::BinOp(bin_op_kind) => get_binary_expression(&mut stacks.node_stack, BinOp::new(bin_op_kind, operator.span), operator.span)?,
+            SymboolKind::UnaryOp(unary_op_kind) => get_unary_expression(&mut stacks.node_stack, UnaryOp::new(unary_op_kind, operator.span), operator.span)?,
             SymboolKind::Parenthesis(..) => panic!("Internal error this should not be possible, precedence should be 0 and all valid ops > 0"),
         };
 
@@ -324,7 +312,7 @@ fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref
     let variable = Variable{name: var_ref.borrow().name.clone()};
     
     if let Some(literal) = &var_ref.borrow().lit_retention {
-        stacks.node_stack.push(Expression::new(ExprKind::Literal(literal.clone()), stream.current_span()));
+        stacks.node_stack.push(literal.clone());
     }
     else {
         stacks.node_stack.push(Expression::new(ExprKind::Variable(variable), stream.current_span()));
@@ -421,7 +409,7 @@ fn is_token_any_ref(token: &Token) -> bool {
 }
 
 fn is_function(stream: &TokenStream, after_generic_index: usize) -> bool {
-    stream[after_generic_index].text == "("
+    stream[after_generic_index].text == "(" || stream[after_generic_index].text == "()"
 }
 
 fn is_end_token(token: &Token, end_tokens: &[&str], open_bracket_stack: i64) -> bool {

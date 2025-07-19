@@ -24,10 +24,29 @@ pub enum ExprKind {
     MutRef(BoxExpr),
     Deref(BoxExpr),
 
-    Array(Vec<ExprKind>),
-    Tuple(Vec<ExprKind>),
-    NamedTuple(BTreeMap<Ident, ExprKind>),
+    Array(Array),
+    Tuple(Tuple),
+    NamedTuple(NamedTuple),
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Array {
+    pub collection_type: Option<SoulType>,
+    pub element_type: Option<SoulType>,
+    pub values: Vec<ExprKind>,
+} 
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tuple {
+    pub object_type: Option<SoulType>,
+    pub values: Vec<ExprKind>,
+} 
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NamedTuple {
+    pub object_type: Option<SoulType>,
+    pub values: BTreeMap<Ident, ExprKind>,
+} 
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Variable {
@@ -77,9 +96,22 @@ impl ExprKind {
             ExprKind::ConstRef(spanned) => format!("@{}", spanned.node.to_string()),
             ExprKind::MutRef(spanned) => format!("&{}", spanned.node.to_string()),
             ExprKind::Deref(spanned) => format!("*{}", spanned.node.to_string()),
-            ExprKind::Array(expr_kinds) => format!("[{}]", expr_kinds.iter().map(|expr| expr.to_string()).join(",")),
-            ExprKind::Tuple(expr_kinds) => format!("({})", expr_kinds.iter().map(|expr| expr.to_string()).join(",")),
-            ExprKind::NamedTuple(btree_map) => format!("({})", btree_map.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.to_string())).join(",")),
+            ExprKind::Array(Array{collection_type, element_type, values}) => format!(
+                "{}[{}{}]", 
+                collection_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
+                element_type.as_ref().map(|ty| format!("{};", ty.to_string())).unwrap_or("".into()),
+                values.iter().map(|expr| expr.to_string()).join(",")
+            ),
+            ExprKind::Tuple(Tuple{object_type, values}) => format!(
+                "{}({})", 
+                object_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
+                values.iter().map(|expr| expr.to_string()).join(","),
+            ),
+            ExprKind::NamedTuple(NamedTuple{object_type, values}) => format!(
+                "{}({})", 
+                object_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
+                values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.to_string())).join(","),
+            ),
         }
     }
 

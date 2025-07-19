@@ -16,16 +16,16 @@ static SPLIT_VEC: Lazy<Vec<&'static str>> = Lazy::new(|| {
         .collect()
 });
 
-pub fn tokenize(mut source_result: SourceFileResponse) -> Result<TokenizeResonse> {
-    if source_result.source_file.is_empty() {
+pub fn tokenize(mut source_response: SourceFileResponse) -> Result<TokenizeResonse> {
+    if source_response.source_file.is_empty() {
         return Ok(TokenizeResonse{stream: TokenStream::new(Vec::new())});
     }
 
-    let mut tokens = Vec::with_capacity(source_result.estimated_token_count);
+    let mut tokens = Vec::with_capacity(source_response.estimated_token_count);
 
-    let source_file = std::mem::take(&mut source_result.source_file);
+    let source_file = std::mem::take(&mut source_response.source_file);
     for file_line in source_file.into_iter().filter(is_not_empty_line) {
-        get_tokens(file_line, &mut tokens, &mut source_result)?;
+        get_tokens(file_line, &mut tokens, &mut source_response)?;
     }
 
     Ok(TokenizeResonse{stream: TokenStream::new(tokens)})

@@ -3,6 +3,10 @@ macro_rules! assert_eq_show_diff {
 	($left:expr, $right:expr) => {
 		assert!($left == $right, "{}", $crate::utils::show_diff::show_str_diff(format!("{:#?}", $left).as_str(), format!("{:#?}", $right).as_str()))
 	};
+    
+    ($left:expr, $right:expr, $msg:expr) => {
+		assert!($left == $right, "{}\n{}", $crate::utils::show_diff::show_str_diff(format!("{:#?}", $left).as_str(), format!("{:#?}", $right).as_str()), $msg)
+	};
 }
 
 pub fn show_str_diff(expected: &str, got: &str) -> String {

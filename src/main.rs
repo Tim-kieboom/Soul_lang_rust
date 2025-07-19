@@ -1,7 +1,7 @@
 extern crate soul_lang_rust;
 
 use itertools::Itertools;
-use std::{fs::{write, File}, io::{BufRead, BufReader, Read}, time::Instant};
+use std::{fs::{write, File}, io::{BufReader, Read}, time::Instant};
 use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 
@@ -36,7 +36,7 @@ fn compiler(run_option: &RunOptions) -> Result<()> {
     Ok(())
 }
 
-fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Result<SourceFileResponse> {
+fn  source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Result<SourceFileResponse> {
     let tab_as_spaces = " ".repeat(run_option.tab_char_len as usize);
     let source_file = read_source_file(reader, &tab_as_spaces)?;
     

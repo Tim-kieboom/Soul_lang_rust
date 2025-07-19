@@ -1,6 +1,6 @@
 use std::{io::{BufRead, BufReader, Read}, result};
 
-use crate::utils::show_diff::{generate_highlighted_string, show_str_diff};
+use crate::utils::show_diff::{generate_highlighted_string};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SoulErrorKind {
@@ -44,6 +44,34 @@ impl SoulSpan {
     pub fn eq(&self, other: &Self) -> bool {
         self.line_number == other.line_number && self.line_offset == other.line_offset && self.len == other.len
     }
+
+    pub fn combine(&self, other: &Self) -> Self {
+        if self.line_number != other.line_number {
+            
+            let mut this = if self.line_number < other.line_number {
+                self.clone()
+            }
+            else {
+                other.clone()
+            };
+
+            // span till end of line
+            this.len = usize::MAX;
+            return this;
+        }
+
+        let line_number = self.line_number.min(other.line_number);
+        let line_offset = self.line_offset.min(other.line_offset);
+        let max_offset = self.line_offset.max(other.line_offset);
+        let len = if self.line_offset == max_offset {
+            max_offset + self.len - line_offset
+        }
+        else {
+            max_offset + other.len - line_offset
+        };
+
+        Self{line_number, line_offset, len}
+    } 
 }
 
 pub type Result<T> = result::Result<T, SoulError>;
@@ -70,7 +98,7 @@ impl SoulError {
         Self { kinds: vec![kind], spans: Vec::from([span]), msgs: Vec::from([msg]), backtrace }
     }
 
-    fn get_message(&self) -> String {
+    fn get_message_stack(&self) -> String {
         self.spans.iter()
             .zip(self.msgs.iter())
             .rev()
@@ -96,18 +124,26 @@ impl SoulError {
 
     #[cfg(not(feature = "throw_result"))]
     pub fn to_err_message(&self) -> String {
-        self.get_message()
+        self.get_message_stack()
     }
 
     pub fn to_highlighed_message<R: Read>(&self, reader: BufReader<R>) -> String {
+        
+        //an error that is not in any line number in the source code
+        const NON_SPANABLE_ERROR: usize = 0;
+        
         let first_span = self.spans[0];
+        if first_span.line_number == NON_SPANABLE_ERROR {
+            return String::new();
+        } 
+        
         let line = reader.lines().nth(first_span.line_number-1).expect("soulspan linenumber not found in reader").expect("soulspan linenumber not found in reader");
         generate_highlighted_string(&line, &[(first_span.line_offset, first_span.line_offset+first_span.len)])
     }
 
     #[cfg(feature = "throw_result")]
     pub fn to_err_message(&self) -> String {
-        format!("{}\n\n{}", self.backtrace, self.get_message())
+        format!("{}\n\n{}", self.backtrace, self.get_message_stack())
     }
 
     #[cfg(feature = "throw_result")]

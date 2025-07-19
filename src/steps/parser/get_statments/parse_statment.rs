@@ -256,7 +256,7 @@ fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<V
 
     let is_type_invered = possible_type.is_none();
 
-    let mut modifier = if is_type_invered {
+    let modifier = if is_type_invered {
         let modi = Modifier::from_str(stream.current_text());
         if modi != Modifier::Default {
 

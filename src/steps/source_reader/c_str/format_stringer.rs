@@ -40,7 +40,7 @@ pub fn format_string(file_line: FileLine) -> Result<FileLine> {
 }
 
 fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Result<String> {
-    const SOUL_FORMATTER_FUNCTION_NAME: &str = "std.Format(@[";
+    const SOUL_FORMATTER_FUNCTION_NAME: &str = "std.fmt.Format(";
 
     let mut buffer = String::with_capacity(file_line.line.len() + SOUL_FORMATTER_FUNCTION_NAME.len());
 
@@ -57,13 +57,16 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
         match ch {
             '{' => {
                 buffer.push_str("\",");
-                buffer.push_str("std.Display(");
+                buffer.push_str("std.fmt.Arg(");
                 start_bracket = i;
                 current_open_bracket = true;
             },
             '}' => {
-                buffer.push(',');
-                buffer.push_str(&pretty_format.to_string());
+                if pretty_format {
+                    buffer.push(',');
+                    buffer.push_str("pretty=true");
+                }
+
                 buffer.push(')');
                 pretty_format = false;
 
@@ -89,7 +92,7 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
 
         i += 1;
     }
-    buffer.push_str("])");
+    buffer.push_str(")");
     buffer.push_str(&file_line.line[span.end+1..]);
 
     if current_open_bracket {
