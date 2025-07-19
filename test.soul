@@ -15,16 +15,10 @@
 // 	return a + b
 // }
 
-struct Foo {
-	int field
-}
-
-main(str[]@ args) int {
-	json := JsonStr(field: 1, name: "foobar")
-
-	Println("hello //world")
-	Println(f"{}hello world {0}")
-	Println(f"hello world {#0}")
+main() {
+	Println("hello world")
+	// Println(f"{}hello world {0}")
+	// Println(f"hello world {#0}")
 }
 
 

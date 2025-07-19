@@ -29,8 +29,8 @@ pub fn get_expression(
 
     if stacks.node_stack.is_empty() {
         assert!(
-            !stacks.symbool_stack.is_empty(), 
-            "Internal error: in get_expression() stacks.node_stack.is_empty() but typeStack is not"
+            stacks.symbool_stack.is_empty(), 
+            "Internal error: in get_expression() stacks.node_stack.is_empty() but node_stack is not"
         );
 
         return Ok(Expression::new(ExprKind::Empty, stream[begin_i].span));
@@ -93,7 +93,7 @@ fn convert_expression(
         }
         else if is_function(stream, after_generic_index) {
             let function = get_function_call(stream, scopes)?;
-            stacks.node_stack.push(Expression::new(ExprKind::Call(function), stream.current_span()));
+            stacks.node_stack.push(Expression::new(ExprKind::Call(function.node), function.span));
         }
         else {
 

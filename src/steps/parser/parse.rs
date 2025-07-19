@@ -1,4 +1,6 @@
-use crate::errors::soul_error::Result;
+use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::Statment;
 use crate::steps::step_interfaces::i_tokenizer::TokenizeResonse;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::parser::get_statments::parse_statment::get_statment;
@@ -12,6 +14,7 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
 
 
     let type_stack = forward_declarde_type_stack(&mut stream)?;
+    stream.reset();
     #[cfg(feature="dev_mode")]
     {
         use itertools::Itertools;
@@ -38,19 +41,27 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
     
     loop {
 
-       get_statment(&mut stream, &mut scopes)?; 
+        if let Some(statment) = get_statment(&mut stream, &mut scopes)? {
+            try_add_to_global(&mut tree, statment)?;
+        } 
 
         if stream.peek().is_none() {
             break;
         }
     }
 
-    println!("{:#?}", tree);
-
     Ok(ParserResponse{tree, scopes})
 }
 
+fn try_add_to_global(tree: &mut AbstractSyntacTree, statment: Statment) -> Result<()> {
+    let statment_name = statment.node.get_varaint_name();
+    let span = statment.span;
+    let global_node = statment.node.consume_as_global_kind()
+        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("{} is not a valid global statment (only use this type of statment contexts of function, class, ect..)", statment_name)))?;
 
+    tree.root.push(Spanned::new(global_node, span));
+    Ok(())
+}
 
 
 

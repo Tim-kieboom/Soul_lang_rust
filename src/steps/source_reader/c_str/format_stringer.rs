@@ -98,7 +98,7 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
     if current_open_bracket {
         return Err(new_soul_error(
             SoulErrorKind::InvalidStringFormat,
-            SoulSpan{line_number: file_line.line_number.max(0), line_offset: i, len: buffer.len()}, 
+            SoulSpan::new(file_line.line_number.max(0), i, buffer.len()), 
             "string formatter opens a bracket with out closing it (add '}' somewhere in f\"...\")"
         ))
     } 
@@ -117,7 +117,7 @@ fn validate_format_argument(file_line: &FileLine, start_bracket: usize, i: usize
 }
 
 fn err_emty_format_arg(line: &FileLine, offset: usize) -> SoulError {
-    let span = SoulSpan{line_number: line.line_number, line_offset: offset, len: line.line.len()};
+    let span = SoulSpan::new(line.line_number, offset, line.line.len());
     new_soul_error(
         SoulErrorKind::InvalidStringFormat,
         span, 
@@ -127,7 +127,7 @@ fn err_emty_format_arg(line: &FileLine, offset: usize) -> SoulError {
 
 
 fn err_string_in_format_arg(line: &FileLine, offset: usize) -> SoulError {
-    let span = SoulSpan{line_number: line.line_number, line_offset: offset, len: line.line.len()};
+    let span = SoulSpan::new(line.line_number, offset, line.line.len());
     new_soul_error(
         SoulErrorKind::InvalidStringFormat,
         span, 
@@ -142,7 +142,7 @@ fn get_end_of_string(line: &FileLine, index: usize, qoute_iter: &mut Iter<usize>
     else {
         Err(new_soul_error( 
             SoulErrorKind::UnterminatedStringLiteral,
-            SoulSpan{line_number: line.line_number, line_offset: index, len: line.line.len()}, 
+            SoulSpan::new(line.line_number, index, line.line.len()), 
             format!("string has no end (probably missing a '{}')", QUOTE)
         ))
     }

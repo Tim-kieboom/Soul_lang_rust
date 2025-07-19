@@ -63,7 +63,15 @@ impl ScopeBuilder {
         Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes }
     }
 
-    pub fn push(&mut self, parent_index: usize, scope_visability: ScopeVisibility) {
+    pub fn current_scope(&self) -> &InnerScope<Vec<ScopeKind>> {
+        &self.scopes.scopes[self.scopes.current]
+    }
+
+    pub fn push(&mut self, scope_visability: ScopeVisibility) {
+        self.scopes.push(self.current_scope().parent_index.unwrap_or(InnerScopeBuilder::<Vec<ScopeKind>>::GLOBAL_SCOPE_INDEX), scope_visability);
+    }
+
+    pub fn push_from(&mut self, parent_index: usize, scope_visability: ScopeVisibility) {
         self.scopes.push(parent_index, scope_visability);
     }
 
@@ -84,6 +92,29 @@ impl ScopeBuilder {
     pub fn lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         self.scopes.lookup(name)
     }
+
+    pub fn add_function(&mut self, fn_decl: FnDecl) {
+        
+        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.signature.name.0) {
+            
+            let possible_funcs = kinds.iter_mut().find(|kind| matches!(kind, ScopeKind::Functions(..)));
+            if let Some(ScopeKind::Functions(funcs)) = possible_funcs {
+                funcs.borrow_mut().push(fn_decl);
+            }
+            else {
+                self.scopes.insert(
+                    fn_decl.signature.name.0.clone(), 
+                    vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl]))]
+                );
+            }
+        }
+        else {
+            self.scopes.insert(
+                fn_decl.signature.name.0.clone(), 
+                vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl]))]
+            );
+        }
+    } 
 
     pub fn insert(&mut self, name: String, kind: ScopeKind) {
         self.scopes.insert_to_vec(name, kind)
@@ -159,7 +190,17 @@ impl<T> InnerScopeBuilder<T> {
 
         None
     }
-    
+        
+    pub fn flat_lookup_mut(&mut self, name: &str) -> Option<&mut T> {
+        let scope = &mut self.scopes[self.current];
+
+        if let Some(kinds) = scope.get_mut(name) {
+            return Some(kinds);
+        }
+
+        None
+    }
+
     pub fn lookup(&self, name: &str) -> Option<&T> {
         let mut current_index = Some(self.current);
 
@@ -251,6 +292,10 @@ impl<T> InnerScope<T> {
 
     pub fn get(&self, name: &str) -> Option<&T> {
         self.symbols.get(name)
+    }
+
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut T> {
+        self.symbols.get_mut(name)
     }
 
 }

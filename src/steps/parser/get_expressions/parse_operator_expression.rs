@@ -82,7 +82,7 @@ pub fn get_binary_expression(
             format!("missing right expression in binary expression (so '{} {} <missing>')", right.node.to_string(), bin_op.node.to_str())
         ))?;
 
-    let new_span = left.span.combine(&bin_op.span).combine(&right.span);
+    let new_span = right.span.combine(&left.span);
     Ok(BinaryExpr{left, operator: bin_op, right}.consume_to_expression(new_span))
 }
 

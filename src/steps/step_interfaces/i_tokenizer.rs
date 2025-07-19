@@ -30,6 +30,10 @@ impl TokenStream {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.go_to_index(0);
+    }
+
     pub fn len(&self) -> usize {
         self.tokens.len()
     }

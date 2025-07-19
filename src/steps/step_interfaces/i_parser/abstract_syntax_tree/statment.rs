@@ -1,5 +1,7 @@
 use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
 
+use itertools::Itertools;
+
 use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
@@ -84,6 +86,28 @@ impl StmtKind {
             StmtKind::EnumDecl(decl) => Some(GlobalKind::EnumDecl(decl)),
             StmtKind::TypeEnumDecl(decl) => Some(GlobalKind::TypeEnumDecl(decl)),
             _ => None,
+        }
+    }
+
+    pub fn get_varaint_name(&self) -> &'static str {
+        match self {
+            StmtKind::ExprStmt(_) => "ExprStmt",
+            StmtKind::VarDecl(_) => "VarDecl",
+            StmtKind::FnDecl(_) => "FnDecl",
+            StmtKind::ExtFnDecl(_) => "ExtFnDecl",
+            StmtKind::StructDecl(_) => "StructDecl",
+            StmtKind::ClassDecl(_) => "ClassDecl",
+            StmtKind::TraitDecl(_) => "TraitDecl",
+            StmtKind::EnumDecl(_) => "EnumDecl",
+            StmtKind::UnionDecl(_) => "UnionDecl",
+            StmtKind::TypeEnumDecl(_) => "TypeEnumDecl",
+            StmtKind::TraitImpl(_) => "TraitImpl",
+            StmtKind::Return(_) => "Return",
+            StmtKind::Assignment(_) => "Assignment",
+            StmtKind::If(_) => "If",
+            StmtKind::While(_) => "While",
+            StmtKind::Block(_) => "Block",
+            StmtKind::CloseBlock(_) => "CloseBlock",
         }
     }
 }
@@ -204,9 +228,23 @@ pub struct ExtFnDecl {
 pub struct FunctionSignature {
     pub name: Ident,
     /// Some() = an extension method
-    pub receiver: Option<SoulType>, 
+    pub calle: Option<SoulType>, 
+    pub generics: Vec<GenericParam>,
     pub params: Vec<Parameter>,
     pub return_type: Option<SoulType>,
+}
+
+impl FunctionSignature {
+    pub fn to_string(&self) -> String {
+        format!(
+            "{}{}<{}>({}){}", 
+            self.calle.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+            self.name.0, 
+            self.generics.iter().map(|gene| gene.to_string()).join(","), 
+            self.params.iter().map(|par| par.to_string()).join(","),
+            self.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -214,6 +252,15 @@ pub struct Parameter {
     pub name: Ident,
     pub ty: SoulType,
     pub default_value: Option<Expression>,
+}
+
+impl Parameter {
+    pub fn to_string(&self) -> String {
+        match &self.default_value {
+            Some(value) => format!("{} {} = {}", self.ty.to_string(), self.name.0, value.node.to_string()),
+            None => format!("{} {}", self.ty.to_string(), self.name.0),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -263,11 +310,30 @@ pub struct GenericParam {
     pub constraint: Vec<TypeConstraint>,
 }
 
+impl GenericParam {
+    pub fn to_string(&self) -> String {
+        match self.constraint.is_empty() {
+            true => format!("{}", self.name.0),
+            false => format!("{}: {}", self.name.0, self.constraint.iter().map(|ty| ty.to_string()).join("+")),
+        }
+    } 
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeConstraint {
     Trait(Ident),
     Interface(Ident),
-    TypeEnum(Ident),
+    TypeEnum(Vec<SoulType>),
+}
+
+impl TypeConstraint {
+    pub fn to_string(&self) -> String {
+        match self {
+            TypeConstraint::Trait(ident) => ident.0.clone(),
+            TypeConstraint::Interface(ident) => ident.0.clone(),
+            TypeConstraint::TypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
+        }
+    }
 }
 
 

@@ -33,12 +33,16 @@ pub enum SoulErrorKind {
 #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
 pub struct SoulSpan {
     pub line_number: usize,
+    ///for multiline span
+    pub end_line_number: Option<usize>,
+    ///lineoffset from last line
     pub line_offset: usize,
+    ///length from from last line line_offset to end
     pub len: usize,
 }
 impl SoulSpan {
     pub fn new(line_number: usize, line_offset: usize, len: usize) -> Self {
-        Self { line_number, line_offset, len }
+        Self { line_number, end_line_number: None, line_offset, len }
     }
 
     pub fn eq(&self, other: &Self) -> bool {
@@ -47,20 +51,23 @@ impl SoulSpan {
 
     pub fn combine(&self, other: &Self) -> Self {
         if self.line_number != other.line_number {
+            let line_number = self.line_number.min(other.line_number);
+            let end_line_number = self.line_number.max(other.line_number);
             
-            let mut this = if self.line_number < other.line_number {
+            let mut this = if self.line_number > other.line_number {
                 self.clone()
             }
             else {
                 other.clone()
             };
 
-            // span till end of line
-            this.len = usize::MAX;
+            this.line_number = line_number;
+            this.end_line_number = Some(end_line_number);
+            
             return this;
         }
 
-        let line_number = self.line_number.min(other.line_number);
+        let line_number = self.line_number;
         let line_offset = self.line_offset.min(other.line_offset);
         let max_offset = self.line_offset.max(other.line_offset);
         let len = if self.line_offset == max_offset {
@@ -70,7 +77,7 @@ impl SoulSpan {
             max_offset + other.len - line_offset
         };
 
-        Self{line_number, line_offset, len}
+        Self{line_number, end_line_number: None, line_offset, len}
     } 
 }
 

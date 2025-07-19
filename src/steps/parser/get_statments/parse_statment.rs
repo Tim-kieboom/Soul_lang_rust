@@ -2,12 +2,14 @@ use std::collections::HashSet;
 
 use once_cell::sync::Lazy;
 
+use crate::steps::parser::get_expressions::parse_expression::get_expression;
+use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, Statment, StmtKind, VariableDecl, VariableRef};
@@ -46,9 +48,6 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         }
 
         stream.next();
-
-        // impl borrowchecker to get deletelist
-
         return Ok(Some(Statment::new(StmtKind::CloseBlock(CloseBlock{delete_list:vec![]}), stream.current_span())));
     }
 
@@ -153,7 +152,9 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
     match stream[next_index].text.as_str() {
         "=" => {
-            //var decl
+            if peek_i != 1 {
+                //var decl
+            }
         }
         ":=" => {
             //var decl
@@ -162,11 +163,17 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             let begin_i = stream.current_index();
             match func_call_or_declaration(stream, scopes)? {
                 FunctionKind::FunctionCall => {
-
+                    stream.go_to_index(begin_i);
+                    let expr = get_expression(stream, scopes, &["\n", ";"])?;
+                    assert!(matches!(expr.node, ExprKind::Call(..)));
+                    let span = expr.span;
+                    return Ok(Some(Statment::new(StmtKind::ExprStmt(expr), span)))
                 },
                 FunctionKind::FunctionDecl => {
                     stream.go_to_index(begin_i);
-
+                    let func = get_function_decl(stream, scopes)?;
+                    scopes.add_function(func.node.clone());
+                    return Ok(Some(Statment::new(StmtKind::FnDecl(func.node), func.span)));
                 },
             }
         }
@@ -177,7 +184,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
             stream.current_span(), 
-            format!("token invalid for statment: '{}'", stream[next_index].text)
+            format!("token invalid for all statments, token: '{}'", stream[next_index].text)
         ));
     }
 
@@ -200,8 +207,11 @@ fn func_call_or_declaration(stream: &mut TokenStream, scopes: &mut ScopeBuilder)
     let possible_result = SoulType::try_from_stream(stream, scopes);
     let is_type = possible_result.is_some();
 
-    if is_type || is_curly_bracket {
+    if is_type {
         possible_result.unwrap()?;
+        Ok(FunctionKind::FunctionDecl)
+    }
+    else if is_curly_bracket {
         Ok(FunctionKind::FunctionDecl)
     }
     else {

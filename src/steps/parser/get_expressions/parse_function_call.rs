@@ -1,4 +1,5 @@
 use crate::soul_names::check_name;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
@@ -8,7 +9,7 @@ use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErr
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Arguments, FnCall, Ident};
 
 
-pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FnCall> {
+pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnCall>> {
     fn pass_err(err: SoulError, func_name: &str, stream: &TokenStream) -> SoulError {
         pass_soul_error(
             err.get_last_kind(), 
@@ -22,7 +23,7 @@ pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
     check_name(stream.current_text())
         .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
 
-    let name = Ident(stream[func_name_index].text.clone());
+    let name = Ident(stream.current_text().clone());
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
@@ -34,20 +35,21 @@ pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
     let arguments = get_arguments(stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
 
-    Ok(FnCall{callee: None, name, arguments, generics})
+    let span = arguments.span.combine(&generics.span).combine(&stream[func_name_index].span);
+    Ok(Spanned::new(FnCall{callee: None, name, arguments: arguments.node, generics: generics.node}, span))
 }
 
-fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Arguments>> {
+fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Vec<Arguments>>> {
 
     if stream.current_text() == "()" {
-        return Ok(vec![]);
+        return Ok(Spanned::new(vec![], stream.current_span()));
     }
 
     if stream.current_text() != "(" {
         return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "function call should start with '('"))
     }
 
-    let mut args = Vec::new();
+    let mut args: Vec<Arguments> = Vec::new();
 
     let mut open_bracket_stack = 1;
     while stream.next().is_some() {
@@ -56,7 +58,8 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
             open_bracket_stack -= 1;
 
             if open_bracket_stack <= 0 {
-                return Ok(args);
+                let span = args[0].expression.span.combine(&stream.current_span());
+                return Ok(Spanned::new(args, span));
             }
         }
         else if stream.current_text() == "(" {
@@ -88,7 +91,8 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
             open_bracket_stack -= 1;
 
             if open_bracket_stack <= 0 {
-                return Ok(args);
+                let span = args[0].expression.span.combine(&stream.current_span());
+                return Ok(Spanned::new(args, span));
             }
         }
     } 
@@ -96,18 +100,21 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     Err(err_out_of_bounds(stream))
 }
 
-fn get_generics(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Vec<SoulType>> {
+fn get_generics(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Spanned<Vec<SoulType>>> {
     let mut generics = Vec::new();
 
     if stream.current_text() != "<" {
-        return Ok(generics);
+        return Ok(Spanned::new(generics, stream.current_span()));
     }
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
 
+    let first = stream.current_span();
+    let last;
     loop {
+
         let ty = SoulType::from_stream(stream, scopes)
             .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream.current_span(), "while trying to get generic", child))?;
 
@@ -118,6 +125,7 @@ fn get_generics(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Vec<S
         }
 
         if stream.current_text() != "," {
+            last = stream.current_span();
             break;
         }
 
@@ -139,7 +147,7 @@ fn get_generics(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Vec<S
     }
     
 
-    Ok(generics)
+    Ok(Spanned::new(generics, first.combine(&last)))
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {

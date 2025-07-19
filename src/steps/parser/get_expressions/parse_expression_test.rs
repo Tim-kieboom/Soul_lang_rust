@@ -559,57 +559,150 @@ fn test_variable_literal_retention() {
 
 #[test]
 fn test_function_call() {
-    let mut stream = stream_from_strs(&["sum", "(", "1", ",", "2", ")", "\n"]);
     let mut scope = empty_scope();
 
+    let mut stream = stream_from_strs(&["Println", "(", "\"hello world\"" ,")" , "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
-    let should_be = ExprKind::Call(FnCall{
-        callee: None, 
-        name: Ident("sum".into()), 
-        generics: vec![], 
-        arguments: vec![
-            Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,2,1))},
-            Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,4,1))},
-        ],
-    });
+    let should_be = Expression::new(
+        ExprKind::Call(FnCall{
+            callee: None, 
+            name: Ident("Println".into()), 
+            generics: vec![], 
+            arguments: vec![
+                Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Str("hello world".into())), SoulSpan::new(0,8,13))},
+            ],
+        }),
+        SoulSpan::new(0,0,22)
+    );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
 
-    assert_eq_show_diff!(result.as_ref().unwrap().node, should_be);
+    
+    stream = stream_from_strs(&["sum", "(", "1", ",", "2", ")", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    let should_be = Expression::new(
+        ExprKind::Call(FnCall{
+            callee: None, 
+            name: Ident("sum".into()), 
+            generics: vec![], 
+            arguments: vec![
+                Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,4,1))},
+                Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,6,1))},
+            ],
+        }),
+        SoulSpan::new(0,0,8)
+    );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
 
+
+    stream = stream_from_strs(&["sum", "()", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    let should_be = Expression::new(
+        ExprKind::Call(FnCall{
+            callee: None, 
+            name: Ident("sum".into()), 
+            generics: vec![], 
+            arguments: vec![],
+        }),
+        SoulSpan::new(0,0,5)
+    );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
+
+
+    stream = stream_from_strs(&["sum", "(", "one", "=", "1", ",", "two", "=", "2", ")", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    let should_be = Expression::new(
+        ExprKind::Call(FnCall{
+            callee: None, 
+            name: Ident("sum".into()), 
+            generics: vec![], 
+            arguments: vec![
+                Arguments{name: Some(Ident("one".to_string())), expression: Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,8,1))},
+                Arguments{name: Some(Ident("two".to_string())), expression: Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,14,1))},
+            ],
+        }),
+        SoulSpan::new(0,0,16)
+    );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
+
+
+    stream = stream_from_strs(&["sum", "(", "1", ",", "two", "=", "2", ")", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    let should_be = Expression::new(
+        ExprKind::Call(FnCall{
+            callee: None, 
+            name: Ident("sum".into()), 
+            generics: vec![], 
+            arguments: vec![
+                Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,4,1))},
+                Arguments{name: Some(Ident("two".to_string())), expression: Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,10,1))},
+            ],
+        }),
+        SoulSpan::new(0,0,12)
+    );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
+
+
+    stream = stream_from_strs(&["sum", "(", "one", "=", "1", ",", "2", ")", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    let should_be = Expression::new(
+        ExprKind::Call(FnCall{
+            callee: None, 
+            name: Ident("sum".into()), 
+            generics: vec![], 
+            arguments: vec![
+                Arguments{name: Some(Ident("one".to_string())), expression: Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,8,1))},
+                Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,10,1))},
+            ],
+        }),
+        SoulSpan::new(0,0,12)
+    );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
 
     stream = stream_from_strs(&["sum", "(", "1", ",", "2", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
     assert_eq!(not_closing_fn.unwrap_err().get_last_kind(), SoulErrorKind::ArgError);
 
-    stream = stream_from_strs(&["sum", "()", "\n"]);
-    let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
-    let should_be = ExprKind::Call(FnCall{
-        callee: None, 
-        name: Ident("sum".into()), 
-        generics: vec![], 
-        arguments: vec![],
-    });
-    assert_eq_show_diff!(result.as_ref().unwrap().node, should_be);
 
-
-    stream = stream_from_strs(&["sum", "(", "one", "=", "1", ",", "two", "=", "2", ")", "\n"]);
-    let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
-    let should_be = ExprKind::Call(FnCall{
-        callee: None, 
-        name: Ident("sum".into()), 
-        generics: vec![], 
-        arguments: vec![
-            Arguments{name: Some(Ident("one".to_string())), expression: Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,4,1))},
-            Arguments{name: Some(Ident("two".to_string())), expression: Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1))},
-        ],
-    });
-    assert_eq_show_diff!(result.as_ref().unwrap().node, should_be);
+    stream = stream_from_strs(&["sum", "(", "1", ",", "name", ":", ")", "\n"]);
+    let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(not_closing_fn.is_err());
+    assert_eq!(not_closing_fn.unwrap_err().get_last_kind(), SoulErrorKind::ArgError);
 }
 
+// #[test]
+// fn test_methode_call() {
+//     let mut stream = stream_from_strs(&["1", ".", "sum", "(", "2", ")", "\n"]);
+//     let mut scope = empty_scope();
 
+//     let result = get_expression(&mut stream, &mut scope, &["\n"]);
+//     assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+//     let should_be = Expression::new(
+//         ExprKind::Call(FnCall{
+//             callee: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,0,0)))), 
+//             name: Ident("sum".into()), 
+//             generics: vec![], 
+//             arguments: vec![
+//                 Arguments{name: None, expression: Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,6,1))},
+//             ],
+//         }),
+//         SoulSpan::new(0,0,10)
+//     );
+//     let expr = result.unwrap();
+//     assert_eq_show_diff!(expr, should_be);
+// }
 
 
 
