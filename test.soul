@@ -11,15 +11,11 @@
 // 	return a + b
 // }
 
-// sum(int a, int b) int {
-// 	return a + b
-// }
-
-// sum() i32 {
-
-// }
-
 // foo<T>(T a) {}
+
+// int sum(this, int a) int {
+// 	return this + a
+// }
 
 sum(int a, int b) int {
 	return a + b
@@ -27,7 +23,17 @@ sum(int a, int b) int {
 
 main() int {
 	sum(int a, int b) int {
-		return a + b
+		return a + b 
+	}
+
+	if true {
+		Println("true is true")
+	}
+	else if false {
+		Println("false is true")
+	}
+	else {
+		Println("else is true")
 	}
 
 	sum(1, 2)

@@ -1,4 +1,6 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::{ClassDecl, EnumDecl, ExtFnDecl, FnDecl, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableRef}};
+use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::ExtFnDecl;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::{Block, ClassDecl, EnumDecl, FnDecl, NodeRef, Statment, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableRef}};
 
 
 #[derive(Debug, Clone)]
@@ -7,6 +9,12 @@ pub struct AbstractSyntacTree {
 }
 
 pub type GlobalNode = Spanned<GlobalKind>;
+
+#[derive(Debug)]
+pub enum StatmentBuilder {
+    Global(NodeRef<Vec<GlobalNode>>),
+    Block(NodeRef<Spanned<Block>>),
+}
 
 #[derive(Debug, Clone)]
 pub enum GlobalKind {
@@ -25,6 +33,27 @@ pub enum GlobalKind {
     TypeEnumDecl(TypeEnumDecl),
 }
 
+impl StatmentBuilder {
+    pub fn try_push(&mut self, stament: Statment) -> Result<()> {
+        match self {
+            StatmentBuilder::Global(node_ref) => {
+                let name = stament.node.get_varaint_name();
+                let global_node = stament.node.consume_as_global_kind();
+                if let Some(node) = global_node {
+                    node_ref.borrow_mut().push(GlobalNode::new(node, stament.span));
+                    return Ok(());
+                } 
+
+                Err(new_soul_error(SoulErrorKind::InvalidInContext, stament.span, format!("{} is not a valid global statment (only use this type of statment contexts of function, class, ect..)", name)))
+            },
+            StatmentBuilder::Block(node_ref) => {
+                node_ref.borrow_mut().node.statments.push(stament);
+                Ok(())
+            },
+        }
+    }
+}
+
 impl GlobalKind {
     pub fn consume_as_stmt_kind(self) -> StmtKind {
         match self {
@@ -40,15 +69,26 @@ impl GlobalKind {
             GlobalKind::TypeEnumDecl(decl) => StmtKind::TypeEnumDecl(decl),
         }
     }
+
+    pub fn get_varaint_name(&self) -> &'static str {
+        match self {
+            GlobalKind::VarDecl(_) => "VarDecl",
+            GlobalKind::StructDecl(_) => "StructDecl",
+            GlobalKind::ClassDecl(_) => "ClassDecl",
+            GlobalKind::TraitDecl(_) => "TraitDecl",
+            GlobalKind::EnumDecl(_) => "EnumDecl",
+            GlobalKind::UnionDecl(_) => "UnionDecl",
+            GlobalKind::TypeEnumDecl(_) => "TypeEnumDecl",
+            GlobalKind::TraitImpl(_) => "TraitImpl",
+            GlobalKind::FuncDecl(_) => "FnDecl",
+            GlobalKind::ExtFuncDecl(_) => "ExtFnDecl",
+        }
+    }
 }
 
 impl AbstractSyntacTree {
     pub fn new() -> Self {
         Self { root: Vec::new() }
-    }
-
-    pub fn to_pretty_string(&self) -> String {
-        todo!()
     }
 }
 

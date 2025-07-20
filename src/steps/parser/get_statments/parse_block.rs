@@ -1,11 +1,12 @@
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
 use crate::steps::parser::get_statments::parse_statment::get_statment;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Parameter, StmtKind, VariableDecl, VariableRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{NodeRef, Parameter, StmtKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{spanned::Spanned, statment::Block}, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
-pub fn get_block(scope_visability: ScopeVisibility, stream: &mut TokenStream, scopes: &mut ScopeBuilder, params: Vec<Spanned<Parameter>>) -> Result<Spanned<Block>> {
+pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream, scopes: &mut ScopeBuilder, params: Vec<Spanned<Parameter>>) -> Result<Spanned<Block>> {
     
     if stream.current_text() != "{" {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("'{}' is invalid token to start block should be '{{'", stream.current_text())));
@@ -29,21 +30,26 @@ pub fn get_block(scope_visability: ScopeVisibility, stream: &mut TokenStream, sc
     }
 
     let mut block = Spanned::new(Block{statments:vec![]}, stream.current_span());
-
+    
+    let mut scope_ref = StatmentBuilder::Block(NodeRef::new(block));
     loop {
         
-        if let Some(statment) = get_statment(stream, scopes)? {
+        if let Some(statment) = get_statment(&mut scope_ref, stream, scopes)? {
             let is_end = matches!(statment.node, StmtKind::CloseBlock(..)); 
-            block.node.statments.push(statment);
+            scope_ref.try_push(statment)?;
 
             if is_end {
                 break;
             }
         }
     }
+    
+    if let StatmentBuilder::Block(blk) = scope_ref {
+        block = blk.consume()
+    }
+    else { unreachable!() }
 
     scopes.pop();
-
     block.span = block.span.combine(&stream.current_span());
     Ok(block)
 }

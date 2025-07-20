@@ -248,7 +248,7 @@ impl Literal {
             Literal::Float(val) => format!("Literal untypedFloat {}", val),
             Literal::Bool(val) => format!("Literal bool {}", val),
             Literal::Char(char) => format!("Literal char {}", char),
-            Literal::Str(str) => format!("Literal str {}", str),
+            Literal::Str(str) => format!("Literal str \"{}\"", str),
             Literal::Array{values, ..} => format!("Literal [{}; {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(",")),
             Literal::Tuple{values, ..} => format!("Literal ({})", values.iter().map(|value| value.to_string()).join(",")),
             Literal::NamedTuple{values, ..} => format!("Literal ({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.to_string())).join(",")),

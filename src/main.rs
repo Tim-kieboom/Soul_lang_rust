@@ -2,7 +2,7 @@ extern crate soul_lang_rust;
 
 use itertools::Itertools;
 use std::{fs::{write, File}, io::{BufReader, Read}, time::Instant};
-use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::parser_response::ParserResponse, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
+use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 
 fn main() {
@@ -79,7 +79,7 @@ fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<Pa
         let file_path = format!("{}/steps/parserAST.soulc", &run_option.output_dir);
         let scopes_file_path = format!("{}/steps/parserScopes.soulc", &run_option.output_dir);
 
-        write(file_path, format!("{:#?}", parse_response.tree))
+        write(file_path, format!("{}", parse_response.tree.to_pretty_string()))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
 
         write(scopes_file_path, format!("{:#?}", parse_response.scopes))

@@ -68,7 +68,7 @@ impl ScopeBuilder {
     }
 
     pub fn push(&mut self, scope_visability: ScopeVisibility) {
-        self.scopes.push(self.current_scope().parent_index.unwrap_or(InnerScopeBuilder::<Vec<ScopeKind>>::GLOBAL_SCOPE_INDEX), scope_visability);
+        self.scopes.push_current(scope_visability);
     }
 
     pub fn push_from(&mut self, parent_index: usize, scope_visability: ScopeVisibility) {

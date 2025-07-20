@@ -1,8 +1,6 @@
-use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
-
 use itertools::Itertools;
-
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
+use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
+use crate::{errors::soul_error::{SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -143,8 +141,14 @@ pub struct WhileDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfDecl {
     pub condition: Expression,
-    pub then_branch: Block,
-    pub else_branch: Block,
+    pub body: Block,
+    pub else_branchs: Vec<ElseKind>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ElseKind {
+    ElseIf(Box<IfDecl>),
+    Else(Block)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -197,6 +201,12 @@ impl<T> NodeRef<T> {
     pub fn borrow_mut(&mut self) -> RefMut<T> {
         self.inner.borrow_mut()
     } 
+
+    pub fn consume(self) -> T {
+        unsafe { Rc::try_unwrap(self.inner)
+            .inspect_err(|_| panic!("internal error consumed nodeRef without this ref being the only owner")).unwrap_unchecked()
+            .into_inner() }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

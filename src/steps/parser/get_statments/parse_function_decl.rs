@@ -11,7 +11,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spa
 use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{FunctionSignature, GenericParam, Parameter, TypeConstraint};
 
-pub fn get_function_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDecl>> {
+pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDecl>> {
     let begin_i = stream.current_index();
     
     let modifier = Modifier::from_str(&stream.current_text());
