@@ -1,9 +1,8 @@
-use std::collections::BTreeMap;
+use std::collections::{HashMap};
 
-use crate::{steps::{parser::forward_type_stack::get_type_stack::{forward_declarde_type_stack}, step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{TypeKind}, tokenizer::tokenizer_test}, utils::show_diff::show_str_diff};
+use crate::{assert_eq_show_diff, steps::{parser::forward_type_stack::get_type_stack::forward_declarde_type_stack, step_interfaces::i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::type_kind::{TypeKind, TypeSize}}, scope::{InnerScope, ScopeVisibility}}, tokenizer::tokenizer_test}, utils::show_diff::show_str_diff};
 
 const TEST_FILE: &str = r#"
-interface Istr {}
 trait Strable {}
 struct StringData {}
 class String {}
@@ -37,133 +36,6 @@ main(str[]@ args) int {
 }
 "#;
 
-const SHOULD_BE: &str = r#"[
-    {
-        "Istr": Interface(
-            Ident(
-                "Istr",
-            ),
-        ),
-        "bool": Bool,
-        "char": Char(
-            Bit8,
-        ),
-        "f16": Float(
-            Bit16,
-        ),
-        "f32": Float(
-            Bit32,
-        ),
-        "f64": Float(
-            Bit64,
-        ),
-        "f8": Float(
-            Bit8,
-        ),
-        "i16": Int(
-            Bit16,
-        ),
-        "i32": Int(
-            Bit32,
-        ),
-        "i64": Int(
-            Bit64,
-        ),
-        "i8": Int(
-            Bit8,
-        ),
-        "int": SystemInt,
-        "none": None,
-        "str": Str,
-        "u16": Uint(
-            Bit16,
-        ),
-        "u32": Uint(
-            Bit32,
-        ),
-        "u64": Uint(
-            Bit64,
-        ),
-        "u8": Uint(
-            Bit8,
-        ),
-        "uint": SystemUint,
-        "untypedFloat": UntypedFloat,
-        "untypedInt": UntypedInt,
-        "untypedUint": UntypedUint,
-    },
-    {
-        "Strable": Trait(
-            Ident(
-                "Strable",
-            ),
-        ),
-    },
-    {
-        "StringData": Struct(
-            Ident(
-                "StringData",
-            ),
-        ),
-    },
-    {
-        "String": Class(
-            Ident(
-                "String",
-            ),
-        ),
-    },
-    {
-        "stringGlobal": Custom(
-            Ident(
-                "stringGlobal",
-            ),
-        ),
-    },
-    {
-        "string1": Custom(
-            Ident(
-                "string1",
-            ),
-        ),
-    },
-    {
-        "Foo": Struct(
-            Ident(
-                "Foo",
-            ),
-        ),
-    },
-    {
-        "string3": Custom(
-            Ident(
-                "string3",
-            ),
-        ),
-    },
-    {
-        "string4": Custom(
-            Ident(
-                "string4",
-            ),
-        ),
-    },
-    {
-        "string5": Custom(
-            Ident(
-                "string5",
-            ),
-        ),
-    },
-    {
-        "string6": Custom(
-            Ident(
-                "string6",
-            ),
-        ),
-    },
-]"#;
-
 #[test]
 fn get_type_stack_should_work() {
     let mut stream = tokenizer_test::get_test_tokenizer(TEST_FILE)
@@ -174,18 +46,137 @@ fn get_type_stack_should_work() {
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
-    let type_stack_string = format!(
-        "{:#?}", 
-        type_stack.scopes
-            .into_iter()
-            .map(|scope| scope.symbols.into_iter().collect::<BTreeMap<String, TypeKind>>())
-            .collect::<Vec<_>>()
-    );
-    
-    assert!(
-        type_stack_string == SHOULD_BE,
-        "{}", show_str_diff(SHOULD_BE, type_stack_string.as_str())
-    );
+    let should_be = vec![
+        InnerScope {
+            parent_index: None,
+            children: vec![
+                1,
+            ],
+            self_index: 0,
+            symbols: HashMap::from([
+                ("str".into(), TypeKind::Str),
+                ("i8".into(), TypeKind::Int(TypeSize::Bit8,)),
+                ("none".into(), TypeKind::None),
+                ("bool".into(), TypeKind::Bool),
+                ("int".into(), TypeKind::SystemInt),
+                ("uint".into(), TypeKind::SystemUint),
+                ("i16".into(), TypeKind::Int(TypeSize::Bit16,)),
+                ("f16".into(), TypeKind::Float(TypeSize::Bit16,)),
+                ("untypedUint".into(), TypeKind::UntypedUint),
+                ("f8".into(), TypeKind::Float(TypeSize::Bit8,)),
+                ("i64".into(), TypeKind::Int(TypeSize::Bit64,)),
+                ("untypedInt".into(), TypeKind::UntypedInt),
+                ("u8".into(), TypeKind::Uint(TypeSize::Bit8,)),
+                ("f64".into(), TypeKind::Float(TypeSize::Bit64,)),
+                ("char".into(), TypeKind::Char(TypeSize::Bit8,)),
+                ("u16".into(), TypeKind::Uint(TypeSize::Bit16,)),
+                ("i32".into(), TypeKind::Int(TypeSize::Bit32,)),
+                ("untypedFloat".into(), TypeKind::UntypedFloat),
+                ("u64".into(), TypeKind::Uint(TypeSize::Bit64,)),
+                ("u32".into(), TypeKind::Uint(TypeSize::Bit32,)),
+                ("f32".into(), TypeKind::Float(TypeSize::Bit32,)),
+                ("Strable".into(), TypeKind::Trait(Ident("Strable".into()))),
+            ]),
+            visibility_mode: ScopeVisibility::GlobalOnly,
+        },
+        InnerScope {
+            parent_index: Some(
+                0,
+            ),
+            children: vec![
+                2,
+            ],
+            self_index: 1,
+            symbols: HashMap::from([("StringData".into(), TypeKind::Struct(Ident("StringData".into()),)),]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                1,
+            ),
+            children: vec![
+                3,
+            ],
+            self_index: 2,
+            symbols: HashMap::from([("String".into(), TypeKind::Class(Ident("String".into()),)),]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                2,
+            ),
+            children: vec![
+                4,
+            ],
+            self_index: 3,
+            symbols: HashMap::from([("stringGlobal".into(), TypeKind::Custom(Ident("stringGlobal".into())))]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                3,
+            ),
+            children: vec![
+                5,
+                7,
+            ],
+            self_index: 4,
+            symbols: HashMap::from([("string1".into(), TypeKind::Custom(Ident("string1".into())))]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                4,
+            ),
+            children: vec![
+                6,
+            ],
+            self_index: 5,
+            symbols: HashMap::from([("Foo".into(), TypeKind::Struct(Ident("Foo".into())))]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                5,
+            ),
+            children: vec![],
+            self_index: 6,
+            symbols: HashMap::from([("string3".into(), TypeKind::Custom(Ident("string3".into())))]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                4,
+            ),
+            children: vec![
+                8,
+                9,
+            ],
+            self_index: 7,
+            symbols: HashMap::from([("string4".into(), TypeKind::Custom(Ident("string4".into())))]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                7,
+            ),
+            children: vec![],
+            self_index: 8,
+            symbols: HashMap::from([("string5".into(), TypeKind::Custom(Ident("string5".into())))]),
+            visibility_mode: ScopeVisibility::All,
+        },
+        InnerScope {
+            parent_index: Some(
+                7,
+            ),
+            children: vec![],
+            self_index: 9,
+            symbols: HashMap::from([("string6".into(), TypeKind::Custom(Ident("string6".into())))]),
+            visibility_mode: ScopeVisibility::All,
+        },
+    ];
+
+    assert_eq_show_diff!(type_stack.scopes, should_be);
 }
 
 

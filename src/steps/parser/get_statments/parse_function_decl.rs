@@ -4,11 +4,11 @@ use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_expressions::parse_expression::get_expression;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
-use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
-use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
+use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::FnDecl};
+use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{FunctionSignature, GenericParam, Parameter, TypeConstraint};
 
 pub fn get_function_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDecl>> {
@@ -23,15 +23,15 @@ pub fn get_function_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
     }
 
     let signature = get_function_signature(stream, scopes)?;
-
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
 
-    let body = get_block(ScopeVisibility::All, stream, scopes)?;
+    let body = get_block(ScopeVisibility::All, stream, scopes, signature.params.clone())?;
+
     
     let span = body.span.combine(&stream[begin_i].span);
-    Ok(Spanned::new(FnDecl{signature, body: body.node, modifier }, span))
+    Ok(Spanned::new(FnDecl{signature, body: body.node, modifier}, span))
 }
 
 fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignature> {
@@ -73,9 +73,24 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
 
     let params = get_parameters(stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
+        
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
 
-    let return_type = try_get_return_type(stream, scopes)
+    let mut return_type = try_get_return_type(stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
+
+    if let Some(ty) = &return_type {
+        
+        if ty.is_none_type() {
+            return_type = None;
+        }   
+    }
+    else {
+        stream.next_multiple(-1);
+    }
+    
 
     let span = stream[begin_i].span.combine(&stream.current_span());
     let signature = Spanned::new(FunctionSignature{name, calle, generics, params, return_type }, span);
@@ -91,7 +106,7 @@ fn get_generics(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<V
         return Ok(generics);
     }
 
-    if stream.next().is_some() {
+    if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
 
@@ -102,19 +117,19 @@ fn get_generics(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<V
         
         let name = Ident(stream.current_text().clone());
 
-        if stream.next().is_some() {
+        if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
         }
 
         let mut constraint = vec![];
         if stream.current_text() == ":" {
-            if stream.next().is_some() {
+            if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
             }
 
             add_generic_type_contraints(&mut constraint, stream, scopes)?;
 
-            if stream.next().is_some() {
+            if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
             }
         }
@@ -145,7 +160,7 @@ fn get_generics(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<V
     Ok(generics)
 }
 
-fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Parameter>> {
+fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Spanned<Parameter>>> {
     let mut params = vec![];
 
     if stream.current_text() == "()" {
@@ -164,8 +179,7 @@ fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     }
 
     loop {
-
-
+        let arg_start_i = stream.current_index();
         let ty = SoulType::from_stream(stream, scopes)
             .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream.current_span(), "while trying to get parameter", child))?;
         
@@ -191,10 +205,14 @@ fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
             value = Some(get_expression(stream, scopes, &[",", ")"])?);
         }
 
-        params.push(Parameter{name, ty, default_value: value});
+        params.push(Spanned::new(Parameter{name, ty, default_value: value}, stream[arg_start_i].span.combine(&stream.current_span())));
 
         if stream.current_text() != "," {
             break;
+        }
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
         }
     }
 

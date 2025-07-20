@@ -47,7 +47,7 @@ pub struct InnerScopeBuilder<T> {
     pub current: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InnerScope<T> {
     pub parent_index: Option<usize>,
     pub children: Vec<usize>,

@@ -47,15 +47,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
 
             let ty = TypeKind::Custom(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty);
-        }
-        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Interface) => {
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-
-            let ty = TypeKind::Interface(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
@@ -63,7 +55,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
 
             let ty = TypeKind::Trait(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty);
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
@@ -71,7 +63,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
 
             let ty = TypeKind::TypeEnum(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty);
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
@@ -79,7 +71,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
 
             let ty = TypeKind::Union(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty);
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
@@ -87,7 +79,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
 
             let ty = TypeKind::Enum(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty);
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
@@ -95,7 +87,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
 
             let ty = TypeKind::Struct(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty);
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
@@ -103,7 +95,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
 
             let ty = TypeKind::Class(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty);
-        }
+        },
         _ => (),
     }
 

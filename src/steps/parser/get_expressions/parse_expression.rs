@@ -252,7 +252,7 @@ fn get_after_generic_index(stream: &TokenStream) -> Result<usize> {
     let mut peek_i = 1;
 
     if !stream.peek_multiple(peek_i as i64).is_some_and(|token| token.text == "<") {
-        return Ok(peek_i);
+        return Ok(stream.current_index() + peek_i);
     }
 
     loop {
@@ -264,7 +264,7 @@ fn get_after_generic_index(stream: &TokenStream) -> Result<usize> {
 
         if next.text == ">" {
             peek_i += 1;
-            return Ok(peek_i);
+            return Ok(stream.current_index() + peek_i);
         }
     }
 } 

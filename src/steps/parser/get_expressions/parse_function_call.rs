@@ -49,6 +49,7 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "function call should start with '('"))
     }
 
+    let first_index = stream.current_index();
     let mut args: Vec<Arguments> = Vec::new();
 
     let mut open_bracket_stack = 1;
@@ -58,7 +59,7 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
             open_bracket_stack -= 1;
 
             if open_bracket_stack <= 0 {
-                let span = args[0].expression.span.combine(&stream.current_span());
+                let span = stream[first_index].span.combine(&stream.current_span());
                 return Ok(Spanned::new(args, span));
             }
         }
@@ -91,7 +92,7 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
             open_bracket_stack -= 1;
 
             if open_bracket_stack <= 0 {
-                let span = args[0].expression.span.combine(&stream.current_span());
+                let span = stream[first_index].span.combine(&stream.current_span());
                 return Ok(Spanned::new(args, span));
             }
         }

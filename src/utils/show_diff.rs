@@ -85,37 +85,40 @@ fn generate_diff_marker(a: &str, b: &str) -> String {
     marker
 }
 
-pub fn generate_highlighted_string(input: &str, spans: &[(usize, usize)]) -> String {
-
+pub fn generate_highlighted_string(
+    start_line: usize,
+    lines: &[String],
+    spans: &[(usize, usize, usize)],
+) -> String {
     let mut result = String::new();
 
-    for (line_idx, line) in input.lines().enumerate() {
-        let line_start = input
-            .lines()
-            .take(line_idx)
-            .map(|l| l.len() + 1) 
-            .sum::<usize>();
+    let max_line_number = lines.len();
+    let number_width = (max_line_number + start_line).to_string().len();
 
-        let line_end = line_start + line.len();
-
+    for (line_idx, line) in lines.iter().enumerate() {
+        let line_number = start_line + line_idx;
 
         let mut line_spans = vec![];
-        for &(start, end) in spans {
-            if start < line_end && end > line_start {
-                let local_start = start.saturating_sub(line_start);
-                let local_end = end.saturating_sub(line_start).min(line.len());
-                line_spans.push((local_start, local_end));
+
+        for &(span_line, start, end) in spans {
+            if span_line == line_number {
+                let local_start = start.min(line.len());
+                let local_end = end.min(line.len());
+                if local_start < local_end {
+                    line_spans.push((local_start, local_end));
+                }
             }
         }
 
         if line_spans.is_empty() {
-            result.push_str(line);
+            result.push_str(&format!("{:width$} | {}", line_number, line, width = number_width));
             result.push('\n');
             continue;
         }
 
         line_spans.sort();
         let mut merged: Vec<(usize, usize)> = vec![];
+
         for (start, end) in line_spans {
             if let Some(last) = merged.last_mut() {
                 if start <= last.1 {
@@ -135,9 +138,17 @@ pub fn generate_highlighted_string(input: &str, spans: &[(usize, usize)]) -> Str
             }
         }
 
-        result.push_str(line);
+        let gutter = format!("{:width$} |", "", width = number_width);
+        result.push_str(&gutter);
         result.push('\n');
-        result.push_str(&caret_line.iter().collect::<String>());
+        result.push_str(&format!("{:width$} | {}", line_number, line, width = number_width));
+        result.push('\n');
+        result.push_str(&format!(
+            "{:width$} | {}",
+            "",
+            caret_line.iter().collect::<String>(),
+            width = number_width
+        ));
         result.push('\n');
     }
 

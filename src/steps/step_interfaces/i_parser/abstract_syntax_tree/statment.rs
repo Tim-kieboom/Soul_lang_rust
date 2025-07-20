@@ -230,20 +230,31 @@ pub struct FunctionSignature {
     /// Some() = an extension method
     pub calle: Option<SoulType>, 
     pub generics: Vec<GenericParam>,
-    pub params: Vec<Parameter>,
+    pub params: Vec<Spanned<Parameter>>,
     pub return_type: Option<SoulType>,
 }
 
 impl FunctionSignature {
     pub fn to_string(&self) -> String {
-        format!(
-            "{}{}<{}>({}){}", 
-            self.calle.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
-            self.name.0, 
-            self.generics.iter().map(|gene| gene.to_string()).join(","), 
-            self.params.iter().map(|par| par.to_string()).join(","),
-            self.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
-        )
+        if self.generics.is_empty() {
+            format!(
+                "{}{}({}){}", 
+                self.calle.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+                self.name.0, 
+                self.params.iter().map(|par| par.node.to_string()).join(","),
+                self.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+            )
+        }
+        else {
+            format!(
+                "{}{}<{}>({}){}", 
+                self.calle.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+                self.name.0, 
+                self.generics.iter().map(|gene| gene.to_string()).join(","), 
+                self.params.iter().map(|par| par.node.to_string()).join(","),
+                self.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+            )
+        }
     }
 }
 
@@ -322,7 +333,6 @@ impl GenericParam {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeConstraint {
     Trait(Ident),
-    Interface(Ident),
     TypeEnum(Vec<SoulType>),
 }
 
@@ -330,7 +340,6 @@ impl TypeConstraint {
     pub fn to_string(&self) -> String {
         match self {
             TypeConstraint::Trait(ident) => ident.0.clone(),
-            TypeConstraint::Interface(ident) => ident.0.clone(),
             TypeConstraint::TypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
         }
     }

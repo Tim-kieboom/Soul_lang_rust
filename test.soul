@@ -15,7 +15,22 @@
 // 	return a + b
 // }
 
-main() {
+// sum() i32 {
+
+// }
+
+// foo<T>(T a) {}
+
+sum(int a, int b) int {
+	return a + b
+}
+
+main() int {
+	sum(int a, int b) int {
+		return a + b
+	}
+
+	sum(1, 2)
 	Println("hello world")
 	// Println(f"{}hello world {0}")
 	// Println(f"hello world {#0}")

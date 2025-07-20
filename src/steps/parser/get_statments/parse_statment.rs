@@ -1,7 +1,5 @@
-use std::collections::HashSet;
-
 use once_cell::sync::Lazy;
-
+use std::collections::HashSet;
 use crate::steps::parser::get_expressions::parse_expression::get_expression;
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
@@ -12,7 +10,7 @@ use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, Statment, StmtKind, VariableDecl, VariableRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, Return, Statment, StmtKind, VariableDecl, VariableRef};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -53,7 +51,21 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
     match stream.current_text() {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
-            todo!()
+            let return_i = stream.current_index();
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }  
+
+            let expr = get_expression(stream, scopes, &["\n", ";"])?;
+            let return_expr = if let ExprKind::Empty = expr.node {
+                None
+            }
+            else {
+                Some(expr)
+            };
+
+            let span = stream[return_i].span.combine(&stream.current_span());
+            return Ok(Some(Statment::new(StmtKind::Return(Return{value: return_expr}), span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => {
             todo!()
@@ -69,28 +81,25 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Type) => {
             todo!()
-        }
-        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Interface) => {
-            todo!()
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
             todo!()
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
             todo!()
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
             todo!()
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
             todo!()
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
             todo!()
-        }
+        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
             todo!()
-        }
+        },
         _ => (),
     }
 
@@ -145,10 +154,17 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
     stream.go_to_index(type_i);
 
-    let next_index = (stream.current_index() as i64 + peek_i) as usize;
+    let mut next_index = (stream.current_index() as i64 + peek_i) as usize;
     
     //check if next_index is valid index
     stream.peek_multiple(peek_i).ok_or(err_out_of_bounds(stream))?;
+
+    if stream[next_index].text == "<" {
+        get_symbool_after_generic(stream, next_index)?;
+        next_index = stream.current_index();
+        
+        stream.go_to_index(type_i);
+    }
 
     match stream[next_index].text.as_str() {
         "=" => {
@@ -161,11 +177,15 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         }
         "(" => {
             let begin_i = stream.current_index();
+            stream.go_to_index(next_index);
             match func_call_or_declaration(stream, scopes)? {
                 FunctionKind::FunctionCall => {
                     stream.go_to_index(begin_i);
                     let expr = get_expression(stream, scopes, &["\n", ";"])?;
-                    assert!(matches!(expr.node, ExprKind::Call(..)));
+                    if !matches!(expr.node, ExprKind::Call(..)) {
+                        return Err(new_soul_error(SoulErrorKind::InternalError, expr.span, format!("internal error get_expression in function call did not return function call, expr: '{}'", expr.node.to_string())))
+                    }
+
                     let span = expr.span;
                     return Ok(Some(Statment::new(StmtKind::ExprStmt(expr), span)))
                 },
@@ -183,7 +203,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     if !ASSIGN_SYMBOOLS_SET.iter().any(|symb| symb == &&stream[next_index].text) {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream[next_index].span, 
             format!("token invalid for all statments, token: '{}'", stream[next_index].text)
         ));
     }
@@ -200,7 +220,7 @@ enum FunctionKind {
 }
 
 fn func_call_or_declaration(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionKind> {
-    go_to_symbool_after_brackets(stream, stream.current_index() + 1)?;
+    go_to_symbool_after_brackets(stream, stream.current_index())?;
 
     let is_curly_bracket = stream.current_text() == "{";
 
@@ -224,7 +244,7 @@ fn go_to_symbool_after_brackets<'a>(stream: &mut TokenStream, start_i: usize) ->
         return Err(new_soul_error(
             SoulErrorKind::UnmatchedParenthesis,
             stream.current_span(), 
-            "unexpected start while trying to get args (args is not opened add '(')",
+            format!("unexpected token: '{}' while trying to open args (args is not opened add '(')", stream.current_text()),
         ));
     }
 
@@ -236,7 +256,7 @@ fn go_to_symbool_after_brackets<'a>(stream: &mut TokenStream, start_i: usize) ->
             break Err(new_soul_error(
                 SoulErrorKind::UnmatchedParenthesis,
                 stream.current_span(), 
-                "unexpected end while trying to get args (args is not closed add ')')"
+                format!("unexpected token: '{}' while trying to close args (args is not closed add ')')", stream.current_text())
             ));
         }
 

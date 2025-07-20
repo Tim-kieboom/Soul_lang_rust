@@ -7,7 +7,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'soul_lang_rust' Compiler",
+            "name": "Debug executable 'soul_lang_rust'",
             "cargo": {
                 "args": [
                     "build",
@@ -34,34 +34,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'soul_lang_rust' Interpreter",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust",
-                    "--features",
-                    "dev_mode"
-                ],
-                "filter": {
-                    "name": "soul_lang_rust",
-                    "kind": "bin"
-                }
-            },
-            "args": [
-                "run", 
-                "test.soul",
-                "-isInterpreted",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
-                "-prettyCppCode"
-            ],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Throw_result executable 'soul_lang_rust' Compiler",
+            "name": "Throw_result executable 'soul_lang_rust'",
             "cargo": {
                 "args": [
                     "build",
@@ -90,7 +63,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Release executable 'soul_lang_rust' compiler SHOW_ALL",
+            "name": "Release executable 'soul_lang_rust' SHOW_ALL",
             "cargo": {
                 "args": [
                     "build",
@@ -117,7 +90,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Release executable 'soul_lang_rust' compiler SHOW_NONE",
+            "name": "Release executable 'soul_lang_rust' SHOW_NONE",
             "cargo": {
                 "args": [
                     "build",
@@ -136,25 +109,6 @@
                 "-showOutput=SHOW_NONE",
                 "-showTime=SHOW_ALL"
             ],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'soul_lang_rust'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust"
-                ],
-                "filter": {
-                    "name": "soul_lang_rust",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
             "cwd": "${workspaceFolder}"
         }
     ]

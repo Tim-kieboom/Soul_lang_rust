@@ -27,7 +27,7 @@ pub fn check_name(name: &str) -> result::Result<(), String> {
     }
 
     if let Some(illigal_name) = SOUL_NAMES.iligal_names.get(name) {
-        return Err(format!("name: '{}' is illigal\n\tilligal names: {:?}", illigal_name, SOUL_NAMES.iligal_names));
+        return Err(format!("name: '{}' is illigal", illigal_name));
     }
 
     if let Some(illigal_symbool) = name.chars().find(|ch| ILLIGAL_SYMBOOLS.contains(ch)) {
@@ -172,7 +172,6 @@ impl<'a> SoulNames<'a> {
             (NamesOtherKeyWords::SwitchCase, "match"),
             (NamesOtherKeyWords::Typeof, "typeof"),
             (NamesOtherKeyWords::Type, "type"),
-            (NamesOtherKeyWords::Interface, "interface"),
             (NamesOtherKeyWords::Trait, "trait"),
             
 
@@ -262,7 +261,6 @@ pub enum NamesOtherKeyWords {
     Enum,
     Union,
     TypeEnum,    
-    Interface,
     Trait,
 
     SwitchCase,

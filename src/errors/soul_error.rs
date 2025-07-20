@@ -135,7 +135,7 @@ impl SoulError {
     }
 
     pub fn to_highlighed_message<R: Read>(&self, reader: BufReader<R>) -> String {
-        
+
         //an error that is not in any line number in the source code
         const NON_SPANABLE_ERROR: usize = 0;
         
@@ -144,8 +144,27 @@ impl SoulError {
             return String::new();
         } 
         
-        let line = reader.lines().nth(first_span.line_number-1).expect("soulspan linenumber not found in reader").expect("soulspan linenumber not found in reader");
-        generate_highlighted_string(&line, &[(first_span.line_offset, first_span.line_offset+first_span.len)])
+        let start = first_span.line_number;
+        let end = if let Some(end) = first_span.end_line_number {
+            end
+        }
+        else {
+            first_span.line_number
+        };
+
+        let lines: Vec<String> = reader.lines()
+            .enumerate()
+            .filter_map(|(idx, line)| {
+                if idx+1 >= start && idx < end {
+                    line.ok()
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+
+        generate_highlighted_string(first_span.line_number, lines.as_slice(), &[(start, first_span.line_offset, first_span.line_offset+first_span.len)])
     }
 
     #[cfg(feature = "throw_result")]

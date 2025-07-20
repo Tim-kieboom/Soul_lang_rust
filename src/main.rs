@@ -28,7 +28,7 @@ fn compiler(run_option: &RunOptions) -> Result<()> {
     let source_response = source_reader(reader, &run_option).main_err_map("in source_reader")?;
     let token_response = tokenizer(source_response, &run_option).main_err_map("in tokenizer")?;
     let parser_reponse = parser(token_response, run_option).main_err_map("in parser")?;
-    
+
     if run_option.show_times.contains(ShowTimes::SHOW_TOTAL) {
         println!("Total time: {:.2?}", start.elapsed());
     }
