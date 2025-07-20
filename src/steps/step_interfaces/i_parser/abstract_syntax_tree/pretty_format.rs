@@ -27,7 +27,7 @@ impl PrettyPrint for StmtKind {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
         match self {
-            StmtKind::ExprStmt(expr) => format!("{}ExprStmt >> {};", prefix, expr.node.to_string()),
+            StmtKind::ExprStmt(expr) => format!("{}ExprStmt<{}> >> {};", prefix, expr.node.get_variant_name(), expr.node.to_string()),
             StmtKind::VarDecl(var_ref) => var_ref.borrow().to_pretty(tab, is_last),
             StmtKind::FnDecl(fn_decl) => fn_decl.to_pretty(tab, is_last),
             StmtKind::ExtFnDecl(ext_fn) => ext_fn.to_pretty(tab, is_last),
@@ -62,6 +62,18 @@ impl PrettyPrint for StmtKind {
             }
             StmtKind::Block(block) => block.to_pretty(tab, is_last),
             StmtKind::CloseBlock(_) => format!("{}CloseBlock >>", prefix),
+            StmtKind::For(for_decl) => {
+                let el = for_decl.element.0.clone();
+                let coll = for_decl.collection.node.to_string();
+                let body = for_decl.body.to_pretty(tab + 1, true);
+                format!(
+                    "{}For >> for {} in {}\n{}",
+                    prefix,
+                    el,
+                    coll,
+                    body
+                )
+            }
         }
     }
 }

@@ -26,6 +26,14 @@ main() int {
 		return a + b 
 	}
 
+	for el in [1,2,3,4] {
+		Println(el)
+	}
+
+	while 1 == 2 {
+		Println("unreachable")
+	}
+
 	if true {
 		Println("true is true")
 	}

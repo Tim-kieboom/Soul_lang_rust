@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
@@ -12,7 +13,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, IfDecl, ElseKind, Return, Statment, StmtKind, VariableDecl, VariableRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, ElseKind, ForDecl, IfDecl, Parameter, Return, Statment, StmtKind, VariableDecl, VariableRef, WhileDecl};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -70,10 +71,47 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(Some(Statment::new(StmtKind::Return(Return{value: return_expr}), span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => {
-            todo!()
+            let while_i = stream.current_index();
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }  
+
+            let condition = get_expression(stream, scopes, &["{"])?;
+            let block = get_block(ScopeVisibility::All, stream, scopes, vec![])?;
+
+            let span = stream[while_i].span.combine(&stream.current_span());
+            return Ok(Some(Statment::new(StmtKind::While(WhileDecl{condition, body: block.node}), span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => {
-            todo!()
+            let for_i = stream.current_index();
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }  
+
+            check_name(stream.current_text())
+                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+            
+            let name_i = stream.current_index();
+            let el_parameter = Spanned::new(Parameter{name: Ident(stream[name_i].text.clone()), ty: SoulType::new(), default_value: None}, stream[name_i].span);
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }  
+
+            if stream.current_text() != "in" {
+                return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("in for statment'{}' should be 'in' (format is 'for <element> in <collection> {{}}')", stream.current_text())))
+            }
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }  
+
+            let collection = get_expression(stream, scopes, &["{"])?;
+
+            let block = get_block(ScopeVisibility::All, stream, scopes, vec![el_parameter])?;
+
+            let span = stream[for_i].span.combine(&stream.current_span());
+            return Ok(Some(Statment::new(StmtKind::For(ForDecl{collection, element: Ident(stream[name_i].text.clone()), body: block.node}), span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
             let if_i = stream.current_index();

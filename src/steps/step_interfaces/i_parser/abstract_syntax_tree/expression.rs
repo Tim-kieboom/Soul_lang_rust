@@ -135,6 +135,25 @@ impl ExprKind {
         }
     }
 
+    pub fn get_variant_name(&self) -> &'static str {
+        match self {
+            ExprKind::Empty => "<empty>",
+            ExprKind::Literal(_) => "Literal",
+            ExprKind::Variable(_) => "Valiable",
+            ExprKind::TypeOf(_) => "typeof",
+            ExprKind::Binary(_) => "binary",
+            ExprKind::Index(_) => "index",
+            ExprKind::Unary(_) => "unary",
+            ExprKind::Call(_) => "FnCall",
+            ExprKind::ConstRef(_) => "ConstRef",
+            ExprKind::MutRef(_) => "MutRef",
+            ExprKind::Deref(_) => "DeRef",
+            ExprKind::Array(_) => "Array",
+            ExprKind::Tuple(_) => "Tuple",
+            ExprKind::NamedTuple(_) => "NamedTuple",
+        }
+    }
+
 }
 
 #[derive(Debug, Clone, PartialEq)]

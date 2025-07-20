@@ -28,6 +28,7 @@ pub enum StmtKind {
     Assignment(Assignment),
     If(IfDecl),
     While(WhileDecl),
+    For(ForDecl),
     Block(Block),
     CloseBlock(CloseBlock),
 }
@@ -106,6 +107,7 @@ impl StmtKind {
             StmtKind::While(_) => "While",
             StmtKind::Block(_) => "Block",
             StmtKind::CloseBlock(_) => "CloseBlock",
+            StmtKind::For(_) => "for",
         }
     }
 }
@@ -135,6 +137,13 @@ pub struct Assignment {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhileDecl {
     pub condition: Expression,
+    pub body: Block,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ForDecl {
+    pub element: Ident,
+    pub collection: Expression,
     pub body: Block,
 }
 
