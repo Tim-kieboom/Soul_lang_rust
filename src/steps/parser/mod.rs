@@ -4,6 +4,7 @@ pub mod soul_type;
 pub mod get_statments;
 pub mod get_expressions;
 pub mod forward_type_stack;
+pub mod parse_generic_decl;
 
 
 

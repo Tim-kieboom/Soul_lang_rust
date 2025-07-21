@@ -1,4 +1,5 @@
 use crate::soul_names::check_name;
+use crate::steps::parser::parse_generic_decl::get_generics_decl;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_expressions::parse_expression::get_expression;
@@ -8,8 +9,8 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::so
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::FnDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{FunctionSignature, Parameter};
 use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{FunctionSignature, GenericParam, Parameter, TypeConstraint};
 
 pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDecl>> {
     let begin_i = stream.current_index();
@@ -68,7 +69,7 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
         return Err(err_out_of_bounds(stream));
     }
 
-    let generics = get_generics(stream, scopes)
+    let generics = get_generics_decl(stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
 
     let params = get_parameters(stream, scopes)
@@ -99,66 +100,7 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     Ok(signature.node)
 }
 
-fn get_generics(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<GenericParam>> {
-    let mut generics = vec![];
 
-    if stream.current_text() != "<" {
-        return Ok(generics);
-    }
-
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    }
-
-    loop {
-
-        check_name(stream.current_text())
-            .map_err(|child| new_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("while trying to parse generics: {}", child)))?;
-        
-        let name = Ident(stream.current_text().clone());
-
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream));
-        }
-
-        let mut constraint = vec![];
-        if stream.current_text() == ":" {
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-
-            add_generic_type_contraints(&mut constraint, stream, scopes)?;
-
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-        }
-
-        generics.push(GenericParam{name, constraint});
-        
-        if stream.current_text() != "," {
-            break;
-        }
-
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream));
-        }
-    }
-
-    if stream.current_text() != ">" {
-        return Err(new_soul_error(
-            SoulErrorKind::UnmatchedParenthesis, 
-            stream.current_span(), 
-            format!("while trying to get generics, generics should en with '>' but ends on '{}'", stream.current_text())
-        ));
-    } 
-
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    }
-
-    Ok(generics)
-}
 
 fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Spanned<Parameter>>> {
     let mut params = vec![];
@@ -290,15 +232,9 @@ fn try_get_return_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> R
     }
 }
 
-fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
-    todo!("plz impl add_generic_type_contraints")
-}
-
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while parsing function")
 }
-
-
 
 
 

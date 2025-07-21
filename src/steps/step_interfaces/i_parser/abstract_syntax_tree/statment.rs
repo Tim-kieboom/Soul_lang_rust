@@ -298,7 +298,7 @@ pub struct StructDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
-    pub implements: Vec<SoulType>,
+    pub implements: Vec<TraitDecl>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -307,7 +307,7 @@ pub struct ClassDecl {
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
     pub methods: Vec<Spanned<FunctionSignature>>,
-    pub implements: Vec<SoulType>,
+    pub implements: Vec<TraitDecl>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -324,6 +324,12 @@ pub struct FieldAccess {
     pub get: Option<Visibility>, 
     // None = disallow set
     pub set: Option<Visibility>, 
+}
+
+impl Default for FieldAccess  {
+    fn default() -> Self {
+        Self { get: None, set: None }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -17,6 +17,12 @@
 // 	return this + a
 // }
 
+struct Foo {
+	str name
+	f32 float = 0.2
+	int foo {Get; set;} = 1
+}
+
 sum(int a, int b) int {
 	return a + b
 }

@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FnDecl, IfDecl, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
-}, scope::{InnerScope, InnerScopeBuilder, ScopeBuilder, ScopeKind}};
+    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FieldAccess, FnDecl, IfDecl, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
+}, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -36,8 +36,7 @@ impl PrettyFormat for ScopeBuilder {
 }
 
 impl PrettyPrint for Vec<ScopeKind> {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let indent_str = indent(tab);
+    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
         
         let inner = self.iter().map(|kind| {
             match kind {
@@ -112,7 +111,7 @@ impl PrettyPrint for StmtKind {
                 )
             }
             StmtKind::Block(block) => block.to_pretty(tab, is_last),
-            StmtKind::CloseBlock(_) => format!("{}CloseBlock >>", prefix),
+            StmtKind::CloseBlock(arr) => format!("{}CloseBlock >> free([{}])", prefix, arr.delete_list.iter().join(",")),
             StmtKind::For(for_decl) => {
                 let el = for_decl.element.0.clone();
                 let coll = for_decl.collection.node.to_string();
@@ -276,10 +275,43 @@ impl PrettyPrint for StructDecl {
         };
         let fields = self.fields
             .iter()
-            .map(|f| format!("{}{}: {}", indent_str, f.name.0, f.ty.to_string()))
+            .map(|f| {
+                if let Some(value) = &f.default_value {
+                    format!("{}{} {} {} = {}", indent_str, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false), value.node.to_string())
+                }
+                else {
+                    format!("{}{} {} {}", indent_str, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false))
+                }
+            })
             .join("\n");
 
         format!("Struct {}{} >>\n{}", self.name.0, generics, fields)
+    }
+}
+
+impl PrettyPrint for FieldAccess {
+    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
+        if self.get.is_none() && self.set.is_none() {
+            return String::new()
+        }
+
+        let get = if let Some(get) = &self.get {
+            match get {
+                Visibility::Public => "Get;",
+                Visibility::Private => "get;",
+            }
+        }
+        else {""};
+
+        let set = if let Some(set) = &self.set {
+            match set {
+                Visibility::Public => "Set;",
+                Visibility::Private => "set;",
+            }
+        }
+        else {""};
+
+        format!("{{{}{}}}", get, set)
     }
 }
 
