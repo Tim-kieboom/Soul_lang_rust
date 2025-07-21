@@ -63,6 +63,14 @@ impl ScopeBuilder {
         Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes }
     }
 
+    pub fn get_scopes(&self) -> &InnerScopeBuilder<Vec<ScopeKind>> {
+        &self.scopes
+    }
+
+    pub fn get_types(&self) -> &Vec<InnerScope<TypeKind>> {
+        &self.types
+    }
+
     pub fn current_scope(&self) -> &InnerScope<Vec<ScopeKind>> {
         &self.scopes.scopes[self.scopes.current]
     }

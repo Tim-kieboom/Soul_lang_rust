@@ -303,14 +303,12 @@ pub struct StructDecl {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassDecl {
-    pub signature: ClassSignature,
+    pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
     pub methods: Vec<Spanned<FunctionSignature>>,
     pub implements: Vec<SoulType>,
 }
-
-pub type ClassSignature = Ident;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldDecl {

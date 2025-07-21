@@ -38,8 +38,13 @@ fn compiler(run_option: &RunOptions) -> Result<()> {
 
 fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Result<SourceFileResponse> {
     let tab_as_spaces = " ".repeat(run_option.tab_char_len as usize);
-    let source_file = read_source_file(reader, &tab_as_spaces)?;
     
+    let start = Instant::now(); 
+    let source_file = read_source_file(reader, &tab_as_spaces)?;
+    if run_option.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
+        println!("source_reader time: {:.2?}", start.elapsed());
+    }
+
     if run_option.show_outputs.contains(ShowOutputs::SHOW_SOURCE) {
         let file_path = format!("{}/steps/source.soulc", &run_option.output_dir);
         let contents = source_file.source_file
@@ -55,7 +60,12 @@ fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Resu
 }
 
 fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result<TokenizeResonse> {
+    
+    let start = Instant::now(); 
     let token_stream = tokenize(source_file)?;
+    if run_option.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
+        println!("tokenizers time: {:.2?}", start.elapsed());
+    }
 
     if run_option.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {
         let file_path = format!("{}/steps/tokenStream.soulc", &run_option.output_dir);
@@ -69,12 +79,19 @@ fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
     }   
 
+
+
     Ok(token_stream)
 }
 
 fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<ParserResponse> {
+    
+    let start = Instant::now(); 
     let parse_response = parse_tokens(token_response)?;
-
+    if run_option.show_times.contains(ShowTimes::SHOW_PARSER) {
+        println!("parser time: {:.2?}", start.elapsed());
+    }
+    
     if run_option.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
         let file_path = format!("{}/steps/parserAST.soulc", &run_option.output_dir);
         let scopes_file_path = format!("{}/steps/parserScopes.soulc", &run_option.output_dir);
@@ -82,9 +99,11 @@ fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<Pa
         write(file_path, format!("{}", parse_response.tree.to_pretty_string()))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
 
-        write(scopes_file_path, format!("{:#?}", parse_response.scopes))
+        write(scopes_file_path, format!("{}", parse_response.scopes.to_pretty_string()))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
     }
+
+
 
     Ok(parse_response)
 }

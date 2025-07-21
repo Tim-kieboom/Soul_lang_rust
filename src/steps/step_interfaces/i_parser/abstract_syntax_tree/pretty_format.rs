@@ -1,9 +1,8 @@
 use itertools::Itertools;
 
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind},
-    statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FnDecl, IfDecl, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility},
-};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
+    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FnDecl, IfDecl, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
+}, scope::{InnerScope, InnerScopeBuilder, ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -11,6 +10,58 @@ pub trait PrettyFormat {
 
 pub trait PrettyPrint {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String;
+}
+
+impl PrettyFormat for ScopeBuilder {
+    fn to_pretty_string(&self) -> String {
+        format!(
+            "scopes: [\n\t{}\n]\ntypes: [\n\t{}\n]",
+            self.get_scopes()
+                .scopes
+                .iter()
+                .map(|scope| format!(
+                    "scope{}: [\n\t\t{}\n\t]", 
+                    scope.self_index, 
+                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
+                )).join(",\n\t"),
+            self.get_types()
+                .iter()
+                .map(|scope| format!(
+                    "scope{}: [\n\t\t{}\n\t]", 
+                    scope.self_index, 
+                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
+                )).join(",\n\t"),
+        )
+    }
+}
+
+impl PrettyPrint for Vec<ScopeKind> {
+    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
+        let indent_str = indent(tab);
+        
+        let inner = self.iter().map(|kind| {
+            match kind {
+                ScopeKind::Invalid() => "<invalid>".into(),
+                ScopeKind::Variable(node_ref) => format!("var({})", node_ref.borrow().name.0),
+                ScopeKind::Struct(struct_decl) => format!("struct({})", struct_decl.name.0),
+                ScopeKind::Class(class_decl) => format!("class({})", class_decl.name.0),
+                ScopeKind::Trait(trait_decl) => format!("trait({})", trait_decl.name.0),
+                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.signature.name.0.as_str()).unwrap_or("") ),
+                ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.name.0),
+                ScopeKind::Union(union_decl) => format!("union({})", union_decl.name.0),
+                ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.name.0),
+                ScopeKind::CurrentGeneric(generic_param) => format!("generic({})", generic_param.name.0),
+            }
+        }).join(",");
+
+        format!("[{}]", inner)
+    }
+}
+
+impl PrettyPrint for TypeKind {
+    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
+        self.to_string()
+    }
 }
 
 impl PrettyFormat for AbstractSyntacTree {
@@ -211,7 +262,7 @@ impl PrettyPrint for ClassDecl {
             .map(|sig| format!("{}fn {};", indent_str, sig.node.to_string()))
             .join("\n");
 
-        format!("Class {}{} >>\n{}\n{}", self.signature.0, generics, fields, methods)
+        format!("Class {}{} >>\n{}\n{}", self.name.0, generics, fields, methods)
     }
 }
 
