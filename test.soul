@@ -17,14 +17,20 @@
 // 	return this + a
 // }
 
-struct Foo<T> { 
+struct Foo<T, T> { 
 	str name
 	f32 float = 0.2
 	int foo {Get; set;} = 1
 	T generic
 }
 
-struct Foo{}
+// sum<T>(T a, T b) T {
+// 	return a + b
+// }
+
+struct Bar<T> {
+	Foo<T> foo
+}
 
 sum(int a, int b) int {
 	return a + b

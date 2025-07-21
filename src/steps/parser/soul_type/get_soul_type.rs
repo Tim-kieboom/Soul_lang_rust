@@ -105,7 +105,7 @@ fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: 
 }
 
 fn get_type_kind(base: &Token, scopes: &ScopeBuilder) -> Result<TypeKind> {
-    scopes.lookup_forwarded_type_kind(base.text.as_str())
+    scopes.lookup_type(base.text.as_str())
         .cloned()
         .ok_or(new_soul_error(SoulErrorKind::InvalidType, base.span, format!("type not found: '{}'", base.text)))
 }

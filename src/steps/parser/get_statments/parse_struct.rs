@@ -24,8 +24,10 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         return Err(err_out_of_bounds(stream));
     }
 
+    let gen_start_i = stream.current_index();
     let generics = get_generics_decl(stream, scopes)
         .map_err(|child| pass_soul_error(SoulErrorKind::InvalidInContext, stream[struct_i].span.combine(&stream.current_span()), "while trying to get struct", child))?;
+    let gen_end_i = stream.current_index();
 
     if stream.current_text() != "{" {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' invalid struct's body should start with '{{'", stream.current_text())))
@@ -44,7 +46,8 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
 
     scopes.push(ScopeVisibility::All);
     for generic in generics.iter().cloned() {
-        scopes.insert_type(generic.name.0.clone(), TypeKind::Generic(generic.name));
+        scopes.insert_type(generic.name.0.clone(), TypeKind::Generic(generic.name))
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream[gen_start_i].span.combine(&stream[gen_end_i].span), msg))?;
     }
     
     let mut fields = Vec::new();
@@ -62,6 +65,8 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     }
     
     scopes.pop();
+    scopes.insert_type(stream[name_i].text.clone(), TypeKind::Struct(Ident(stream[name_i].text.clone())))
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream[name_i].span, msg))?;
 
     if stream.current_text() != "}" {
         return Err(new_soul_error(

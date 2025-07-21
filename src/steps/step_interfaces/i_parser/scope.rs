@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind, statment::{ClassDecl, EnumDecl, FnDecl, GenericParam, NodeRef, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableRef}}, utils::push::Push};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind, statment::{ClassDecl, EnumDecl, FnDecl, GenericParam, NodeRef, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableRef}}, utils::push::Push};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -128,15 +128,22 @@ impl ScopeBuilder {
         self.scopes.insert_to_vec(name, kind)
     } 
 
-    pub fn insert_type(&mut self, name: String, kind: TypeKind) {
-        self.types[self.scopes.current].symbols.insert(name, kind);
+    pub fn insert_type(&mut self, name: String, kind: TypeKind) -> std::result::Result<(), String> {
+        let types = &mut self.types[self.scopes.current];
+
+        if types.get(&name).is_some() {
+            return Err(format!("type: '{}' already exists", name));
+        }
+
+        types.symbols.insert(name, kind);
+        Ok(())
     }  
 
     pub fn insert_global(&mut self, name: String, kind: ScopeKind) {
         self.scopes.insert_global_to_vec(name, kind)
     }
 
-    pub fn lookup_forwarded_type_kind(&self, name: &str) -> Option<&TypeKind> {
+    pub fn lookup_type(&self, name: &str) -> Option<&TypeKind> {
         let mut current_index = Some(self.scopes.current);
 
         while let Some(index) = current_index {
