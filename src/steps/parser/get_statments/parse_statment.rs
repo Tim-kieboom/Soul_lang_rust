@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 use crate::steps::parser::get_statments::parse_field::try_get_field;
+use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::steps::parser::parse_generic_decl::get_generics_decl;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
@@ -22,9 +23,7 @@ static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
 });
 
 pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statment>> {
-    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
-    }
+
 
     if stream.current().text == "\n" {
 
@@ -173,75 +172,8 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             todo!()
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
-            let struct_i = stream.current_index();
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            } 
-
-            let name_i = stream.current_index();
-            check_name(&stream.current_text())
-                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
-        
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-
-            let generics = get_generics_decl(stream, scopes)
-                .map_err(|child| pass_soul_error(SoulErrorKind::InvalidInContext, stream[struct_i].span.combine(&stream.current_span()), "while trying to get struct", child))?;
-
-            if stream.current_text() != "{" {
-                return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' invalid struct's body should start with '{{'", stream.current_text())))
-            }
-
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            } 
-
-            if stream.current_text() == "\n" {
-                
-                if stream.next().is_none() {
-                    return Err(err_out_of_bounds(stream));
-                } 
-            }
-
-            let mut fields = Vec::new();
-            loop {
-                let field = match try_get_field(stream, scopes) {
-                    Some(result) => result?,
-                    None => break,
-                };
-
-                if stream.next().is_none() {
-                    return Err(err_out_of_bounds(stream));
-                }
-
-                fields.push(field);
-            }
-
-            if stream.current_text() != "}" {
-                return Err(new_soul_error(
-                    SoulErrorKind::UnexpectedToken, 
-                    stream.current_span(), 
-                    format!("in struct '{}' token: '{}' is unexpected (e.eg is not field or '}}')", stream[name_i].text, stream.current_text())
-                ));
-            }
-
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-
-            return Ok(Some(
-                Statment::new(StmtKind::StructDecl(
-                        StructDecl{
-                            name: Ident(stream[name_i].text.clone()), 
-                            generics, 
-                            fields, 
-                            implements: vec![]
-                        }
-                    ),
-                    stream.current_span().combine(&stream[struct_i].span)
-                )
-            ))
+            let result = get_struct(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::StructDecl(result.node), result.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
             todo!()
@@ -357,7 +289,6 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     //assignment
     todo!();
 }
-
 
 
 enum FunctionKind {
@@ -617,7 +548,9 @@ fn get_scope<'a>(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, sco
     }
 }
 
-
+fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
+}
 
 
 

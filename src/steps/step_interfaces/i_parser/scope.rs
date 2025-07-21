@@ -126,8 +126,12 @@ impl ScopeBuilder {
 
     pub fn insert(&mut self, name: String, kind: ScopeKind) {
         self.scopes.insert_to_vec(name, kind)
-    }    
-    
+    } 
+
+    pub fn insert_type(&mut self, name: String, kind: TypeKind) {
+        self.types[self.scopes.current].symbols.insert(name, kind);
+    }  
+
     pub fn insert_global(&mut self, name: String, kind: ScopeKind) {
         self.scopes.insert_global_to_vec(name, kind)
     }
@@ -328,8 +332,6 @@ pub enum ScopeKind {
     Enum(EnumDecl),
     Union(UnionDecl),
     TypeEnum(TypeEnumDecl),
-
-    CurrentGeneric(GenericParam),
 }
 
 pub type OverloadedFunctions = NodeRef<Vec<FnDecl>>;

@@ -17,17 +17,21 @@
 // 	return this + a
 // }
 
-struct Foo {
+struct Foo<T> { 
 	str name
 	f32 float = 0.2
 	int foo {Get; set;} = 1
+	T generic
 }
+
+struct Foo{}
 
 sum(int a, int b) int {
 	return a + b
 }
 
 main() int {
+
 	sum(int a, int b) int {
 		return a + b 
 	}

@@ -49,7 +49,6 @@ impl PrettyPrint for Vec<ScopeKind> {
                 ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.name.0),
                 ScopeKind::Union(union_decl) => format!("union({})", union_decl.name.0),
                 ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.name.0),
-                ScopeKind::CurrentGeneric(generic_param) => format!("generic({})", generic_param.name.0),
             }
         }).join(",");
 
