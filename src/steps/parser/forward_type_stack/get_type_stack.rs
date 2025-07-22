@@ -24,14 +24,22 @@ pub fn forward_declarde_type_stack(stream: &mut TokenStream) -> Result<TypeScope
 }
 
 fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()> {
-    if stream.current_text() == "{" {
+    
+    if stream.current_text() == "{}" {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+    else if stream.current_text() == "{" {
         types.push_current(ScopeVisibility::All);
         
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
         }
-    }    
-    else if stream.current_text() == "}" {
+    } 
+       
+    if stream.current_text() == "}" {
         types.pop();
         
         if stream.next().is_none() {
@@ -39,14 +47,14 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
         }
     }
     
-    match stream.current_text() {
+    let duplicate = !match stream.current_text() {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Type) => {
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
             }
 
             let ty = TypeKind::Custom(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
+            types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
             if stream.next().is_none() {
@@ -54,7 +62,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             }
 
             let ty = TypeKind::Trait(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
+            types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
             if stream.next().is_none() {
@@ -62,7 +70,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             }
 
             let ty = TypeKind::TypeEnum(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
+            types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
             if stream.next().is_none() {
@@ -70,7 +78,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             }
 
             let ty = TypeKind::Union(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
+            types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
             if stream.next().is_none() {
@@ -78,7 +86,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             }
 
             let ty = TypeKind::Enum(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
+            types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
             if stream.next().is_none() {
@@ -86,7 +94,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             }
 
             let ty = TypeKind::Struct(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
+            types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
             if stream.next().is_none() {
@@ -94,9 +102,13 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             }
 
             let ty = TypeKind::Class(Ident(stream.current_text().clone()));
-            types.insert(stream.current_text().clone(), ty);
+            types.insert(stream.current_text().clone(), ty)
         },
-        _ => (),
+        _ => true,
+    };
+
+    if duplicate {
+        return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("a type of name: '{}' already exists", stream.current_text())))
     }
 
     Ok(())

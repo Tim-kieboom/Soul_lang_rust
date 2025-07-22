@@ -254,10 +254,15 @@ impl<T> InnerScopeBuilder<T> {
         None
     }
 
-    pub fn insert(&mut self, name: String, kind: T) {
+    /// Inserts a new symbol. 
+    /// Returns `true` if the symbol was newly inserted; 
+    /// returns `false` if a symbol with the same name already existed. 
+    pub fn insert(&mut self, name: String, kind: T) -> bool {
+        
         self.current_mut()
             .symbols
-            .insert(name, kind);
+            .insert(name, kind)
+            .is_none()
     }
 
     pub fn insert_to_vec<V>(&mut self, name: String, kind: V) 
