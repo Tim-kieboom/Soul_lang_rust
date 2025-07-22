@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
+use std::{cell::{Ref, RefCell, RefMut}, fmt::format, rc::Rc};
 use crate::{errors::soul_error::{SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
@@ -342,13 +342,19 @@ pub enum Visibility {
 pub struct GenericParam {
     pub name: Ident,
     pub constraint: Vec<TypeConstraint>,
+    pub default: Option<SoulType>,
 }
 
 impl GenericParam {
     pub fn to_string(&self) -> String {
-        match self.constraint.is_empty() {
+        let str = match self.constraint.is_empty() {
             true => format!("{}", self.name.0),
             false => format!("{}: {}", self.name.0, self.constraint.iter().map(|ty| ty.to_string()).join("+")),
+        };
+
+        match &self.default {
+            Some(val) => format!("{} = {}", str, val.to_string()),
+            None => str,
         }
     } 
 }

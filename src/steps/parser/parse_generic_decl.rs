@@ -1,7 +1,10 @@
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::soul_names::check_name;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::TypeConstraint;
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::statment::GenericParam, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<GenericParam>> {
@@ -39,8 +42,28 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             }
         }
 
-        generics.push(GenericParam{name, constraint});
+        let default = if stream.current_text() == "=" {
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            let ty = SoulType::from_stream(stream, scopes)?;
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            Some(ty)
+        }
+        else {
+            None
+        };
+
+        generics.push(GenericParam{name: name.clone(), constraint, default});
         
+        scopes.insert_type(name.0.clone(), TypeKind::Generic(name))
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+
         if stream.current_text() != "," {
             break;
         }

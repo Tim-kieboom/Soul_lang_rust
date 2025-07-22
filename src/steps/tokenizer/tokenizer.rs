@@ -1,19 +1,20 @@
-use std::collections::HashMap;
-
+use regex::Regex;
 use once_cell::sync::Lazy;
-use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan};
+use std::collections::{BTreeMap};
 use crate::soul_names::SOUL_NAMES;
+use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResponse};
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream, TokenizeResonse};
-use crate::utils::split_on::SplitOn;
 
-static SPLIT_VEC: Lazy<Vec<&'static str>> = Lazy::new(|| {
-    SOUL_NAMES
+static TOKEN_SPLIT_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(&SOUL_NAMES
         .parse_tokens
         .iter()
-        .map(|s| *s)
-        .filter(|&s| s != ".")
-        .collect()
+        .filter(|&&s| s != ".")
+        .map(|s| regex::escape(s))
+        .collect::<Vec<_>>()
+        .join("|")
+    ).unwrap()
 });
 
 pub fn tokenize(mut source_response: SourceFileResponse) -> Result<TokenizeResonse> {
@@ -41,29 +42,30 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
         }
     }
 
-    fn add_offset_range(offset: usize, gaps: &mut HashMap<usize, i64>, start: usize) -> usize {
+    fn add_offset_range(offset: usize, gaps: &mut BTreeMap<usize, i64>, start: usize) -> usize {
         let mut sum_gap = 0i64;
-        
-        let to_remove: Vec<_> = gaps
-            .keys()
-            .filter(|&&k| k >= start && k <= offset)
-            .cloned()
+
+        let to_remove: Vec<usize> = gaps
+            .range(start..=offset)
+            .map(|(&k, _)| k)
             .collect();
 
-        for k in to_remove {
-            sum_gap += gaps.remove(&k).unwrap();
+        for key in to_remove {
+            if let Some(gap) = gaps.remove(&key) {
+                sum_gap += gap;
+            }
         }
 
         add_offset_with_gap(offset, sum_gap)
     }
 
 
-    let splits = file_line.line.split_on(&SPLIT_VEC);
+    let splits = split_tokens(&file_line.line);
     let mut line_offset = 0;
     let mut last_is_forward_slash = false;
 
     let mut gaps = source_result.gaps.remove(&file_line.line_number)
-        .unwrap_or(HashMap::new());
+        .unwrap_or(BTreeMap::new());
 
     let mut in_string = false;
     let mut string_token = String::new();
@@ -159,6 +161,27 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
     }
 
     Ok(())
+}
+
+fn split_tokens(this: &str) -> Vec<&str> { 
+    let regex = &*TOKEN_SPLIT_REGEX;
+    let mut result = Vec::with_capacity(this.len() / 4);
+    let mut last_end = 0;
+
+    for find in regex.find_iter(this) {
+        if find.start() > last_end {
+            result.push(&this[last_end..find.start()]);
+        }
+
+        result.push(find.as_str());
+        last_end = find.end();
+    }
+
+    if last_end < this.len() {
+        result.push(&this[last_end..]);
+    }
+
+    result
 }
 
 fn needs_to_dot_tokenize(text: &str) -> bool {

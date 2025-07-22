@@ -7,17 +7,12 @@
 // 	span := array[1..2]
 // }
 
-// PubSum(int a, int b) int {
-// 	return a + b
+// trait Add<T, O = T, R = T> {
+// 	add(this, O other) R
 // }
 
-// foo<T>(T a) {}
 
-// int sum(this, int a) int {
-// 	return this + a
-// }
-
-struct Foo<T, T> { 
+struct Foo<T> { 
 	str name
 	f32 float = 0.2
 	int foo {Get; set;} = 1
@@ -28,9 +23,7 @@ struct Foo<T, T> {
 // 	return a + b
 // }
 
-struct Bar<T> {
-	Foo<T> foo
-}
+
 
 sum(int a, int b) int {
 	return a + b
@@ -61,9 +54,13 @@ main() int {
 	}
 
 	sum(1, 2)
+
+	sum(
+		1,
+		2
+	)
+
 	Println("hello world")
-	// Println(f"{}hello world {0}")
-	// Println(f"hello world {#0}")
 }
 
 

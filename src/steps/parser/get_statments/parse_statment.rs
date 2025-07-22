@@ -1,22 +1,20 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
-use crate::steps::parser::get_statments::parse_field::try_get_field;
-use crate::steps::parser::get_statments::parse_struct::get_struct;
-use crate::steps::parser::parse_generic_decl::get_generics_decl;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_block::get_block;
+use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_expressions::parse_expression::get_expression;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
-use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, ElseKind, ForDecl, IfDecl, Parameter, Return, Statment, StmtKind, StructDecl, VariableDecl, VariableRef, WhileDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, ElseKind, ForDecl, IfDecl, Parameter, Return, Statment, StmtKind, VariableDecl, VariableRef, WhileDecl};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()

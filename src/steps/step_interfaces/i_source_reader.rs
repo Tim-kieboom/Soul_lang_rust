@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone)]
 pub struct FileLine {
@@ -15,7 +15,7 @@ pub type LineOffset = usize;
 pub struct SourceFileResponse {
     pub source_file: Vec<FileLine>,
     pub c_str_store: HashMap<RawCstr, CstrVarName>,
-    pub gaps: HashMap<LineNumber, HashMap<LineOffset, i64>>,
+    pub gaps: HashMap<LineNumber, BTreeMap<LineOffset, i64>>,
     pub estimated_token_count: usize,
 }
 impl SourceFileResponse {

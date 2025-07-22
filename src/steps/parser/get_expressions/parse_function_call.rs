@@ -55,6 +55,13 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     let mut open_bracket_stack = 1;
     while stream.next().is_some() {
 
+        if stream.current_text() == "\n" {
+        
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
         if stream.current_text() == ")" {
             open_bracket_stack -= 1;
 
@@ -83,7 +90,7 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         };
 
         let begin_i = stream.current_index();
-        let expression = get_expression(stream, scopes, &[",", ")"])
+        let expression = get_expression(stream, scopes, &["\n", ",", ")"])
             .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream[begin_i].span,  format!("at argument number: {}", args.len()+1), child))?;
 
         args.push(Arguments{name: optional_name, expression});
@@ -112,6 +119,13 @@ fn get_generics(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Spann
         return Err(err_out_of_bounds(stream));
     }
 
+    if stream.current_text() == "\n" {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
     let first = stream.current_span();
     let last;
     loop {
@@ -132,6 +146,13 @@ fn get_generics(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Spann
 
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+        
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
         }
     }
 

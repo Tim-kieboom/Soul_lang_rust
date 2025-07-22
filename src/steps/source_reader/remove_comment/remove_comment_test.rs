@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use itertools::Itertools;
 
@@ -91,9 +91,9 @@ fn does_remove_comment_give_correct_gaps() {
         result.push(new_line);
     }
 
-    let should_be_gaps: HashMap<LineNumber, HashMap<LineOffset, i64>> = HashMap::from([
-        (5, HashMap::from([(18, 11)])),
-        (11, HashMap::from([(0, 2)])), 
+    let should_be_gaps: HashMap<LineNumber, BTreeMap<LineOffset, i64>> = HashMap::from([
+        (5, BTreeMap::from([(18, 11)])),
+        (11, BTreeMap::from([(0, 2)])), 
     ]);
 
     assert!(

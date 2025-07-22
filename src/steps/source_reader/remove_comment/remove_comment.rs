@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::Peekable, str::Chars};
+use std::{collections::{BTreeMap}, iter::Peekable, str::Chars};
 
 use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResponse};
 
@@ -127,7 +127,7 @@ fn check_char<'a>(info: &mut RemoveCommentInfo<'a>, result: &mut SourceFileRespo
             *info.in_multi_line_comment = false; 
             info.chars.next();
 
-            let gaps = result.gaps.entry(info.line_number).or_insert(HashMap::new());
+            let gaps = result.gaps.entry(info.line_number).or_insert(BTreeMap::new());
             gaps.insert(info.gap_offset, info.gap_count as i64 +1);
         }
 

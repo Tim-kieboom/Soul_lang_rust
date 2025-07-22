@@ -40,7 +40,7 @@ pub fn format_string(file_line: FileLine) -> Result<FileLine> {
 }
 
 fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Result<String> {
-    const SOUL_FORMATTER_FUNCTION_NAME: &str = "std.fmt.Format(";
+    const SOUL_FORMATTER_FUNCTION_NAME: &str = "std.fmt.FormatArgs(";
 
     let mut buffer = String::with_capacity(file_line.line.len() + SOUL_FORMATTER_FUNCTION_NAME.len());
 

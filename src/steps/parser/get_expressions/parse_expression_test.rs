@@ -673,13 +673,13 @@ fn test_function_call() {
     stream = stream_from_strs(&["sum", "(", "1", ",", "2", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
-    assert_eq!(not_closing_fn.unwrap_err().get_last_kind(), SoulErrorKind::ArgError);
+    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::UnexpectedEnd, "{}", not_closing_fn.unwrap_err().to_err_message());
 
 
     stream = stream_from_strs(&["sum", "(", "1", ",", "name", ":", ")", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
-    assert_eq!(not_closing_fn.unwrap_err().get_last_kind(), SoulErrorKind::ArgError);
+    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::ArgError, "{}", not_closing_fn.unwrap_err().to_err_message());
 }
 
 // #[test]
