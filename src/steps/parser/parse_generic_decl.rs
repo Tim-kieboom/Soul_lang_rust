@@ -1,9 +1,10 @@
-use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
-use crate::soul_names::check_name;
+use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
+use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
+use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::TypeConstraint;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{TypeConstraint, TypeEnumDecl};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::statment::GenericParam, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
@@ -88,8 +89,49 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
     Ok(generics)
 }
 
-fn add_generic_type_contraints(_contraints: &mut Vec<TypeConstraint>, _stream: &mut TokenStream, _scopes: &mut ScopeBuilder) -> Result<()> {
-    todo!("plz impl add_generic_type_contraints")
+fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+    loop {
+
+        let type_contraints = if let Some(kind) = scopes.lookup_type(stream.current_text()) {
+            match kind {
+                TypeKind::Trait(id) => TypeConstraint::Trait(id.clone()), 
+                TypeKind::TypeEnum(_, types) => TypeConstraint::TypeEnum(types.clone()),
+                _ => return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("type: '{}' is '{}' only 'trait' and 'typeEnum' is allowed for generic contraint", stream.current_text(), kind.get_variant())))
+            }
+        }
+        else if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+            let types = get_type_enum_body(stream, scopes)?;
+            
+            TypeConstraint::TypeEnum(types)
+        }
+        else {
+            return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' is invalid in typeContrainets only allowed traits typeEnums and '+'", stream.current_text())))
+        };
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        contraints.push(type_contraints);
+
+        if stream.current_text() != "+" {
+            break;
+        }
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    if stream.current_text() != ">" && stream.current_text() != "," {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' in not allowed in generic", stream.current_text())))
+    }
+
+    if stream.next_multiple(-1).is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    Ok(())
 }
 
 fn err_out_of_bounds(stream: &mut TokenStream) -> SoulError {

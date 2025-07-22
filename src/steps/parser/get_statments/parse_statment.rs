@@ -1,5 +1,7 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
+use crate::steps::parser::get_statments::parse_trait::get_trait;
+use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_statments::parse_struct::get_struct;
@@ -14,7 +16,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, ElseKind, ForDecl, IfDecl, Parameter, Return, Statment, StmtKind, VariableDecl, VariableRef, WhileDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{Block, CloseBlock, ElseKind, ForDecl, IfDecl, Parameter, Return, Statment, StmtKind, TypeEnumDecl, VariableDecl, VariableRef, WhileDecl};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -158,10 +160,40 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             todo!()
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
-            todo!()
+            let result = get_trait(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::TraitDecl(result.node), result.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
-            todo!()
+            let type_enum_i = stream.current_index();
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            check_name(stream.current_text())
+                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+            
+            let name_i = stream.current_index();
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            } 
+
+            let types = get_type_enum_body(stream, scopes)?; 
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            } 
+            
+            if stream.current_text() != ";" && stream.current_text() != "\n" {
+                return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token: '{}' is incorrect end of typeEnum", stream.current_text())));
+            }
+
+            return Ok(Some(
+                Statment::new(StmtKind::TypeEnumDecl(
+                    TypeEnumDecl{name: Ident(stream[name_i].text.clone()), types}), 
+                    stream.current_span().combine(&stream[type_enum_i].span
+                )),
+            ));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
             todo!()
@@ -191,7 +223,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             .ok_or(err_out_of_bounds(stream))?;
 
         if peek2_token.text == "(" {
-            let func = get_function_decl(stream, scopes)?;
+            let func = get_function_decl(None, stream, scopes)?;
             scopes.add_function(func.node.clone());
             return Ok(Some(func.node.consume_to_statment(func.span)));
         }
@@ -274,7 +306,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                 },
                 FunctionKind::FunctionDecl => {
                     stream.go_to_index(begin_i);
-                    let func = get_function_decl(stream, scopes)?;
+                    let func = get_function_decl(None, stream, scopes)?;
                     scopes.add_function(func.node.clone());
                     return Ok(Some(func.node.consume_to_statment(func.span)));
                 },

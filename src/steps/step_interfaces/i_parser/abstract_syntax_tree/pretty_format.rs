@@ -179,7 +179,7 @@ impl PrettyPrint for GlobalKind {
 impl PrettyPrint for TraitDecl {
     fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
         let indent_str = indent(tab);
-        let methods = self.methods
+        let methods = self.methodes
             .iter()
             .map(|sig| format!("{}fn {};", indent_str, sig.to_string()))
             .join("\n");
@@ -227,7 +227,7 @@ impl PrettyPrint for ExtFnDecl {
 
 impl PrettyPrint for TraitImpl {
     fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let methods = self.methods
+        let methods = self.methodes
             .iter()
             .map(|fn_decl| fn_decl.to_pretty(tab + 1, true))
             .join("\n\n");
@@ -256,7 +256,7 @@ impl PrettyPrint for ClassDecl {
                 .unwrap_or_default();
             format!("{}{} {}: {}{}", indent_str, access, f.name.0, f.ty.to_string(), default)
         }).join("\n");
-        let methods = self.methods.iter()
+        let methods = self.methodes.iter()
             .map(|sig| format!("{}fn {};", indent_str, sig.node.to_string()))
             .join("\n");
 

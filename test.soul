@@ -11,12 +11,7 @@
 // 	add(this, O other) R
 // }
 
-// struct Foo<T> { 
-// 	str name
-// 	f32 float = 0.2
-// 	int foo {Get; set;} = 1
-// 	T generic
-// }
+
 
 // sum<T>(T a, T b) T {
 // 	return a + b
@@ -30,6 +25,18 @@
 // 	Foo<T> foo
 // }
 
+trait Add<O, R = O> {
+	add(this, O other) R
+}
+
+typeEnum SystemNumber typeof[int, uint] 
+
+struct Foo<T: SystemNumber + Add + typeof[int, uint]> { 
+	str name
+	f32 float = 0.2
+	int foo {Get; set;} = 1
+	T generic
+}
 
 int sum(this, int a) int {
 	return this + a

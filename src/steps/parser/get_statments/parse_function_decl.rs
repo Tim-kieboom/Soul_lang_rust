@@ -12,7 +12,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spa
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{ExtFnDecl, FnDeclKind, FunctionSignature, Parameter, SoulThis};
 use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
 
-pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDeclKind>> {
+pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDeclKind>> {
     let begin_i = stream.current_index();
     
     let modifier = Modifier::from_str(&stream.current_text());
@@ -23,7 +23,8 @@ pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder
         }
     }
 
-    let signature = get_function_signature(stream, scopes)?;
+    let span_calle = body_calle.map(|cal| Spanned::new(cal, stream.current_span()));
+    let signature = get_function_signature(span_calle, stream, scopes)?;
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
@@ -40,7 +41,25 @@ pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder
     }
 }
 
-fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignature> {
+pub fn get_bodyless_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FunctionSignature>>  {
+        let begin_i = stream.current_index();
+    
+    let modifier = Modifier::from_str(&stream.current_text());
+    if modifier != Modifier::Default {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    let span_calle = body_calle.map(|cal| Spanned::new(cal, stream.current_span()));
+    let signature = get_function_signature(span_calle, stream, scopes)?; 
+    
+    let span = stream.current_span().combine(&stream[begin_i].span);
+    Ok(Spanned::new(signature, span))
+}
+
+fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignature> {
     fn pass_err(err: SoulError, func_name: &str, stream: &TokenStream) -> SoulError {
         pass_soul_error(
             err.get_last_kind(), 
@@ -52,6 +71,10 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     let begin_i = stream.current_index();
     
     let mut calle = if let Some(result) = SoulType::try_from_stream(stream, scopes) {
+        if calle_body.is_some() {
+            return Err(new_soul_error(SoulErrorKind::InvalidInContext, calle_body.as_ref().unwrap().span, "can not add extention type to function when in type block (e.g. in block/scope of 'class Foo{}' '<type> func()' not allowed because func is already automaticly 'Foo func()' )"))
+        }
+
         let ty = result?;
         
         if stream.next().is_none() {
@@ -61,7 +84,7 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
         Some(Spanned::new(SoulThis{ty, this: None}, stream.current_span()))
     }
     else {
-        None
+        calle_body.map(|this| Spanned::new(this.node.clone(), this.span))
     }; 
 
     let func_name_index = stream.current_index();

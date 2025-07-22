@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 
 use crate::soul_names::{NamesInternalType, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
+use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeVisibility, TypeScopeStack};
@@ -69,7 +70,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
                 return Err(err_out_of_bounds(stream));
             }
 
-            let ty = TypeKind::TypeEnum(Ident(stream.current_text().clone()));
+            let ty = TypeKind::TypeEnum(Ident(stream.current_text().clone()), vec![]);
             types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {

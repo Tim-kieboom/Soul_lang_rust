@@ -36,7 +36,6 @@ pub enum TypeKind {
 
     Struct(Ident),
     Class(Ident),
-    Interface(Ident),
     Trait(Ident),
 
     // C-style Enums
@@ -44,7 +43,7 @@ pub enum TypeKind {
     // Rust-style Enums
     Union(Ident),
 
-    TypeEnum(Ident),
+    TypeEnum(Ident, Vec<SoulType>),
 
     Generic(Ident),
 }
@@ -98,12 +97,59 @@ impl TypeKind {
             TypeKind::Function(function_signature) => function_signature.name.0.clone(),
             TypeKind::Struct(ident) => ident.0.clone(),
             TypeKind::Class(ident) => ident.0.clone(),
-            TypeKind::Interface(ident) => ident.0.clone(),
             TypeKind::Trait(ident) => ident.0.clone(),
             TypeKind::Enum(ident) => ident.0.clone(),
             TypeKind::Union(ident) => ident.0.clone(),
-            TypeKind::TypeEnum(ident) => ident.0.clone(),
+            TypeKind::TypeEnum(ident, ..) => ident.0.clone(),
             TypeKind::Generic(ident) => ident.0.clone(),
+        }
+    }
+
+    pub fn get_variant(&self) -> &'static str {
+        match self {
+            TypeKind::None => "none",
+            TypeKind::UntypedInt => "untypedInt",
+            TypeKind::SystemInt => "int",
+            TypeKind::Int(type_size) => match type_size {
+                TypeSize::Bit8 => "i8",
+                TypeSize::Bit16 => "i16",
+                TypeSize::Bit32 => "i32",
+                TypeSize::Bit64 => "i64",
+            },
+            TypeKind::SystemUint => "uint",
+            TypeKind::UntypedUint => "untypedUint",
+            TypeKind::Uint(type_size) => match type_size {
+                TypeSize::Bit8 => "u8",
+                TypeSize::Bit16 => "u16",
+                TypeSize::Bit32 => "u32",
+                TypeSize::Bit64 => "u64",
+            },
+            TypeKind::UntypedFloat => "untypedFloat",
+            TypeKind::Float(type_size) => match type_size {
+                TypeSize::Bit8 => "f8",
+                TypeSize::Bit16 => "f16",
+                TypeSize::Bit32 => "f32",
+                TypeSize::Bit64 => "f64",
+            },
+            TypeKind::Char(type_size) => match type_size {
+                TypeSize::Bit8 => "char",
+                TypeSize::Bit16 => "char16",
+                TypeSize::Bit32 => "char32",
+                TypeSize::Bit64 => "char64",
+            },
+            TypeKind::Bool => "bool",
+            TypeKind::Str => "str",
+            TypeKind::Custom(..) => "Custom",
+            TypeKind::Tuple(..) => "Tuple",
+            TypeKind::NamedTuple(..) => "NamedTuple",
+            TypeKind::Function(..) => "Function",
+            TypeKind::Struct(..) => "struct",
+            TypeKind::Class(..) => "class",
+            TypeKind::Trait(..) => "trait",
+            TypeKind::Enum(..) => "enum",
+            TypeKind::Union(..) => "union",
+            TypeKind::TypeEnum(..) => "typeEnum",
+            TypeKind::Generic(..) => "generic",
         }
     }
 }

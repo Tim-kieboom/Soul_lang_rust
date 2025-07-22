@@ -163,7 +163,9 @@ pub enum ElseKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TraitDecl {
     pub name: Ident,
-    pub methods: Vec<FunctionSignature>,
+    pub generics: Vec<GenericParam>,
+    pub methodes: Vec<FunctionSignature>,
+    pub implements: Vec<TraitDecl>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -188,7 +190,7 @@ pub struct TypeEnumDecl {
 pub struct TraitImpl {
     pub trait_name: Ident,
     pub for_type: SoulType,
-    pub methods: Vec<FnDecl>,
+    pub methodes: Vec<FnDecl>,
 }
 
 pub type VariableRef = NodeRef<VariableDecl>;
@@ -256,7 +258,13 @@ impl FnDeclKind {
             FnDeclKind::ExtFn(ext_fn_decl) => Statment::new(StmtKind::ExtFnDecl(ext_fn_decl), span),
         }
     } 
-    
+    pub fn consume_signature(self) -> FunctionSignature {
+        match self {
+            FnDeclKind::Fn(this) => this.signature,
+            FnDeclKind::ExtFn(this) => this.signature,
+        }
+    }
+
     pub fn get_signature(&self) -> &FunctionSignature {
         match self {
             FnDeclKind::Fn(this) => &this.signature,
@@ -357,7 +365,7 @@ pub struct ClassDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
-    pub methods: Vec<Spanned<FunctionSignature>>,
+    pub methodes: Vec<Spanned<FunctionSignature>>,
     pub implements: Vec<TraitDecl>,
 }
 
