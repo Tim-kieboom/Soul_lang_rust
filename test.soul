@@ -25,18 +25,26 @@
 // 	Foo<T> foo
 // }
 
+
 trait Add<O, R = O> {
 	add(this, O other) R
 }
 
 typeEnum SystemNumber typeof[int, uint] 
 
-struct Foo<T: SystemNumber + Add + typeof[int, uint]> { 
+struct Foo<T> { 
 	str name
 	f32 float = 0.2
 	int foo {Get; set;} = 1
 	T generic
 }
+
+// struct Far<T>
+// where 
+// 	T: SystemNumber + Add + typeof[int, uint]
+// {
+// 	T foo
+// }
 
 int sum(this, int a) int {
 	return this + a

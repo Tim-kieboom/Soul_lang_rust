@@ -9,7 +9,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::so
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{AnyRef, Modifier, TypeWrapper};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::FnDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{ExtFnDecl, FnDeclKind, FunctionSignature, Parameter, SoulThis};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{ExtFnDecl, FnDeclKind, FunctionSignatureRef, InnerFunctionSignature, Parameter, SoulThis};
 use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
 
 pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDeclKind>> {
@@ -29,11 +29,11 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
         return Err(err_out_of_bounds(stream));
     }
 
-    let body = get_block(ScopeVisibility::All, stream, scopes, signature.calle.clone(), signature.params.clone())?;
+    let body = get_block(ScopeVisibility::All, stream, scopes, signature.borrow().calle.clone(), signature.borrow().params.clone())?;
 
     
     let span = body.span.combine(&stream[begin_i].span);
-    if signature.calle.is_some() {
+    if signature.borrow().calle.is_some() {
         Ok(Spanned::new(FnDeclKind::ExtFn(ExtFnDecl{signature, body: body.node, modifier}), span))
     }
     else {
@@ -41,7 +41,7 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
     }
 }
 
-pub fn get_bodyless_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FunctionSignature>>  {
+pub fn get_bodyless_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FunctionSignatureRef>>  {
         let begin_i = stream.current_index();
     
     let modifier = Modifier::from_str(&stream.current_text());
@@ -59,7 +59,7 @@ pub fn get_bodyless_function_decl(body_calle: Option<&SoulThis>, stream: &mut To
     Ok(Spanned::new(signature, span))
 }
 
-fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignature> {
+fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignatureRef> {
     fn pass_err(err: SoulError, func_name: &str, stream: &TokenStream) -> SoulError {
         pass_soul_error(
             err.get_last_kind(), 
@@ -100,6 +100,10 @@ fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut T
     let generics = get_generics_decl(stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
 
+    if !generics.implements.is_empty() {
+        return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "inherating (e.g. 'typeof <trait>') in not allowed in function"))
+    }
+
     let params = get_parameters(&mut calle, stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
         
@@ -122,7 +126,7 @@ fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut T
     
 
     let span = stream[begin_i].span.combine(&stream.current_span());
-    let signature = Spanned::new(FunctionSignature{name, calle, generics, params, return_type }, span);
+    let signature = Spanned::new(FunctionSignatureRef::new(InnerFunctionSignature{name, calle, generics: generics.generics, params, return_type }), span);
     check_function_with_scope(scopes, &signature)?;
     
     Ok(signature.node)
@@ -259,9 +263,9 @@ fn convert_this(arg_position: usize, calle: &mut Option<Spanned<SoulThis>>, stre
     }
 }
 
-fn check_function_with_scope<'a>(scopes: &ScopeBuilder, signature: &Spanned<FunctionSignature>) -> Result<()> {
+fn check_function_with_scope<'a>(scopes: &ScopeBuilder, signature: &Spanned<FunctionSignatureRef>) -> Result<()> {
     
-    let kinds = scopes.flat_lookup(&signature.node.name.0);
+    let kinds = scopes.flat_lookup(&signature.node.borrow().name.0);
     if kinds.is_none() {
         return Ok(());
     }
@@ -276,14 +280,14 @@ fn check_function_with_scope<'a>(scopes: &ScopeBuilder, signature: &Spanned<Func
     Ok(())
 }
 
-fn check_function(signature: &Spanned<FunctionSignature>, funcs: &OverloadedFunctions) -> Result<()> {
+fn check_function(signature: &Spanned<FunctionSignatureRef>, funcs: &OverloadedFunctions) -> Result<()> {
     if funcs.borrow().iter().any(|fnc| fnc.get_signature() == &signature.node) {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             signature.span, 
             format!(
                 "function: '{}', with: '{}' already exists", 
-                signature.node.name.0, 
+                signature.node.borrow().name.0, 
                 signature.node.to_string(),
             )
         ))
@@ -294,18 +298,18 @@ fn check_function(signature: &Spanned<FunctionSignature>, funcs: &OverloadedFunc
 
     let same_calle_fn = ref_guard
         .iter()
-        .filter(|fnc| fnc.get_signature().calle == signature.node.calle)
+        .filter(|fnc| fnc.get_signature().borrow().calle == signature.node.borrow().calle)
         .last();
 
     if let Some(fnc) = same_calle_fn {
 
-        if fnc.get_signature().return_type != signature.node.return_type {
+        if fnc.get_signature().borrow().return_type != signature.node.borrow().return_type {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
                 signature.span, 
                 format!(
                     "prev function of: '{}', being: '{}', used an other return type", 
-                    signature.node.name.0,
+                    signature.node.borrow().name.0,
                     signature.node.to_string(),
                 )
             ))

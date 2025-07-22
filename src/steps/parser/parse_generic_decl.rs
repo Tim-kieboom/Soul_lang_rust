@@ -1,18 +1,23 @@
-use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{TypeConstraint, TypeEnumDecl};
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{TraitDeclRef, TypeConstraint};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::statment::GenericParam, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
-pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<GenericParam>> {
-    let mut generics = vec![];
+pub struct GenericDecl {
+    pub generics: Vec<GenericParam>,
+    pub implements: Vec<TraitDeclRef>,
+}
+
+pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<GenericDecl> {
+    let mut generics_decl = GenericDecl{generics: vec![], implements: vec![]};
 
     if stream.current_text() != "<" {
-        return Ok(generics);
+        return Ok(generics_decl);
     }
 
     if stream.next().is_none() {
@@ -60,7 +65,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             None
         };
 
-        generics.push(GenericParam{name: name.clone(), constraint, default});
+        generics_decl.generics.push(GenericParam{name: name.clone(), constraint, default});
         
         scopes.insert_type(name.0.clone(), TypeKind::Generic(name))
             .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
@@ -86,7 +91,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
         return Err(err_out_of_bounds(stream));
     }
 
-    Ok(generics)
+    Ok(generics_decl)
 }
 
 fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {

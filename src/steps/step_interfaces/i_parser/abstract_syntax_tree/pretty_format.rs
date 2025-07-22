@@ -1,7 +1,9 @@
+use std::sync::RwLockReadGuard;
+
 use itertools::Itertools;
 
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FieldAccess, FnDecl, IfDecl, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
+    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FieldAccess, FnDecl, IfDecl, InnerTraitDecl, StmtKind, StructDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
 }, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
@@ -44,8 +46,8 @@ impl PrettyPrint for Vec<ScopeKind> {
                 ScopeKind::Variable(node_ref) => format!("var({})", node_ref.borrow().name.0),
                 ScopeKind::Struct(struct_decl) => format!("struct({})", struct_decl.name.0),
                 ScopeKind::Class(class_decl) => format!("class({})", class_decl.name.0),
-                ScopeKind::Trait(trait_decl) => format!("trait({})", trait_decl.name.0),
-                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.get_signature().name.0.as_str()).unwrap_or("") ),
+                ScopeKind::Trait(trait_decl) => format!("trait({})", trait_decl.borrow().name.0),
+                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.get_signature().borrow().name.0.clone()).unwrap_or("".into()) ),
                 ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.name.0),
                 ScopeKind::Union(union_decl) => format!("union({})", union_decl.name.0),
                 ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.name.0),
@@ -82,7 +84,7 @@ impl PrettyPrint for StmtKind {
             StmtKind::ExtFnDecl(ext_fn) => ext_fn.to_pretty(tab, is_last),
             StmtKind::StructDecl(struc) => struc.to_pretty(tab, is_last),
             StmtKind::ClassDecl(class) => class.to_pretty(tab, is_last),
-            StmtKind::TraitDecl(trait_decl) => trait_decl.to_pretty(tab, is_last),
+            StmtKind::TraitDecl(trait_decl) => trait_decl.borrow().to_pretty(tab, is_last),
             StmtKind::EnumDecl(enum_decl) => enum_decl.to_pretty(tab, is_last),
             StmtKind::UnionDecl(union_decl) => union_decl.to_pretty(tab, is_last),
             StmtKind::TypeEnumDecl(type_enum) => type_enum.to_pretty(tab, is_last),
@@ -163,7 +165,7 @@ impl PrettyPrint for GlobalKind {
         let content = match self {
             GlobalKind::ClassDecl(class) => class.to_pretty(tab, true),
             GlobalKind::StructDecl(struc) => struc.to_pretty(tab, true),
-            GlobalKind::TraitDecl(trait_decl) => trait_decl.to_pretty(tab, true),
+            GlobalKind::TraitDecl(trait_decl) => trait_decl.borrow().to_pretty(tab, true),
             GlobalKind::TraitImpl(impl_block) => impl_block.to_pretty(tab, true),
             GlobalKind::FuncDecl(fn_decl) => fn_decl.to_pretty(tab, true),
             GlobalKind::ExtFuncDecl(fn_decl) => fn_decl.to_pretty(tab, true),
@@ -176,7 +178,7 @@ impl PrettyPrint for GlobalKind {
     }
 }
 
-impl PrettyPrint for TraitDecl {
+impl PrettyPrint for RwLockReadGuard<'_, InnerTraitDecl> {
     fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
         let indent_str = indent(tab);
         let methods = self.methodes
@@ -361,6 +363,38 @@ fn tree_prefix(indent: usize, is_last: bool) -> String {
 
     prefix
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

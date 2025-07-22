@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, statment::{FunctionSignature, VariableDecl}}};
+use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, statment::{FunctionSignatureRef, VariableDecl}}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeSize {
@@ -32,7 +32,7 @@ pub enum TypeKind {
     Custom(Ident),
     Tuple(Vec<SoulType>),
     NamedTuple(HashMap<Ident, SoulType>),
-    Function(Box<FunctionSignature>),
+    Function(Box<FunctionSignatureRef>),
 
     Struct(Ident),
     Class(Ident),
@@ -94,7 +94,7 @@ impl TypeKind {
             TypeKind::Custom(ident) => ident.0.clone(),
             TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string()).join(",")),
             TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string())).join(",")),
-            TypeKind::Function(function_signature) => function_signature.name.0.clone(),
+            TypeKind::Function(function_signature) => function_signature.borrow().name.0.clone(),
             TypeKind::Struct(ident) => ident.0.clone(),
             TypeKind::Class(ident) => ident.0.clone(),
             TypeKind::Trait(ident) => ident.0.clone(),

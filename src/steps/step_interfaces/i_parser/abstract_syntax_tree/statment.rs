@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::{errors::soul_error::{SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
@@ -15,7 +15,7 @@ pub enum StmtKind {
 
     StructDecl(StructDecl),
     ClassDecl(ClassDecl),
-    TraitDecl(TraitDecl),
+    TraitDecl(TraitDeclRef),
 
     EnumDecl(EnumDecl),
     UnionDecl(UnionDecl),
@@ -52,7 +52,7 @@ impl_in_stmt_kind!(
     ExtFnDecl => ExtFnDecl, 
     StructDecl => StructDecl, 
     ClassDecl => ClassDecl, 
-    TraitDecl => TraitDecl, 
+    TraitDecl => TraitDeclRef, 
     EnumDecl => EnumDecl, 
     UnionDecl => UnionDecl, 
     TypeEnumDecl => TypeEnumDecl, 
@@ -160,12 +160,14 @@ pub enum ElseKind {
     Else(Block)
 }
 
+pub type TraitDeclRef = NodeRef<InnerTraitDecl>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct TraitDecl {
+pub struct InnerTraitDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
-    pub methodes: Vec<FunctionSignature>,
-    pub implements: Vec<TraitDecl>,
+    pub methodes: Vec<FunctionSignatureRef>,
+    pub implements: Vec<TraitDeclRef>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -195,28 +197,36 @@ pub struct TraitImpl {
 
 pub type VariableRef = NodeRef<VariableDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct NodeRef<T> {
-    inner: Rc<RefCell<T>>
+#[derive(Debug, Clone)]
+pub struct NodeRef<T> 
+{
+    inner: Arc<RwLock<T>>
 }
 
-impl<T> NodeRef<T> {
+impl<T> NodeRef<T> 
+{
     pub fn new(var: T) -> Self {
-        Self { inner: Rc::new(RefCell::new(var)) }
+        Self { inner: Arc::new(RwLock::new(var)) }
     }
 
-    pub fn borrow(&self) -> Ref<T> {
-        self.inner.borrow()
+    pub fn borrow(&self) -> RwLockReadGuard<T> {
+        self.inner.read().unwrap()
     } 
 
-    pub fn borrow_mut(&mut self) -> RefMut<T> {
-        self.inner.borrow_mut()
+    pub fn borrow_mut(&self) -> RwLockWriteGuard<T> {
+        self.inner.write().unwrap()
     } 
 
     pub fn consume(self) -> T {
-        unsafe { Rc::try_unwrap(self.inner)
+        unsafe { Arc::try_unwrap(self.inner)
             .inspect_err(|_| panic!("internal error consumed nodeRef without this ref being the only owner")).unwrap_unchecked()
-            .into_inner() }
+            .into_inner().unwrap() }
+    }
+}
+
+impl<T> PartialEq for NodeRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
     }
 }
 
@@ -231,7 +241,7 @@ pub struct VariableDecl {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnDecl {
-    pub signature: FunctionSignature,
+    pub signature: FunctionSignatureRef,
     pub body: Block,
     ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
     pub modifier: Modifier, 
@@ -239,7 +249,7 @@ pub struct FnDecl {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExtFnDecl {
-    pub signature: FunctionSignature,
+    pub signature: FunctionSignatureRef,
     pub body: Block,
     ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
     pub modifier: Modifier, 
@@ -258,14 +268,14 @@ impl FnDeclKind {
             FnDeclKind::ExtFn(ext_fn_decl) => Statment::new(StmtKind::ExtFnDecl(ext_fn_decl), span),
         }
     } 
-    pub fn consume_signature(self) -> FunctionSignature {
+    pub fn consume_signature(self) -> FunctionSignatureRef {
         match self {
             FnDeclKind::Fn(this) => this.signature,
             FnDeclKind::ExtFn(this) => this.signature,
         }
     }
 
-    pub fn get_signature(&self) -> &FunctionSignature {
+    pub fn get_signature(&self) -> &FunctionSignatureRef {
         match self {
             FnDeclKind::Fn(this) => &this.signature,
             FnDeclKind::ExtFn(this) => &this.signature,
@@ -287,8 +297,10 @@ impl FnDeclKind {
     }
 }
 
+pub type FunctionSignatureRef = NodeRef<InnerFunctionSignature>; 
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunctionSignature {
+pub struct InnerFunctionSignature {
     pub name: Ident,
     /// Some() = an extension method
     pub calle: Option<Spanned<SoulThis>>, 
@@ -312,25 +324,26 @@ impl SoulThis {
     }
 }
 
-impl FunctionSignature {
+impl FunctionSignatureRef {
     pub fn to_string(&self) -> String {
-        if self.generics.is_empty() {
+        let this = self.borrow();
+        if this.generics.is_empty() {
             format!(
                 "{}{}({}){}", 
-                self.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
-                self.name.0, 
-                self.params.iter().map(|par| par.node.to_string()).join(","),
-                self.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+                this.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
+                this.name.0, 
+                this.params.iter().map(|par| par.node.to_string()).join(","),
+                this.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
             )
         }
         else {
             format!(
                 "{}{}<{}>({}){}", 
-                self.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
-                self.name.0, 
-                self.generics.iter().map(|gene| gene.to_string()).join(","), 
-                self.params.iter().map(|par| par.node.to_string()).join(","),
-                self.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+                this.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
+                this.name.0, 
+                this.generics.iter().map(|gene| gene.to_string()).join(","), 
+                this.params.iter().map(|par| par.node.to_string()).join(","),
+                this.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
             )
         }
     }
@@ -357,7 +370,7 @@ pub struct StructDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
-    pub implements: Vec<TraitDecl>,
+    pub implements: Vec<TraitDeclRef>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -365,8 +378,8 @@ pub struct ClassDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
-    pub methodes: Vec<Spanned<FunctionSignature>>,
-    pub implements: Vec<TraitDecl>,
+    pub methodes: Vec<Spanned<FunctionSignatureRef>>,
+    pub implements: Vec<TraitDeclRef>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

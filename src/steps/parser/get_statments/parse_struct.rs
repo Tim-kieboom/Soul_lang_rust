@@ -25,7 +25,7 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
 
     scopes.push(ScopeVisibility::All);
 
-    let generics = get_generics_decl(stream, scopes)
+    let generics_decl = get_generics_decl(stream, scopes)
         .map_err(|child| pass_soul_error(SoulErrorKind::InvalidInContext, stream[struct_i].span.combine(&stream.current_span()), "while trying to get struct", child))?;
 
     if stream.current_text() != "{" {
@@ -75,9 +75,9 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         Spanned::new(
             StructDecl{
                 name: Ident(stream[name_i].text.clone()), 
-                generics, 
+                generics: generics_decl.generics, 
                 fields, 
-                implements: vec![]
+                implements: generics_decl.implements
             },
             stream.current_span().combine(&stream[struct_i].span)
         ),

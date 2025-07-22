@@ -1,6 +1,6 @@
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::ExtFnDecl;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::{Block, ClassDecl, EnumDecl, FnDecl, NodeRef, Statment, StmtKind, StructDecl, TraitDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableRef}};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::{Block, ClassDecl, EnumDecl, FnDecl, NodeRef, Statment, StmtKind, StructDecl, TraitDeclRef, TraitImpl, TypeEnumDecl, UnionDecl, VariableRef}};
 
 
 #[derive(Debug, Clone)]
@@ -21,7 +21,7 @@ pub enum GlobalKind {
     ClassDecl(ClassDecl),
     StructDecl(StructDecl),
     
-    TraitDecl(TraitDecl),
+    TraitDecl(TraitDeclRef),
     TraitImpl(TraitImpl),
     
     FuncDecl(FnDecl),

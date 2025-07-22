@@ -6,10 +6,10 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Span
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{SoulThis, TraitDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{InnerTraitDecl, SoulThis, TraitDeclRef};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
-pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<TraitDecl>> {
+pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<TraitDeclRef>> {
     
     let struct_i = stream.current_index();
     if stream.next().is_none() {
@@ -26,7 +26,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 
     scopes.push(ScopeVisibility::All);
 
-    let generics = get_generics_decl(stream, scopes)
+    let generics_decl = get_generics_decl(stream, scopes)
         .map_err(|child| pass_soul_error(SoulErrorKind::InvalidInContext, stream[struct_i].span.combine(&stream.current_span()), "while trying to get struct", child))?;
 
     if stream.current_text() != "{" {
@@ -87,12 +87,12 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 
     return Ok(
         Spanned::new(
-            TraitDecl{
+            TraitDeclRef::new(InnerTraitDecl{
                 name: Ident(stream[name_i].text.clone()), 
-                generics, 
+                generics: generics_decl.generics, 
                 methodes, 
-                implements: vec![]
-            },
+                implements: generics_decl.implements
+            }),
             stream.current_span().combine(&stream[struct_i].span)
         ),
     )

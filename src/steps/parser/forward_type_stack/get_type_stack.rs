@@ -2,7 +2,6 @@ use once_cell::sync::Lazy;
 
 use crate::soul_names::{NamesInternalType, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
-use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeVisibility, TypeScopeStack};

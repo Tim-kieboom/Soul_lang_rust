@@ -224,7 +224,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
         if peek2_token.text == "(" {
             let func = get_function_decl(None, stream, scopes)?;
-            scopes.add_function(func.node.clone());
+            scopes.add_function(&func.node);
             return Ok(Some(func.node.consume_to_statment(func.span)));
         }
 
@@ -307,7 +307,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                 FunctionKind::FunctionDecl => {
                     stream.go_to_index(begin_i);
                     let func = get_function_decl(None, stream, scopes)?;
-                    scopes.add_function(func.node.clone());
+                    scopes.add_function(&func.node);
                     return Ok(Some(func.node.consume_to_statment(func.span)));
                 },
             }

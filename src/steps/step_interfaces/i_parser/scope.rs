@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, statment::{ClassDecl, EnumDecl, FnDecl, FnDeclKind, NodeRef, SoulThis, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableDecl, VariableRef}}, utils::push::Push};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, statment::{ClassDecl, EnumDecl, FnDeclKind, NodeRef, SoulThis, StructDecl, TraitDeclRef, TypeEnumDecl, UnionDecl, VariableDecl, VariableRef}}, utils::push::Push};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -101,25 +101,25 @@ impl ScopeBuilder {
         self.scopes.lookup(name)
     }
 
-    pub fn add_function(&mut self, fn_decl: FnDeclKind) {
+    pub fn add_function(&mut self, fn_decl: &FnDeclKind) {
         
-        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().name.0) {
+        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().borrow().name.0) {
             
             let possible_funcs = kinds.iter_mut().find(|kind| matches!(kind, ScopeKind::Functions(..)));
             if let Some(ScopeKind::Functions(funcs)) = possible_funcs {
-                funcs.borrow_mut().push(fn_decl);
+                funcs.borrow_mut().push(fn_decl.clone());
             }
             else {
                 self.scopes.insert(
-                    fn_decl.get_signature().name.0.clone(), 
-                    vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl]))]
+                    fn_decl.get_signature().borrow().name.0.clone(), 
+                    vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()]))]
                 );
             }
         }
         else {
             self.scopes.insert(
-                fn_decl.get_signature().name.0.clone(), 
-                vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl]))]
+                fn_decl.get_signature().borrow().name.0.clone(), 
+                vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()]))]
             );
         }
     } 
@@ -350,7 +350,7 @@ pub enum ScopeKind {
     Struct(StructDecl),
     Class(ClassDecl),
 
-    Trait(TraitDecl),
+    Trait(TraitDeclRef),
 
     Functions(OverloadedFunctions),
 
