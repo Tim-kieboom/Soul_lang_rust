@@ -49,77 +49,67 @@ fn get_type_stack_should_work() {
     let should_be = vec![
         InnerScope {
             parent_index: None,
-            children: vec![
-                1,
-            ],
+            children: vec![1, 2, 3, 4],
             self_index: 0,
             symbols: HashMap::from([
                 ("str".into(), TypeKind::Str),
-                ("i8".into(), TypeKind::Int(TypeSize::Bit8,)),
+                ("i8".into(), TypeKind::Int(TypeSize::Bit8)),
                 ("none".into(), TypeKind::None),
                 ("bool".into(), TypeKind::Bool),
                 ("int".into(), TypeKind::SystemInt),
                 ("uint".into(), TypeKind::SystemUint),
-                ("i16".into(), TypeKind::Int(TypeSize::Bit16,)),
-                ("f16".into(), TypeKind::Float(TypeSize::Bit16,)),
+                ("i16".into(), TypeKind::Int(TypeSize::Bit16)),
+                ("f16".into(), TypeKind::Float(TypeSize::Bit16)),
                 ("untypedUint".into(), TypeKind::UntypedUint),
-                ("f8".into(), TypeKind::Float(TypeSize::Bit8,)),
-                ("i64".into(), TypeKind::Int(TypeSize::Bit64,)),
+                ("f8".into(), TypeKind::Float(TypeSize::Bit8)),
+                ("i64".into(), TypeKind::Int(TypeSize::Bit64)),
                 ("untypedInt".into(), TypeKind::UntypedInt),
-                ("u8".into(), TypeKind::Uint(TypeSize::Bit8,)),
-                ("f64".into(), TypeKind::Float(TypeSize::Bit64,)),
-                ("char".into(), TypeKind::Char(TypeSize::Bit8,)),
-                ("u16".into(), TypeKind::Uint(TypeSize::Bit16,)),
-                ("i32".into(), TypeKind::Int(TypeSize::Bit32,)),
+                ("u8".into(), TypeKind::Uint(TypeSize::Bit8)),
+                ("f64".into(), TypeKind::Float(TypeSize::Bit64)),
+                ("char".into(), TypeKind::Char(TypeSize::Bit8)),
+                ("u16".into(), TypeKind::Uint(TypeSize::Bit16)),
+                ("i32".into(), TypeKind::Int(TypeSize::Bit32)),
                 ("untypedFloat".into(), TypeKind::UntypedFloat),
-                ("u64".into(), TypeKind::Uint(TypeSize::Bit64,)),
-                ("u32".into(), TypeKind::Uint(TypeSize::Bit32,)),
-                ("f32".into(), TypeKind::Float(TypeSize::Bit32,)),
+                ("u64".into(), TypeKind::Uint(TypeSize::Bit64)),
+                ("u32".into(), TypeKind::Uint(TypeSize::Bit32)),
+                ("f32".into(), TypeKind::Float(TypeSize::Bit32)),
                 ("Strable".into(), TypeKind::Trait(Ident("Strable".into()))),
+                ("StringData".into(), TypeKind::Struct(Ident("StringData".into()))),
+                ("String".into(), TypeKind::Class(Ident("String".into()))),
+                ("stringGlobal".into(), TypeKind::Custom(Ident("stringGlobal".into()))),
             ]),
             visibility_mode: ScopeVisibility::GlobalOnly,
+        },
+        InnerScope {
+            parent_index: Some(0),
+            children: vec![],
+            self_index: 1,
+            symbols: HashMap::from([]),
+            visibility_mode: ScopeVisibility::All,
         },
         InnerScope {
             parent_index: Some(
                 0,
             ),
-            children: vec![
-                2,
-            ],
-            self_index: 1,
-            symbols: HashMap::from([("StringData".into(), TypeKind::Struct(Ident("StringData".into()),)),]),
-            visibility_mode: ScopeVisibility::All,
-        },
-        InnerScope {
-            parent_index: Some(
-                1,
-            ),
-            children: vec![
-                3,
-            ],
+            children: vec![],
             self_index: 2,
-            symbols: HashMap::from([("String".into(), TypeKind::Class(Ident("String".into()),)),]),
+            symbols: HashMap::from([]),
             visibility_mode: ScopeVisibility::All,
         },
         InnerScope {
             parent_index: Some(
-                2,
+                0,
             ),
-            children: vec![
-                4,
-            ],
+            children: vec![],
             self_index: 3,
-            symbols: HashMap::from([("stringGlobal".into(), TypeKind::Custom(Ident("stringGlobal".into())))]),
+            symbols: HashMap::from([]),
             visibility_mode: ScopeVisibility::All,
         },
         InnerScope {
             parent_index: Some(
-                3,
+                0,
             ),
-            children: vec![
-                5,
-                7,
-            ],
+            children: vec![5,7],
             self_index: 4,
             symbols: HashMap::from([("string1".into(), TypeKind::Custom(Ident("string1".into())))]),
             visibility_mode: ScopeVisibility::All,
@@ -128,9 +118,7 @@ fn get_type_stack_should_work() {
             parent_index: Some(
                 4,
             ),
-            children: vec![
-                6,
-            ],
+            children: vec![6],
             self_index: 5,
             symbols: HashMap::from([("Foo".into(), TypeKind::Struct(Ident("Foo".into())))]),
             visibility_mode: ScopeVisibility::All,
@@ -148,10 +136,7 @@ fn get_type_stack_should_work() {
             parent_index: Some(
                 4,
             ),
-            children: vec![
-                8,
-                9,
-            ],
+            children: vec![8,9],
             self_index: 7,
             symbols: HashMap::from([("string4".into(), TypeKind::Custom(Ident("string4".into())))]),
             visibility_mode: ScopeVisibility::All,
@@ -175,7 +160,6 @@ fn get_type_stack_should_work() {
             visibility_mode: ScopeVisibility::All,
         },
     ];
-
     assert_eq_show_diff!(type_stack.scopes, should_be);
 }
 
