@@ -1,4 +1,4 @@
-use crate::soul_names::check_name;
+use crate::soul_names::{check_name_allow_types};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
@@ -20,7 +20,7 @@ pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
     }
 
     let func_name_index = stream.current_index();
-    check_name(stream.current_text())
+    check_name_allow_types(stream.current_text())
         .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
 
     let name = Ident(stream.current_text().clone());

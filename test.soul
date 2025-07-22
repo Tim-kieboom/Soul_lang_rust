@@ -30,18 +30,13 @@
 // 	Foo<T> foo
 // }
 
-struct Foo{}
-struct Foo{}
-struct Foo{}
-struct Foo{}
-struct Foo{}
 
 int sum(this, int a) int {
 	return this + a
 }
 
 str parse(this@, int a) int {
-	return 1	
+	return int(1)	
 }
 
 sum(int a, int b) int {
@@ -56,10 +51,10 @@ main() int {
 
 	for el in [1,2,3,4] {
 		Println(el)
-	}
+	} 
 
 	while 1 == 2 {
-		Println("unreachable")
+		Println("unreachable")		
 	}
 
 	if true {

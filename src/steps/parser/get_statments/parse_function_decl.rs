@@ -209,19 +209,24 @@ fn convert_this(arg_position: usize, calle: &mut Option<Spanned<SoulThis>>, stre
     }
 
     let any_ref = AnyRef::from_str(stream.current_text());
-    if any_ref != AnyRef::Invalid {
+    let ty = if any_ref != AnyRef::Invalid {
+        let mut ty = calle.as_ref().unwrap().node.ty.clone();
         match any_ref {
-            AnyRef::MutRef => calle.as_mut().unwrap().node.ty.wrapper.push(TypeWrapper::MutRef),
-            AnyRef::ConstRef => calle.as_mut().unwrap().node.ty.wrapper.push(TypeWrapper::ConstRef),
+            AnyRef::MutRef => ty.wrapper.push(TypeWrapper::MutRef),
+            AnyRef::ConstRef => ty.wrapper.push(TypeWrapper::ConstRef),
             AnyRef::Invalid => unreachable!(),
         }
         
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
         }
+        ty
     }
+    else {
+        calle.as_ref().unwrap().node.ty.clone()
+    };
 
-    calle.as_mut().unwrap().node.this = Some(calle.as_ref().unwrap().node.ty.clone());
+    calle.as_mut().unwrap().node.this = Some(ty);
 
     if stream.current_text() == "," || stream.current_text() == ")" {
         return Ok(());

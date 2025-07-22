@@ -20,6 +20,23 @@ static ILLIGAL_SYMBOOLS: Lazy<HashSet<char>> = Lazy::new(|| HashSet::from([
     '`', '~',
 ]));
 
+pub fn check_name_allow_types(name: &str) -> result::Result<(), String> {
+  
+    if name.starts_with("__") {
+        return Err(format!("name: '{}' can not begin wiht '__' ", name));
+    }
+
+    if let Some(illigal_name) = SOUL_NAMES.type_less_iligal_names.get(name) {
+        return Err(format!("name: '{}' is illigal", illigal_name));
+    }
+
+    if let Some(illigal_symbool) = name.chars().find(|ch| ILLIGAL_SYMBOOLS.contains(ch)) {
+        return Err(format!("name: '{}', has illigal symbool '{}'", name, illigal_symbool));
+    }
+
+    Ok(())
+}
+
 pub fn check_name(name: &str) -> result::Result<(), String> {
   
     if name.starts_with("__") {
@@ -52,6 +69,8 @@ pub struct SoulNames<'a> {
     pub operator_names: HashMap<NamesOperator, &'a str>,
     #[serde(borrow)]
     pub iligal_names: HashSet<&'a str>,
+    #[serde(borrow)]
+    pub type_less_iligal_names: HashSet<&'a str>,
     #[serde(borrow)]
     pub other_keywords_names: HashMap<NamesOtherKeyWords, &'a str>,
     #[serde(borrow)]
@@ -191,9 +210,10 @@ impl<'a> SoulNames<'a> {
 
         let mut iligal_names = HashSet::<&str>::new();
         iligal_names.insert(operator_names.get(&NamesOperator::Logarithm).expect("log not impl"));
-        iligal_names.extend(internal_types.iter().map(|(_, str)| *str));
         iligal_names.extend(type_modifiers.iter().map(|(_, str)| *str));
         iligal_names.extend(other_keywords_names.iter().map(|(_, str)| *str));
+        let type_less_iligal_names = iligal_names.clone();
+        iligal_names.extend(internal_types.iter().map(|(_, str)| *str));
 
         let mut parse_tokens: Vec<&str> = BASE_TOKENS.iter().copied().collect();
         parse_tokens.extend(operator_names.iter().filter(|(key, _)| key != &&NamesOperator::Logarithm).map(|(_, str)| *str));
@@ -214,6 +234,7 @@ impl<'a> SoulNames<'a> {
             operator_names,
             assign_symbools,
             other_keywords_names,
+            type_less_iligal_names,
         }
     }
 
