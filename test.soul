@@ -25,6 +25,12 @@
 // 	Foo<T> foo
 // }
 
+struct Far<T> impl Add 
+where 
+	T: SystemNumber + Add + typeof[int, uint] 
+{
+	T foo
+}
 
 trait Add<O, R = O> {
 	add(this, O other) R
@@ -38,13 +44,6 @@ struct Foo<T> {
 	int foo {Get; set;} = 1
 	T generic
 }
-
-// struct Far<T>
-// where 
-// 	T: SystemNumber + Add + typeof[int, uint]
-// {
-// 	T foo
-// }
 
 int sum(this, int a) int {
 	return this + a

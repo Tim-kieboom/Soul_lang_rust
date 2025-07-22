@@ -167,7 +167,7 @@ pub struct InnerTraitDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub methodes: Vec<FunctionSignatureRef>,
-    pub implements: Vec<TraitDeclRef>,
+    pub implements: Vec<Ident>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -370,7 +370,7 @@ pub struct StructDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
-    pub implements: Vec<TraitDeclRef>,
+    pub implements: Vec<Ident>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -379,7 +379,7 @@ pub struct ClassDecl {
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
     pub methodes: Vec<Spanned<FunctionSignatureRef>>,
-    pub implements: Vec<TraitDeclRef>,
+    pub implements: Vec<Ident>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

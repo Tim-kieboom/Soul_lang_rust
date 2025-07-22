@@ -192,6 +192,8 @@ impl<'a> SoulNames<'a> {
             (NamesOtherKeyWords::Typeof, "typeof"),
             (NamesOtherKeyWords::Type, "type"),
             (NamesOtherKeyWords::Trait, "trait"),
+            (NamesOtherKeyWords::Impl, "impl"),
+            (NamesOtherKeyWords::Where, "where"),
             
 
             (NamesOtherKeyWords::CopyData, "copy"),
@@ -283,6 +285,8 @@ pub enum NamesOtherKeyWords {
     Union,
     TypeEnum,    
     Trait,
+    Impl,
+    Where,
 
     SwitchCase,
     Typeof,

@@ -5,12 +5,12 @@ use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{TraitDeclRef, TypeConstraint};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{TypeConstraint};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::statment::GenericParam, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub struct GenericDecl {
     pub generics: Vec<GenericParam>,
-    pub implements: Vec<TraitDeclRef>,
+    pub implements: Vec<Ident>,
 }
 
 pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<GenericDecl> {
@@ -91,7 +91,140 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
         return Err(err_out_of_bounds(stream));
     }
 
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    add_impl(&mut generics_decl, stream, scopes)?;
+    add_where(&mut generics_decl, stream, scopes)?;
+
     Ok(generics_decl)
+}
+
+fn add_impl(generics_decl: &mut GenericDecl, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) { 
+        return Ok(());
+    }
+        
+    loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        scopes.lookup_type(stream.current_text())
+            .ok_or(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' is not allowed in impl only traits are allowed", stream.current_text())))?;
+        
+        generics_decl.implements.push(Ident(stream.current_text().clone()));
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        if stream.current_text() != "+" {
+            break;
+        }
+    }
+
+    if stream.current_text() != "\n" && stream.current_text() != "{" && stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Where) {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token: '{}' invalid end should be '{{' or endline of '{}' ", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Where))))
+    }
+
+    Ok(())
+}
+
+fn add_where(generics_decl: &mut GenericDecl, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+    
+    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Where) { 
+        return Ok(())
+    }
+
+    loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        let kind = scopes.lookup_type(stream.current_text())
+            .ok_or(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' is invalid should be generic (e.g. 'where T: trait,')", stream.current_text())))?;
+
+        let generic_name = match kind {
+            TypeKind::Generic(ident) => ident,
+            _ => return Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), format!("type: '{}' is not allowed in where should be generic (e.g. 'where T: trait,')", kind.get_variant()))),
+        };
+
+        let generic = generics_decl.generics.iter_mut().find(|gene| &gene.name == generic_name)
+            .ok_or(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' is invalid should be generic (e.g. 'where T: trait,')", stream.current_text())))?;
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() != ":" {
+
+        }
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        add_generic_type_contraints(&mut generic.constraint, stream, scopes)?;
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() != "," {
+            break;
+        }
+    }
+
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    if stream.current_text() != "{" {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' invalid should be '{{'", stream.current_text())))
+    }
+
+    Ok(())
 }
 
 fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
@@ -127,8 +260,15 @@ fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mu
             return Err(err_out_of_bounds(stream));
         }
     }
+    
+    if stream.current_text() == "\n" {
 
-    if stream.current_text() != ">" && stream.current_text() != "," {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    if stream.current_text() != ">" && stream.current_text() != "," && stream.current_text() != "{" {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' in not allowed in generic", stream.current_text())))
     }
 
