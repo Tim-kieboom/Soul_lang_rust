@@ -76,7 +76,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             }  
 
             let condition = get_expression(stream, scopes, &["{"])?;
-            let block = get_block(ScopeVisibility::All, stream, scopes, vec![])?;
+            let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
 
             let span = stream[while_i].span.combine(&stream.current_span());
             return Ok(Some(Statment::new(StmtKind::While(WhileDecl{condition, body: block.node}), span)))
@@ -107,7 +107,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
             let collection = get_expression(stream, scopes, &["{"])?;
 
-            let block = get_block(ScopeVisibility::All, stream, scopes, vec![el_parameter])?;
+            let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![el_parameter])?;
 
             let span = stream[for_i].span.combine(&stream.current_span());
             return Ok(Some(Statment::new(StmtKind::For(ForDecl{collection, element: Ident(stream[name_i].text.clone()), body: block.node}), span)))
@@ -119,7 +119,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             }  
 
             let condition = get_expression(stream, scopes, &["{"])?;
-            let block = get_block(ScopeVisibility::All, stream, scopes, vec![])?;
+            let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
 
             let span = stream[if_i].span.combine(&stream.current_span());
             return Ok(Some(Statment::new(StmtKind::If(IfDecl{condition, body: block.node, else_branchs: vec![]}), span)))
@@ -137,12 +137,12 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                 } 
 
                 let condition = get_expression(stream, scopes, &["{"])?;
-                let block = get_block(ScopeVisibility::All, stream, scopes, vec![])?;
+                let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
 
                 ElseKind::ElseIf(Box::new(IfDecl{body: block.node, condition, else_branchs: vec![]}))
             }
             else {
-                let block = get_block(ScopeVisibility::All, stream, scopes, vec![])?;
+                let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
 
                 ElseKind::Else(block.node)
             };
@@ -190,6 +190,12 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         let peek2_token = stream.peek_multiple(2)
             .ok_or(err_out_of_bounds(stream))?;
 
+        if peek2_token.text == "(" {
+            let func = get_function_decl(stream, scopes)?;
+            scopes.add_function(func.node.clone());
+            return Ok(Some(func.node.consume_to_statment(func.span)));
+        }
+
         let symbool_index = if peek2_token.text == ">" {
             let begin_gen_i = stream.current_index();
             get_symbool_after_generic(stream, begin_gen_i)?;
@@ -213,6 +219,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                 ))
             );
         }
+
     }
 
     let type_i = stream.current_index();
@@ -269,7 +276,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                     stream.go_to_index(begin_i);
                     let func = get_function_decl(stream, scopes)?;
                     scopes.add_function(func.node.clone());
-                    return Ok(Some(Statment::new(StmtKind::FnDecl(func.node), func.span)));
+                    return Ok(Some(func.node.consume_to_statment(func.span)));
                 },
             }
         }

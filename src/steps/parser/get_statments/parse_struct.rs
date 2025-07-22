@@ -1,8 +1,7 @@
 use crate::soul_names::check_name;
 use crate::steps::parser::parse_generic_decl::get_generics_decl;
+use crate::steps::step_interfaces::i_parser::scope::ScopeVisibility;
 use crate::steps::parser::get_statments::parse_field::try_get_field;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
-use crate::steps::step_interfaces::i_parser::scope::{ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{StructDecl};

@@ -143,6 +143,13 @@ pub enum TypeWrapper {
     Pointer
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum AnyRef {
+    Invalid,
+    ConstRef,
+    MutRef,
+}
+
 impl Modifier {
     pub fn from_str(str: &str) -> Modifier {
         match str {
@@ -183,6 +190,23 @@ impl TypeWrapper {
     }
 }
 
+impl AnyRef {
+    pub fn from_str(str: &str) -> AnyRef {
+        match str {
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => AnyRef::ConstRef,
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => AnyRef::MutRef,
+            _ => AnyRef::Invalid,
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            AnyRef::Invalid => "<invalid>",
+            AnyRef::ConstRef => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
+            AnyRef::MutRef => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
+        }
+    }
+}
 
 
 

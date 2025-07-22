@@ -3,7 +3,7 @@ use itertools::Itertools;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct SoulType {
+pub struct  SoulType {
     pub modifier: Modifier,
     pub base: TypeKind,
     pub wrapper: Vec<TypeWrapper>,

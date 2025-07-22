@@ -2,11 +2,11 @@ use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
 use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{NodeRef, Parameter, StmtKind, VariableDecl, VariableRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{NodeRef, Parameter, SoulThis, StmtKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{spanned::Spanned, statment::Block}, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
-pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream, scopes: &mut ScopeBuilder, params: Vec<Spanned<Parameter>>) -> Result<Spanned<Block>> {
+pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream, scopes: &mut ScopeBuilder, possible_this: Option<Spanned<SoulThis>>, params: Vec<Spanned<Parameter>>) -> Result<Spanned<Block>> {
     
     if stream.current_text() != "{" {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("'{}' is invalid token to start block should be '{{'", stream.current_text())));
@@ -17,6 +17,11 @@ pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream
     }
 
     scopes.push(scope_visability);
+    
+    if let Some(this) = possible_this {
+        scopes.insert_this(this);
+    }
+
     for Spanned{node: param, span} in params {
         let name = param.name.0.clone();
         let var = ScopeKind::Variable(VariableRef::new(VariableDecl{

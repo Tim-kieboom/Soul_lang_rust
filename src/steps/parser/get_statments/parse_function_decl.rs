@@ -7,12 +7,12 @@ use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{AnyRef, Modifier, TypeWrapper};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::FnDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{FunctionSignature, Parameter};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{ExtFnDecl, FnDeclKind, FunctionSignature, Parameter, SoulThis};
 use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
 
-pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDecl>> {
+pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDeclKind>> {
     let begin_i = stream.current_index();
     
     let modifier = Modifier::from_str(&stream.current_text());
@@ -28,11 +28,16 @@ pub fn get_function_decl<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder
         return Err(err_out_of_bounds(stream));
     }
 
-    let body = get_block(ScopeVisibility::All, stream, scopes, signature.params.clone())?;
+    let body = get_block(ScopeVisibility::All, stream, scopes, signature.calle.clone(), signature.params.clone())?;
 
     
     let span = body.span.combine(&stream[begin_i].span);
-    Ok(Spanned::new(FnDecl{signature, body: body.node, modifier}, span))
+    if signature.calle.is_some() {
+        Ok(Spanned::new(FnDeclKind::ExtFn(ExtFnDecl{signature, body: body.node, modifier}), span))
+    }
+    else {
+        Ok(Spanned::new(FnDeclKind::Fn(FnDecl{signature, body: body.node, modifier}), span))
+    }
 }
 
 fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignature> {
@@ -46,14 +51,14 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     }
     let begin_i = stream.current_index();
     
-    let calle = if let Some(result) = SoulType::try_from_stream(stream, scopes) {
+    let mut calle = if let Some(result) = SoulType::try_from_stream(stream, scopes) {
         let ty = result?;
         
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
         }
 
-        Some(ty)
+        Some(Spanned::new(SoulThis{ty, this: None}, stream.current_span()))
     }
     else {
         None
@@ -72,7 +77,7 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     let generics = get_generics_decl(stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
 
-    let params = get_parameters(stream, scopes)
+    let params = get_parameters(&mut calle, stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
         
     if stream.next().is_none() {
@@ -102,7 +107,7 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
 
 
 
-fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Spanned<Parameter>>> {
+fn get_parameters(calle: &mut Option<Spanned<SoulThis>>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Spanned<Parameter>>> {
     let mut params = vec![];
 
     if stream.current_text() == "()" {
@@ -120,7 +125,28 @@ fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         return Ok(params);
     }
 
+    let mut arg_position = 0usize;
     loop {
+        arg_position += 1;
+        if stream.current_text() == "this" {
+            convert_this(arg_position, calle, stream)?;
+
+            if stream.current_text() == "," {
+                if stream.next().is_none() {
+                    return Err(err_out_of_bounds(stream));
+                }
+                
+                continue;
+            }
+            else if stream.current_text() == ")" {
+                if stream.next().is_none() {
+                    return Err(err_out_of_bounds(stream));
+                }
+
+                break;
+            }
+        }
+
         let arg_start_i = stream.current_index();
         let ty = SoulType::from_stream(stream, scopes)
             .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream.current_span(), "while trying to get parameter", child))?;
@@ -169,6 +195,42 @@ fn get_parameters(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     Ok(params)
 }
 
+fn convert_this(arg_position: usize, calle: &mut Option<Spanned<SoulThis>>, stream: &mut TokenStream) -> Result<()> {
+    if calle.is_none() {
+        return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "'this' is only allowed in extention functions (e.g. add type before function '<type> func(this, ...)' )"))
+    }
+
+    if arg_position != 1 {
+        return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "'this' is only allowed as first parameter (e.g. '<type> func(this, ...)' )"))
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let any_ref = AnyRef::from_str(stream.current_text());
+    if any_ref != AnyRef::Invalid {
+        match any_ref {
+            AnyRef::MutRef => calle.as_mut().unwrap().node.ty.wrapper.push(TypeWrapper::MutRef),
+            AnyRef::ConstRef => calle.as_mut().unwrap().node.ty.wrapper.push(TypeWrapper::ConstRef),
+            AnyRef::Invalid => unreachable!(),
+        }
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    calle.as_mut().unwrap().node.this = Some(calle.as_ref().unwrap().node.ty.clone());
+
+    if stream.current_text() == "," || stream.current_text() == ")" {
+        return Ok(());
+    }
+    else {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' is not valid atfer 'this' use '@' or '&'", stream.current_text())));
+    }
+}
+
 fn check_function_with_scope<'a>(scopes: &ScopeBuilder, signature: &Spanned<FunctionSignature>) -> Result<()> {
     
     let kinds = scopes.flat_lookup(&signature.node.name.0);
@@ -187,7 +249,7 @@ fn check_function_with_scope<'a>(scopes: &ScopeBuilder, signature: &Spanned<Func
 }
 
 fn check_function(signature: &Spanned<FunctionSignature>, funcs: &OverloadedFunctions) -> Result<()> {
-    if funcs.borrow().iter().any(|fnc| fnc.signature == signature.node) {
+    if funcs.borrow().iter().any(|fnc| fnc.get_signature() == &signature.node) {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             signature.span, 
@@ -204,12 +266,12 @@ fn check_function(signature: &Spanned<FunctionSignature>, funcs: &OverloadedFunc
 
     let same_calle_fn = ref_guard
         .iter()
-        .filter(|fnc| fnc.signature.calle == signature.node.calle)
+        .filter(|fnc| fnc.get_signature().calle == signature.node.calle)
         .last();
 
     if let Some(fnc) = same_calle_fn {
 
-        if fnc.signature.return_type != signature.node.return_type {
+        if fnc.get_signature().return_type != signature.node.return_type {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
                 signature.span, 

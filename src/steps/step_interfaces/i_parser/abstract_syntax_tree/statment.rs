@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::{cell::{Ref, RefCell, RefMut}, fmt::format, rc::Rc};
+use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
 use crate::{errors::soul_error::{SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
@@ -244,13 +244,64 @@ pub struct ExtFnDecl {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum FnDeclKind {
+    Fn(FnDecl),
+    ExtFn(ExtFnDecl),
+}
+
+impl FnDeclKind {
+    pub fn consume_to_statment(self, span: SoulSpan) -> Statment {
+        match self {
+            FnDeclKind::Fn(fn_decl) => Statment::new(StmtKind::FnDecl(fn_decl), span),
+            FnDeclKind::ExtFn(ext_fn_decl) => Statment::new(StmtKind::ExtFnDecl(ext_fn_decl), span),
+        }
+    } 
+    
+    pub fn get_signature(&self) -> &FunctionSignature {
+        match self {
+            FnDeclKind::Fn(this) => &this.signature,
+            FnDeclKind::ExtFn(this) => &this.signature,
+        }
+    }
+
+    pub fn get_body(&self) -> &Block {
+        match self {
+            FnDeclKind::Fn(this) => &this.body,
+            FnDeclKind::ExtFn(this) => &this.body,
+        }
+    }
+
+    pub fn get_modifier(&self) -> &Modifier {
+        match self {
+            FnDeclKind::Fn(this) => &this.modifier,
+            FnDeclKind::ExtFn(this) => &this.modifier,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionSignature {
     pub name: Ident,
     /// Some() = an extension method
-    pub calle: Option<SoulType>, 
+    pub calle: Option<Spanned<SoulThis>>, 
     pub generics: Vec<GenericParam>,
     pub params: Vec<Spanned<Parameter>>,
     pub return_type: Option<SoulType>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SoulThis {
+    pub ty: SoulType, 
+    pub this: Option<SoulType>,
+}
+
+impl SoulThis {
+    pub fn to_string(&self) -> String {
+        match &self.this {
+            Some(this) => format!("{} this{}", self.ty.to_string(), this.wrapper.iter().map(|wrap| wrap.to_str()).join("")),
+            None => format!("{}", self.ty.to_string()),
+        }
+    }
 }
 
 impl FunctionSignature {
@@ -258,7 +309,7 @@ impl FunctionSignature {
         if self.generics.is_empty() {
             format!(
                 "{}{}({}){}", 
-                self.calle.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+                self.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
                 self.name.0, 
                 self.params.iter().map(|par| par.node.to_string()).join(","),
                 self.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
@@ -267,7 +318,7 @@ impl FunctionSignature {
         else {
             format!(
                 "{}{}<{}>({}){}", 
-                self.calle.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
+                self.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
                 self.name.0, 
                 self.generics.iter().map(|gene| gene.to_string()).join(","), 
                 self.params.iter().map(|par| par.node.to_string()).join(","),

@@ -45,7 +45,7 @@ impl PrettyPrint for Vec<ScopeKind> {
                 ScopeKind::Struct(struct_decl) => format!("struct({})", struct_decl.name.0),
                 ScopeKind::Class(class_decl) => format!("class({})", class_decl.name.0),
                 ScopeKind::Trait(trait_decl) => format!("trait({})", trait_decl.name.0),
-                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.signature.name.0.as_str()).unwrap_or("") ),
+                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.get_signature().name.0.as_str()).unwrap_or("") ),
                 ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.name.0),
                 ScopeKind::Union(union_decl) => format!("union({})", union_decl.name.0),
                 ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.name.0),
@@ -221,7 +221,7 @@ impl PrettyPrint for ExtFnDecl {
     fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
         let sig = self.signature.to_string();
         let body = self.body.to_pretty(tab + 1, true);
-        format!("External fn {} >>\n{}", sig, body)
+        format!("ExtFnDecl {} >>\n{}", sig, body)
     }
 }
 

@@ -88,7 +88,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
     Ok(generics)
 }
 
-fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+fn add_generic_type_contraints(_contraints: &mut Vec<TypeConstraint>, _stream: &mut TokenStream, _scopes: &mut ScopeBuilder) -> Result<()> {
     todo!("plz impl add_generic_type_contraints")
 }
 

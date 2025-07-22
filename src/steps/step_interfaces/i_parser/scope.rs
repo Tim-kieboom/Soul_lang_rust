@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind, statment::{ClassDecl, EnumDecl, FnDecl, GenericParam, NodeRef, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableRef}}, utils::push::Push};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, statment::{ClassDecl, EnumDecl, FnDecl, FnDeclKind, NodeRef, SoulThis, StructDecl, TraitDecl, TypeEnumDecl, UnionDecl, VariableDecl, VariableRef}}, utils::push::Push};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -14,7 +14,7 @@ pub struct ScopeBuilder {
     pub global_literal: ProgramMemmory,
 }
 
-#[derive(Debug, Hash, Clone, Copy, )]
+#[derive(Debug, Hash, Clone, Copy)]
 pub struct ProgramMemmoryId(pub usize);
 
 
@@ -101,9 +101,9 @@ impl ScopeBuilder {
         self.scopes.lookup(name)
     }
 
-    pub fn add_function(&mut self, fn_decl: FnDecl) {
+    pub fn add_function(&mut self, fn_decl: FnDeclKind) {
         
-        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.signature.name.0) {
+        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().name.0) {
             
             let possible_funcs = kinds.iter_mut().find(|kind| matches!(kind, ScopeKind::Functions(..)));
             if let Some(ScopeKind::Functions(funcs)) = possible_funcs {
@@ -111,14 +111,14 @@ impl ScopeBuilder {
             }
             else {
                 self.scopes.insert(
-                    fn_decl.signature.name.0.clone(), 
+                    fn_decl.get_signature().name.0.clone(), 
                     vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl]))]
                 );
             }
         }
         else {
             self.scopes.insert(
-                fn_decl.signature.name.0.clone(), 
+                fn_decl.get_signature().name.0.clone(), 
                 vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl]))]
             );
         }
@@ -127,6 +127,19 @@ impl ScopeBuilder {
     pub fn insert(&mut self, name: String, kind: ScopeKind) {
         self.scopes.insert_to_vec(name, kind)
     } 
+
+    pub fn insert_this(&mut self, this: Spanned<SoulThis>) {
+        let this_var = ScopeKind::Variable(NodeRef::new(
+            VariableDecl{
+                name: Ident("this".into()), 
+                ty: this.node.ty, 
+                initializer: Some(Box::new(Expression::new(ExprKind::Empty, this.span))), 
+                lit_retention: None,
+            }
+        ));
+        
+        self.scopes.insert_to_vec("this".into(), this_var);
+    }
 
     pub fn insert_type(&mut self, name: String, kind: TypeKind) -> std::result::Result<(), String> {
         let types = &mut self.types[self.scopes.current];
@@ -341,7 +354,7 @@ pub enum ScopeKind {
     TypeEnum(TypeEnumDecl),
 }
 
-pub type OverloadedFunctions = NodeRef<Vec<FnDecl>>;
+pub type OverloadedFunctions = NodeRef<Vec<FnDeclKind>>;
 
 
 
