@@ -25,6 +25,8 @@
 // 	Foo<T> foo
 // }
 
+type string typeof str
+
 struct Far<T> impl Add 
 where 
 	T: SystemNumber + Add + typeof[int, uint] 
@@ -33,7 +35,7 @@ where
 }
 
 trait Add<O, R = O> {
-	add(this, O other) R
+	Add(this, O other) R
 }
 
 typeEnum SystemNumber typeof[int, uint] 
@@ -43,6 +45,31 @@ struct Foo<T> {
 	f32 float = 0.2
 	int foo {Get; set;} = 1
 	T generic
+}
+
+class StrBuilder {
+	str buffer
+
+	Ctor::[](str[] arr) {
+		// this.buffer = ""
+
+		for el in arr {
+			// this.buffer += el
+		} 
+	}
+
+	Ctor() {
+		// this.buffer = ""
+	}
+
+	Push(str s) {
+		// this.buffer += s
+	}
+
+	IntoStr() str {
+		// return this.buffer
+		return ""
+	}
 }
 
 int sum(this, int a) int {

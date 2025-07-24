@@ -5,6 +5,7 @@ use ordered_float::OrderedFloat;
 use crate::assert_eq_show_diff;
 use crate::errors::soul_error::{SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
+use crate::steps::step_interfaces::i_parser::external_header::ExternalHeader;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, TypeScopeStack};
@@ -21,7 +22,7 @@ fn stream_from_strs(tokens: &[&str]) -> TokenStream {
 }
 
 fn dummy_scopes() -> ScopeBuilder {
-    ScopeBuilder::new(TypeScopeStack::new())
+    ScopeBuilder::new(TypeScopeStack::new(), ExternalHeader::new())
 }
 
 #[test]

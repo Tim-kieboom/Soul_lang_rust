@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use crate::{errors::soul_error::{SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType, type_kind::{EnumVariant, Modifier, UnionVariant}}, spanned::Spanned}};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -242,36 +242,45 @@ pub struct VariableDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnDecl {
     pub signature: FunctionSignatureRef,
-    pub body: Block,
-    ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
-    pub modifier: Modifier, 
+    pub body: Block, 
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExtFnDecl {
     pub signature: FunctionSignatureRef,
     pub body: Block,
-    ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
-    pub modifier: Modifier, 
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FnDeclKind {
+    InternalFn(FunctionSignatureRef),
     Fn(FnDecl),
     ExtFn(ExtFnDecl),
 }
 
 impl FnDeclKind {
+
     pub fn consume_to_statment(self, span: SoulSpan) -> Statment {
         match self {
             FnDeclKind::Fn(fn_decl) => Statment::new(StmtKind::FnDecl(fn_decl), span),
             FnDeclKind::ExtFn(ext_fn_decl) => Statment::new(StmtKind::ExtFnDecl(ext_fn_decl), span),
+            FnDeclKind::InternalFn(..) => panic!("trying to consume_to_statment but is internalfn"),
         }
-    } 
+    }
+
     pub fn consume_signature(self) -> FunctionSignatureRef {
         match self {
             FnDeclKind::Fn(this) => this.signature,
             FnDeclKind::ExtFn(this) => this.signature,
+            FnDeclKind::InternalFn(..) => panic!("trying to consume_signature but is internalfn"),
+        }
+    }
+
+    pub fn consume_body(self) -> Block {
+        match self {
+            FnDeclKind::Fn(this) => this.body,
+            FnDeclKind::ExtFn(this) => this.body,
+            FnDeclKind::InternalFn(..) => panic!("trying to consume_signature but is internalfn"),
         }
     }
 
@@ -279,6 +288,7 @@ impl FnDeclKind {
         match self {
             FnDeclKind::Fn(this) => &this.signature,
             FnDeclKind::ExtFn(this) => &this.signature,
+            FnDeclKind::InternalFn(fn_ref) => &fn_ref,
         }
     }
 
@@ -286,14 +296,12 @@ impl FnDeclKind {
         match self {
             FnDeclKind::Fn(this) => &this.body,
             FnDeclKind::ExtFn(this) => &this.body,
+            FnDeclKind::InternalFn(..) => panic!("trying to get_body but is internalfn"),
         }
     }
 
-    pub fn get_modifier(&self) -> &Modifier {
-        match self {
-            FnDeclKind::Fn(this) => &this.modifier,
-            FnDeclKind::ExtFn(this) => &this.modifier,
-        }
+    pub fn get_modifier(&self) -> Modifier {
+        self.get_signature().borrow().modifier.clone()
     }
 }
 
@@ -307,6 +315,8 @@ pub struct InnerFunctionSignature {
     pub generics: Vec<GenericParam>,
     pub params: Vec<Spanned<Parameter>>,
     pub return_type: Option<SoulType>,
+    ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
+    pub modifier: Modifier,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -378,7 +388,7 @@ pub struct ClassDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
-    pub methodes: Vec<Spanned<FunctionSignatureRef>>,
+    pub methodes: Vec<Spanned<FnDeclKind>>,
     pub implements: Vec<Ident>,
 }
 
@@ -388,6 +398,12 @@ pub struct FieldDecl {
     pub ty: SoulType,
     pub default_value: Option<Expression>,
     pub vis: FieldAccess
+}
+
+impl FieldDecl {
+    pub fn new_struct_field(name: Ident, ty: SoulType) -> Self {
+        Self{name, ty, default_value: None, vis: FieldAccess::default() }
+    }
 }
  
 #[derive(Debug, Clone, PartialEq)]
@@ -434,17 +450,37 @@ impl GenericParam {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeConstraint {
     Trait(Ident),
-    TypeEnum(Vec<SoulType>),
+    TypeEnum(Ident),
+    LiteralTypeEnum(Vec<SoulType>),
 }
 
 impl TypeConstraint {
     pub fn to_string(&self) -> String {
         match self {
             TypeConstraint::Trait(ident) => ident.0.clone(),
-            TypeConstraint::TypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
+            TypeConstraint::TypeEnum(ident) => ident.0.clone(),
+            TypeConstraint::LiteralTypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

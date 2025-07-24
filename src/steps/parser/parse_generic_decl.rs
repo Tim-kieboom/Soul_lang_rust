@@ -233,14 +233,14 @@ fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mu
         let type_contraints = if let Some(kind) = scopes.lookup_type(stream.current_text()) {
             match kind {
                 TypeKind::Trait(id) => TypeConstraint::Trait(id.clone()), 
-                TypeKind::TypeEnum(_, types) => TypeConstraint::TypeEnum(types.clone()),
+                TypeKind::TypeEnum(id, _) => TypeConstraint::TypeEnum(id.clone()),
                 _ => return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("type: '{}' is '{}' only 'trait' and 'typeEnum' is allowed for generic contraint", stream.current_text(), kind.get_variant())))
             }
         }
         else if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
             let types = get_type_enum_body(stream, scopes)?;
             
-            TypeConstraint::TypeEnum(types)
+            TypeConstraint::LiteralTypeEnum(types)
         }
         else {
             return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' is invalid in typeContrainets only allowed traits typeEnums and '+'", stream.current_text())))

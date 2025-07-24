@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, statment::{ClassDecl, EnumDecl, FnDeclKind, NodeRef, SoulThis, StructDecl, TraitDeclRef, TypeEnumDecl, UnionDecl, VariableDecl, VariableRef}}, utils::push::Push};
+use crate::{steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, statment::{ClassDecl, EnumDecl, FnDecl, FnDeclKind, FunctionSignatureRef, NodeRef, SoulThis, StructDecl, TraitDeclRef, TypeEnumDecl, UnionDecl, VariableDecl, VariableRef}}, external_header::ExternalHeader}, utils::push::Push};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -12,6 +12,7 @@ pub struct ScopeBuilder {
     scopes: ScopeStack,
     types: Vec<TypeScope>,
     pub global_literal: ProgramMemmory,
+    pub external_header: ExternalHeader,
 }
 
 #[derive(Debug, Hash, Clone, Copy)]
@@ -59,8 +60,8 @@ pub struct InnerScope<T> {
 }
 
 impl ScopeBuilder {
-    pub fn new(type_stack: TypeScopeStack) -> Self {
-        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes }
+    pub fn new(type_stack: TypeScopeStack, external_header: ExternalHeader) -> Self {
+        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes, external_header }
     }
 
     pub fn get_scopes(&self) -> &InnerScopeBuilder<Vec<ScopeKind>> {
@@ -361,7 +362,15 @@ pub enum ScopeKind {
 
 pub type OverloadedFunctions = NodeRef<Vec<FnDeclKind>>;
 
+impl OverloadedFunctions {
+    pub fn from_fn(decl: FnDecl) -> Self {
+        Self::new(vec![FnDeclKind::Fn(decl)])
+    }
 
+    pub fn from_internal_fn(sig: FunctionSignatureRef) -> Self {
+        Self::new(vec![FnDeclKind::InternalFn(sig)])
+    }
+}
 
 
 

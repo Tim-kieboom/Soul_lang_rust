@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
+use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
 use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
@@ -84,35 +85,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(Some(Statment::new(StmtKind::While(WhileDecl{condition, body: block.node}), span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => {
-            let for_i = stream.current_index();
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }  
-
-            check_name(stream.current_text())
-                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
-            
-            let name_i = stream.current_index();
-            let el_parameter = Spanned::new(Parameter{name: Ident(stream[name_i].text.clone()), ty: SoulType::new(), default_value: None}, stream[name_i].span);
-            
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }  
-
-            if stream.current_text() != "in" {
-                return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("in for statment'{}' should be 'in' (format is 'for <element> in <collection> {{}}')", stream.current_text())))
-            }
-            
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }  
-
-            let collection = get_expression(stream, scopes, &["{"])?;
-
-            let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![el_parameter])?;
-
-            let span = stream[for_i].span.combine(&stream.current_span());
-            return Ok(Some(Statment::new(StmtKind::For(ForDecl{collection, element: Ident(stream[name_i].text.clone()), body: block.node}), span)))
+            return add_for_loop(stream, scopes);
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
             let if_i = stream.current_index();
@@ -127,73 +100,19 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(Some(Statment::new(StmtKind::If(IfDecl{condition, body: block.node, else_branchs: vec![]}), span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
-            let else_i = stream.current_index();
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            } 
-
-            let else_branch = if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::If) {
-                
-                if stream.next().is_none() {
-                    return Err(err_out_of_bounds(stream));
-                } 
-
-                let condition = get_expression(stream, scopes, &["{"])?;
-                let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-
-                ElseKind::ElseIf(Box::new(IfDecl{body: block.node, condition, else_branchs: vec![]}))
-            }
-            else {
-                let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-
-                ElseKind::Else(block.node)
-            };
-
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            } 
-
-            try_add_else_to_if_branch(node_scope, else_branch, stream[else_i].span)?;
+            add_else(stream, scopes, node_scope)?;
             return Ok(None);
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Type) => {
-            todo!()
+            add_type(stream, scopes)?;
+            return Ok(None);
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
             let result = get_trait(stream, scopes)?;
             return Ok(Some(Statment::new(StmtKind::TraitDecl(result.node), result.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
-            let type_enum_i = stream.current_index();
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-
-            check_name(stream.current_text())
-                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
-            
-            let name_i = stream.current_index();
-            
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            } 
-
-            let types = get_type_enum_body(stream, scopes)?; 
-
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            } 
-            
-            if stream.current_text() != ";" && stream.current_text() != "\n" {
-                return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token: '{}' is incorrect end of typeEnum", stream.current_text())));
-            }
-
-            return Ok(Some(
-                Statment::new(StmtKind::TypeEnumDecl(
-                    TypeEnumDecl{name: Ident(stream[name_i].text.clone()), types}), 
-                    stream.current_span().combine(&stream[type_enum_i].span
-                )),
-            ));
+            return Ok(Some(add_type_enum(stream, scopes)?));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
             todo!()
@@ -206,7 +125,8 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(Some(Statment::new(StmtKind::StructDecl(result.node), result.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
-            todo!()
+            let result = get_class(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::ClassDecl(result.node), result.span)));
         },
         _ => (),
     }
@@ -369,6 +289,141 @@ fn try_add_else_to_if_branch<'a>(
         "An 'else' must follow an 'if' statement.",
     ));
 
+}
+
+fn add_for_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statment>> {
+    let for_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }  
+
+    check_name(stream.current_text())
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+    
+    let name_i = stream.current_index();
+    let el_parameter = Spanned::new(Parameter{name: Ident(stream[name_i].text.clone()), ty: SoulType::new(), default_value: None}, stream[name_i].span);
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }  
+
+    if stream.current_text() != "in" {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("in for statment'{}' should be 'in' (format is 'for <element> in <collection> {{}}')", stream.current_text())))
+    }
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }  
+
+    let collection = get_expression(stream, scopes, &["{"])?;
+
+    let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![el_parameter])?;
+
+    let span = stream[for_i].span.combine(&stream.current_span());
+    return Ok(Some(Statment::new(StmtKind::For(ForDecl{collection, element: Ident(stream[name_i].text.clone()), body: block.node}), span)))
+}
+
+fn add_else(stream: &mut TokenStream, scopes: &mut ScopeBuilder, node_scope: &mut StatmentBuilder) -> Result<()> {
+    let else_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    } 
+
+    let else_branch = if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::If) {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        } 
+
+        let condition = get_expression(stream, scopes, &["{"])?;
+        let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
+
+        ElseKind::ElseIf(Box::new(IfDecl{body: block.node, condition, else_branchs: vec![]}))
+    }
+    else {
+        let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
+
+        ElseKind::Else(block.node)
+    };
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    } 
+
+    try_add_else_to_if_branch(node_scope, else_branch, stream[else_i].span)?;
+
+    Ok(())
+}
+
+fn add_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+    loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+            break;
+        }
+
+        if stream.current_text() == "\n" {
+            return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("can not end line of type statment without '{}'", SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))));
+        }
+    } 
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() == "\n" {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    SoulType::from_stream(stream, scopes)?;
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() != ";" && stream.current_text() != "\n" {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token: '{}' is incorrect end of type", stream.current_text())));
+    }
+
+    Ok(())
+}
+
+fn add_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Statment> {
+    let type_enum_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    check_name(stream.current_text())
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+    
+    let name_i = stream.current_index();
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    } 
+
+    let types = get_type_enum_body(stream, scopes)?; 
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    } 
+    
+    if stream.current_text() != ";" && stream.current_text() != "\n" {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token: '{}' is incorrect end of typeEnum", stream.current_text())));
+    }
+
+    return Ok(
+        Statment::new(StmtKind::TypeEnumDecl(
+            TypeEnumDecl{name: Ident(stream[name_i].text.clone()), types}), 
+            stream.current_span().combine(&stream[type_enum_i].span
+        )),
+    );
 }
 
 fn func_call_or_declaration(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionKind> {
@@ -588,6 +643,27 @@ fn get_scope<'a>(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, sco
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

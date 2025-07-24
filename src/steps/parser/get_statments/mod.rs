@@ -1,4 +1,5 @@
 pub mod parse_block;
+pub mod parse_class;
 pub mod parse_field;
 pub mod parse_trait;
 pub mod parse_struct;

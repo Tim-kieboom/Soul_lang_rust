@@ -142,11 +142,14 @@ static INTERNAL_TYPES: Lazy<Vec<(&str, TypeKind)>> = Lazy::new(|| vec![
     (SOUL_NAMES.get_name(NamesInternalType::Uint64),        TypeKind::Uint(TypeSize::Bit64)), 
 
     (SOUL_NAMES.get_name(NamesInternalType::UntypedFloat),  TypeKind::UntypedFloat), 
-    (SOUL_NAMES.get_name(NamesInternalType::Float8),       TypeKind::Float(TypeSize::Bit8)), 
+    (SOUL_NAMES.get_name(NamesInternalType::Float8),        TypeKind::Float(TypeSize::Bit8)), 
     (SOUL_NAMES.get_name(NamesInternalType::Float16),       TypeKind::Float(TypeSize::Bit16)), 
     (SOUL_NAMES.get_name(NamesInternalType::Float32),       TypeKind::Float(TypeSize::Bit32)), 
     (SOUL_NAMES.get_name(NamesInternalType::Float64),       TypeKind::Float(TypeSize::Bit64)),
-]);
+    
+    (SOUL_NAMES.get_name(NamesInternalType::Float64),       TypeKind::Float(TypeSize::Bit64)),
+    (SOUL_NAMES.get_name(NamesInternalType::FILE),          TypeKind::Struct(Ident("FILE".into()))),
+]); 
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")

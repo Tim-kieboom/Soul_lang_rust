@@ -19,6 +19,16 @@ impl SoulType {
         Self{ modifier: Modifier::Default, base, wrapper: vec![], generics: vec![] }
     }
 
+    pub fn with_wrappers(mut self, wrapper: Vec<TypeWrapper>) -> Self {
+        self.wrapper = wrapper;
+        self    
+    }
+
+    pub fn with_mod(mut self, modifier: Modifier) -> Self {
+        self.modifier = modifier;
+        self    
+    }
+
     pub fn is_none_type(&self) -> bool {
         matches!(self.base, TypeKind::None)
     }

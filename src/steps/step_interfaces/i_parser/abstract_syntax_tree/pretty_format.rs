@@ -3,7 +3,7 @@ use std::sync::RwLockReadGuard;
 use itertools::Itertools;
 
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FieldAccess, FnDecl, IfDecl, InnerTraitDecl, StmtKind, StructDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
+    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FieldAccess, FnDecl, FnDeclKind, IfDecl, InnerTraitDecl, StmtKind, StructDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
 }, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
@@ -112,7 +112,12 @@ impl PrettyPrint for StmtKind {
                 )
             }
             StmtKind::Block(block) => block.to_pretty(tab, is_last),
-            StmtKind::CloseBlock(arr) => format!("{}CloseBlock >> free([{}])", prefix, arr.delete_list.iter().join(",")),
+            StmtKind::CloseBlock(arr) => format!(
+                "{}CloseBlock >> free([{}])\n{}",
+                prefix,
+                arr.delete_list.iter().join(","),
+                tree_next_line_prefix(tab),
+            ),
             StmtKind::For(for_decl) => {
                 let el = for_decl.element.0.clone();
                 let coll = for_decl.collection.node.to_string();
@@ -179,14 +184,21 @@ impl PrettyPrint for GlobalKind {
 }
 
 impl PrettyPrint for RwLockReadGuard<'_, InnerTraitDecl> {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let indent_str = indent(tab);
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        let header = format!("{}Trait {} >>", prefix, self.name.0);
+
         let methods = self.methodes
             .iter()
-            .map(|sig| format!("{}fn {};", indent_str, sig.to_string()))
+            .enumerate()
+            .map(|(i, sig)| {
+                let last = i == self.methodes.len() - 1;
+                let inner_prefix = tree_prefix(tab + 1, last);
+                format!("{} {};", inner_prefix, sig.to_string())
+            })
             .join("\n");
 
-        format!("Trait {} >>\n{}", self.name.0, methods)
+        format!("{}\n{}", header, methods)
     }
 }
 
@@ -219,14 +231,6 @@ impl PrettyPrint for EnumDecl {
     }
 }
 
-impl PrettyPrint for ExtFnDecl {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let sig = self.signature.to_string();
-        let body = self.body.to_pretty(tab + 1, true);
-        format!("ExtFnDecl {} >>\n{}", sig, body)
-    }
-}
-
 impl PrettyPrint for TraitImpl {
     fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
         let methods = self.methodes
@@ -238,55 +242,76 @@ impl PrettyPrint for TraitImpl {
 }
 
 impl PrettyPrint for ClassDecl {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let indent_str = indent(tab);
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
         let generics = if self.generics.is_empty() {
             "".to_string()
         } else {
             format!("<{}>", self.generics.iter().map(|g| g.to_string()).join(", "))
         };
-        let fields = self.fields.iter().map(|f| {
+        let header = format!("{}Class {}{} >>", prefix, self.name.0, generics);
+
+        let fields = self.fields.iter().enumerate().map(|(i, f)| {
+            let is_last_field = i == self.fields.len() - 1 && self.methodes.is_empty();
+            let field_prefix = tree_prefix(tab + 1, is_last_field);
             let access = match (&f.vis.get, &f.vis.set) {
-                (Some(Visibility::Public), Some(Visibility::Public)) => "pub",
-                (Some(Visibility::Public), _) => "pub(get)",
-                (_, Some(Visibility::Public)) => "pub(set)",
-                _ => "priv",
+                (Some(Visibility::Public), Some(Visibility::Public)) => "{Get;Set;}",
+                (Some(Visibility::Public), _) => "{Get;}",
+                (_, Some(Visibility::Public)) => "{Set;}",
+                _ => "",
             };
             let default = f.default_value
                 .as_ref()
                 .map(|v| format!(" = {}", v.node.to_string()))
                 .unwrap_or_default();
-            format!("{}{} {}: {}{}", indent_str, access, f.name.0, f.ty.to_string(), default)
-        }).join("\n");
-        let methods = self.methodes.iter()
-            .map(|sig| format!("{}fn {};", indent_str, sig.node.to_string()))
-            .join("\n");
+            format!("{}{} {}: {}{}", field_prefix, access, f.name.0, f.ty.to_string(), default)
+        });
 
-        format!("Class {}{} >>\n{}\n{}", self.name.0, generics, fields, methods)
+        let methods = self.methodes.iter().enumerate().map(|(i, m)| {
+            let is_last_method = i == self.methodes.len() - 1;
+            m.node.to_pretty(tab + 1, is_last_method)
+        });
+
+        format!("{}\n{}", header, fields.chain(methods).join("\n"))
+    }
+}
+
+impl PrettyPrint for FnDeclKind {
+
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        match self {
+            FnDeclKind::Fn(fn_decl) => fn_decl.to_pretty(tab, is_last),
+            FnDeclKind::InternalFn(node_ref) => node_ref.to_string(),
+            FnDeclKind::ExtFn(ext_fn_decl) => ext_fn_decl.to_pretty(tab, is_last),
+        }
     }
 }
 
 impl PrettyPrint for StructDecl {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let indent_str = indent(tab);
-        let generics = if self.generics.is_empty() {
-            "".to_string()
-        } else {
-            format!("<{}>", self.generics.iter().map(|g| g.to_string()).join(", "))
-        };
-        let fields = self.fields
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        let header = format!("{}Struct {}{} >>", prefix, self.name.0, 
+            if self.generics.is_empty() {
+                "".to_string()
+            } else {
+                format!("<{}>", self.generics.iter().map(|g| g.to_string()).join(", "))
+            });
+
+        let body = self.fields
             .iter()
-            .map(|f| {
+            .enumerate()
+            .map(|(i, f)| {
+                let last = i == self.fields.len() - 1;
+                let inner_prefix = tree_prefix(tab + 1, last);
                 if let Some(value) = &f.default_value {
-                    format!("{}{} {} {} = {}", indent_str, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false), value.node.to_string())
-                }
-                else {
-                    format!("{}{} {} {}", indent_str, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false))
+                    format!("{}{} {} {} = {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false), value.node.to_string())
+                } else {
+                    format!("{}{} {} {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false))
                 }
             })
             .join("\n");
 
-        format!("Struct {}{} >>\n{}", self.name.0, generics, fields)
+        format!("{}\n{}", header, body)
     }
 }
 
@@ -322,6 +347,15 @@ impl PrettyPrint for FnDecl {
         let sig = self.signature.to_string();
         let body = self.body.to_pretty(tab + 1, true); 
         format!("{}FnDecl >> {}\n{}", prefix, sig, body)
+    }
+}
+
+impl PrettyPrint for ExtFnDecl {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        let sig = self.signature.to_string();
+        let body = self.body.to_pretty(tab + 1, true); 
+        format!("{}ExtFnDecl >> {}\n{}", prefix, sig, body)
     }
 }
 
@@ -364,7 +398,19 @@ fn tree_prefix(indent: usize, is_last: bool) -> String {
     prefix
 }
 
+fn tree_next_line_prefix(indent: usize) -> String {
+    if indent == 0 {
+        return String::new();
+    }
 
+    let mut prefix = String::new();
+
+    for _ in 0..indent {
+        prefix.push_str("│   ");
+    }
+
+    prefix
+}
 
 
 

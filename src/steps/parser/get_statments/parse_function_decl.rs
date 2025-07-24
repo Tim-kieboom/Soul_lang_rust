@@ -24,7 +24,7 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
     }
 
     let span_calle = body_calle.map(|cal| Spanned::new(cal, stream.current_span()));
-    let signature = get_function_signature(span_calle, stream, scopes)?;
+    let signature = get_function_signature(modifier, span_calle, stream, scopes)?;
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
@@ -34,15 +34,15 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
     
     let span = body.span.combine(&stream[begin_i].span);
     if signature.borrow().calle.is_some() {
-        Ok(Spanned::new(FnDeclKind::ExtFn(ExtFnDecl{signature, body: body.node, modifier}), span))
+        Ok(Spanned::new(FnDeclKind::ExtFn(ExtFnDecl{signature, body: body.node}), span))
     }
     else {
-        Ok(Spanned::new(FnDeclKind::Fn(FnDecl{signature, body: body.node, modifier}), span))
+        Ok(Spanned::new(FnDeclKind::Fn(FnDecl{signature, body: body.node}), span))
     }
 }
 
 pub fn get_bodyless_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FunctionSignatureRef>>  {
-        let begin_i = stream.current_index();
+    let begin_i = stream.current_index();
     
     let modifier = Modifier::from_str(&stream.current_text());
     if modifier != Modifier::Default {
@@ -53,13 +53,13 @@ pub fn get_bodyless_function_decl(body_calle: Option<&SoulThis>, stream: &mut To
     }
 
     let span_calle = body_calle.map(|cal| Spanned::new(cal, stream.current_span()));
-    let signature = get_function_signature(span_calle, stream, scopes)?; 
+    let signature = get_function_signature(modifier, span_calle, stream, scopes)?; 
     
     let span = stream.current_span().combine(&stream[begin_i].span);
     Ok(Spanned::new(signature, span))
 }
 
-fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignatureRef> {
+fn get_function_signature(modifier: Modifier, calle_body: Option<Spanned<&SoulThis>>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignatureRef> {
     fn pass_err(err: SoulError, func_name: &str, stream: &TokenStream) -> SoulError {
         pass_soul_error(
             err.get_last_kind(), 
@@ -70,28 +70,47 @@ fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut T
     }
     let begin_i = stream.current_index();
     
-    let mut calle = if let Some(result) = SoulType::try_from_stream(stream, scopes) {
-        if calle_body.is_some() {
-            return Err(new_soul_error(SoulErrorKind::InvalidInContext, calle_body.as_ref().unwrap().span, "can not add extention type to function when in type block (e.g. in block/scope of 'class Foo{}' '<type> func()' not allowed because func is already automaticly 'Foo func()' )"))
-        }
-
-        let ty = result?;
-        
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream));
-        }
-
-        Some(Spanned::new(SoulThis{ty, this: None}, stream.current_span()))
+    let mut calle = if stream.peek().is_some_and(|token| token.text == "(") {
+        calle_body.map(|this| Spanned::new(this.node.clone(), this.span))
     }
     else {
-        calle_body.map(|this| Spanned::new(this.node.clone(), this.span))
+        if let Some(result) = SoulType::try_from_stream(stream, scopes) {
+            let ty = result?;
+
+            if calle_body.is_some() {
+                return Err(new_soul_error(
+                    SoulErrorKind::InvalidInContext, 
+                    calle_body.as_ref().unwrap().span, 
+                    "can not add extention type to function when in type block (e.g. in block/scope of in 'class Foo{}' function '<type> func()' not allowed because func is already automaticly 'Foo func()' )"
+                ))
+            }
+
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            Some(Spanned::new(SoulThis{ty, this: None}, stream.current_span()))
+        }
+        else {
+            calle_body.map(|this| Spanned::new(this.node.clone(), this.span))
+        }
     }; 
 
     let func_name_index = stream.current_index();
-    check_name(stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+    let is_ctor = stream[func_name_index].text == "Ctor" || stream[func_name_index].text == "ctor";
+    let mut is_array_ctor = false;
+    let mut is_named_tuple_ctor = false;
 
-    let name = Ident(stream.current_text().clone());
+    let name = if !is_ctor {
+        check_name(stream.current_text())
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+    
+        Ident(stream.current_text().clone())
+    }
+    else {
+        get_ctor_name(stream, func_name_index, &mut is_array_ctor, &mut is_named_tuple_ctor)?
+    };
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
@@ -106,7 +125,20 @@ fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut T
 
     let params = get_parameters(&mut calle, stream, scopes)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
-        
+    
+    if is_array_ctor {
+        if params.len() != 1 {
+            return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "array ctor should only have 1 parameter of type '<type>[]'"))
+        }
+
+        if params[0].node.ty.wrapper.last().is_none_or(|wrap| *wrap != TypeWrapper::Array) {
+            return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "array ctor should have parameter of type '<type>[]'"))
+        }
+    }
+    else if is_named_tuple_ctor {
+        todo!("named tuple not impl")
+    }
+
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
@@ -124,15 +156,66 @@ fn get_function_signature(calle_body: Option<Spanned<&SoulThis>>, stream: &mut T
         stream.next_multiple(-1);
     }
     
+    if is_ctor {
+        if calle.is_none() {
+            return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "ctor should be an extention methode (this is a contructor function because you named it 'ctor' so add type before function name to make extention type"))
+        }
+
+        if return_type.is_some() {
+            return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "ctor should not have a return type is by default this type"))
+        }
+
+        return_type = Some(calle.as_ref().unwrap().node.ty.clone())
+    }
 
     let span = stream[begin_i].span.combine(&stream.current_span());
-    let signature = Spanned::new(FunctionSignatureRef::new(InnerFunctionSignature{name, calle, generics: generics.generics, params, return_type }), span);
+    let signature = Spanned::new(FunctionSignatureRef::new(InnerFunctionSignature{name, calle, generics: generics.generics, params, return_type, modifier}), span);
     check_function_with_scope(scopes, &signature)?;
     
     Ok(signature.node)
 }
 
+fn get_ctor_name(stream: &mut TokenStream, func_name_index: usize, is_array_ctor: &mut bool, is_named_tuple_ctor: &mut bool) -> Result<Ident> {
+    if !stream.peek().is_some_and(|token| token.text == "::" ) {
+        return Ok(Ident(stream.current_text().clone()))
+    }
 
+    if stream.next_multiple(2).is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    match stream.current_text().as_str() {
+        "[]" => {
+            *is_array_ctor = true;
+        },
+        "[" => {
+            *is_array_ctor = true;
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+            if stream.current_text() != "]" {
+                return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("token: '{}' should be ']'", stream.current_text())));
+            }
+        },
+        "()" => {
+            *is_named_tuple_ctor = true;
+        },
+        "(" => {
+            *is_named_tuple_ctor = true;
+            if stream.current_text() != ")" {
+                return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("token: '{}' should be ')'", stream.current_text())));
+            }
+        },
+        _ => return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' invalid valid ctor's, array: 'Ctor::[]' and namedTuple: 'Ctor::()'", stream.current_text()))),
+    };
+
+    let mut name = String::new();
+    for i in func_name_index..stream.current_index()+1 {
+        name.push_str(&stream[i].text);
+    }
+
+    Ok(Ident(name))
+}
 
 fn get_parameters(calle: &mut Option<Spanned<SoulThis>>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<Spanned<Parameter>>> {
     let mut params = vec![];
