@@ -369,12 +369,13 @@ impl PrettyPrint for Block {
 }
 
 impl PrettyPrint for VariableDecl {
-    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
         let init = match &self.initializer {
             Some(expr) => format!(" = {}", expr.node.to_string()),
             None => "".to_string(),
         };
-        format!("Var {}: {}{}", self.name.0, self.ty.to_string(), init)
+        format!("{}Var {} {}{}", prefix, self.ty.to_string(), self.name.0, init)
     }
 }
 

@@ -25,6 +25,9 @@
 // 	Foo<T> foo
 // }
 
+const int foo2 = 1
+Literal int foo3 = 1 
+
 type string typeof str
 
 struct Far<T> impl Add 
@@ -90,6 +93,15 @@ main() int {
 		return a + b 
 	}
 
+
+
+	foo := 1
+	const f = "hello world"
+	Literal fo = (1, 2, 3)
+	json := (field: 1, foo: (1, 2, 3), arr: [1,2,3])
+	int foo1 = 1
+
+
 	for el in [1,2,3,4] {
 		Println(el)
 	} 
@@ -117,7 +129,6 @@ main() int {
 
 	Println("hello world")
 }
-
 
 
 

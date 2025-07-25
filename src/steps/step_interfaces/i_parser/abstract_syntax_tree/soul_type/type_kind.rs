@@ -233,7 +233,7 @@ impl TypeWrapper {
             TypeWrapper::ConstRef => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
             TypeWrapper::MutRef => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
             TypeWrapper::Pointer => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer),
-            TypeWrapper::ConstPointer => " const *",
+            TypeWrapper::ConstPointer => " const*",
         }
     }
 }

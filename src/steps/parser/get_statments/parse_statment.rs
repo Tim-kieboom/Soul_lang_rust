@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
 use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
+use crate::steps::parser::get_statments::parse_var_decl::get_var_decl;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_statments::parse_struct::get_struct;
@@ -11,7 +12,7 @@ use crate::steps::parser::get_expressions::parse_expression::get_expression;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
+use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
@@ -135,9 +136,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     let possible_res_type = SoulType::try_from_stream(stream, scopes);
 
     if let Some(result_ty) = possible_res_type {
-        if let Err(err) = result_ty {
-            return Err(err);
-        } 
+        let _ty = result_ty?;
 
         let peek2_token = stream.peek_multiple(2)
             .ok_or(err_out_of_bounds(stream))?;
@@ -146,6 +145,16 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             let func = get_function_decl(None, stream, scopes)?;
             scopes.add_function(&func.node);
             return Ok(Some(func.node.consume_to_statment(func.span)));
+        }
+        else if peek2_token.text == "=" {
+            stream.go_to_index(begin_i);
+            let var = get_var_decl(stream, scopes)?;
+            return Ok(Some(
+                Statment::from_kind(
+                    var.node, 
+                    var.span
+                ))
+            );
         }
 
         let symbool_index = if peek2_token.text == ">" {
@@ -164,10 +173,11 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
         if symbool == "=" {
             stream.go_to_index(begin_i);
+            let var = get_var_decl(stream, scopes)?;
             return Ok(Some(
                 Statment::from_kind(
-                    get_var_decl(stream, scopes)?, 
-                    stream.current_span()
+                    var.node, 
+                    var.span
                 ))
             );
         }
@@ -204,11 +214,13 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     match stream[next_index].text.as_str() {
         "=" => {
             if peek_i != 1 {
-                //var decl
+                let var = get_var_decl(stream, scopes)?;
+                return Ok(Some(Statment::new(StmtKind::VarDecl(var.node), var.span)))
             }
         }
         ":=" => {
-            //var decl
+            let var = get_var_decl(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::VarDecl(var.node), var.span)))
         }
         "(" => {
             let begin_i = stream.current_index();
@@ -479,119 +491,6 @@ fn go_to_symbool_after_brackets<'a>(stream: &mut TokenStream, start_i: usize) ->
             break Ok(());
         }
     }
-}
-
-fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<VariableRef> {
-    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get initialization of variable")
-    }
-
-    let possible_type = match SoulType::try_from_stream(stream, scopes) {
-        Some(val) => Some(val?),
-        None => None,
-    };
-
-    let is_type_invered = possible_type.is_none();
-
-    let modifier = if is_type_invered {
-        let modi = Modifier::from_str(stream.current_text());
-        if modi != Modifier::Default {
-
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-        }
-
-        modi
-    }
-    else {
-        possible_type.as_ref()
-            .unwrap()
-            .modifier
-            .clone()
-    };
-
-    let var_name_index = stream.current_index();
-    if let Err(msg) = check_name(&stream[var_name_index].text) {
-        return Err(new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))
-    }
-
-    let possible_scope_kinds = scopes.flat_lookup(&stream[var_name_index].text);
-    let possible_var = possible_scope_kinds
-        .filter(|scope_kinds| {
-            scope_kinds.iter().any(|kind| matches!(kind, ScopeKind::Variable(_)))
-        });
-
-    if possible_var.is_some() {
-        return Err(new_soul_error(
-            SoulErrorKind::NotFoundInScope, 
-            stream[var_name_index].span, 
-            format!("variable '{}' already exists in scope", &stream[var_name_index].text)
-        ));
-    }
-
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    }
-
-    if stream.current_text() == "\n" || stream.current_text() == ";" {
-        if is_type_invered {
-            return Err(new_soul_error(
-                SoulErrorKind::InvalidEscapeSequence, 
-                stream.current_span(), 
-                format!("variable '{}' can not have no type and no assignment (add type 'int foo' or assignment 'foo := 1')", &stream[var_name_index].text)
-            ));
-        }
-
-        if scopes.is_in_global() {
-            return Err(new_soul_error(
-                SoulErrorKind::InvalidEscapeSequence, 
-                stream.current_span(), 
-                format!("global variables HAVE TO BE assigned at init, variable '{}' is not assigned", &stream[var_name_index].text)
-            ));
-        }
-
-        let ty = possible_type.unwrap();
-        let name = Ident(stream[var_name_index].text.clone());
-        let var_decl: VariableRef = VariableRef::new(
-            VariableDecl{name, ty, initializer: None, lit_retention: None}
-        );
-
-        scopes.insert(stream[var_name_index].text.clone(), ScopeKind::Variable(var_decl.clone()));
-        return Ok(var_decl);
-    }
-
-    if is_type_invered {
-
-        if modifier == Modifier::Default &&
-           stream.current_text() != ":=" 
-        {
-            return Err(new_soul_error(
-                SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
-                format!("'{}' is not allowed at end of default type invered initialize variable (use ':=')", stream.current_text())
-            ));
-        }
-    }
-    else if stream.current_text() != "=" {
-        return Err(new_soul_error(
-            SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
-            format!("'{}' is not allowed at end of initialize variable (use '=')", &stream.current().text)
-        ));
-    }
-
-    if is_type_invered {
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream));
-        }
-
-
-    }
-
-
-    todo!()
-    // Ok(VariableRef::new(RefCell::new()))
 }
 
 fn get_symbool_after_generic<'a>(stream: &'a mut TokenStream, start_i: usize) -> Result<()> {
