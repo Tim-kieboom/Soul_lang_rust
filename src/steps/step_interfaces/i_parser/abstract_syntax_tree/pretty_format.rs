@@ -3,8 +3,7 @@ use std::sync::RwLockReadGuard;
 use itertools::Itertools;
 
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, statment::{Block, ClassDecl, ElseKind, EnumDecl, ExtFnDecl, FieldAccess, FnDecl, FnDeclKind, IfDecl, InnerTraitDecl, StmtKind, StructDecl, TraitImpl, TypeEnumDecl, UnionDecl, VariableDecl, Visibility}
-}, scope::{ScopeBuilder, ScopeKind}};
+    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDecl, TypeEnumDecl, UnionDecl}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDecl, InnerTraitDecl, StructDecl, TraitImpl}, statment::{Block, StmtKind, VariableDecl}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;

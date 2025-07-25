@@ -1,6 +1,4 @@
-use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::ExtFnDecl;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::{Block, ClassDecl, EnumDecl, FnDecl, NodeRef, Statment, StmtKind, StructDecl, TraitDeclRef, TraitImpl, TypeEnumDecl, UnionDecl, VariableRef}};
+use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDecl, TypeEnumDecl, UnionDecl}, function::{ExtFnDecl, FnDecl}, objects::{ClassDecl, StructDecl, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableRef}}}, utils::node_ref::NodeRef};
 
 
 #[derive(Debug, Clone)]

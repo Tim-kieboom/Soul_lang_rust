@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}, staments::statment::Lifetime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct  SoulType {
@@ -8,15 +8,16 @@ pub struct  SoulType {
     pub base: TypeKind,
     pub wrapper: Vec<TypeWrapper>,
     pub generics: Vec<SoulType>,
+    pub lifetime: Option<Lifetime>,
 }
 
 impl SoulType {
     pub fn new() -> Self {
-        Self{ modifier: Modifier::Default, base: TypeKind::None, wrapper: vec![], generics: vec![] }
+        Self{ modifier: Modifier::Default, base: TypeKind::None, wrapper: vec![], generics: vec![], lifetime: None }
     } 
     
     pub fn from_type_kind(base: TypeKind) -> Self {
-        Self{ modifier: Modifier::Default, base, wrapper: vec![], generics: vec![] }
+        Self{ modifier: Modifier::Default, base, wrapper: vec![], generics: vec![], lifetime: None }
     }
 
     pub fn with_wrappers(mut self, wrapper: Vec<TypeWrapper>) -> Self {

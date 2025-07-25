@@ -4,8 +4,8 @@ use crate::steps::step_interfaces::i_parser::scope::ScopeVisibility;
 use crate::steps::parser::get_statments::parse_field::try_get_field;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{StructDecl};
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::objects::StructDecl;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
 pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<StructDecl>> {

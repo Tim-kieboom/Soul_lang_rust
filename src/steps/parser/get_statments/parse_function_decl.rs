@@ -1,5 +1,7 @@
 use crate::soul_names::check_name;
 use crate::steps::parser::parse_generic_decl::get_generics_decl;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::{ExtFnDecl, FnDecl, FnDeclKind, FunctionSignatureRef, InnerFunctionSignature, Parameter};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::SoulThis;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_expressions::parse_expression::get_expression;
@@ -8,8 +10,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::I
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{AnyRef, Modifier, TypeWrapper};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, statment::FnDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{ExtFnDecl, FnDeclKind, FunctionSignatureRef, InnerFunctionSignature, Parameter, SoulThis};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned};
 use crate::steps::step_interfaces::i_parser::scope::{OverloadedFunctions, ScopeBuilder, ScopeKind, ScopeVisibility};
 
 pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnDeclKind>> {

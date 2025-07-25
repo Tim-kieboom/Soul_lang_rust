@@ -1,14 +1,14 @@
-use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::soul_names::check_name;
+use crate::steps::step_interfaces::i_parser::scope::ScopeKind;
 use crate::steps::parser::get_expressions::parse_expression::get_expression;
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{VariableDecl, VariableRef};
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
-use crate::steps::step_interfaces::i_parser::scope::ScopeKind;
-use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableDecl, VariableRef};
+use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
 pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<VariableRef>> {
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {

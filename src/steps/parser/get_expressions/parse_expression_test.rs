@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use ordered_float::OrderedFloat;
-use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Arguments, BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, FnCall, Ident, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, statment::{VariableDecl, VariableRef}}, external_header::ExternalHeader, scope::{ScopeBuilder, ScopeKind, TypeScopeStack}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Arguments, BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, FnCall, Ident, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, staments::statment::{VariableDecl, VariableRef}}, external_header::ExternalHeader, scope::{ScopeBuilder, ScopeKind, TypeScopeStack}}, i_tokenizer::{Token, TokenStream}}}};
 
 fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
     let mut line_number = 0;

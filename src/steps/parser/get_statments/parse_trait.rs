@@ -1,12 +1,13 @@
 use crate::soul_names::check_name;
 use crate::steps::parser::parse_generic_decl::get_generics_decl;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::SoulThis;
 use crate::steps::step_interfaces::i_parser::scope::ScopeVisibility;
 use crate::steps::parser::get_statments::parse_methode::try_get_methode_decl;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{InnerTraitDecl, SoulThis, TraitDeclRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::objects::{InnerTraitDecl, TraitDeclRef};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
 pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<TraitDeclRef>> {

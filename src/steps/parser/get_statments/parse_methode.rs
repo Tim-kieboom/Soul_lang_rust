@@ -1,10 +1,11 @@
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::{FnDeclKind, FunctionSignatureRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::SoulThis;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::parser::get_statments::parse_function_decl::{get_bodyless_function_decl, get_function_decl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statment::{FnDeclKind, FunctionSignatureRef, SoulThis};
 
 pub fn try_get_methode(this: &SoulThis, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Spanned<FnDeclKind>>> {
     let is_methode = match check_if_methode(&stream) {

@@ -1,9 +1,9 @@
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeWrapper};
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeWrapper};
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::soul_type::SoulType, parser_response::FromTokenStream};
-
 
 impl FromTokenStream<SoulType> for SoulType {
     fn from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<SoulType> {

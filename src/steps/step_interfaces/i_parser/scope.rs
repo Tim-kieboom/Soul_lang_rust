@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use crate::{steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, statment::{ClassDecl, EnumDecl, FnDecl, FnDeclKind, FunctionSignatureRef, NodeRef, SoulThis, StructDecl, TraitDeclRef, TypeEnumDecl, UnionDecl, VariableDecl, VariableRef}}, external_header::ExternalHeader}, utils::push::Push};
+use crate::{steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDecl, TypeEnumDecl, UnionDecl}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDecl, StructDecl, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;

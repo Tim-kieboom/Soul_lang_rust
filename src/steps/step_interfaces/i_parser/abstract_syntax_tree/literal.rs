@@ -101,7 +101,7 @@ impl LiteralType {
     }
 
     fn to_soul_type(&self) -> SoulType {
-        SoulType { modifier: Modifier::Literal, base: self.to_type_kind(), wrapper: vec![], generics: vec![] }
+        SoulType { modifier: Modifier::Literal, base: self.to_type_kind(), wrapper: vec![], generics: vec![], lifetime: None }
     }
 
     fn to_type_kind(&self) -> TypeKind {
