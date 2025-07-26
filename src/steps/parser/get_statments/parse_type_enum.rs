@@ -6,6 +6,15 @@ use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind}, soul
 
 
 pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<SoulType>> {
+    inner_type_enum_body(stream, scopes, true)
+}
+
+pub fn traverse_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+    inner_type_enum_body(stream, scopes, true)?;
+    Ok(())
+}
+
+fn inner_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder, return_result: bool) -> Result<Vec<SoulType>> {
     if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
 
     }
@@ -31,7 +40,9 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
             return Err(err_out_of_bounds(stream));
         }
 
-        types.push(ty);
+        if return_result{
+            types.push(ty);
+        }
 
         if stream.current_text() == "\n" {
             
@@ -49,6 +60,7 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
         return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("token: '{}' is not valid to end typeEnum should end with ']'", stream.current_text())))
     }
 
+    //if return_result false then yes i know i do return something but its empty (this is to avoid mallocs and so safe time when only traversing)
     Ok(types)
 }
 

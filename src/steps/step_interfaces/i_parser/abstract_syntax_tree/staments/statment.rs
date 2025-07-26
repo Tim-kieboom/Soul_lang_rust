@@ -157,7 +157,7 @@ pub struct SoulThis {
 impl SoulThis {
     pub fn to_string(&self) -> String {
         match &self.this {
-            Some(this) => format!("{} this{}", self.ty.to_string(), this.wrapper.iter().map(|wrap| wrap.to_str()).join("")),
+            Some(this) => format!("{} this{}", self.ty.to_string(), this.wrappers.iter().map(|wrap| wrap.to_str()).join("")),
             None => format!("{}", self.ty.to_string()),
         }
     }

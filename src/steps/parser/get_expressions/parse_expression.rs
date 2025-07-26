@@ -89,7 +89,19 @@ fn convert_expression(
             add_variable(stream, stacks, var_ref)?;
         }
         else if let Some(literal) = possible_literal {
-            stacks.node_stack.push(Expression::new(ExprKind::Literal(literal), stream.current_span()));
+            let expr_kind = match &literal {
+                Literal::Tuple{..} |
+                Literal::Array{..} |
+                Literal::NamedTuple{..} => {
+                    let literal_ty = literal.get_literal_type();
+                    let id = scopes.global_literal.insert(literal);
+                    let name = ProgramMemmory::to_program_memory_name(&id);
+                    ExprKind::Literal(Literal::ProgramMemmory(name, literal_ty))
+                },
+                _ => ExprKind::Literal(literal),
+            };
+
+            stacks.node_stack.push(Expression::new(expr_kind, stream.current_span()));
         }
         else if is_function(stream, after_generic_index) {
             let function = get_function_call(stream, scopes)?;
@@ -227,12 +239,13 @@ fn add_ref(
             _ => return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), format!("Internal error token: '{}' 'let Some(to_ref) = stacks.ref_stack.pop()' is not const or mut ref", to_ref))),
         };
 
-        if let ExprKind::Literal(literal) = &expression.node {
-            let id = scopes.global_literal.insert(literal.clone());
+        if let ExprKind::Literal(literal) = expression.node {
+            let literal_ty = literal.get_literal_type();
+            let id = scopes.global_literal.insert(literal);
 
             let name = ProgramMemmory::to_program_memory_name(&id);
-            let variable = ExprKind::Variable(Variable{name: name.clone()});
-            expression = Expression::new(variable, stream.current_span());
+            let variable = Literal::ProgramMemmory(name, literal_ty);
+            expression = Expression::new(ExprKind::Literal(variable), stream.current_span());
         }
 
         let ref_expr = if is_const_ref {
@@ -267,7 +280,7 @@ fn get_after_generic_index(stream: &TokenStream) -> Result<usize> {
             return Ok(stream.current_index() + peek_i);
         }
     }
-} 
+}
 
 fn add_index(
     stream: &mut TokenStream,

@@ -25,7 +25,8 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
 
     scopes.push(ScopeVisibility::All);
 
-    let generics_decl = get_generics_decl(stream, scopes)
+    const ADD_TO_SCOPE: bool = true;
+    let generics_decl = get_generics_decl(stream, scopes, ADD_TO_SCOPE)
         .map_err(|child| pass_soul_error(SoulErrorKind::InvalidInContext, stream[struct_i].span.combine(&stream.current_span()), "while trying to get struct", child))?;
 
     if stream.current_text() != "{" {

@@ -271,6 +271,8 @@ pub enum BinOpKind {
     Gt, // >
     Le, // <=
     Ge, // >=
+
+    Range, //..
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -309,6 +311,7 @@ impl BinOpKind {
         match self {
             BinOpKind::Invalid => 0,
             
+            BinOpKind::Range |
             BinOpKind::LogAnd |
             BinOpKind::LogOr => 1,
 
@@ -381,6 +384,7 @@ impl BinOpKind {
             val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseXor) => Self::BitXor,
             val if val == SOUL_NAMES.get_name(NamesOperator::LogicalOr) => Self::LogOr,
             val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => Self::LogAnd,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Range) => Self::Range,
             _ => Self::Invalid, 
         }
     }
@@ -406,6 +410,7 @@ impl BinOpKind {
             Self::BitXor  => SOUL_NAMES.get_name(NamesOperator::BitWiseXor),
             Self::LogOr   => SOUL_NAMES.get_name(NamesOperator::LogicalOr),
             Self::LogAnd  => SOUL_NAMES.get_name(NamesOperator::LogicalAnd),
+            Self::Range  => SOUL_NAMES.get_name(NamesOperator::Range),
             Self::Invalid => "<invalid>",
         }
     }

@@ -30,8 +30,14 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
         return Err(err_out_of_bounds(stream));
     }
 
-    let body = get_block(ScopeVisibility::All, stream, scopes, signature.borrow().calle.clone(), signature.borrow().params.clone())?;
+    if stream.current_text() == "\n" {
 
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    let body = get_block(ScopeVisibility::All, stream, scopes, signature.borrow().calle.clone(), signature.borrow().params.clone())?;
     
     let span = body.span.combine(&stream[begin_i].span);
     if signature.borrow().calle.is_some() {
@@ -117,7 +123,8 @@ fn get_function_signature(modifier: Modifier, calle_body: Option<Spanned<&SoulTh
         return Err(err_out_of_bounds(stream));
     }
 
-    let generics = get_generics_decl(stream, scopes)
+    const ADD_TO_SCOPE: bool = true;
+    let generics = get_generics_decl(stream, scopes, ADD_TO_SCOPE)
         .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
 
     if !generics.implements.is_empty() {
@@ -132,7 +139,7 @@ fn get_function_signature(modifier: Modifier, calle_body: Option<Spanned<&SoulTh
             return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "array ctor should only have 1 parameter of type '<type>[]'"))
         }
 
-        if params[0].node.ty.wrapper.last().is_none_or(|wrap| *wrap != TypeWrapper::Array) {
+        if params[0].node.ty.wrappers.last().is_none_or(|wrap| *wrap != TypeWrapper::Array) {
             return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "array ctor should have parameter of type '<type>[]'"))
         }
     }
@@ -323,8 +330,8 @@ fn convert_this(arg_position: usize, calle: &mut Option<Spanned<SoulThis>>, stre
     let ty = if any_ref != AnyRef::Invalid {
         let mut ty = calle.as_ref().unwrap().node.ty.clone();
         match any_ref {
-            AnyRef::MutRef => ty.wrapper.push(TypeWrapper::MutRef),
-            AnyRef::ConstRef => ty.wrapper.push(TypeWrapper::ConstRef),
+            AnyRef::MutRef(lifetime) => ty.wrappers.push(TypeWrapper::MutRef(lifetime)),
+            AnyRef::ConstRef(lifetime) => ty.wrappers.push(TypeWrapper::ConstRef(lifetime)),
             AnyRef::Invalid => unreachable!(),
         }
         

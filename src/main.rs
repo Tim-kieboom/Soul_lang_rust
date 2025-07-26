@@ -16,7 +16,7 @@ fn main() {
         let reader = get_file_reader(&run_option).main_err_map("while trying to get file reader")
             .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
 
-        eprintln!("{}\n", err.to_err_message());        
+        eprintln!("at char:line; !!error!! message\n\n{}\n", err.to_err_message());        
         eprintln!("{}", err.to_highlighed_message(reader));        
     }
 }
@@ -78,9 +78,7 @@ fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result
 
         write(file_path, contents)
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
-    }   
-
-
+    }
 
     Ok(token_stream)
 }
@@ -103,8 +101,6 @@ fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<Pa
         write(scopes_file_path, format!("{}", parse_response.scopes.to_pretty_string()))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
     }
-
-
 
     Ok(parse_response)
 }

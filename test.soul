@@ -1,43 +1,68 @@
 //comment 1
 /*comment 2*/
 
-// array() {
-// 	array := [1,2,3,4,5,6]
-// 	el := array[0]
-// 	span := array[1..2]
-// }
+sum(int a, int b) int {
+	return a + b
+}
 
-// trait Add<T, O = T, R = T> {
-// 	add(this, O other) R
-// }
+sumGeneric<T>(T a, T b) T 
+// where
+// 	T: Add
+{
+	return a + b
+}
 
+array() {
+	array := [1,2,3,4,5,6]
+	el := array[0]
+	span := array[1..2]
+}
 
+varDecl() {
+	foo := 1
+	const f = "hello world"
+	Literal fo = (1, 2, 3)
+	json := (field: 1, foo: (1, 2, 3), arr: [1,2,3])
+	int foo1 = 1
+	const int foo2 = 1
+	Literal int foo3 = 1 
+}
 
-// sum<T>(T a, T b) T {
-// 	return a + b
-// }
+ifs() {
+	if true {
+		Println("true is true")
+	}
+	else if false {
+		Println("false is true")
+	}
+	else {
+		Println("else is true")
+	}
+}
 
-// struct Far {
-// 	Foo<int> foo
-// }
+str parse(this@, int a) int {
+	return int(1)	
+}
 
-// struct Bar<T> {
-// 	Foo<T> foo
-// }
+uint sum(this, uint a) uint {
+	return this + a
+}
 
+int sum(this, int a) int {
+	return this + a
+}
 
+struct Ref<'a, T> {
+	T'a@ inner
+}
 
-// struct Ref<'a, T> {
-// 	T'a& inner
-// }
-
-// Ref<'a, T> Ctor<'a, T>(T'a& ref) {
+// Ref<'a, T> Ctor<'a, T>(T'a@ ref) {
 // 	return Ref(inner: ref)
 // }
 
 type string typeof str
 
-struct Far<T> impl Add 
+struct Far<T> 
 where 
 	T: SystemNumber + Add + typeof[int, uint] 
 {
@@ -82,31 +107,11 @@ class StrBuilder {
 	}
 }
 
-int sum(this, int a) int {
-	return this + a
-}
-
-str parse(this@, int a) int {
-	return int(1)	
-}
-
-sum(int a, int b) int {
-	return a + b
-}
-
 main() int {
 
 	sum(int a, int b) int {
 		return a + b 
 	}
-
-	foo := 1
-	const f = "hello world"
-	Literal fo = (1, 2, 3)
-	json := (field: 1, foo: (1, 2, 3), arr: [1,2,3])
-	int foo1 = 1
-	const int foo2 = 1
-	Literal int foo3 = 1 
 
 	for el in [1,2,3,4] {
 		Println(el)
@@ -114,16 +119,6 @@ main() int {
 
 	while 1 == 2 {
 		Println("unreachable")		
-	}
-
-	if true {
-		Println("true is true")
-	}
-	else if false {
-		Println("false is true")
-	}
-	else {
-		Println("else is true")
 	}
 
 	sum(1, 2)
@@ -135,6 +130,11 @@ main() int {
 
 	Println("hello world")
 }
+
+
+
+
+
 
 
 

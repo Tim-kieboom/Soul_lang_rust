@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::FunctionSignatureRef, statment::VariableDecl}}};
+use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::FunctionSignatureRef, statment::{Lifetime, VariableDecl}}}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeSize {
@@ -46,6 +46,7 @@ pub enum TypeKind {
     TypeEnum(Ident, Vec<SoulType>),
 
     Generic(Ident),
+    LifeTime(Ident),
 }
 
 impl TypeKind {
@@ -102,6 +103,7 @@ impl TypeKind {
             TypeKind::Union(ident) => ident.0.clone(),
             TypeKind::TypeEnum(ident, ..) => ident.0.clone(),
             TypeKind::Generic(ident) => ident.0.clone(),
+            TypeKind::LifeTime(ident) => ident.0.clone(),
         }
     }
 
@@ -150,6 +152,7 @@ impl TypeKind {
             TypeKind::Union(..) => "union",
             TypeKind::TypeEnum(..) => "typeEnum",
             TypeKind::Generic(..) => "generic",
+            TypeKind::LifeTime(..) => "lifetime",
         }
     }
 }
@@ -184,8 +187,8 @@ pub enum Modifier {
 pub enum TypeWrapper {
     Invalid,
     Array,
-    ConstRef,
-    MutRef,
+    ConstRef(Option<Lifetime>),
+    MutRef(Option<Lifetime>),
     Pointer,
     ConstPointer
 }
@@ -193,8 +196,18 @@ pub enum TypeWrapper {
 #[derive(Debug, Clone, PartialEq)]
 pub enum AnyRef {
     Invalid,
-    ConstRef,
-    MutRef,
+    ConstRef(Option<Lifetime>),
+    MutRef(Option<Lifetime>),
+}
+
+impl TypeWrapper {
+    pub fn is_any_ref(&self) -> bool {
+        match self {
+            TypeWrapper::ConstRef(..) |
+            TypeWrapper::MutRef(..) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Modifier {
@@ -218,8 +231,8 @@ impl Modifier {
 impl TypeWrapper {
     pub fn from_str(str: &str) -> TypeWrapper {
         match str {
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => TypeWrapper::ConstRef,
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => TypeWrapper::MutRef,
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => TypeWrapper::ConstRef(None),
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => TypeWrapper::MutRef(None),
             val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Pointer) => TypeWrapper::Pointer,
             val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Array)  => TypeWrapper::Array,
             _ => TypeWrapper::Invalid,
@@ -230,8 +243,8 @@ impl TypeWrapper {
         match self {
             TypeWrapper::Invalid => "<invalid>",
             TypeWrapper::Array => SOUL_NAMES.get_name(NamesTypeWrapper::Array),
-            TypeWrapper::ConstRef => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
-            TypeWrapper::MutRef => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
+            TypeWrapper::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
+            TypeWrapper::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
             TypeWrapper::Pointer => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer),
             TypeWrapper::ConstPointer => " const*",
         }
@@ -241,8 +254,8 @@ impl TypeWrapper {
 impl AnyRef {
     pub fn from_str(str: &str) -> AnyRef {
         match str {
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => AnyRef::ConstRef,
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => AnyRef::MutRef,
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => AnyRef::ConstRef(None),
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => AnyRef::MutRef(None),
             _ => AnyRef::Invalid,
         }
     }
@@ -250,8 +263,8 @@ impl AnyRef {
     pub fn to_str(&self) -> &str {
         match self {
             AnyRef::Invalid => "<invalid>",
-            AnyRef::ConstRef => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
-            AnyRef::MutRef => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
+            AnyRef::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
+            AnyRef::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
         }
     }
 }

@@ -1,13 +1,10 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, IfDecl, WhileDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::TypeEnumDecl;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, Return, Statment, StmtKind};
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
 use crate::steps::parser::get_statments::parse_block::get_block;
+use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_statments::parse_var_decl::get_var_decl;
@@ -19,9 +16,13 @@ use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeVisibili
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::TypeEnumDecl;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, IfDecl, WhileDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, Return, Statment, StmtKind};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -206,13 +207,22 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     
     //check if next_index is valid index
     stream.peek_multiple(peek_i).ok_or(err_out_of_bounds(stream))?;
+    
+    let generics = if stream[next_index].text == "<" {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
 
-    if stream[next_index].text == "<" {
-        get_symbool_after_generic(stream, next_index)?;
+        const ADD_TO_SCOPE: bool = false;
+        let gene = get_generics_decl(stream, scopes, ADD_TO_SCOPE)?;
         next_index = stream.current_index();
         
         stream.go_to_index(type_i);
+        Some(gene)
     }
+    else {
+        None
+    };
 
     match stream[next_index].text.as_str() {
         "=" => {
@@ -228,7 +238,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         "(" => {
             let begin_i = stream.current_index();
             stream.go_to_index(next_index);
-            match func_call_or_declaration(stream, scopes)? {
+            match func_call_or_declaration(stream, scopes, generics)? {
                 FunctionKind::FunctionCall => {
                     stream.go_to_index(begin_i);
                     let expr = get_expression(stream, scopes, &["\n", ";"])?;
@@ -441,15 +451,19 @@ fn add_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     );
 }
 
-fn func_call_or_declaration(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionKind> {
-    go_to_symbool_after_brackets(stream, stream.current_index())?;
+fn func_call_or_declaration(stream: &mut TokenStream, scopes: &mut ScopeBuilder, generics: Option<GenericDecl>) -> Result<FunctionKind> {
+    go_to_symbool_after_brackets(stream)?;
 
     let is_curly_bracket = stream.current_text() == "{";
 
     let possible_result = SoulType::try_from_stream(stream, scopes);
     let is_type = possible_result.is_some();
+    let is_generic = generics.is_some_and(|gen_decl| gen_decl.generics.iter().any(|generic| &generic.name.0 == stream.current_text()));
 
-    if is_type {
+    if is_generic {
+        Ok(FunctionKind::FunctionDecl)
+    }
+    else if is_type {
         possible_result.unwrap()?;
         Ok(FunctionKind::FunctionDecl)
     }
@@ -461,8 +475,8 @@ fn func_call_or_declaration(stream: &mut TokenStream, scopes: &mut ScopeBuilder)
     }
 }
 
-fn go_to_symbool_after_brackets<'a>(stream: &mut TokenStream, start_i: usize) -> Result<()> {
-    if &stream[start_i].text != "(" {
+fn go_to_symbool_after_brackets<'a>(stream: &mut TokenStream) -> Result<()> {
+    if stream.current_text() != "(" {
         return Err(new_soul_error(
             SoulErrorKind::UnmatchedParenthesis,
             stream.current_span(), 
@@ -470,7 +484,6 @@ fn go_to_symbool_after_brackets<'a>(stream: &mut TokenStream, start_i: usize) ->
         ));
     }
 
-    stream.go_to_index(start_i);
     let mut stack = 1;
 
     loop {

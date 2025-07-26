@@ -3,25 +3,39 @@ use itertools::Itertools;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}, staments::statment::Lifetime};
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum TypeGenericKind {
+    Type(SoulType),
+    Lifetime(Lifetime)
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct  SoulType {
     pub modifier: Modifier,
     pub base: TypeKind,
-    pub wrapper: Vec<TypeWrapper>,
-    pub generics: Vec<SoulType>,
-    pub lifetime: Option<Lifetime>,
+    pub wrappers: Vec<TypeWrapper>,
+    pub generics: Vec<TypeGenericKind>,
+}
+
+impl TypeGenericKind {
+    pub fn to_string(&self) -> String {
+        match self {
+            TypeGenericKind::Type(soul_type) => soul_type.to_string(),
+            TypeGenericKind::Lifetime(lifetime) => lifetime.name.0.clone(),
+        }
+    }
 }
 
 impl SoulType {
     pub fn new() -> Self {
-        Self{ modifier: Modifier::Default, base: TypeKind::None, wrapper: vec![], generics: vec![], lifetime: None }
+        Self{ modifier: Modifier::Default, base: TypeKind::None, wrappers: vec![], generics: vec![] }
     } 
     
     pub fn from_type_kind(base: TypeKind) -> Self {
-        Self{ modifier: Modifier::Default, base, wrapper: vec![], generics: vec![], lifetime: None }
+        Self{ modifier: Modifier::Default, base, wrappers: vec![], generics: vec![] }
     }
 
     pub fn with_wrappers(mut self, wrapper: Vec<TypeWrapper>) -> Self {
-        self.wrapper = wrapper;
+        self.wrappers = wrapper;
         self    
     }
 
@@ -40,7 +54,7 @@ impl SoulType {
                 "{} {}{}",
                 self.modifier.to_str(),
                 self.base.to_string(),
-                self.wrapper.iter().map(|wrap| wrap.to_str()).join("")
+                self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
             )
         }
         else {
@@ -49,7 +63,7 @@ impl SoulType {
                 self.modifier.to_str(),
                 self.base.to_string(),
                 self.generics.iter().map(|gene| gene.to_string()).join(","),
-                self.wrapper.iter().map(|wrap| wrap.to_str()).join("")
+                self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
             )
         }
     }

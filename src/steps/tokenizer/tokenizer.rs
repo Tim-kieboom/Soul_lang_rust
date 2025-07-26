@@ -70,7 +70,8 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
     let mut in_string = false;
     let mut string_token = String::new();
     let mut string_span = SoulSpan::new(0,0,0);
-    for (i, text) in splits.iter().enumerate() {
+    
+    for (i, mut text) in splits.iter().enumerate() {
         if *text == "\"" {
             string_token.push_str(*text);
             if in_string {
@@ -110,6 +111,14 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
         }
 
         if !needs_to_dot_tokenize(text) {
+            
+            let possible_lifetime = if text.len() > 2 {&text[text.len()-2..]} else {&text};
+            if text.chars().nth_back(1) == Some('\'') && text.len() > 2 {
+                let first = &text[..text.len()-2];
+                tokens.push(Token::new(first.to_string(), SoulSpan::new(file_line.line_number, line_offset, first.len())));
+                text = &possible_lifetime;
+            }
+            
             if *text != "\\" {
                 tokens.push(Token::new(text.to_string(), SoulSpan::new(file_line.line_number, line_offset, text.len())));
                 
@@ -131,9 +140,16 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
 
         let dot_splits = text.split('.').collect::<Vec<_>>();
         let last_index = dot_splits.len() - 1;
-        for (j, split) in dot_splits.into_iter().enumerate() {
+        for (j, mut split) in dot_splits.into_iter().enumerate() {
             if split.is_empty() || split == " " {
                 continue;
+            }
+
+            let possible_lifetime = if text.len() > 2 {&split[split.len()-2..]} else {&split};
+            if split.chars().nth_back(1) == Some('\'') && split.len() > 2 {
+                let first = &split[..split.len()-2];
+                tokens.push(Token::new(first.to_string(), SoulSpan::new(file_line.line_number, line_offset, first.len())));
+                split = &possible_lifetime;
             }
 
             tokens.push(Token::new(

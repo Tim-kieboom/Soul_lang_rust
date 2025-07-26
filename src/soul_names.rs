@@ -154,7 +154,7 @@ impl<'a> SoulNames<'a> {
             (NamesOperator::BitWiseAnd, "&"),
             (NamesOperator::BitWiseXor, "^"),
 
-            (NamesOperator::Range, ":"),
+            (NamesOperator::Range, ".."),
         ]);
 
         let assign_symbools = HashMap::from([

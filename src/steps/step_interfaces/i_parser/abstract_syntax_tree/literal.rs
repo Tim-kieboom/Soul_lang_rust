@@ -3,20 +3,26 @@ use std::collections::BTreeMap;
 use ordered_float::OrderedFloat;
 use crate::errors::soul_error::Result;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeSize};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeSize, TypeWrapper};
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Literal {
+    // basic
     Int(i64),
     Uint(u64),
     Float(OrderedFloat<f64>),
     Bool(bool),
     Char(char),
     Str(String),
+
+    // complex
     Array{ty: LiteralType, values: Vec<Literal>},
     Tuple{values: Vec<Literal>},
     NamedTuple{values: BTreeMap<Ident, Literal>},
+
+    // a type of Literal variable for complex literals and refing basic literals 
+    ProgramMemmory(Ident, LiteralType),
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -30,6 +36,7 @@ pub enum LiteralType {
     Array(Box<LiteralType>),
     Tuple(Vec<LiteralType>),
     NamedTuple(BTreeMap<Ident, LiteralType>),
+    ProgramMemmory(Box<LiteralType>),
 }
 
 impl LiteralType {
@@ -44,6 +51,8 @@ impl LiteralType {
             LiteralType::Array(ty) => format!("{}[]", ty.type_to_string()),
             LiteralType::Tuple(tys) => format!("({})", tys.iter().map(|value| value.type_to_string()).join(",")),
             LiteralType::NamedTuple(tys) => format!("({})", tys.iter().map(|(name, value)| format!("{}: {}", name.0, value.type_to_string())).join(",")),
+
+            LiteralType::ProgramMemmory(inner) => format!("promem({})", inner.type_to_string()),
         }
     }
 
@@ -58,6 +67,8 @@ impl LiteralType {
             LiteralType::Array(ty) => ty.precedence(),
             LiteralType::Tuple(..) => 1,
             LiteralType::NamedTuple(..) => 1,
+
+            LiteralType::ProgramMemmory(inner) => inner.precedence()
         }
     }
 
@@ -81,6 +92,7 @@ impl LiteralType {
             LiteralType::Array(literal_type) => *literal_type.as_mut() = other.clone(),
             LiteralType::Tuple(literal_types) => literal_types.iter_mut().filter(|ty| !matches!(ty, LiteralType::Array(..))).for_each(|ty| ty.force_array_type(other)),
             LiteralType::NamedTuple(hash_map) => hash_map.iter_mut().filter(|(_name, ty)| !matches!(ty, LiteralType::Array(..))).for_each(|(_name, ty)| ty.force_array_type(other)),
+            LiteralType::ProgramMemmory(inner) => inner.force_array_type(other)
         }
     }
 
@@ -101,10 +113,12 @@ impl LiteralType {
     }
 
     fn to_soul_type(&self) -> SoulType {
-        SoulType { modifier: Modifier::Literal, base: self.to_type_kind(), wrapper: vec![], generics: vec![], lifetime: None }
+        let mut wrappers = Vec::new();
+        let base = self.to_type_kind(&mut wrappers);
+        SoulType { modifier: Modifier::Literal, base, wrappers, generics: vec![] }
     }
 
-    fn to_type_kind(&self) -> TypeKind {
+    fn to_type_kind(&self, wrap: &mut Vec<TypeWrapper>) -> TypeKind {
         match self {
             LiteralType::Int => TypeKind::UntypedInt,
             LiteralType::Uint => TypeKind::UntypedUint,
@@ -112,9 +126,13 @@ impl LiteralType {
             LiteralType::Bool => TypeKind::Bool,
             LiteralType::Char => TypeKind::Char(TypeSize::Bit8),
             LiteralType::Str => TypeKind::Str,
-            LiteralType::Array(ty) => ty.to_type_kind(),
+            LiteralType::Array(ty) => {
+                wrap.push(TypeWrapper::Array);
+                ty.to_type_kind(wrap)
+            },
             LiteralType::Tuple(types) => TypeKind::Tuple(types.iter().map(|ty| ty.to_soul_type()).collect()),
             LiteralType::NamedTuple(hash_map) => TypeKind::NamedTuple(hash_map.iter().map(|(name, ty)| (name.clone(), ty.to_soul_type())).collect()),
+            LiteralType::ProgramMemmory(inner) => inner.to_type_kind(wrap)
         }
     }
 }
@@ -195,11 +213,14 @@ impl Literal {
             Literal::Array{ty, .. } => LiteralType::Array(Box::new(ty.clone())),
             Literal::Tuple{values, .. } => LiteralType::Tuple(values.iter().map(|val| val.get_literal_type()).collect::<Vec<_>>()),
             Literal::NamedTuple{values, .. } => LiteralType::NamedTuple(values.iter().map(|val| (val.0.clone(), val.1.get_literal_type())).collect::<BTreeMap<_,_>>()),
+
+            Literal::ProgramMemmory(_, ty) => LiteralType::ProgramMemmory(Box::new(ty.clone())),
         }
     }
 
     pub fn is_numeric(&self) -> bool {
         match self {
+            Literal::ProgramMemmory(_, ty) => ty.is_numeric(),
             Literal::Bool(_) |
             Literal::Char(_) |
             Literal::Str(_) |
@@ -224,6 +245,8 @@ impl Literal {
             Literal::Array{ty, ..} => format!("Literal {}[]", ty.type_to_string()),
             Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(",")),
             Literal::NamedTuple{values} => format!("Literal ({})", values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(",")),
+
+            Literal::ProgramMemmory(name, ty) => format!("{}({})", name.0, ty.type_to_string()),
         }
     }
 
@@ -238,6 +261,8 @@ impl Literal {
             Literal::Array{values, ..} => format!("[{}]", values.iter().map(|lit| lit.value_to_string()).join(",")),
             Literal::Tuple{values, ..} => format!("({})", values.iter().map(|value| value.value_to_string()).join(",")),
             Literal::NamedTuple{values, ..} => format!("({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.value_to_string())).join(",")),
+            
+            Literal::ProgramMemmory(name, ty) => format!("{}({})", name.0, ty.type_to_string()),
         }
     }
 
@@ -252,6 +277,7 @@ impl Literal {
             Literal::Array{values, ..} => format!("Literal [{}; {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(",")),
             Literal::Tuple{values, ..} => format!("Literal ({})", values.iter().map(|value| value.to_string()).join(",")),
             Literal::NamedTuple{values, ..} => format!("Literal ({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.to_string())).join(",")),
+            Literal::ProgramMemmory(name, ty) => format!("Literal {}({})", name.0, ty.type_to_string()),
         }
     }
 }

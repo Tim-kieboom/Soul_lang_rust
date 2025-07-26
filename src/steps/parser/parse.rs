@@ -1,11 +1,14 @@
-use crate::errors::soul_error::Result;
+use crate::errors::soul_error::{Result, SoulSpan};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::external_header::ExternalHeader;
 use crate::steps::step_interfaces::i_tokenizer::TokenizeResonse;
-use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
+use crate::steps::step_interfaces::i_parser::scope::{ProgramMemmory, ScopeBuilder, ScopeKind};
 use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::parser_response::ParserResponse;
 use crate::steps::parser::forward_type_stack::get_type_stack::forward_declarde_type_stack;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, StatmentBuilder};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, StatmentBuilder};
 use crate::utils::node_ref::NodeRef;
 
 pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
@@ -42,6 +45,24 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
         tree.root = global.consume();
     }
     else { unreachable!() }
+
+    let first_span = SoulSpan::new(0, 0, 0);
+    for (literal, id) in std::mem::take(&mut scopes.global_literal.store) {
+        let name = ProgramMemmory::to_program_memory_name(&id);
+        
+        let var_ref = VariableRef::new(
+            VariableDecl{
+                name: name.clone(), 
+                ty: literal.to_soul_type(), 
+                initializer: Some(Box::new(Expression::new(ExprKind::Literal(literal), first_span))),
+                lit_retention: None,
+            },
+        );
+        let var = ScopeKind::Variable(var_ref.clone());
+
+        scopes.insert_global(name.0, var);
+        tree.root.push(Spanned::new(GlobalKind::VarDecl(var_ref), first_span));
+    }
 
     Ok(ParserResponse{tree, scopes})
 }
