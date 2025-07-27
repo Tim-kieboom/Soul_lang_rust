@@ -190,7 +190,6 @@ pub fn pass_soul_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg
 
 #[cfg(feature = "throw_result")]
 pub fn new_soul_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg: S) -> SoulError {
-    use std::backtrace::Backtrace;
     SoulError::new(kind, span, msg.into(), std::backtrace::Backtrace::capture().to_string())
 }
 

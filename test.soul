@@ -12,10 +12,25 @@ sumGeneric<T>(T a, T b) T
 	return a + b
 }
 
+struct List{}
+
 array() {
 	array := [1,2,3,4,5,6]
+	// int el = 1
 	el := array[0]
 	span := array[1..2]
+	runTimeArray := [el, 1, 2,]
+	runTimeArray1 := [int; el, 1, 2]
+	runTimeArray2 := List[el, 1, 2,]
+	runTimeArray3 := List[int; el, 1, 2]
+}
+
+tuple() {
+	runTimeTuple := (el,2,"hello")
+	// runTimeTuple1 := (el,2,[1,2,3,],)
+
+	// runTimeNamedTuple := (field: 1, name: "hello")
+	// runTimeNamedTuple := List(:)
 }
 
 varDecl() {

@@ -33,19 +33,18 @@ pub enum ExprKind {
 pub struct Array {
     pub collection_type: Option<SoulType>,
     pub element_type: Option<SoulType>,
-    pub values: Vec<ExprKind>,
+    pub values: Vec<Expression>,
 } 
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tuple {
-    pub object_type: Option<SoulType>,
-    pub values: Vec<ExprKind>,
+    pub values: Vec<Expression>,
 } 
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NamedTuple {
     pub object_type: Option<SoulType>,
-    pub values: BTreeMap<Ident, ExprKind>,
+    pub values: BTreeMap<Ident, Expression>,
 } 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -100,17 +99,16 @@ impl ExprKind {
                 "{}[{}{}]", 
                 collection_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
                 element_type.as_ref().map(|ty| format!("{};", ty.to_string())).unwrap_or("".into()),
-                values.iter().map(|expr| expr.to_string()).join(",")
+                values.iter().map(|expr| expr.node.to_string()).join(",")
             ),
-            ExprKind::Tuple(Tuple{object_type, values}) => format!(
-                "{}({})", 
-                object_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
-                values.iter().map(|expr| expr.to_string()).join(","),
+            ExprKind::Tuple(Tuple{values}) => format!(
+                "({})", 
+                values.iter().map(|expr| expr.node.to_string()).join(","),
             ),
             ExprKind::NamedTuple(NamedTuple{object_type, values}) => format!(
                 "{}({})", 
                 object_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
-                values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.to_string())).join(","),
+                values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.node.to_string())).join(","),
             ),
         }
     }

@@ -125,7 +125,6 @@ impl<'a> SoulNames<'a> {
             (NamesInternalType::Float64, "f64"),
 
             (NamesInternalType::Range, "Range"),
-            (NamesInternalType::FILE, "FILE"),
         ]);
 
         let operator_names = HashMap::from([
@@ -402,7 +401,6 @@ pub enum NamesInternalType {
     Float64,
 
     Range,
-    FILE,
 }
 impl_soul_name_enum!(NamesInternalType, internal_types);
 

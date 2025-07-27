@@ -129,10 +129,7 @@ fn test_complex_literal() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExprKind::Literal(Literal::Array{
-            ty: LiteralType::Int, 
-            values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)]
-        })
+        ExprKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_0".into()), LiteralType::Array(Box::new(LiteralType::Int))))
     );
 
     stream = stream_from_strs(&[
@@ -149,21 +146,21 @@ fn test_complex_literal() {
             ,"]",
         ")", "\n"
     ]);
+    
+    scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExprKind::Literal(Literal::Tuple{
-            values: vec![
-                Literal::Int(1), 
-                Literal::Uint(0b1), 
-                Literal::Float(OrderedFloat(2.0)), 
-                Literal::Bool(true),
-                Literal::Str("string".into()),
-                Literal::Array { ty: LiteralType::Int, values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)] }
-            ]
-        })
+        ExprKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_0".into()), LiteralType::Tuple(vec![
+            LiteralType::Int,
+            LiteralType::Uint,
+            LiteralType::Float,
+            LiteralType::Bool,
+            LiteralType::Str,
+            LiteralType::Array(Box::new(LiteralType::Int))
+        ])))
     );
 
     stream = stream_from_strs(&[
@@ -172,17 +169,16 @@ fn test_complex_literal() {
             "name2", ":", "1.0", ",",
         ")", "\n"
     ]);
+    scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExprKind::Literal(Literal::NamedTuple{
-            values: BTreeMap::from([
-                (Ident("name1".into()), Literal::Int(1)), 
-                (Ident("name2".into()), Literal::Float(OrderedFloat(1.0))), 
-            ])
-        })
+        ExprKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_0".into()), LiteralType::NamedTuple(BTreeMap::from([
+            (Ident("name1".into()), LiteralType::Int),
+            (Ident("name2".into()), LiteralType::Float),
+        ]))))
     );
 
 }

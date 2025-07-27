@@ -246,13 +246,10 @@ fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Result<L
     const ARRAY_END: &str = "]";
     const ARRAY_EMPTY: &str = "[]";
 
-    if stream.current_text() == ARRAY_EMPTY {
-        return Ok(Literal::new_array(Vec::new(), &stream.current_span()));
-    }
-    else if stream.current_text() != ARRAY_START {
+    if stream.current_text() != ARRAY_START {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), "array should start with '['"));
     }
-    else if stream.peek().is_some_and(|token| token.text == ARRAY_END) {
+    if stream.current_text() == ARRAY_EMPTY || stream.peek().is_some_and(|token| token.text == ARRAY_END) {
         return Ok(Literal::new_array(Vec::new(), &stream.current_span()));
     }
 
@@ -373,7 +370,7 @@ fn get_number(token: &Token) -> Result<Result<Literal>> {
     Err(new_soul_error(
         SoulErrorKind::InvalidType, 
         token.span, 
-        format!("while trying ti get literal number\n{}", int_res.unwrap_err())
+        format!("while trying to get literal number '{}' \n{}", token.text, int_res.unwrap_err())
     ))
 }
 

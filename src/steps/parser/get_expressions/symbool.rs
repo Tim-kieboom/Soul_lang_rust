@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::SoulSpan, steps::{parser::get_expressions::parse_expression::ExpressionStacks, step_interfaces::i_parser::abstract_syntax_tree::{expression::{BinOpKind, OperatorKind, UnaryOpKind}, spanned::Spanned}}};
+use crate::{errors::soul_error::SoulSpan, steps::{step_interfaces::i_parser::abstract_syntax_tree::{expression::{BinOpKind, OperatorKind, UnaryOpKind}, spanned::Spanned}}};
 
 pub const ROUND_BRACKET_OPEN: SymboolKind = SymboolKind::Parenthesis(Parenthesis::RoundOpen);
 pub const ROUND_BRACKET_CLOSED: SymboolKind = SymboolKind::Parenthesis(Parenthesis::RoundClosed);
@@ -48,12 +48,6 @@ impl SymboolKind {
 
     pub fn consume_to_symbool(self, span: SoulSpan) -> Symbool {
         Symbool::new(self, span)
-    }
-}
-
-impl ExpressionStacks {
-    pub fn new() -> Self {
-        Self { symbool_stack: vec![], ref_stack: vec![], node_stack: vec![] }
     }
 }
 

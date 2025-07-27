@@ -148,7 +148,6 @@ static INTERNAL_TYPES: Lazy<Vec<(&str, TypeKind)>> = Lazy::new(|| vec![
     (SOUL_NAMES.get_name(NamesInternalType::Float64),       TypeKind::Float(TypeSize::Bit64)),
     
     (SOUL_NAMES.get_name(NamesInternalType::Float64),       TypeKind::Float(TypeSize::Bit64)),
-    (SOUL_NAMES.get_name(NamesInternalType::FILE),          TypeKind::Struct(Ident("FILE".into()))),
 ]); 
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
