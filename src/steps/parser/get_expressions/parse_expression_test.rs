@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use ordered_float::OrderedFloat;
-use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Arguments, BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, FnCall, Ident, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, staments::statment::{VariableDecl, VariableRef}}, external_header::ExternalHeader, scope::{ScopeBuilder, ScopeKind, TypeScopeStack}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Arguments, Array, BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, FnCall, Ident, NamedTuple, Tuple, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, staments::statment::{VariableDecl, VariableRef}}, external_header::ExternalHeader, scope::{ScopeBuilder, ScopeKind, TypeScopeStack}}, i_tokenizer::{Token, TokenStream}}}};
 
 fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
     let mut line_number = 0;
@@ -550,6 +550,167 @@ fn test_variable_literal_retention() {
         should_be
     );
 }
+
+// # group (tuple, array and namedTuple that contain non literal expressions)
+
+#[test]
+fn test_group_expressions() {
+// 
+    let mut stream = stream_from_strs(&[
+        "[",
+            "func", "(", ")", ",",
+            "2", ",",
+            "3",
+        "]", "\n"
+    ]);
+    let mut scope = empty_scope();
+
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let values = vec![
+        Expression::new(ExprKind::Call(FnCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: vec![]}), SoulSpan::new(0,1,6)),
+        Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
+        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
+    ];
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExprKind::Array(Array{collection_type: None, element_type: None, values: values.clone()})
+    );
+
+    let mut stream = stream_from_strs(&[
+        "[",
+            "[", "func", "(", ")", ",", "1", "]", ",",
+            "[", "2", "]", ",",
+            "[", "3", "]",
+        "]", "\n"
+    ]);
+    let mut scope = empty_scope();
+
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let values = vec![
+        Expression::new(ExprKind::Call(FnCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: vec![]}), SoulSpan::new(0,1,6)),
+        Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
+        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
+    ];
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExprKind::Array(Array{collection_type: None, element_type: None, values: values.clone()})
+    );
+
+//
+
+    stream = stream_from_strs(&[
+        "(",
+            "func", "(", ")", ",",
+            "2", ",",
+            "3",
+        ")", "\n"
+    ]);
+    
+    scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let values = vec![
+        Expression::new(ExprKind::Call(FnCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: vec![]}), SoulSpan::new(0,1,6)),
+        Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
+        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
+    ];
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExprKind::Tuple(Tuple{values: values.clone()})
+    );
+
+    stream = stream_from_strs(&[
+        "(",
+            "func", "(", ")", ",",
+            "2", ",",
+            "(", "3", ",", "true", ")",
+        ")", "\n"
+    ]);
+    
+    scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let values = vec![
+        Expression::new(ExprKind::Call(FnCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: vec![]}), SoulSpan::new(0,1,6)),
+        Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
+        Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
+    ];
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExprKind::Tuple(Tuple{values: values.clone()})
+    );
+//
+
+    stream = stream_from_strs(&[
+        "(",
+            "field", ":", "func", "(", ")", ",",
+            "field2", ":", "2", ",",
+            "field3", ":", "3",
+        ")", "\n"
+    ]);
+    
+    scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let values = BTreeMap::from([
+        (Ident("field".into()), Expression::new(ExprKind::Call(FnCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: vec![]}), SoulSpan::new(0,7,6))),
+        (Ident("field2".into()), Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,21,1))),
+        (Ident("field3".into()), Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,30,1))),
+    ]);
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExprKind::NamedTuple(NamedTuple{values: values.clone(), object_type: None })
+    );
+
+    stream = stream_from_strs(&[
+        "(",
+            "field", ":", "func", "(", ")", ",",
+            "field2", ":", "2", ",",
+            "field3", ":", "(", "field", ":", "1", ")",
+        ")", "\n"
+    ]);
+    
+    scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let values = BTreeMap::from([
+        (Ident("field".into()), Expression::new(ExprKind::Call(FnCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: vec![]}), SoulSpan::new(0,7,6))),
+        (Ident("field2".into()), Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,21,1))),
+        (Ident("field3".into()), Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,30,1))),
+    ]);
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExprKind::NamedTuple(NamedTuple{values: values.clone(), object_type: None })
+    );
+
+    stream = stream_from_strs(&[
+        "(",
+            "field", ":", "func", "(", ")", ",",
+            "field", ":", "2", ",",
+        ")", "\n"
+    ]);
+    
+    scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::InvalidName);
+
+}
+
 
 // # Function
 

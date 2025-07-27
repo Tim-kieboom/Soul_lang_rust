@@ -1,6 +1,5 @@
 //comment 1
 /*comment 2*/
-
 sum(int a, int b) int {
 	return a + b
 }
@@ -14,23 +13,50 @@ sumGeneric<T>(T a, T b) T
 
 struct List{}
 
+tuple() {
+	el := 1
+	runTimeTuple := (el,2,"hello")
+	runTimeTuple1 := (el,2,[1,2,3,],)
+	// runTimeTuple2 := (el,(1,2,3,),2)
+
+	(int, bool) tuple = (el, true)
+	// (number, condition) = (el, true)
+	(field: int, name: bool) namedTuple = (field: el, name: true)
+	// (field, name) = (field: el, name: true) 
+
+	functionCall := func(el, 2, "hello")
+
+	runTimeNamedTuple := (field: el, name: "hello")
+	ctor := List()
+	runTimeNamedTuple2 := List(:)
+	runTimeNamedTuple3 := List(field: el, name: "hello")
+}
+
 array() {
-	array := [1,2,3,4,5,6]
-	// int el = 1
+	array := [int: 1,2,3,4,5,6]
 	el := array[0]
 	span := array[1..2]
 	runTimeArray := [el, 1, 2,]
-	runTimeArray1 := [int; el, 1, 2]
+	runTimeArray1 := [int: el, 1, 2]
 	runTimeArray2 := List[el, 1, 2,]
-	runTimeArray3 := List[int; el, 1, 2]
-}
+	runTimeArray3 := List[int: el, 1, 2]
+	runTimeArray4 := [int:
+		el, 
+		1, 
+		2,
+	]
 
-tuple() {
-	runTimeTuple := (el,2,"hello")
-	// runTimeTuple1 := (el,2,[1,2,3,],)
+	map := [(str, i32):
+		("stuff",  1), 
+		("things", 2)
+	]
 
-	// runTimeNamedTuple := (field: 1, name: "hello")
-	// runTimeNamedTuple := List(:)
+	el2 := [el, 1, 2,][0]
+
+	// runTime2DArray := [[el,1], [1,2,34]]
+	// runTime2DArray2 := [int[]; [el,1], [1,2,34]]
+	// runTime3DArray := [[[el,1],[1,2]], [[1,2],[2,34]]]
+	// runTime3DArray2 := [int[][]; [[el,1],[1,2]], [[1,2],[2,34]]]
 }
 
 varDecl() {

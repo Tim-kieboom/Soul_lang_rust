@@ -108,7 +108,8 @@ impl ExprKind {
             ExprKind::NamedTuple(NamedTuple{object_type, values}) => format!(
                 "{}({})", 
                 object_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
-                values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.node.to_string())).join(","),
+                if !values.is_empty() {values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.node.to_string())).join(",")}
+                else {":".into()},
             ),
         }
     }

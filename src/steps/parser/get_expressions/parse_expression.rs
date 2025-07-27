@@ -1,6 +1,4 @@
-use std::collections::BTreeMap;
-
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Array, BinOp, BinOpKind, ExprKind, Expression, Ident, Index, NamedTuple, OperatorKind, Tuple, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Index, OperatorKind, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -84,8 +82,9 @@ fn convert_expression(
         let possible_literal = try_get_literal(stream, stacks, scopes, &mut open_bracket_stack)?;
 
         if possible_literal.is_none() {
-            
-            if let Some(group) = try_get_expression_group(stream, scopes, stacks)? {
+            stream.go_to_index(literal_begin);
+
+            if let Some(group) = try_get_expression_group(stream, scopes)? {
                 stacks.node_stack.push(group);
                 end_expr_loop(stream, scopes, stacks)?;
                 continue;
@@ -131,123 +130,6 @@ fn convert_expression(
     }   
 
     Err(err_out_of_bounds(stream))
-}
-
-fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<Option<Expression>> {
-    let group_i = stream.current_index();
-    let collection_type = match SoulType::try_from_stream(stream, scopes) {
-        Some(result) => {
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-            
-            Some(result?)
-        },
-        None => None,
-    };
-
-    if stream.current_text() != "[" && stream.current_text() != "(" {
-        stream.go_to_index(group_i);
-        return Ok(None)
-    }
-
-    let is_array = stream.current_text() == "[";
-
-    if !is_array && stream.peek_multiple(2).is_some_and(|token| token.text == ":") {
-        let values = parse_named_group(stream, scopes, stacks)?;
-        let group_span = stream.current_span().combine(&stream[group_i].span);
-
-        Ok(Some(Expression::new(ExprKind::NamedTuple(NamedTuple{object_type: collection_type, values}), group_span)))
-    }
-    else {
-        // e.g List(1,2,3) is function call instead of tuple
-        if !is_array && collection_type.is_some() {
-            stream.go_to_index(group_i);
-            return Ok(None)
-        }
-
-        let (element_type, values) = parse_group(stream, scopes)?;
-        let group_span = stream.current_span().combine(&stream[group_i].span);
-
-        if is_array {
-            Ok(Some(Expression::new(ExprKind::Array(Array{collection_type, element_type, values}), group_span)))
-        }
-        else {
-            Ok(Some(Expression::new(ExprKind::Tuple(Tuple{values}), group_span)))
-        }
-    }
-
-}
-
-fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(Option<SoulType>, Vec<Expression>)> {
-    let group_i = stream.current_index();
-    let is_array = stream.current_text() == "[";
-    let end_token = if is_array {"]"} else {")"};
-
-    fn err_out_of_bounds(group_i: usize, stream: &TokenStream) -> SoulError {
-        new_soul_error(SoulErrorKind::UnexpectedEnd, stream[group_i].span.combine(&stream.current_span()), "unexpeced end while parsing expression group")
-    }
-
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(group_i, stream));
-    } 
-
-    let element_type = if is_array {
-        match SoulType::try_from_stream(stream, scopes) {
-            Some(result) => {
-                stream.next();
-                if stream.current_text() != ";" {
-                    return Err(new_soul_error(
-                        SoulErrorKind::UnexpectedToken, 
-                        stream.current_span(), 
-                        format!("token: '{}' invalid after element type in array should be ';' (e.g '[int; 1,2,3,4]')", stream.current_text())
-                    ));
-                }
-                stream.next();
-
-                Some(result?)
-            },
-            None => None,
-        }
-    }
-    else {
-        None
-    };
-
-    let mut values = Vec::new();
-    loop {
-        if stream.current_text() == end_token {
-            return Ok((element_type, values))
-        }
-
-        let expr = get_expression(stream, scopes, &[",", end_token])?;
-        values.push(expr);
-
-        if stream.current_text() == end_token {
-            return Ok((element_type, values))
-        }
-        else if stream.current_text() != "," {
-            return Err(new_soul_error(
-                SoulErrorKind::UnexpectedToken,
-                stream.current_span(),
-                format!("expected ',' or '{}' in group expression", end_token),
-            ));
-        }
-
-        if stream.next().is_none() {
-            break;
-        } 
-    }
-
-    Err(err_out_of_bounds(group_i, stream))
-}
-
-fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<BTreeMap<Ident, Expression>> {
-    todo!()
-    // let group_i = stream.current_index();
-    // let (start_token, end_token) = ("(", ")");
-
-    // Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream[group_i].span.combine(&stream.current_span()), "unexpeced end while parsing expression group"))
 }
 
 fn end_expr_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
@@ -535,14 +417,6 @@ fn traverse_brackets(
     false
 }
 
-fn is_minus_negative_unary(stacks: &ExpressionStacks) -> bool {
-    stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty()
-}
-
-fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {
-    !stacks.ref_stack.is_empty() && !stacks.node_stack.is_empty()
-}
-
 fn get_operator(stream: &TokenStream, stacks: &ExpressionStacks) -> Option<OperatorKind> {
     let mut op = OperatorKind::from_str(stream.current_text());
     if op.is_none() || unary_is_before_expr(&op, stacks) {
@@ -560,6 +434,14 @@ fn get_operator(stream: &TokenStream, stacks: &ExpressionStacks) -> Option<Opera
     }
 
     op
+}
+
+fn is_minus_negative_unary(stacks: &ExpressionStacks) -> bool {
+    stacks.node_stack.is_empty() || !stacks.symbool_stack.is_empty()
+}
+
+fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {
+    !stacks.ref_stack.is_empty() && !stacks.node_stack.is_empty()
 }
 
 fn unary_is_before_expr(op: &Option<OperatorKind>, stacks: &ExpressionStacks) -> bool {

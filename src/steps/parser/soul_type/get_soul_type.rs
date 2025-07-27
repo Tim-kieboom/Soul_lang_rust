@@ -1,12 +1,13 @@
+use std::collections::HashMap;
 use crate::soul_names::check_name;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeWrapper};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::Lifetime;
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::Lifetime;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeWrapper};
 
 impl FromTokenStream<SoulType> for SoulType {
     fn from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<SoulType> {
@@ -49,7 +50,12 @@ fn inner_from_token_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> R
         }
     }
 
-    soul_type.base = get_type_kind(stream.current(), scopes)?;
+    if stream.current_text() == "(" {
+        soul_type.base = get_tuple_type_kind(stream, scopes)?;
+    }
+    else {
+        soul_type.base = get_type_kind(stream.current(), scopes)?;
+    }
 
     if stream.peek().is_some_and(|token| token.text == "<") {
         
@@ -106,6 +112,171 @@ fn inner_from_token_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> R
     }
 
     Ok(Ok(soul_type))
+}
+
+fn get_tuple_type_kind(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind> {
+    if stream.peek_multiple(2).is_some_and(|token| token.text == ":") {
+        get_named_tuple(stream, scopes)
+    }
+    else {
+        get_tuple(stream, scopes)
+    }
+}
+
+fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind> {
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    } 
+
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        } 
+    }
+    
+    let mut values = Vec::new();
+    loop {
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                break;
+            } 
+        }
+
+        if stream.current_text() == ")" {
+            return Ok(TypeKind::Tuple(values))
+        }
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                break;
+            } 
+        }
+
+        let ty = SoulType::from_stream(stream, scopes)?;
+        values.push(ty);
+
+        if stream.next().is_none() {
+            break;
+        } 
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                break;
+            } 
+        }
+        
+        if stream.current_text() == ")" {
+            return Ok(TypeKind::Tuple(values))
+        }
+        else if stream.current_text() != "," {
+            return Err(new_soul_error(
+                SoulErrorKind::UnexpectedToken,
+                stream.current_span(),
+                "expected ',' or ')' in group expression",
+            ));
+        }
+
+        if stream.next().is_none() {
+            break;
+        } 
+    }
+
+    Err(err_out_of_bounds(stream))
+}
+
+fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind> {
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    } 
+
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        } 
+    }
+    
+    let mut values = HashMap::new();
+    loop {
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                break;
+            } 
+        }
+
+        if stream.current_text() == ")" {
+            return Ok(TypeKind::NamedTuple(values))
+        }
+
+        if stream.current_text() == "\n" {
+            
+            if stream.next().is_none() {
+                break;
+            } 
+        }
+
+        let name = Ident(stream.current_text().clone());
+        check_name(&name.0)
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+
+        if stream.next().is_none() {
+            break;
+        } 
+
+        if stream.current_text() != ":" {
+            return Err(new_soul_error(
+                SoulErrorKind::InvalidType, 
+                stream.current_span(), 
+                format!("token: '{}' should be ':'", stream.current_text())
+            ));
+        }
+
+        if stream.next().is_none() {
+            break;
+        } 
+
+        if stream.current_text() == "\n" {
+            
+            if stream.next().is_none() {
+                break;
+            } 
+        }
+
+        let ty = SoulType::from_stream(stream, scopes)?;
+        values.insert(name, ty);
+        if stream.next().is_none() {
+            break;
+        } 
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                break;
+            } 
+        }
+        
+        if stream.current_text() == ")" {
+            return Ok(TypeKind::NamedTuple(values))
+        }
+        else if stream.current_text() != "," {
+            return Err(new_soul_error(
+                SoulErrorKind::UnexpectedToken,
+                stream.current_span(),
+                "expected ',' or ')' in group expression",
+            ));
+        }
+
+        if stream.next().is_none() {
+            break;
+        } 
+    }
+
+    Err(err_out_of_bounds(stream))
 }
 
 fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<()> {

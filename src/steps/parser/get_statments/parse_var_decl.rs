@@ -132,6 +132,7 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         };
 
         ty.modifier = modifier;
+        ty.base = ty.base.untyped_to_typed();
 
         let var = VariableRef::new(VariableDecl{name: Ident(stream[var_name_index].text.clone()), ty, initializer: Some(Box::new(expr)), lit_retention});
         

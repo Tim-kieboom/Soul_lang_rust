@@ -49,7 +49,25 @@ pub enum TypeKind {
     LifeTime(Ident),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum UntypedKind {
+    UntypedInt,
+    UntypedUint,
+    UntypedFloat,
+}
+
 impl TypeKind {
+
+    /// if type is untyped go to default type for untyped type (e.g UntypedInt -> Int but i32 -> i32)
+    pub fn untyped_to_typed(self) -> Self {
+        match self {
+            TypeKind::UntypedInt => TypeKind::SystemInt,
+            TypeKind::UntypedUint => TypeKind::SystemUint,
+            TypeKind::UntypedFloat => TypeKind::Float(TypeSize::Bit32),
+            _ => self,
+        }
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             TypeKind::None => SOUL_NAMES.get_name(NamesInternalType::None).to_string(),

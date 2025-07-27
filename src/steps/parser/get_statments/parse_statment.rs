@@ -4,13 +4,13 @@ use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
 use crate::steps::parser::get_statments::parse_block::get_block;
-use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_statments::parse_var_decl::get_var_decl;
 use crate::steps::parser::get_expressions::parse_expression::get_expression;
 use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
@@ -29,7 +29,6 @@ static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
 });
 
 pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statment>> {
-
 
     if stream.current().text == "\n" {
 
