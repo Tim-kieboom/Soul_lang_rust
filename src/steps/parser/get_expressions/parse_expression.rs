@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Index, OperatorKind, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -7,18 +7,27 @@ pub fn get_expression(
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str]
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, end_tokens)
+    inner_get_expression(stream, scopes, end_tokens, true)
+}
+
+pub fn get_expression_no_literal_retention(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    end_tokens: &[&str]
+) -> Result<Expression> {
+    inner_get_expression(stream, scopes, end_tokens, false)
 }
 
 fn inner_get_expression(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder,
     end_tokens: &[&str],
+    use_literal_retention: bool,
 ) -> Result<Expression> {
     let begin_i = stream.current_index();
     let mut stacks = ExpressionStacks::new();
 
-    let result = convert_expression(stream, scopes, &mut stacks, end_tokens);
+    let result = convert_expression(stream, scopes, &mut stacks, end_tokens, use_literal_retention);
     if result.is_err() {
         stream.go_to_index(begin_i);
         return Err(result.unwrap_err());
@@ -64,6 +73,7 @@ fn convert_expression(
     scopes: &mut ScopeBuilder, 
     stacks: &mut ExpressionStacks, 
     end_tokens: &[&str],
+    use_literal_retention: bool
 ) -> Result<()> {
 
     let mut open_bracket_stack = 0i64;
@@ -104,7 +114,7 @@ fn convert_expression(
             try_add_operator(stacks, operator, stream.current_span())?;
         }
         else if let Some(var_ref) = try_get_variable(&possible_scopes) {
-            add_variable(stream, stacks, var_ref)?;
+            add_variable(stream, stacks, var_ref, use_literal_retention)?;
         }
         else if let Some(literal) = possible_literal {
             add_literal(literal, stream, scopes, stacks);
@@ -133,14 +143,53 @@ fn convert_expression(
 }
 
 fn end_expr_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+    
     if stream.peek().is_some_and(|token| token.text == "[") {
         add_index(stream, scopes, stacks)?;
+    }
+
+    while stream.peek().is_some_and(|token| token.text == ".") {
+        try_add_field_or_methode(stream, scopes, stacks)?;
     }
 
     if should_convert_to_ref(stacks) {
         add_ref(stream, scopes, stacks)?;
     }
 
+    Ok(())
+}
+
+fn try_add_field_or_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+    if stream.next_multiple(2).is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.peek().is_some_and(|token| token.text == "<" || token.text == "(") {
+        add_methode(stream, scopes, stacks)
+    }
+    else {
+        add_field(stream, stacks)
+    }
+}
+
+fn add_field(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
+    let object = stacks.node_stack.pop()
+        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
+
+    let field = Variable{name: Ident(stream.current_text().clone())};
+    let span = object.span;
+    let field_expr = Expression::new(ExprKind::Field(Field{object: Box::new(object), field}), span.combine(&stream.current_span()));
+    stacks.node_stack.push(field_expr);
+    Ok(())
+}
+
+fn add_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+    let object = stacks.node_stack.pop()
+        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
+
+    let mut func = get_function_call(stream, scopes)?;
+    func.node.callee = Some(Box::new(object));
+    stacks.node_stack.push(Expression::new(ExprKind::Call(func.node), func.span));
     Ok(())
 }
 
@@ -353,7 +402,7 @@ fn add_index(
     Ok(())
 }
 
-fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref: &VariableRef) -> Result<()> {
+fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref: &VariableRef, use_literal_retention: bool) -> Result<()> {
     if var_ref.borrow().initializer.is_none() {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
@@ -365,12 +414,18 @@ fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref
     let variable = Variable{name: var_ref.borrow().name.clone()};
     
     if let Some(literal) = &var_ref.borrow().lit_retention {
-        stacks.node_stack.push(literal.clone());
-    }
-    else {
-        stacks.node_stack.push(Expression::new(ExprKind::Variable(variable), stream.current_span()));
+        
+        if use_literal_retention {
+            stacks.node_stack.push(literal.clone());
+        }
+        else {
+            stacks.node_stack.push(Expression::new(ExprKind::Variable(variable), stream.current_span()));
+        }
+
+        return Ok(());
     }
 
+    stacks.node_stack.push(Expression::new(ExprKind::Variable(variable), stream.current_span()));
     Ok(())
 }
 
@@ -476,35 +531,13 @@ fn is_valid_end_token(token: &Token, open_bracket_stack: i64) -> bool {
 pub struct ExpressionStacks {
     pub symbool_stack: Vec<Symbool>,
     pub ref_stack: Vec<String>,
-    pub collection_stack: Vec<CollectionStackSymbool>,
     pub node_stack: Vec<Expression>,
 }
-
-pub enum CollectionStackSymbool {
-    Comma,
-    RoundBracket{is_open: bool},
-    SquareBracket{is_open: bool},
-}
-
 impl ExpressionStacks {
     pub fn new() -> Self {
-        Self { symbool_stack: vec![], ref_stack: vec![], collection_stack: vec![], node_stack: vec![] }
+        Self { symbool_stack: vec![], ref_stack: vec![], node_stack: vec![] }
     }
 }
-
-impl CollectionStackSymbool {
-    pub fn from_str(text: &str) -> Option<Self> {
-        match text {
-            "(" => Some(CollectionStackSymbool::RoundBracket { is_open: true }),
-            ")" => Some(CollectionStackSymbool::RoundBracket { is_open: false }),
-            "[" => Some(CollectionStackSymbool::SquareBracket { is_open: true }),
-            "]" => Some(CollectionStackSymbool::SquareBracket { is_open: false }),
-            "," => Some(CollectionStackSymbool::Comma),
-            _ => None
-        }
-    }
-}
-
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while parsing exprestion")

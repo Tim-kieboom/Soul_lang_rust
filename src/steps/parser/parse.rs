@@ -19,7 +19,7 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
     let type_stack = forward_declarde_type_stack(&mut stream)?;
     stream.reset();
     #[cfg(feature="dev_mode")]
-    println!( // this print is to be able to see what token is at what index because rust debugger suckss
+    println!( // this print is to be able to see what token is at what index because rust debugger sucks
         "\ntokenizer:\n{:?}\n", 
         stream
             .iter()

@@ -1,12 +1,41 @@
 //comment 1
 /*comment 2*/
+
+class StrBuilder {
+	str buffer
+
+	Ctor::[](str[] arr) {
+		this.buffer = ""
+
+		for el in arr {
+			this.buffer += el
+		} 
+	}
+
+	Ctor() {
+		this.buffer = ""
+	}
+
+	Len(this@) uint {
+		return this.buffer.Len()
+	}
+
+	Push(this&, str s) {
+		this.buffer += s
+	}
+
+	IntoStr(this) str {
+		return this.buffer
+	}
+}
+
 sum(int a, int b) int {
 	return a + b
 }
 
 sumGeneric<T>(T a, T b) T 
-// where
-// 	T: Add
+// where 
+// 	T: Add 
 {
 	return a + b
 }
@@ -20,9 +49,9 @@ tuple() {
 	// runTimeTuple2 := (el,(1,2,3,),2)
 
 	(int, bool) tuple = (el, true)
-	// (number, condition) = (el, true)
+	// (number, condition) := (el, true)
 	(field: int, name: bool) namedTuple = (field: el, name: true)
-	// (field, name) = (field: el, name: true) 
+	// (field, name) := (field: el, name: true) 
 
 	functionCall := func(el, 2, "hello")
 
@@ -67,6 +96,21 @@ varDecl() {
 	int foo1 = 1
 	const int foo2 = 1
 	Literal int foo3 = 1 
+}
+
+assignment() {
+	int foo = 1
+	Println(foo)
+	foo = 2
+	Println(foo)
+
+	foo += 1; foo -= 1; \
+	foo *= 1
+	foo /= 1
+	foo %= 1
+	foo |= 1
+	foo &= 1
+	foo ^= 1
 }
 
 ifs() {
@@ -121,31 +165,6 @@ struct Foo<T> {
 	f32 float = 0.2
 	int foo {Get; set;} = 1
 	T generic
-}
-
-class StrBuilder {
-	str buffer
-
-	Ctor::[](str[] arr) {
-		// this.buffer = ""
-
-		for el in arr {
-			// this.buffer += el
-		} 
-	}
-
-	Ctor() {
-		// this.buffer = ""
-	}
-
-	Push(str s) {
-		// this.buffer += s
-	}
-
-	IntoStr() str {
-		// return this.buffer
-		return ""
-	}
 }
 
 main() int {

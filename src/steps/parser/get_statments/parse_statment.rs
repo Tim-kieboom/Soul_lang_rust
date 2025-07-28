@@ -7,22 +7,22 @@ use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_statments::parse_var_decl::get_var_decl;
-use crate::steps::parser::get_expressions::parse_expression::get_expression;
+use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_no_literal_retention};
 use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
-use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeVisibility};
+use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::TypeEnumDecl;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, IfDecl, WhileDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, Return, Statment, StmtKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Assignment, Block, CloseBlock, Return, Statment, StmtKind, VariableRef};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -30,7 +30,7 @@ static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
 
 pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statment>> {
 
-    if stream.current().text == "\n" {
+    if stream.current_text() == "\n" || stream.current_text() == ";" {
 
         if stream.next().is_none() {
             return Ok(None)
@@ -267,10 +267,87 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         ));
     }
 
-    //assignment
-    todo!();
+    let assign = get_assignment(stream, scopes)?;
+    return Ok(Some(Statment::new(StmtKind::Assignment(assign.node), assign.span)));
 }
 
+
+fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
+    
+    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
+        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing assignment")
+    }
+    
+    let end_tokens = SOUL_NAMES.
+        assign_symbools
+        .iter()
+        .map(|(_, symbool)| *symbool)
+        .filter(|symbool| *symbool != "." && *symbool != "[")
+        .collect::<Vec<&str>>();
+    
+    let variable = get_expression_no_literal_retention(stream, scopes, &end_tokens)?;
+    let symbool_i = stream.current_index();
+
+    if let ExprKind::Variable(var) = &variable.node {
+        
+        let scope = scopes.lookup(&var.name.0);
+        let possible_var = try_get_variable(&scope);
+        if let Some(var_ref) = possible_var {
+            var_ref.borrow_mut().lit_retention = None;
+        }
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let expr = get_expression(stream, scopes, &["\n", ";"])?;
+
+    let expression = get_compount_assignment(stream, symbool_i, &variable, expr)?;
+
+    let span = variable.span.combine(&expression.span);
+    Ok(Spanned::new(Assignment{target: variable, value: expression}, span))
+}
+
+fn try_get_variable<'a>(possible_scopes: &'a Option<&Vec<ScopeKind>>) -> Option<&'a VariableRef> {
+    
+    possible_scopes
+        .as_ref()?
+        .iter()
+        .find_map(|kind| {
+            if let ScopeKind::Variable(var) = kind {
+                Some(var)
+            } else {
+                None
+            }
+        })
+}
+
+fn get_compount_assignment(stream: &TokenStream, symbool_i: usize, variable: &Expression, expression: Expression) -> Result<Expression> {
+    let op_kind = match stream[symbool_i].text.as_str() {
+        "=" => return Ok(expression),
+        "+=" => BinOpKind::Add,
+        "-=" => BinOpKind::Sub,
+        "*=" => BinOpKind::Mul,
+        "/=" => BinOpKind::Div,
+        "%=" => BinOpKind::Mod,
+        "&=" => BinOpKind::BitAnd,
+        "|=" => BinOpKind::BitOr,
+        "^=" => BinOpKind::BitXor,
+        _ => return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream[symbool_i].span, format!("symbool: '{}' unknown symbool for assignment", stream[symbool_i].text))),
+    };
+
+    let span = expression.span;
+    let operator = BinOp::new(op_kind, stream[symbool_i].span);
+    Ok(Expression::new(ExprKind::Binary(
+        BinaryExpr{
+            left: Box::new(variable.clone()), 
+            operator,
+            right: Box::new(expression),
+        }), 
+        span
+    ))
+}
 
 enum FunctionKind {
     FunctionCall,

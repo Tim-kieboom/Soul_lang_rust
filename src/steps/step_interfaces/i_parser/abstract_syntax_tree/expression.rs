@@ -12,21 +12,28 @@ pub type UnaryOp = Spanned<UnaryOpKind>;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind {
     Empty,
+    Call(FnCall),
+    Index(Index),
+    Field(Field),
     Literal(Literal),
+    Unary(UnaryExpr),
     Variable(Variable),
     TypeOf(TypeOfExpr),
     Binary(BinaryExpr),
-    Index(Index),
-    Unary(UnaryExpr),
-    Call(FnCall),
-    
-    ConstRef(BoxExpr),
-    MutRef(BoxExpr),
+
     Deref(BoxExpr),
+    MutRef(BoxExpr),
+    ConstRef(BoxExpr),
 
     Array(Array),
     Tuple(Tuple),
     NamedTuple(NamedTuple),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Field {
+    pub object: BoxExpr,
+    pub field: Variable,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -111,6 +118,11 @@ impl ExprKind {
                 if !values.is_empty() {values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.node.to_string())).join(",")}
                 else {":".into()},
             ),
+            ExprKind::Field(Field{object, field}) => format!(
+                "{}.{}",
+                object.node.to_string(),
+                field.name.0
+            ),
         }
     }
 
@@ -123,6 +135,7 @@ impl ExprKind {
             ExprKind::Deref(..) |
             ExprKind::Array(..) |
             ExprKind::Tuple(..) |
+            ExprKind::Field(..) |
             ExprKind::TypeOf(..) |
             ExprKind::Binary(..) |
             ExprKind::Literal(..) |
@@ -137,18 +150,19 @@ impl ExprKind {
     pub fn get_variant_name(&self) -> &'static str {
         match self {
             ExprKind::Empty => "<empty>",
-            ExprKind::Literal(_) => "Literal",
-            ExprKind::Variable(_) => "Valiable",
-            ExprKind::TypeOf(_) => "typeof",
-            ExprKind::Binary(_) => "binary",
             ExprKind::Index(_) => "index",
             ExprKind::Unary(_) => "unary",
             ExprKind::Call(_) => "FnCall",
-            ExprKind::ConstRef(_) => "ConstRef",
-            ExprKind::MutRef(_) => "MutRef",
             ExprKind::Deref(_) => "DeRef",
             ExprKind::Array(_) => "Array",
             ExprKind::Tuple(_) => "Tuple",
+            ExprKind::Field(_) => "Field",
+            ExprKind::TypeOf(_) => "typeof",
+            ExprKind::Binary(_) => "binary",
+            ExprKind::MutRef(_) => "MutRef",
+            ExprKind::Literal(_) => "Literal",
+            ExprKind::Variable(_) => "Valiable",
+            ExprKind::ConstRef(_) => "ConstRef",
             ExprKind::NamedTuple(_) => "NamedTuple",
         }
     }

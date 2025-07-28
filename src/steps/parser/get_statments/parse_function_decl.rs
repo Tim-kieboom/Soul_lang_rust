@@ -257,10 +257,6 @@ fn get_parameters(calle: &mut Option<Spanned<SoulThis>>, stream: &mut TokenStrea
                 continue;
             }
             else if stream.current_text() == ")" {
-                if stream.next().is_none() {
-                    return Err(err_out_of_bounds(stream));
-                }
-
                 break;
             }
         }
