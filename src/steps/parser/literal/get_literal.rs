@@ -245,13 +245,15 @@ fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Result<L
     const ARRAY_START: &str = "[";
     const ARRAY_END: &str = "]";
     const ARRAY_EMPTY: &str = "[]";
+    
+    if stream.current_text() == ARRAY_EMPTY || stream.peek().is_some_and(|token| token.text == ARRAY_END) {
+        return Ok(Literal::new_array(Vec::new(), &stream.current_span()));
+    }
 
     if stream.current_text() != ARRAY_START {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), "array should start with '['"));
     }
-    if stream.current_text() == ARRAY_EMPTY || stream.peek().is_some_and(|token| token.text == ARRAY_END) {
-        return Ok(Literal::new_array(Vec::new(), &stream.current_span()));
-    }
+
 
     let mut literals = Vec::new();
     while stream.next().is_some() {

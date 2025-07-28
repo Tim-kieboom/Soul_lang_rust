@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::FunctionSignatureRef, statment::{Lifetime, VariableDecl}}}};
+use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::FunctionSignatureRef, statment::Lifetime}}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeSize {
@@ -173,25 +173,6 @@ impl TypeKind {
             TypeKind::LifeTime(..) => "lifetime",
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct EnumVariant {
-    pub name: Ident,
-    pub value: Option<u64>, // Optional manual value
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnionVariant {
-    pub name: Ident,
-    pub fields: Vec<UnionVariantKind>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum UnionVariantKind {
-    Unit,
-    Tuple(Vec<SoulType>),
-    Struct(Vec<VariableDecl>)
 }
 
 #[derive(Debug, Clone, PartialEq)]

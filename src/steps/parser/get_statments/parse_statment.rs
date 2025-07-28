@@ -7,25 +7,35 @@ use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_statments::parse_var_decl::get_var_decl;
-use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_no_literal_retention};
 use crate::steps::parser::get_statments::parse_type_enum::get_type_enum_body;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
-use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Literal};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident};
+use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::TypeEnumDecl;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::{EnumDecl, EnumVariant, TypeEnumDecl};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
+use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_no_literal_retention};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, IfDecl, WhileDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Assignment, Block, CloseBlock, Return, Statment, StmtKind, VariableRef};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
+});
+
+static ASSIGN_END_TOKENS: Lazy<Vec<&str>> = Lazy::new(|| {
+    SOUL_NAMES
+        .assign_symbools
+        .iter()
+        .map(|(_, symbool)| *symbool)
+        .filter(|symbool| *symbool != "." && *symbool != "[")
+        .collect::<Vec<&str>>()
 });
 
 pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statment>> {
@@ -122,7 +132,8 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             todo!()
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
-            todo!()
+            let enum_decl = get_enum(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::EnumDecl(enum_decl.node), enum_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
             let result = get_struct(stream, scopes)?;
@@ -131,6 +142,9 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
             let result = get_class(stream, scopes)?;
             return Ok(Some(Statment::new(StmtKind::ClassDecl(result.node), result.span)));
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::SwitchCase) => {
+            todo!()
         },
         _ => (),
     }
@@ -255,7 +269,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                     return Ok(Some(func.node.consume_to_statment(func.span)));
                 },
             }
-        }
+        },
         _ => (),
     }
 
@@ -271,6 +285,171 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     return Ok(Some(Statment::new(StmtKind::Assignment(assign.node), assign.span)));
 }
 
+fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<EnumDecl>> {
+    let enum_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    check_name(&stream.current_text())
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), format!("while trying to parse enum {}", msg)))?;
+
+    let name = Ident(stream.current_text().clone());
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() == "\n" {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    if stream.current_text() != "{" {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' should be '{{'", stream.current_text())))
+    }
+
+    let mut min_num = 0i64;
+    let mut max_num = 0i64;
+    let mut variants = Vec::new();
+    let mut names = HashSet::new();
+    let mut assignments = HashSet::new();
+    loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        if stream.current_text() == "}" {
+            break;
+        }
+
+        check_name(stream.current_text())
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), format!("while trying to parse enum variant {}", msg)))?;
+
+        if !names.insert(stream.current_text().clone()) {
+            return Err(new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), format!("variant: '{}' already exist", stream.current_text())))
+        }
+
+        let name = Ident(stream.current_text().clone());
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+        
+        let assign = get_enum_assignment(&mut assignments, stream, scopes)?;
+        if let Some(num) = assign {
+            min_num = min_num.min(num);
+            max_num = max_num.max(num);
+        }
+
+        let value = assign.unwrap_or(variants.len() as i64);
+        variants.push(EnumVariant{name, value});
+
+        if stream.current_text() == "\n" {
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        if stream.current_text() == "}" {
+            break;
+        }
+        else if stream.current_text() != "," {
+            return Err(new_soul_error(
+                SoulErrorKind::UnexpectedToken, 
+                stream.current_span(), 
+                format!("token: '{}' is not ',' or '}}'", stream.current_text())
+            ));
+        }
+    }
+
+    if max_num == 0 {
+        max_num = (variants.len() as i64 - 1).min(0);
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    Ok(Spanned::new(EnumDecl{name, variants, max_num, min_num}, stream.current_span().combine(&stream[enum_i].span)))
+}
+
+fn get_enum_assignment(assignments: &mut HashSet<i64>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<i64>> {
+    
+    if stream.current_text() != "=" {
+        return Ok(None);
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() == "\n" {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    let is_neg = stream.current_text() == "-";
+    if is_neg {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    let assign = match Literal::try_from_stream(stream, scopes) {
+        Some(result) => {
+            Some(result?)
+        },
+        None => None,
+    };
+
+    if let Some(lit) = assign {
+
+        let mut num = match lit {
+            Literal::Int(num) => num as i64,
+            Literal::Uint(num) => num as i64,
+            _ => return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("literal value of type: '{}' is not allowed as value of enum variant (only int and uint numbers)", lit.type_to_string()))),
+        };
+
+        if is_neg {
+            num *= -1;
+        }
+
+        if !assignments.insert(num as i64) {
+            return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("number: '{}' is already used (this can also be by diffrent notation so '0b1010'(binary for 10) and '10' are still duplicates)", num)))
+        }
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        Ok(Some(num))
+    }
+    else {
+        Ok(None)
+    }
+
+}
 
 fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
     
@@ -278,33 +457,33 @@ fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing assignment")
     }
     
-    let end_tokens = SOUL_NAMES.
-        assign_symbools
-        .iter()
-        .map(|(_, symbool)| *symbool)
-        .filter(|symbool| *symbool != "." && *symbool != "[")
-        .collect::<Vec<&str>>();
-    
-    let variable = get_expression_no_literal_retention(stream, scopes, &end_tokens)?;
+    let variable = get_expression_no_literal_retention(stream, scopes, &ASSIGN_END_TOKENS)?;
     let symbool_i = stream.current_index();
 
-    if let ExprKind::Variable(var) = &variable.node {
+    let lit_retention = if let ExprKind::Variable(var) = &variable.node {
         
         let scope = scopes.lookup(&var.name.0);
         let possible_var = try_get_variable(&scope);
         if let Some(var_ref) = possible_var {
-            var_ref.borrow_mut().lit_retention = None;
+            std::mem::take(&mut var_ref.borrow_mut().lit_retention)
+        }
+        else {
+            None
         }
     }
+    else {
+        None
+    };
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
 
     let expr = get_expression(stream, scopes, &["\n", ";"])?;
-
-    let expression = get_compount_assignment(stream, symbool_i, &variable, expr)?;
-
+    
+    let assign = if let Some(literal) = lit_retention {Expression::new(literal.node, variable.span)} else {variable.clone()};
+    let expression = get_compount_assignment(stream, symbool_i, &assign, expr)?;
+    
     let span = variable.span.combine(&expression.span);
     Ok(Spanned::new(Assignment{target: variable, value: expression}, span))
 }

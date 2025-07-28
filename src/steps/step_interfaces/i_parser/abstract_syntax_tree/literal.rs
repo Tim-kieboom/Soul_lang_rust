@@ -6,7 +6,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::so
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeSize, TypeWrapper};
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Literal {
     // basic
     Int(i64),
@@ -25,7 +25,7 @@ pub enum Literal {
     ProgramMemmory(Ident, LiteralType),
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub enum LiteralType {
     Int,
     Uint,
@@ -96,11 +96,11 @@ impl LiteralType {
         }
     }
 
-    fn is_numeric(&self) -> bool {
+    pub fn is_numeric(&self) -> bool {
         matches!(self, LiteralType::Int | LiteralType::Uint | LiteralType::Float)
     }
 
-    fn is_compatible(&self, other: &Self) -> bool {
+    pub fn is_compatible(&self, other: &Self) -> bool {
         if self.is_numeric() && other.is_numeric() {
             return true;
         }

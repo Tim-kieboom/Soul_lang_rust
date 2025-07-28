@@ -46,7 +46,12 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
             Ok(Some(Expression::new(ExprKind::Array(Array{collection_type, element_type, values}), group_span)))
         }
         else {
-            Ok(Some(Expression::new(ExprKind::Tuple(Tuple{values}), group_span)))
+            if values.len() == 1 {
+                Ok(Some(values[0].to_owned()))
+            }
+            else { 
+                Ok(Some(Expression::new(ExprKind::Tuple(Tuple{values}), group_span)))
+            }
         }
     }
 

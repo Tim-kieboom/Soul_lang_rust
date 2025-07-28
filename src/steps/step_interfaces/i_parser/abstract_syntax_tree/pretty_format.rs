@@ -187,7 +187,7 @@ impl PrettyPrint for RwLockReadGuard<'_, InnerTraitDecl> {
         let prefix = tree_prefix(tab, is_last);
         let header = format!("{}Trait {} >>", prefix, self.name.0);
 
-        let methods = self.methodes
+        let mut methods = self.methodes
             .iter()
             .enumerate()
             .map(|(i, sig)| {
@@ -196,6 +196,10 @@ impl PrettyPrint for RwLockReadGuard<'_, InnerTraitDecl> {
                 format!("{} {};", inner_prefix, sig.to_string())
             })
             .join("\n");
+
+        if methods.is_empty() {
+            methods = prefix;
+        }
 
         format!("{}\n{}", header, methods)
     }
@@ -220,22 +224,26 @@ impl PrettyPrint for UnionDecl {
 }
 
 impl PrettyPrint for EnumDecl {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let indent_str = indent(tab);
+    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
         let variants = self.variants
             .iter()
-            .map(|v| format!("{}{:?}", indent_str, v.value))
-            .join(",\n");
-        format!("Enum {} >>\n{}", self.name.0, variants)
+            .map(|v| format!("{}({:?})", v.name.0, v.value))
+            .join(", ");
+        format!("Enum {} >> [{}]", self.name.0, variants)
     }
 }
 
 impl PrettyPrint for TraitImpl {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let methods = self.methodes
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let mut methods = self.methodes
             .iter()
             .map(|fn_decl| fn_decl.to_pretty(tab + 1, true))
             .join("\n\n");
+
+        if methods.is_empty() {
+            methods = tree_prefix(tab, is_last);
+        }
+
         format!("Impl {} for {} >>\n{}", self.trait_name.0, self.for_type.to_string(), methods)
     }
 }
@@ -271,7 +279,12 @@ impl PrettyPrint for ClassDecl {
             m.node.to_pretty(tab + 1, is_last_method)
         });
 
-        format!("{}\n{}", header, fields.chain(methods).join("\n"))
+        let mut body = fields.chain(methods).join("\n");
+        if body.is_empty() {
+            body = prefix;
+        }
+
+        format!("{}\n{}", header, body)
     }
 }
 
@@ -296,7 +309,7 @@ impl PrettyPrint for StructDecl {
                 format!("<{}>", self.generics.iter().map(|g| g.to_string()).join(", "))
             });
 
-        let body = self.fields
+        let mut body = self.fields
             .iter()
             .enumerate()
             .map(|(i, f)| {
@@ -309,6 +322,10 @@ impl PrettyPrint for StructDecl {
                 }
             })
             .join("\n");
+
+        if body.is_empty() {
+            body = prefix;
+        }
 
         format!("{}\n{}", header, body)
     }

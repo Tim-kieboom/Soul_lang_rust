@@ -1,7 +1,78 @@
 //comment 1
 /*comment 2*/
 
+enum Alphabet {
+	A,B,C,D,E,F,G,H,I,
+	J,K,L,N,M,O,P,Q,R,
+	S,T,U,V,W,X,Y,Z
+}
+
+enum NumberedEnum {
+	One = 1,
+	Two = 0b1010,
+	Three = -1,
+	Four = 0xff
+}
+
+enumFunc() {
+	letter := Alphabet.A
+	if letter == Alphabet.A {
+		Println(letter)
+	}
+	else if letter > Alphabet.B {
+		Println("ogaboega")
+	}
+	else if int(letter) > int(NumberedEnum.One) {
+		Println("ogaboega (but int)")
+	}
+}
+
+// union Num {
+// 	Int(int),
+// 	Uint(num: uint),
+// 	Float(f32),
+// }
+
+// switch() {
+// 	num := 12
+// 	match num {
+// 		1 => Println("is 1"),
+// 		21 => Println("is 21"),
+// 		12 => Println("is 12"),
+// 		_ => Println("default"),
+// 	}
+
+// 	string := "num" 
+// 	match string {
+// 		"num" => Println("yippie"),
+// 		"mun" => Println("eippiy"),
+// 		_ => Println("oh no"),
+// 	}
+
+// 	tuple := (1, 2, 3)
+// 	match tuple {
+// 		val if val.0 < val.1 && val.1 < val.2 => Println("ordered"),
+// 		val if val.0 > val.1 && val.1 > val.2 => Println("rev ordered"),
+// 		_ => Println("not ordered"),
+// 	}
+
+// 	val := match 1 == 1 {
+// 		true => 12,
+// 		false => 21,
+// 	}
+
+// 	Num unionName = Num.Int(1)
+// 	match unionName {
+// 		Int(num) => Println(num),
+// 		Uint(num) => Println(num),
+// 		Float(num) => Println(num),
+// 	} 
+// }
+
 class StrBuilder {
+	// static int runTimeStatic {Get;} = 1
+	// Literal int compileTimeStatic {Get;} = 1 
+
 	str buffer
 
 	Ctor::[](str[] arr) {
@@ -29,6 +100,14 @@ class StrBuilder {
 	}
 }
 
+testClass() {
+	sb := StrBuilder()
+	sb = StrBuilder["hello ", "world"]
+	len := sb.Len()
+	// sb.Push(" test")
+	Println(sb.IntoStr())
+}
+
 sum(int a, int b) int {
 	return a + b
 }
@@ -40,15 +119,18 @@ sumGeneric<T>(T a, T b) T
 	return a + b
 }
 
-struct List{}
 
 tuple() {
+	struct MyList{}
+
 	el := 1
 	runTimeTuple := (el,2,"hello")
 	runTimeTuple1 := (el,2,[1,2,3,],)
 	// runTimeTuple2 := (el,(1,2,3,),2)
 
 	(int, bool) tuple = (el, true)
+	// int first = tuple.0
+	// bool second = tuple.1
 	// (number, condition) := (el, true)
 	(field: int, name: bool) namedTuple = (field: el, name: true)
 	// (field, name) := (field: el, name: true) 
@@ -56,29 +138,32 @@ tuple() {
 	functionCall := func(el, 2, "hello")
 
 	runTimeNamedTuple := (field: el, name: "hello")
-	ctor := List()
-	runTimeNamedTuple2 := List(:)
-	runTimeNamedTuple3 := List(field: el, name: "hello")
+	ctor := MyList()
+	// runTimeNamedTuple2 := MyList(:)
+	// runTimeNamedTuple3 := MyList(field: el, name: "hello")
 }
 
 array() {
+	struct MyList{}
+	struct MyHashMap{}
+	
 	array := [int: 1,2,3,4,5,6]
 	el := array[0]
 	span := array[1..2]
 	runTimeArray := [el, 1, 2,]
 	runTimeArray1 := [int: el, 1, 2]
-	runTimeArray2 := List[el, 1, 2,]
-	runTimeArray3 := List[int: el, 1, 2]
+	runTimeArray2 := MyList[el, 1, 2,]
+	runTimeArray3 := MyList[int: el, 1, 2]
 	runTimeArray4 := [int:
 		el, 
 		1, 
 		2,
 	]
 
-	map := [(str, i32):
-		("stuff",  1), 
-		("things", 2)
-	]
+	// map := MyHashMap[(str, i32):
+	// 	("stuff",  1), 
+	// 	("things", 2)
+	// ]
 
 	el2 := [el, 1, 2,][0]
 
@@ -101,7 +186,7 @@ varDecl() {
 assignment() {
 	int foo = 1
 	Println(foo)
-	foo = 2
+	foo += 2
 	Println(foo)
 
 	foo += 1; foo -= 1; \
@@ -111,6 +196,8 @@ assignment() {
 	foo |= 1
 	foo &= 1
 	foo ^= 1
+	foo = foo log 100
+	foo = foo </ 100
 }
 
 ifs() {
@@ -123,6 +210,28 @@ ifs() {
 	else {
 		Println("else is true")
 	}
+
+	// val := if true {
+	// 	12
+	// }
+	// else {
+	// 	21
+	// }
+
+	// val := if true {
+	// 	12
+	// }
+	// else if false {
+	// 	32
+	// }
+	// else {
+	// 	21
+	// }
+
+	// Op<i32> num = None
+	// if num typeof Some(num) {
+	// 	Println(num)
+	// } 
 }
 
 str parse(this@, int a) int {

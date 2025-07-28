@@ -145,7 +145,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
                 continue;
             }
 
-            let possible_lifetime = if text.len() > 2 {&split[split.len()-2..]} else {&split};
+            let possible_lifetime = if split.len() > 2 {&split[split.len()-2..]} else {&split};
             if split.chars().nth_back(1) == Some('\'') && split.len() > 2 {
                 let first = &split[..split.len()-2];
                 tokens.push(Token::new(first.to_string(), SoulSpan::new(file_line.line_number, line_offset, first.len())));

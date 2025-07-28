@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use itertools::Itertools;
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned}}}};
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned}};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
@@ -20,6 +20,8 @@ pub enum ExprKind {
     Variable(Variable),
     TypeOf(TypeOfExpr),
     Binary(BinaryExpr),
+    StaticField(StaticField),
+    StaticMethode(StaticMethode),
 
     Deref(BoxExpr),
     MutRef(BoxExpr),
@@ -33,6 +35,12 @@ pub enum ExprKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     pub object: BoxExpr,
+    pub field: Variable,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StaticField {
+    pub object: Spanned<TypeKind>,
     pub field: Variable,
 }
 
@@ -69,36 +77,36 @@ impl ExprKind {
             ExprKind::Binary(BinaryExpr{left, operator, right}) => format!("({} {} {})", left.node.to_string(), operator.node.to_str(), right.node.to_string()),
             ExprKind::Index(Index{ collection, index }) => format!("{}[{}]", collection.node.to_string(), index.node.to_string()),
             ExprKind::Unary(UnaryExpr{ operator, expression }) => {
-                    match operator.node {
-                        UnaryOpKind::Incr{before_var} |
-                        UnaryOpKind::Decr{before_var} => {
-                            if before_var {
-                                format!("{} {}", operator.node.to_str(), expression.node.to_string())
-                            }
-                            else {
-                                format!("{} {}", expression.node.to_string(), operator.node.to_str())
-                            }
+                match operator.node {
+                    UnaryOpKind::Incr{before_var} |
+                    UnaryOpKind::Decr{before_var} => {
+                        if before_var {
+                            format!("{} {}", operator.node.to_str(), expression.node.to_string())
                         }
-                        UnaryOpKind::Neg |
-                        UnaryOpKind::Not |
-                        UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string()),
+                        else {
+                            format!("{} {}", expression.node.to_string(), operator.node.to_str())
+                        }
                     }
-                },
+                    UnaryOpKind::Neg |
+                    UnaryOpKind::Not |
+                    UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string()),
+                }
+            },
             ExprKind::Call(FnCall{callee, name, generics, arguments}) => {
-                    let generics = if generics.is_empty() {
-                        String::new()
-                    }
-                    else {
-                        format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
-                    };
+                let generics = if generics.is_empty() {
+                    String::new()
+                }
+                else {
+                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
+                };
 
-                    if let Some(methode) = callee {
-                        format!("{}.{}{}({})", methode.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
-                    }
-                    else {
-                        format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
-                    }
-                },
+                if let Some(methode) = callee {
+                    format!("{}.{}{}({})", methode.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
+                }
+                else {
+                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
+                }
+            },
             ExprKind::ConstRef(spanned) => format!("@{}", spanned.node.to_string()),
             ExprKind::MutRef(spanned) => format!("&{}", spanned.node.to_string()),
             ExprKind::Deref(spanned) => format!("*{}", spanned.node.to_string()),
@@ -123,6 +131,21 @@ impl ExprKind {
                 object.node.to_string(),
                 field.name.0
             ),
+            ExprKind::StaticField(StaticField{object, field}) => format!(
+                "{}.{}",
+                object.node.to_string(),
+                field.name.0
+            ),
+            ExprKind::StaticMethode(StaticMethode{ callee, name, generics, arguments}) => {
+                let generics = if generics.is_empty() {
+                    String::new()
+                }
+                else {
+                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
+                };
+
+                format!("{}.{}{}({})", callee.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
+            },
         }
     }
 
@@ -140,7 +163,9 @@ impl ExprKind {
             ExprKind::Binary(..) |
             ExprKind::Literal(..) |
             ExprKind::Variable(..) |
-            ExprKind::NamedTuple(..) => false,
+            ExprKind::NamedTuple(..) |
+            ExprKind::StaticMethode(..) |
+            ExprKind::StaticField(..) => false,
             
             ExprKind::MutRef(..) |
             ExprKind::ConstRef(..) => true,
@@ -164,6 +189,8 @@ impl ExprKind {
             ExprKind::Variable(_) => "Valiable",
             ExprKind::ConstRef(_) => "ConstRef",
             ExprKind::NamedTuple(_) => "NamedTuple",
+            ExprKind::StaticMethode(_) => "StaticCall",
+            ExprKind::StaticField(_) => "StaticField",
         }
     }
 
@@ -198,6 +225,25 @@ impl TypeOfExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnCall {
     pub callee: Option<BoxExpr>,
+    pub name: Ident,
+    pub generics: Vec<SoulType>,
+    pub arguments: Vec<Arguments>,
+}
+
+impl FnCall {
+    pub fn consume_to_static_methode(self, ty: Spanned<TypeKind>) -> StaticMethode {
+        StaticMethode{
+            callee: ty, 
+            name: self.name, 
+            generics: self.generics, 
+            arguments: self.arguments,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StaticMethode {
+    pub callee: Spanned<TypeKind>,
     pub name: Ident,
     pub generics: Vec<SoulType>,
     pub arguments: Vec<Arguments>,
