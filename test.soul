@@ -11,7 +11,7 @@ enum NumberedEnum {
 	One = 1,
 	Two = 0b1010,
 	Three = -1,
-	Four = 0xff
+	Four = 0xff,
 }
 
 enumFunc() {
@@ -105,8 +105,11 @@ testClass() {
 	sb := StrBuilder()
 	sb = StrBuilder["hello ", "world"]
 	len := sb.Len()
-	// sb.Push(" test")
+	sb.Push(" test")
 	Println(sb.IntoStr())
+	hash := "str".Hash()
+	hash = func().Hash()
+	hash = 1.Hash()
 }
 
 sum(int a, int b) int {
@@ -203,10 +206,26 @@ array() {
 
 varDecl() {
 	// int forwardDecl
+	
+	// let untyped
+	// untyped = 1 //turns untyped to int from none
+
+	// const untyped
+	// untyped = 1 //turns untyped to int from none
+
+	// list := List[]
+	// list.Push(1) //turns arr to int[] from none 
+
 	foo := 1
 	const f = "hello world"
 	Literal fo = (1, 2, 3)
+
+
+	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])
+
 	json := (field: 1, foo: (1, 2, 3), arr: [1,2,3])
+	MyJson typedjson = (field: 1, foo: (1, 2, 3), arr: [1,2,3])
+	
 	int foo1 = 1
 	const int foo2 = 1
 	Literal int foo3 = 1 

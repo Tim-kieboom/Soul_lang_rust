@@ -70,6 +70,10 @@ impl TokenStream {
         self.peek_multiple(1)
     }
 
+    pub fn is_valid_index(&self, index: usize) -> bool {
+        index < self.tokens.len()
+    }
+
     pub fn go_to_index(&mut self, index: usize) -> Option<&Token> {
         if index >= self.tokens.len() {
             None

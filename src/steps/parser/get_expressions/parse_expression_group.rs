@@ -194,6 +194,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             } 
         }
 
+        let name_i = stream.current_index();
         let name = Ident(stream.current_text().clone());
         if stream.next().is_none() {
             break;
@@ -219,7 +220,9 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         }
 
         let expr = get_expression(stream, scopes, &[",", "\n", end_token])?;
-        values.insert(name, expr);
+        if let Some(duplicate) = values.insert(name, expr) {
+            return Err(new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), format!("in NamedTuple fieldName: '{}' already exists at{}:{};", stream[name_i].text, duplicate.span.line_number, duplicate.span.line_offset)))
+        }
 
         if stream.current_text() == "\n" {
 

@@ -10,7 +10,6 @@ static TOKEN_SPLIT_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(&SOUL_NAMES
         .parse_tokens
         .iter()
-        .filter(|&&s| s != ".")
         .map(|s| regex::escape(s))
         .collect::<Vec<_>>()
         .join("|")
@@ -72,6 +71,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
     let mut string_span = SoulSpan::new(0,0,0);
     
     for (i, mut text) in splits.iter().enumerate() {
+
         if *text == "\"" {
             string_token.push_str(*text);
             if in_string {
@@ -136,6 +136,12 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
 
             last_is_forward_slash = true;
             break;
+        }
+
+        if *text == "." {
+            tokens.push(Token::new(".".to_string(), SoulSpan::new(file_line.line_number, line_offset, 1)));
+            line_offset = add_offset_range(line_offset + 1, &mut gaps, line_offset);
+            continue;
         }
 
         let dot_splits = text.split('.').collect::<Vec<_>>();

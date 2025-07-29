@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -128,10 +128,13 @@ fn convert_expression(
             stacks.node_stack.push(Expression::new(ExprKind::Call(function.node), function.span));
         }
         else if scopes.lookup_type(&stream.current_text()).is_some() {
-            let type_i = stream.current_index();
+            let ty_i = stream.current_index();
+            let ty = SoulType::from_stream(stream, &scopes)?;
+            let span = stream.current_span().combine(&stream[ty_i].span);
 
+            let spanned_ty = Spanned::new(ty, span);
             while stream.peek().is_some_and(|token| token.text == ".") {
-                try_static_field_or_static_methode(type_i, stream, scopes, stacks)?;
+                try_static_field_or_static_methode(&spanned_ty, stream, scopes, stacks)?;
             }
         }
         else {
@@ -170,15 +173,10 @@ fn end_expr_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &m
     Ok(())
 }
 
-fn try_static_field_or_static_methode(type_i: usize, stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+fn try_static_field_or_static_methode(ty: &Spanned<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
     if stream.next_multiple(2).is_none() {
         return Err(err_out_of_bounds(stream));
     }
-
-    let ty = Spanned::new(
-        scopes.lookup_type(&stream[type_i].text).cloned().unwrap(),
-        stream[type_i].span
-    );
 
     if stream.peek().is_some_and(|token| token.text == "<" || token.text == "(") {
         add_static_methode(ty, stream, scopes, stacks)
@@ -201,19 +199,19 @@ fn try_add_field_or_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder,
     }
 }
 
-fn add_static_field(ty: Spanned<TypeKind>, stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
+fn add_static_field(ty: &Spanned<SoulType>, stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
 
     let span = ty.span;
     let field = Variable{name: Ident(stream.current_text().clone())};
-    let field_expr = Expression::new(ExprKind::StaticField(StaticField{object: ty, field}), span.combine(&stream.current_span()));
+    let field_expr = Expression::new(ExprKind::StaticField(StaticField{object: ty.clone(), field}), span.combine(&stream.current_span()));
     stacks.node_stack.push(field_expr);
     Ok(())
 }
 
-fn add_static_methode(ty: Spanned<TypeKind>, stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+fn add_static_methode(ty: &Spanned<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
 
     let func = get_function_call(stream, scopes)?;
-    let methode = func.node.consume_to_static_methode(ty);
+    let methode = func.node.consume_to_static_methode(ty.clone());
     stacks.node_stack.push(Expression::new(ExprKind::StaticMethode(methode), func.span));
     Ok(())
 }

@@ -7,14 +7,14 @@ use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
-use crate::steps::parser::get_expressions::parse_expression::{get_expression};
+use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_no_literal_retention};
 use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
 use crate::steps::parser::get_statments::parse_enum_like::{get_enum, get_type_enum};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
-use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_var_decl};
+use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_var_decl};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
@@ -25,6 +25,19 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::sta
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
+});
+
+static END_DOT_EXPRESSION: Lazy<Vec<&str>> = Lazy::new(|| {
+    let mut symbools = SOUL_NAMES
+        .assign_symbools
+        .iter()
+        .map(|(_, symbool)| *symbool)
+        .filter(|symbool| *symbool != "." && *symbool != "[")
+        .collect::<Vec<&str>>();
+
+    symbools.push("\n");
+    symbools.push(";");
+    symbools
 });
 
 pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statment>> {
@@ -139,8 +152,9 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         _ => (),
     }
 
-    let begin_i = stream.current_index();
+    let first_type_i = stream.current_index();
     let possible_res_type = SoulType::try_from_stream(stream, scopes);
+    let has_valid_type = possible_res_type.as_ref().is_some_and(|res| res.is_ok());
 
     if let Some(result_ty) = possible_res_type {
         let _ty = result_ty?;
@@ -154,7 +168,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(Some(func.node.consume_to_statment(func.span)));
         }
         else if peek2_token.text == "=" {
-            stream.go_to_index(begin_i);
+            stream.go_to_index(first_type_i);
             let var = get_var_decl(stream, scopes)?;
             return Ok(Some(
                 Statment::from_kind(
@@ -179,7 +193,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         let symbool = &stream[symbool_index].text;
 
         if symbool == "=" {
-            stream.go_to_index(begin_i);
+            stream.go_to_index(first_type_i);
             let var = get_var_decl(stream, scopes)?;
             return Ok(Some(
                 Statment::from_kind(
@@ -227,6 +241,18 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         None
     };
 
+    if stream[next_index].text == "." {
+        let variable = get_expression_no_literal_retention(stream, scopes, &END_DOT_EXPRESSION)?;
+        let span = variable.span;
+        
+        if stream.current_text() == "\n" || stream.current_text() == ";" {
+            return Ok(Some(Statment::new(StmtKind::ExprStmt(variable), span)));
+        }
+
+        let assignment = get_assignment_with_var(variable, stream, scopes)?;
+        return Ok(Some(Statment::new(StmtKind::Assignment(assignment.node), assignment.span)));
+    }
+
     match stream[next_index].text.as_str() {
         "=" => {
             if peek_i != 1 {
@@ -260,10 +286,18 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                 },
             }
         },
+        "++" | "--" => {
+            let expr = get_expression(stream, scopes, &["\n", ";"])?;
+            
+            let span = expr.span;
+            return Ok(Some(Spanned::new(StmtKind::ExprStmt(expr), span)));
+        }
         _ => (),
     }
 
     if !ASSIGN_SYMBOOLS_SET.iter().any(|symb| symb == &&stream[next_index].text) {
+        try_get_special_error(next_index, stream, has_valid_type, first_type_i)?;
+        
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
             stream[next_index].span, 
@@ -273,6 +307,18 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
     let assign = get_assignment(stream, scopes)?;
     return Ok(Some(Statment::new(StmtKind::Assignment(assign.node), assign.span)));
+}
+
+fn try_get_special_error(next_index: usize, stream: &TokenStream, has_type: bool, type_t: usize) -> Result<()> {
+    if has_type && stream.is_valid_index(next_index+1) && stream[next_index+1].text == ":=" {
+        return Err(new_soul_error(
+            SoulErrorKind::InvalidInContext, 
+            stream[next_index+1].span, 
+            format!("can not have a type: '{}' and a ':='(aka a default type-invered assign symbool) in the same variable declaration (remove '{}' or change ':=' to '=')", stream[type_t].text, stream[type_t].text)
+        ));
+    }
+
+    Ok(())
 }
 
 enum FunctionKind {

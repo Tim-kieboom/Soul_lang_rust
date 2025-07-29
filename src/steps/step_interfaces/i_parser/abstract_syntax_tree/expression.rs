@@ -1,7 +1,6 @@
-use std::collections::BTreeMap;
-
 use itertools::Itertools;
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned}};
+use std::collections::BTreeMap;
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned}};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
@@ -40,7 +39,7 @@ pub struct Field {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StaticField {
-    pub object: Spanned<TypeKind>,
+    pub object: Spanned<SoulType>,
     pub field: Variable,
 }
 
@@ -231,7 +230,7 @@ pub struct FnCall {
 }
 
 impl FnCall {
-    pub fn consume_to_static_methode(self, ty: Spanned<TypeKind>) -> StaticMethode {
+    pub fn consume_to_static_methode(self, ty: Spanned<SoulType>) -> StaticMethode {
         StaticMethode{
             callee: ty, 
             name: self.name, 
@@ -243,7 +242,7 @@ impl FnCall {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StaticMethode {
-    pub callee: Spanned<TypeKind>,
+    pub callee: Spanned<SoulType>,
     pub name: Ident,
     pub generics: Vec<SoulType>,
     pub arguments: Vec<Arguments>,

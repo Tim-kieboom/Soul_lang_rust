@@ -170,6 +170,25 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
 }
 
+pub fn get_assignment_with_var(variable: Expression, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
+        
+    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
+        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing assignment")
+    }
+    
+    let symbool_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let expr = get_expression(stream, scopes, &["\n", ";"])?;
+    
+    let expression = get_compount_assignment(stream, symbool_i, &variable, expr)?;
+    
+    let span = variable.span.combine(&expression.span);
+    Ok(Spanned::new(Assignment{target: variable, value: expression}, span))
+}
+
 pub fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
     
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
