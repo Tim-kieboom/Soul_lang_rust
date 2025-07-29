@@ -1,5 +1,7 @@
 //comment 1
 /*comment 2*/
+// el := 1
+// runTimeTuple3 := (el,(1,2,3,),2)
 
 enum Alphabet {
 	A,B,C,D,E,F,G,H,I,
@@ -28,6 +30,7 @@ enumFunc() {
 }
 
 // union Num {
+// 	None(),
 // 	Int(int),
 // 	Uint(num: uint),
 // 	Float(f32),
@@ -126,11 +129,14 @@ tuple() {
 	el := 1
 	runTimeTuple := (el,2,"hello")
 	runTimeTuple1 := (el,2,[1,2,3,],)
-	// runTimeTuple2 := (el,(1,2,3,),2)
+	
+	t := (1,2,3,)
+	runTimeTuple2 := (el,t,2)
+	// runTimeTuple3 := (el,(1,2,3,),2)
 
 	(int, bool) tuple = (el, true)
-	// int first = tuple.0
-	// bool second = tuple.1
+	int first = tuple.0
+	bool second = tuple.1
 	// (number, condition) := (el, true)
 	(field: int, name: bool) namedTuple = (field: el, name: true)
 	// (field, name) := (field: el, name: true) 

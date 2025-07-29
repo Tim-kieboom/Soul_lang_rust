@@ -1,14 +1,25 @@
-use crate::soul_names::check_name;
+use once_cell::sync::Lazy;
+
+use crate::soul_names::{check_name, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope::ScopeKind;
-use crate::steps::parser::get_expressions::parse_expression::get_expression;
+use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_no_literal_retention};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableDecl, VariableRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Assignment, VariableDecl, VariableRef};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
+
+static ASSIGN_END_TOKENS: Lazy<Vec<&str>> = Lazy::new(|| {
+    SOUL_NAMES
+        .assign_symbools
+        .iter()
+        .map(|(_, symbool)| *symbool)
+        .filter(|symbool| *symbool != "." && *symbool != "[")
+        .collect::<Vec<&str>>()
+});
 
 pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<VariableRef>> {
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
@@ -159,6 +170,82 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
 }
 
+pub fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
+    
+    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
+        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing assignment")
+    }
+    
+    let variable = get_expression_no_literal_retention(stream, scopes, &ASSIGN_END_TOKENS)?;
+    let symbool_i = stream.current_index();
+
+    let lit_retention = if let ExprKind::Variable(var) = &variable.node {
+        
+        let scope = scopes.lookup(&var.name.0);
+        let possible_var = try_get_variable(&scope);
+        if let Some(var_ref) = possible_var {
+            std::mem::take(&mut var_ref.borrow_mut().lit_retention)
+        }
+        else {
+            None
+        }
+    }
+    else {
+        None
+    };
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let expr = get_expression(stream, scopes, &["\n", ";"])?;
+    
+    let assign = if let Some(literal) = lit_retention {Expression::new(literal.node, variable.span)} else {variable.clone()};
+    let expression = get_compount_assignment(stream, symbool_i, &assign, expr)?;
+    
+    let span = variable.span.combine(&expression.span);
+    Ok(Spanned::new(Assignment{target: variable, value: expression}, span))
+}
+
+fn get_compount_assignment(stream: &TokenStream, symbool_i: usize, variable: &Expression, expression: Expression) -> Result<Expression> {
+    let op_kind = match stream[symbool_i].text.as_str() {
+        "=" => return Ok(expression),
+        "+=" => BinOpKind::Add,
+        "-=" => BinOpKind::Sub,
+        "*=" => BinOpKind::Mul,
+        "/=" => BinOpKind::Div,
+        "%=" => BinOpKind::Mod,
+        "&=" => BinOpKind::BitAnd,
+        "|=" => BinOpKind::BitOr,
+        "^=" => BinOpKind::BitXor,
+        _ => return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream[symbool_i].span, format!("symbool: '{}' unknown symbool for assignment", stream[symbool_i].text))),
+    };
+
+    let span = expression.span;
+    let operator = BinOp::new(op_kind, stream[symbool_i].span);
+    Ok(Expression::new(ExprKind::Binary(
+        BinaryExpr{
+            left: Box::new(variable.clone()), 
+            operator,
+            right: Box::new(expression),
+        }), 
+        span
+    ))
+}
+
+fn try_get_variable<'a>(possible_scopes: &'a Option<&Vec<ScopeKind>>) -> Option<&'a VariableRef> {
+    
+    possible_scopes
+        .as_ref()?
+        .iter()
+        .find_map(|kind| {
+            if let ScopeKind::Variable(var) = kind {
+                Some(var)
+            } else {
+                None
+            }
+        })
+}
 
 
 

@@ -1,12 +1,12 @@
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
-use crate::steps::parser::get_statments::parse_type_enum::{get_type_enum_body, traverse_type_enum_body};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
+use crate::steps::parser::get_statments::parse_enum_like::{get_type_enum_body, traverse_type_enum_body};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::generics::{GenericKind, GenericParam, TypeConstraint};
 
 pub struct GenericDecl {
