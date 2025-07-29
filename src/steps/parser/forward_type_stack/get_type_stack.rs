@@ -24,7 +24,7 @@ pub fn forward_declarde_type_stack(stream: &mut TokenStream) -> Result<TypeScope
 }
 
 fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()> {
-    
+
     if stream.current_text() == "{}" {
         
         if stream.next().is_none() {

@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
+use crate::steps::step_interfaces::i_parser::scope::{ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
-use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
+use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::{EnumVariant, TypeEnumDecl};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{spanned::Spanned, staments::enum_likes::EnumDecl}, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
@@ -55,61 +56,6 @@ pub fn traverse_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuild
     Ok(())
 }
 
-fn inner_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder, return_result: bool) -> Result<Vec<SoulType>> {
-    
-    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing typeEnum")
-    }
-    
-    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
-        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
-    }
-
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    }
-
-    if stream.current_text() != "[" {
-        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("token: '{}' is not valid to start typeEnum should start with '['", stream.current_text())))
-    }
-
-    let mut types = vec![];
-    loop {
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream));
-        }
-
-        let ty = SoulType::from_stream(stream, scopes)
-            .map_err(|child| pass_soul_error(SoulErrorKind::InvalidType, stream.current_span(), "while trying to get typeEnum", child))?;
-       
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream));
-        }
-
-        if return_result{
-            types.push(ty);
-        }
-
-        if stream.current_text() == "\n" {
-            
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }
-        }
-
-        if stream.current_text() != "," {
-            break;
-        }
-    }
-
-    if stream.current_text() != "]" {
-        return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("token: '{}' is not valid to end typeEnum should end with ']'", stream.current_text())))
-    }
-
-    //if return_result false then yes i know i do return something but its empty (this is to avoid mallocs and so safe time when only traversing)
-    Ok(types)
-}
-
 pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<EnumDecl>> {
     
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
@@ -140,6 +86,9 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
     if stream.current_text() != "{" {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' should be '{{'", stream.current_text())))
     }
+
+    //this is to validate type_stack PLZ KEEP
+    scopes.push(ScopeVisibility::All);
 
     let mut min_num = 0i64;
     let mut max_num = 0i64;
@@ -218,7 +167,64 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         return Err(err_out_of_bounds(stream));
     }
 
+    scopes.pop();
+
     Ok(Spanned::new(EnumDecl{name, variants, max_num, min_num}, stream.current_span().combine(&stream[enum_i].span)))
+}
+
+fn inner_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder, return_result: bool) -> Result<Vec<SoulType>> {
+    
+    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
+        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing typeEnum")
+    }
+    
+    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() != "[" {
+        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("token: '{}' is not valid to start typeEnum should start with '['", stream.current_text())))
+    }
+
+    let mut types = vec![];
+    loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        let ty = SoulType::from_stream(stream, scopes)
+            .map_err(|child| pass_soul_error(SoulErrorKind::InvalidType, stream.current_span(), "while trying to get typeEnum", child))?;
+       
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if return_result{
+            types.push(ty);
+        }
+
+        if stream.current_text() == "\n" {
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        if stream.current_text() != "," {
+            break;
+        }
+    }
+
+    if stream.current_text() != "]" {
+        return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("token: '{}' is not valid to end typeEnum should end with ']'", stream.current_text())))
+    }
+
+    //if return_result false then yes i know i do return something but its empty (this is to avoid mallocs and so safe time when only traversing)
+    Ok(types)
 }
 
 fn get_enum_assignment(assignments: &mut HashSet<i64>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<i64>> {

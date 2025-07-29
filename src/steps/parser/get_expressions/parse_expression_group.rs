@@ -93,7 +93,6 @@ fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(O
         None => None,
     };
 
-    
 
     let mut values = Vec::new();
     loop {
@@ -128,7 +127,8 @@ fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(O
         if stream.current_text() == end_token {
             return Ok((element_type, values))
         }
-        else if stream.current_text() != "," {
+
+        if stream.current_text() != "," {
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken,
                 stream.current_span(),

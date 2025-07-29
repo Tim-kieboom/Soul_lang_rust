@@ -30,6 +30,10 @@ impl ProgramMemmory {
     }
 
     pub fn insert(&mut self, entry: Literal) -> ProgramMemmoryId {
+        if let Some(id) = self.store.get(&entry) {
+            return *id;
+        }
+        
         let id = self.last_id;
         self.last_id.0 += 1;
         self.store.insert(entry, id);

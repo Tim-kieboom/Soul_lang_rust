@@ -7,7 +7,8 @@ pub fn get_expression(
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str]
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, end_tokens, true)
+    let mut open_bracket_stack = 0i64;
+    inner_get_expression(stream, scopes, end_tokens, true, &mut open_bracket_stack)
 }
 
 pub fn get_expression_no_literal_retention(
@@ -15,7 +16,8 @@ pub fn get_expression_no_literal_retention(
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str]
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, end_tokens, false)
+    let mut open_bracket_stack = 0i64;
+    inner_get_expression(stream, scopes, end_tokens, false, &mut open_bracket_stack)
 }
 
 fn inner_get_expression(
@@ -23,11 +25,12 @@ fn inner_get_expression(
     scopes: &mut ScopeBuilder,
     end_tokens: &[&str],
     use_literal_retention: bool,
+    open_bracket_stack: &mut i64
 ) -> Result<Expression> {
     let begin_i = stream.current_index();
     let mut stacks = ExpressionStacks::new();
 
-    let result = convert_expression(stream, scopes, &mut stacks, end_tokens, use_literal_retention);
+    let result = convert_expression(stream, scopes, &mut stacks, end_tokens, use_literal_retention, open_bracket_stack);
     if result.is_err() {
         stream.go_to_index(begin_i);
         return Err(result.unwrap_err());
@@ -73,10 +76,9 @@ fn convert_expression(
     scopes: &mut ScopeBuilder, 
     stacks: &mut ExpressionStacks, 
     end_tokens: &[&str],
-    use_literal_retention: bool
+    use_literal_retention: bool,
+    open_bracket_stack: &mut i64
 ) -> Result<()> {
-
-    let mut open_bracket_stack = 0i64;
 
     stream.next_multiple(-1);
 
@@ -84,14 +86,19 @@ fn convert_expression(
 		
         // for catching ')' as endToken, 
         // (YES there are 2 is_end_token() this is because of traverse_brackets() mutates the iterator DONT REMOVE PLZ)
-        if is_end_token(stream.current(), end_tokens, open_bracket_stack) {
+        if is_end_token(stream.current(), end_tokens, *open_bracket_stack) {
             return Ok(());
         }
 
         let literal_begin = stream.current_index();
-        let possible_literal = try_get_literal(stream, stacks, scopes, &mut open_bracket_stack)?;
+        let possible_literal = try_get_literal(stream, stacks, scopes, open_bracket_stack)?;
 
-        if possible_literal.is_none() {
+        if let Some(literal) = possible_literal {
+            add_literal(literal, stream, scopes, stacks);
+            end_expr_loop(stream, scopes, stacks)?;
+            continue;
+        }
+        else {
             stream.go_to_index(literal_begin);
 
             if let Some(group) = try_get_expression_group(stream, scopes)? {
@@ -104,7 +111,7 @@ fn convert_expression(
         let possible_scopes = scopes.lookup(stream.current_text());
         let after_generic_index = get_after_generic_index(stream)?;
 
-        if is_end_token(stream.current(), end_tokens, open_bracket_stack) {
+        if is_end_token(stream.current(), end_tokens, *open_bracket_stack) {
             return Ok(());
         }
         else if is_ref(stream, stacks) {
@@ -115,9 +122,6 @@ fn convert_expression(
         }
         else if let Some(var_ref) = try_get_variable(&possible_scopes) {
             add_variable(stream, stacks, var_ref, use_literal_retention)?;
-        }
-        else if let Some(literal) = possible_literal {
-            add_literal(literal, stream, scopes, stacks);
         }
         else if is_function(stream, after_generic_index) {
             let function = get_function_call(stream, scopes)?;

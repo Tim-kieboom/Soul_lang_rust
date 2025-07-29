@@ -1,7 +1,5 @@
 //comment 1
 /*comment 2*/
-// el := 1
-// runTimeTuple3 := (el,(1,2,3,),2)
 
 enum Alphabet {
 	A,B,C,D,E,F,G,H,I,
@@ -132,7 +130,7 @@ tuple() {
 	
 	t := (1,2,3,)
 	runTimeTuple2 := (el,t,2)
-	// runTimeTuple3 := (el,(1,2,3,),2)
+	runTimeTuple3 := (el,(1,2,3,),2)
 
 	(int, bool) tuple = (el, true)
 	int first = tuple.0
@@ -145,8 +143,8 @@ tuple() {
 
 	runTimeNamedTuple := (field: el, name: "hello")
 	ctor := MyList()
-	// runTimeNamedTuple2 := MyList(:)
-	// runTimeNamedTuple3 := MyList(field: el, name: "hello")
+	runTimeNamedTuple2 := MyList(:)
+	runTimeNamedTuple3 := MyList(field: el, name: "hello")
 }
 
 array() {
@@ -166,20 +164,45 @@ array() {
 		2,
 	]
 
-	// map := MyHashMap[(str, i32):
-	// 	("stuff",  1), 
-	// 	("things", 2)
-	// ]
+	map := MyHashMap[(str, i32):
+		("stuff",  1), 
+		("things", 2)
+	]
 
 	el2 := [el, 1, 2,][0]
 
-	// runTime2DArray := [[el,1], [1,2,34]]
-	// runTime2DArray2 := [int[]; [el,1], [1,2,34]]
-	// runTime3DArray := [[[el,1],[1,2]], [[1,2],[2,34]]]
-	// runTime3DArray2 := [int[][]; [[el,1],[1,2]], [[1,2],[2,34]]]
+	runTime2DArray  := [
+		[el,1], 
+		[1,2,34]
+	]
+	runTime2DArray2 := [int[]: 
+		[1,2,34],
+		[el,1], 
+	]
+	runTime3DArray  := [
+		[
+			[el,1],
+			[1,2]
+		], 
+		[
+			[1,2],
+			[2,34]
+		]
+	]
+	runTime3DArray2 := [int[][]: 
+		[
+			[1,2],
+			[2,34],
+		],
+		[
+			[el,1],
+			[1,2],
+		], 
+	]
 }
 
 varDecl() {
+	// int forwardDecl
 	foo := 1
 	const f = "hello world"
 	Literal fo = (1, 2, 3)
