@@ -1,48 +1,238 @@
-# Soul_lang
+# Soul Language
 
-**Soul** is a **low-level programming language**, focusing on performance, memory safety, while remaining as simple as possible. Inspired by the power of **Rust's borrow checker** and the minimalism of **Go's syntax**, Soul offers a unique balance between control, safety and developer ergonomics.
+**Soul** is a **low-level, memory-safe programming language** designed for **performance**, **developer control**, and **compile-time optimization**. 
+Inspired by **Rust’s borrow-checker** and **Go’s simplicity**, Soul gives developers the best of both worlds — fine-grained memory control with minimal boilerplate.
 
-At its core, **Soul** introduces a **borrow-checking** mechanism aimed at preventing common memory safety issues, such as memory leaks. While influenced by Rust, Soul adopts **looser and more flexible borrowing rules** by **decreasing race condition safety**, giving programmers more freedom while still catching many critical errors at compile time.
+---
 
-**Soul** also prioritizes **stack allocation** whenever possible, reducing the performance cost of the program by reducing heap allocations. With the help of the **borrow-checker** and **dynamic stack allocation**, **Soul** can reduce the vast majority of heap allocations.
+## ❔ Why Soul?
 
-A distinct feature of **Soul** is its **ruleset system**, which allows developers to define functions with specific compile-time or functional constraints:
+- **Memory Safety** via a flexable custom **borrow checker** inspired by rust
+- **Stack-First Allocation** model
+- **Flexible Compile-Time Evaluation**
+- **Minimal Syntax**, inspired by Go
+- Built-in **Ruleset System** for deterministic or functional coding styles
+- **Literal Retention** for zero-cost optimizations
+---
 
-- **Default Ruleset**: The default mode for functions and variables. **Default** allows unrestricted behavior, including mutation, borrowing, and runtime evaluation. It is the most flexible and imperative-friendly mode, suited for general-purpose programming and low-level system code.
+## Core Concepts
 
-- **Literal Rulesets**: Inspired by **C++'s `constexpr`**, **Literal Functions** in Soul are part of the **Literal Ruleset**. These functions must be fully resolved at compile time, enforced by Soul's **stricter static analysis** and **simplified syntax**. This guarantees that computations within **Literal Functions** will never occur at runtime, boosting efficiency and ensuring deterministic behavior.
-    
-- **Const Rulesets**: For developers requiring a purely functional approach, **Soul** offers **Const Functions** under the **Const Ruleset**. These functions enforce a **Haskell-like functional style**, forbidding side effects, mutation, and borrowing. **Const Functions** are ideal for deterministic logic, mathematical operations, and transformations that must remain free of external state or mutable data. Additionally, when a **Const Function** is called **exclusively with literal arguments**, it is **automatically promoted to compile-time evaluation**, behaving like a **Literal Function** to further enhance performance.
+### 🔄 Borrow Checker
 
-Soul introduces a feature called **Literal Retention**. This optimization allows variables initialized with literal values to maintain their literal status internally, even when declared as `var` or `const`. This enables the compiler to perform additional optimizations at compile-time. If a variable with literal status is later mutated, it automatically becomes a normal runtime variable.
+Soul features a **custom borrow-checking system** inspired by Rust’s, designed to prevent:
 
-With its minimalistic syntax, explicit memory model, compile-time computation capabilities, and functional programming constructs, Soul is an ideal choice for developers looking to write fast, efficient, and safe low-level code—without the steep learning curve or verbosity often found in other memory-safe low-level languages.
+- **Dangling pointers**  
+- **Double frees**  
+- **Use-after-free bugs**
 
-## **Core Concepts**
-### 1. **Borrow Checker**
+Unlike Rust, **Soul removes restrictions that aren’t strictly necessary for memory safety**. This means:
 
-Soul uses a custom borrow-checking system inspired by Rust but with looser rules. It prevents common issues such as dangling pointers and double frees while giving developers more freedom in pointer ownership and aliasing.
+- You can have **multiple mutable references** (`&`) and **mutable and const references** (`&` and `@`) to the same object **at the same time**  
+- **Memory safety is still guaranteed**, thanks to **lifetime tracking**
+- **Aliasing is allowed**, but always **tracked and bounded** by the compiler's borrow-checker
 
-### 2. **Stack-First Memory Model**
+This relaxed model gives you **more flexibility than Rust**, without compromising safety, making Soul ideal for **low-level, high-performance systems** where **strict aliasing rules would otherwise limit design choices**.
 
-Soul prioritizes stack allocation whenever possible, automatically placing pointers and objects on the stack to reduce heap allocations. This improves cache locality and lowers the overhead typically associated with dynamic memory.
+> ⚖️ Soul keeps **lifetimes and ownership**, but **loosens aliasing**, offering the **safety of Rust** with the **more freedom**.
 
-### 3. **Minimalistic Syntax**
+### 📦 Stack-First Memory Model
 
-Drawing from Go, Soul maintains a simple and concise syntax, reducing boilerplate and focusing on developer productivity, while still offering fine-grained control over low-level operations.
+Using the borrow checker, objects are allocated on the **stack by default**. Heap allocation is minimized unless explicitly required, improving cache locality and runtime performance.
 
-### 4. **Rulesets**
+### ✍️ Minimal Syntax
 
-Rulesets define how functions behave in terms of mutability, evaluation time, and side-effects.
+Soul syntax is clean and direct, keeping the developer in control with less ceremony.
 
-- **4.1. Default**  
-    Standard behavior for functions and variables, allowing full control over mutation, borrowing, and runtime evaluation.
-    
-- **4.2. const**  
-    Enforces a **functional programming style**, disallowing side effects, mutation, and borrowing within **Const Functions**. **Const Functions** can be promoted to compile-time if called exclusively with literal arguments.
-    
-- **4.3. Literal**  
-    Functions under the **Literal Ruleset** are guaranteed to be fully evaluated at compile time. Variables assigned within these functions cannot be mutated and must resolve to literals before runtime.
-    
-### 5. **Literal Retention**
-when a `var` or `const` variable is initialized with a literal value, it retains **literal status** under the hood. This allows for compile-time optimizations. The literal status is revoked automatically when the variable is later mutated, converting it into a regular runtime variable.
+## 📜 Rulesets
+
+Soul functions and variables follow specific **Rulesets**:
+
+| Ruleset   | Description |
+|-----------|-------------|
+| `Default` | Normal behavior — allows mutation, borrowing, and runtime evaluation. |
+| `Const`   | Enforces **pure functional** style. No mutation, borrowing, or side effects. Can be compile-time or run-time. |
+| `Literal` | Must be **entirely resolved at compile-time**. No runtime evaluation allowed. Great for constexpr-like performance. |
+
+## ⚡ Literal Retention
+
+Variables initialized with literals retain their **literal status** for optimization, even if declared as `var` or `const`.
+
+```soul
+let a = 1  // optimized at compile time
+const b = 5    // retains literal status
+Literal c = 10 // retains literal status
+
+constFunc(a)   // 'a' is replaced with Literal '1' so function is run in compileTime
+a = 20         // loses literal status
+constFunc(a)   // 'a' lost literal retention so will not run in runTime
+```
+
+## Language Reference
+### 🔹 Function Scoping & Rulesets
+```soul
+func() {}             // default, runtime allowed
+const func() {}       // no mutation, can be runtime or compile-time
+Literal func() {}     // no mutation, compile-time only
+
+access() {}           // private function
+Access() {}           // public function
+
+parent() {
+    child(int a) {}
+    child(1)
+}
+
+//!!Error: 'child' not in scope!!
+// child(1)
+```
+### 🔹 Parameters & Return Types
+```soul
+func(int a) {}                  // parameter is const int
+func(str a) {}                  // function overloading is allowed  
+func(mut int[] a) {}            // mutable array parameter
+func(int a, str name = "tim")   // there are also default parameters
+
+func(1)                         // calls func(int)
+func("foo")                     // calls func(str)
+func([1,2,3])                   // calls func(int[])
+func(1, name="jim")             // calls func(int, str)
+
+//!!function overloading by return type is not allowed!!
+// func(str a) int {} 
+
+funcNone() {                    // no return type
+    return
+}
+
+funcInt() int {                 // returns int
+    return 1
+}
+```
+### 🔹 Static Method
+```soul
+u8 maxValue() u8 { // the first 'u8' is the 'this' type and the second 'u8' the return type
+    return 255
+}
+
+max := u8.maxValue()
+```
+### 🔹 Consume Method
+a methode that takes ownership of the variable when called
+```soul
+int[] consumeToEl(this, int a) int[] {
+    this = [0]
+    this[0] = a
+    return this
+}
+
+arr := [1,2,3]
+newArr := arr.consumeToEl(1)
+
+//!!Cannot use 'arr' anymore after consume unless autoCopy is enabled(like in number types)!!
+// el := arr[1]
+```
+### 🔹 Const Reference Method
+```soul
+int constRefSum(this@, int a) int {
+    //!!not allowed!!
+    // *this +=1
+    return *this + a
+}
+
+a := 1
+res := a.constRefSum(1)
+
+int& aMutRef = &a
+res = aMutRef.constRefSum(1)
+
+int@ aConstRef = @a
+res = aConstRef.constRefSum(1)
+
+const b = 1
+res = b.constRefSum(1)
+```
+### 🔹 Mutable Reference Method
+```soul
+int mutRefSum(this&, int a) int {
+    *this += 1
+    return *this
+}
+
+a := 1
+res := a.mutRefSum(1)
+
+int& aMutRef = &a
+res = aMutRef.mutRefSum(1)
+
+int@ aConstRef = @a
+//!!Cannot use mutRefSum on const ref!!
+// res = aConstRef.mutRefSum(1)
+
+const b = 1
+//!!Cannot call mutRefMethode on const var!!
+// res = b.mutRefSum(1)
+```
+### 🔹 Typed Variable Declarations
+```soul
+int a = 1
+const uint b = 1
+Literal i32 c = 1
+
+int e
+e = 1
+
+const int f
+f = 1
+
+//!!Not allowed!!
+// Literal int g
+// g = 1
+```
+### 🔹 Type Inference
+#### Strict Inference
+```soul
+a := 1               // becomes int
+let x = 1            // becomes int
+const b = 1          // becomes int
+Literal c = 1        // becomes int
+
+// type casting is done with contructors
+e := uint(1)
+const f = i32(1)
+Literal g = f32(1)
+```
+#### Lazy Inference
+```soul
+let a
+//...
+a = 1               // becomes int
+
+const b
+//...
+b = "hello"         // becomes str
+
+//!!Not allowed!!
+// Literal c
+// c = 1
+
+list := List[]
+//...
+list = list.Push(1)  // becomes List<int>
+```
+## 📦 Build & Compile
+### ⚠️ CLI and compiler tooling coming soon.
+
+Soul is designed to perform compile-time checks and literal propagation during build. Its goal is zero-cost abstraction, maximum safety, and performance-first programming.
+
+## 💬 Final Thoughts
+Soul is for developers who want:
+- The safety of Rust
+- The simplicity of Go
+- The performance of C
+- The power of compile-time logic
+
+> ⚡ Write fast. Run faster. Stay safe.
+
+
+
+
