@@ -1,14 +1,14 @@
 use once_cell::sync::Lazy;
 
-use crate::soul_names::{check_name, SOUL_NAMES};
+use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope::ScopeKind;
-use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_no_literal_retention};
+use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::Modifier;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Assignment, VariableDecl, VariableRef};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
@@ -28,20 +28,25 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
     let begin_i = stream.current_index();
     let possible_type = match SoulType::try_from_stream(stream, scopes) {
-        Some(val) => {
+        Some(result) => {
+            let ty = result?;
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream))
             }
-            Some(val?)
+            if scopes.is_in_global() && ty.modifier.is_mutable() {
+                return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "global variable can not be mutable"))
+            }
+            Some(ty)
         },
         None => None,
     };
 
     let is_type_invered = possible_type.is_none();
+    let is_let = stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Let);
 
     let modifier = if is_type_invered {
         let modi = Modifier::from_str(stream.current_text());
-        if modi != Modifier::Default {
+        if modi != Modifier::Default || stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Let) {
 
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
@@ -81,13 +86,6 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
 
     if stream.current_text() == "\n" || stream.current_text() == ";" {
-        if is_type_invered {
-            return Err(new_soul_error(
-                SoulErrorKind::InvalidEscapeSequence, 
-                stream.current_span(), 
-                format!("variable '{}' can not have no type and no assignment (add type 'int foo' or assignment 'foo := 1')", &stream[var_name_index].text)
-            ));
-        }
 
         if scopes.is_in_global() {
             return Err(new_soul_error(
@@ -97,7 +95,13 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             ));
         }
 
-        let ty = possible_type.unwrap();
+        let ty = if is_type_invered {
+            SoulType::from_type_kind(TypeKind::None)
+        } 
+        else {
+            possible_type.unwrap()
+        };
+
         let name = Ident(stream[var_name_index].text.clone());
         let var_decl: VariableRef = VariableRef::new(
             VariableDecl{name, ty, initializer: None, lit_retention: None}
@@ -110,7 +114,7 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     if is_type_invered {
 
         if modifier == Modifier::Default &&
-           stream.current_text() != ":=" 
+           (stream.current_text() != ":=" && !is_let)
         {
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken, 
@@ -132,6 +136,10 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
 
     if is_type_invered {
+
+        if scopes.is_in_global() && modifier.is_mutable() {
+            return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "global variable can not be mutable"))
+        }
 
         let begin_i = stream.current_index();
         let expr = get_expression(stream, scopes, &[";", "\n"])
@@ -194,8 +202,10 @@ pub fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Re
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
         new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing assignment")
     }
-    
-    let variable = get_expression_no_literal_retention(stream, scopes, &ASSIGN_END_TOKENS)?;
+
+    const IS_ASSIGN_VAR: bool = true;
+    const USE_LITERAL_RETENTION: bool = false;
+    let variable = get_expression_options(stream, scopes, &ASSIGN_END_TOKENS, USE_LITERAL_RETENTION, IS_ASSIGN_VAR)?;
     let symbool_i = stream.current_index();
 
     let lit_retention = if let ExprKind::Variable(var) = &variable.node {
@@ -265,6 +275,30 @@ fn try_get_variable<'a>(possible_scopes: &'a Option<&Vec<ScopeKind>>) -> Option<
             }
         })
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

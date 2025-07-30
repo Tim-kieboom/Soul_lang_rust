@@ -1,13 +1,11 @@
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Debug, Clone)]
-pub struct NodeRef<T> 
-{
+pub struct NodeRef<T> {
     inner: Arc<RwLock<T>>
 }
 
-impl<T> NodeRef<T> 
-{
+impl<T> NodeRef<T> {
     pub fn new(var: T) -> Self {
         Self { inner: Arc::new(RwLock::new(var)) }
     }

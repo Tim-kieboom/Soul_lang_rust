@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType}, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, WhileDecl}, enum_likes::{EnumDecl, TypeEnumDecl, UnionDecl}, function::{ExtFnDecl, FnDecl}, objects::{ClassDecl, StructDecl, TraitDeclRef, TraitImpl}}}, utils::node_ref::NodeRef};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType}, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::NodeRef};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -12,13 +12,13 @@ pub enum StmtKind {
     FnDecl(FnDecl),
     ExtFnDecl(ExtFnDecl),
 
-    StructDecl(StructDecl),
-    ClassDecl(ClassDecl),
+    StructDecl(StructDeclRef),
+    ClassDecl(ClassDeclRef),
     TraitDecl(TraitDeclRef),
 
-    EnumDecl(EnumDecl),
-    UnionDecl(UnionDecl),
-    TypeEnumDecl(TypeEnumDecl),
+    EnumDecl(EnumDeclRef),
+    UnionDecl(UnionDeclRef),
+    TypeEnumDecl(TypeEnumDeclRef),
 
     TraitImpl(TraitImpl),
 
@@ -49,12 +49,12 @@ impl_in_stmt_kind!(
     VarDecl => VariableRef, 
     FnDecl => FnDecl, 
     ExtFnDecl => ExtFnDecl, 
-    StructDecl => StructDecl, 
-    ClassDecl => ClassDecl, 
+    StructDecl => StructDeclRef, 
+    ClassDecl => ClassDeclRef, 
     TraitDecl => TraitDeclRef, 
-    EnumDecl => EnumDecl, 
-    UnionDecl => UnionDecl, 
-    TypeEnumDecl => TypeEnumDecl, 
+    EnumDecl => EnumDeclRef, 
+    UnionDecl => UnionDeclRef, 
+    TypeEnumDecl => TypeEnumDeclRef, 
     TraitImpl => TraitImpl, 
     Return => Return,
     Assignment => Assignment, 

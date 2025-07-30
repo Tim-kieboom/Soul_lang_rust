@@ -1,6 +1,6 @@
 use crate::soul_names::check_name;
 use crate::steps::parser::parse_generic_decl::get_generics_decl;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::objects::ClassDecl;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::objects::{ClassDeclRef, InnerClassDecl};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::SoulThis;
 use crate::steps::step_interfaces::i_parser::scope::ScopeVisibility;
 use crate::steps::parser::get_statments::parse_field::try_get_field;
@@ -11,7 +11,7 @@ use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
-pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<ClassDecl>> {
+pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<ClassDeclRef>> {
     
     let class_i = stream.current_index();
     if stream.next().is_none() {
@@ -93,13 +93,13 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 
     return Ok(
         Spanned::new(
-            ClassDecl{
+            ClassDeclRef::new(InnerClassDecl{
                 name: Ident(stream[name_i].text.clone()), 
                 generics: generics_decl.generics, 
                 fields, 
                 implements: generics_decl.implements,
                 methodes,
-            },
+            }),
             stream.current_span().combine(&stream[class_i].span)
         ),
     )

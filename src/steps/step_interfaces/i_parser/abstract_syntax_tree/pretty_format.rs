@@ -3,7 +3,7 @@ use std::sync::RwLockReadGuard;
 use itertools::Itertools;
 
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDecl, TypeEnumDecl, UnionDecl}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDecl, InnerTraitDecl, StructDecl, TraitImpl}, statment::{Block, StmtKind, VariableDecl}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
+    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, StmtKind, VariableDecl}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -42,14 +42,14 @@ impl PrettyPrint for Vec<ScopeKind> {
         let inner = self.iter().map(|kind| {
             match kind {
                 ScopeKind::Invalid() => "<invalid>".into(),
-                ScopeKind::Variable(node_ref) => format!("var({})", node_ref.borrow().name.0),
-                ScopeKind::Struct(struct_decl) => format!("struct({})", struct_decl.name.0),
-                ScopeKind::Class(class_decl) => format!("class({})", class_decl.name.0),
+                ScopeKind::Variable(node_ref) => format!("let({})", node_ref.borrow().name.0),
+                ScopeKind::Struct(struct_decl) => format!("struct({})", struct_decl.borrow().name.0),
+                ScopeKind::Class(class_decl) => format!("class({})", class_decl.borrow().name.0),
                 ScopeKind::Trait(trait_decl) => format!("trait({})", trait_decl.borrow().name.0),
                 ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.get_signature().borrow().name.0.clone()).unwrap_or("".into()) ),
-                ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.name.0),
-                ScopeKind::Union(union_decl) => format!("union({})", union_decl.name.0),
-                ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.name.0),
+                ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.borrow().name.0),
+                ScopeKind::Union(union_decl) => format!("union({})", union_decl.borrow().name.0),
+                ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.borrow().name.0),
             }
         }).join(",");
 
@@ -205,31 +205,34 @@ impl PrettyPrint for RwLockReadGuard<'_, InnerTraitDecl> {
     }
 }
 
-impl PrettyPrint for TypeEnumDecl {
+impl PrettyPrint for TypeEnumDeclRef {
     fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
-        let types = self.types.iter().map(|t| t.to_string()).join(", ");
-        format!("TypeEnum {} = [{}];", self.name.0, types)
+        let this = self.borrow();
+        let types = this.types.iter().map(|t| t.to_string()).join(", ");
+        format!("TypeEnum {} = [{}];", this.name.0, types)
     }
 }
 
-impl PrettyPrint for UnionDecl {
+impl PrettyPrint for UnionDeclRef {
     fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
+        let this = self.borrow();
         let indent_str = indent(tab);
-        let variants = self.variants
+        let variants = this.variants
             .iter()
             .map(|v| format!("{}{:?}", indent_str, v.fields))
             .join(",\n");
-        format!("Union {} >>\n{}", self.name.0, variants)
+        format!("Union {} >>\n{}", this.name.0, variants)
     }
 }
 
-impl PrettyPrint for EnumDecl {
+impl PrettyPrint for EnumDeclRef {
     fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
-        let variants = self.variants
+        let this = self.borrow();
+        let variants = this.variants
             .iter()
             .map(|v| format!("{}({:?})", v.name.0, v.value))
             .join(", ");
-        format!("Enum {} >> [{}]", self.name.0, variants)
+        format!("Enum {} >> [{}]", this.name.0, variants)
     }
 }
 
@@ -248,18 +251,23 @@ impl PrettyPrint for TraitImpl {
     }
 }
 
-impl PrettyPrint for ClassDecl {
+impl PrettyPrint for ClassDeclRef {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let this = self.borrow();
+        
         let prefix = tree_prefix(tab, is_last);
-        let generics = if self.generics.is_empty() {
+        let generics = if this.generics.is_empty() {
             "".to_string()
         } else {
-            format!("<{}>", self.generics.iter().map(|g| g.to_string()).join(", "))
+            format!("<{}>", this.generics.iter().map(|g| g.to_string()).join(", "))
         };
-        let header = format!("{}Class {}{} >>", prefix, self.name.0, generics);
+        let header = format!("{}Class {}{} >>", prefix, this.name.0, generics);
 
-        let fields = self.fields.iter().enumerate().map(|(i, f)| {
-            let is_last_field = i == self.fields.len() - 1 && self.methodes.is_empty();
+        let last_index = this.fields.len() - 1;
+        let is_empty = this.methodes.is_empty();
+
+        let fields = this.fields.iter().enumerate().map(|(i, f)| {
+            let is_last_field = i == last_index && is_empty;
             let field_prefix = tree_prefix(tab + 1, is_last_field);
             let access = match (&f.vis.get, &f.vis.set) {
                 (Some(Visibility::Public), Some(Visibility::Public)) => "{Get;Set;}",
@@ -274,8 +282,9 @@ impl PrettyPrint for ClassDecl {
             format!("{}{} {}: {}{}", field_prefix, access, f.name.0, f.ty.to_string(), default)
         });
 
-        let methods = self.methodes.iter().enumerate().map(|(i, m)| {
-            let is_last_method = i == self.methodes.len() - 1;
+        let len = this.methodes.len();
+        let methods = this.methodes.iter().enumerate().map(|(i, m)| {
+            let is_last_method = i == len - 1;
             m.node.to_pretty(tab + 1, is_last_method)
         });
 
@@ -299,21 +308,21 @@ impl PrettyPrint for FnDeclKind {
     }
 }
 
-impl PrettyPrint for StructDecl {
+impl PrettyPrint for StructDeclRef {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let header = format!("{}Struct {}{} >>", prefix, self.name.0, 
-            if self.generics.is_empty() {
+        let header = format!("{}Struct {}{} >>", prefix, self.borrow().name.0, 
+            if self.borrow().generics.is_empty() {
                 "".to_string()
             } else {
-                format!("<{}>", self.generics.iter().map(|g| g.to_string()).join(", "))
+                format!("<{}>", self.borrow().generics.iter().map(|g| g.to_string()).join(", "))
             });
 
-        let mut body = self.fields
+        let mut body = self.borrow().fields
             .iter()
             .enumerate()
             .map(|(i, f)| {
-                let last = i == self.fields.len() - 1;
+                let last = i == self.borrow().fields.len() - 1;
                 let inner_prefix = tree_prefix(tab + 1, last);
                 if let Some(value) = &f.default_value {
                     format!("{}{} {} {} = {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false), value.node.to_string())

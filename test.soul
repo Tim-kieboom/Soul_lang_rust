@@ -205,20 +205,22 @@ array() {
 }
 
 varDecl() {
-	// int forwardDecl
+	struct List{}
+	int forwardDecl
 	
-	// let untyped
-	// untyped = 1 //turns untyped to int from none
+	let untyped
+	untyped = 1 //turns untyped to int from none
 
-	// const untyped
-	// untyped = 1 //turns untyped to int from none
+	const constUntyped
+	constUntyped = 1 //turns untyped to int from none
 
-	// list := List[]
-	// list.Push(1) //turns arr to int[] from none 
+	list := List[]
+	list.Push(1) //turns arr to List<int> from List<none> 
 
-	foo := 1
-	const f = "hello world"
-	Literal fo = (1, 2, 3)
+	a := 1
+	let b = 1
+	const c = "hello world"
+	Literal d = (1, 2, 3)
 
 
 	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])

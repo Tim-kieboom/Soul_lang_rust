@@ -7,11 +7,11 @@ use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
-use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_no_literal_retention};
+use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options};
 use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
-use crate::steps::parser::get_statments::parse_enum_like::{get_enum, get_type_enum};
-use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeVisibility};
+use crate::steps::parser::get_statments::parse_enum_like::{get_enum, get_type_enum, get_union};
+use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_var_decl};
@@ -124,27 +124,40 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(None);
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
-            let result = get_trait(stream, scopes)?;
-            return Ok(Some(Statment::new(StmtKind::TraitDecl(result.node), result.span)));
+            let trait_decl = get_trait(stream, scopes)?;
+            let name = trait_decl.node.borrow().name.0.clone();
+            scopes.insert(name, ScopeKind::Trait(trait_decl.node.clone()));
+            return Ok(Some(Statment::new(StmtKind::TraitDecl(trait_decl.node), trait_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
             let type_enum = get_type_enum(stream, scopes)?;
+            let name = type_enum.node.borrow().name.0.clone();
+            scopes.insert(name, ScopeKind::TypeEnum(type_enum.node.clone()));
             return Ok(Some(Statment::new(StmtKind::TypeEnumDecl(type_enum.node), type_enum.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
-            todo!()
+            let union_decl = get_union(stream, scopes)?;
+            let name = union_decl.node.borrow().name.0.clone();
+            scopes.insert(name, ScopeKind::Union(union_decl.node.clone()));
+            return Ok(Some(Statment::new(StmtKind::UnionDecl(union_decl.node), union_decl.span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
             let enum_decl = get_enum(stream, scopes)?;
+            let name = enum_decl.node.borrow().name.0.clone();
+            scopes.insert(name, ScopeKind::Enum(enum_decl.node.clone()));
             return Ok(Some(Statment::new(StmtKind::EnumDecl(enum_decl.node), enum_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
-            let result = get_struct(stream, scopes)?;
-            return Ok(Some(Statment::new(StmtKind::StructDecl(result.node), result.span)));
+            let struct_decl = get_struct(stream, scopes)?;
+            let name = struct_decl.node.borrow().name.0.clone();
+            scopes.insert(name, ScopeKind::Struct(struct_decl.node.clone()));
+            return Ok(Some(Statment::new(StmtKind::StructDecl(struct_decl.node), struct_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
-            let result = get_class(stream, scopes)?;
-            return Ok(Some(Statment::new(StmtKind::ClassDecl(result.node), result.span)));
+            let class_decl = get_class(stream, scopes)?;
+            let name = class_decl.node.borrow().name.0.clone();
+            scopes.insert(name, ScopeKind::Class(class_decl.node.clone()));
+            return Ok(Some(Statment::new(StmtKind::ClassDecl(class_decl.node), class_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::SwitchCase) => {
             todo!()
@@ -167,7 +180,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             scopes.add_function(&func.node);
             return Ok(Some(func.node.consume_to_statment(func.span)));
         }
-        else if peek2_token.text == "=" {
+        else if peek2_token.text == "=" || peek2_token.text == "\n" || peek2_token.text == ";" {
             stream.go_to_index(first_type_i);
             let var = get_var_decl(stream, scopes)?;
             return Ok(Some(
@@ -191,8 +204,22 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         };
 
         let symbool = &stream[symbool_index].text;
+        if symbool == "=" || symbool == "\n" || symbool == ";" {
+            stream.go_to_index(first_type_i);
+            let var = get_var_decl(stream, scopes)?;
+            return Ok(Some(
+                Statment::from_kind(
+                    var.node, 
+                    var.span
+                ))
+            );
+        }
+    }
+    else if Modifier::from_str(stream.current_text()) != Modifier::Default || stream.current_text() == "let" {
+        let peek2_token = stream.peek_multiple(2)
+            .ok_or(err_out_of_bounds(stream))?;
 
-        if symbool == "=" {
+        if peek2_token.text == "=" || peek2_token.text == "\n" || peek2_token.text == ";" {
             stream.go_to_index(first_type_i);
             let var = get_var_decl(stream, scopes)?;
             return Ok(Some(
@@ -203,6 +230,29 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             );
         }
 
+        let symbool_index = if peek2_token.text == ">" {
+            let begin_gen_i = stream.current_index();
+            get_symbool_after_generic(stream, begin_gen_i)?;
+            let sym = stream.current_index();
+            
+            stream.go_to_index(begin_gen_i);
+            sym
+        }
+        else {
+            stream.current_index()
+        };
+
+        let symbool = &stream[symbool_index].text;
+        if symbool == "=" || symbool == "\n" || symbool == ";" {
+            stream.go_to_index(first_type_i);
+            let var = get_var_decl(stream, scopes)?;
+            return Ok(Some(
+                Statment::from_kind(
+                    var.node, 
+                    var.span
+                ))
+            );
+        }
     }
 
     let type_i = stream.current_index();
@@ -210,7 +260,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         stream.current_index() as i64 - type_i as i64
     }
     else {
-        if Modifier::from_str(stream.current_text()) != Modifier::Default {
+        if Modifier::from_str(stream.current_text()) != Modifier::Default || stream.current_text() == "let" {
             2i64
         }
         else {
@@ -242,7 +292,9 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     };
 
     if stream[next_index].text == "." {
-        let variable = get_expression_no_literal_retention(stream, scopes, &END_DOT_EXPRESSION)?;
+        const IS_ASSIGN_VAR: bool = false;
+        const USE_LITERAL_RETENTION: bool = false;
+        let variable = get_expression_options(stream, scopes, &END_DOT_EXPRESSION, USE_LITERAL_RETENTION, IS_ASSIGN_VAR)?;
         let span = variable.span;
         
         if stream.current_text() == "\n" || stream.current_text() == ";" {

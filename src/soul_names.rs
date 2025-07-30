@@ -181,21 +181,22 @@ impl<'a> SoulNames<'a> {
             (NamesOtherKeyWords::BreakLoop, "break"),
             (NamesOtherKeyWords::ContinueLoop, "continue"),
             (NamesOtherKeyWords::Return, "return"),
-
+            
             (NamesOtherKeyWords::Struct, "struct"),
             (NamesOtherKeyWords::Class, "class"),
             (NamesOtherKeyWords::Union, "union"),
             (NamesOtherKeyWords::TypeEnum, "typeEnum"),
             (NamesOtherKeyWords::Enum, "enum"),
-
+            
             (NamesOtherKeyWords::SwitchCase, "match"),
             (NamesOtherKeyWords::Typeof, "typeof"),
             (NamesOtherKeyWords::Type, "type"),
             (NamesOtherKeyWords::Trait, "trait"),
             (NamesOtherKeyWords::Impl, "impl"),
             (NamesOtherKeyWords::Where, "where"),
+            (NamesOtherKeyWords::Let, "let"),
             
-
+            
             (NamesOtherKeyWords::CopyData, "copy"),
             (NamesOtherKeyWords::Async, "async"),
             (NamesOtherKeyWords::AwaitAsync, "await"),
@@ -292,6 +293,7 @@ pub enum NamesOtherKeyWords {
     SwitchCase,
     Typeof,
     Type,
+    Let,
 
     CopyData,
     Async,
@@ -401,6 +403,7 @@ pub enum NamesInternalType {
     Float64,
 
     Range,
+    List,
 }
 impl_soul_name_enum!(NamesInternalType, internal_types);
 

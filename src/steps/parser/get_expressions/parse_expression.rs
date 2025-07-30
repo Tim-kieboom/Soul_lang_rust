@@ -8,16 +8,18 @@ pub fn get_expression(
     end_tokens: &[&str]
 ) -> Result<Expression> {
     let mut open_bracket_stack = 0i64;
-    inner_get_expression(stream, scopes, end_tokens, true, &mut open_bracket_stack)
+    inner_get_expression(stream, scopes, end_tokens, true, &mut open_bracket_stack, false)
 }
 
-pub fn get_expression_no_literal_retention(
+pub fn get_expression_options(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
-    end_tokens: &[&str]
+    end_tokens: &[&str],
+    use_literal_retention: bool,
+    is_assign_var: bool,
 ) -> Result<Expression> {
     let mut open_bracket_stack = 0i64;
-    inner_get_expression(stream, scopes, end_tokens, false, &mut open_bracket_stack)
+    inner_get_expression(stream, scopes, end_tokens, use_literal_retention, &mut open_bracket_stack, is_assign_var)
 }
 
 fn inner_get_expression(
@@ -25,12 +27,13 @@ fn inner_get_expression(
     scopes: &mut ScopeBuilder,
     end_tokens: &[&str],
     use_literal_retention: bool,
-    open_bracket_stack: &mut i64
+    open_bracket_stack: &mut i64,
+    is_assign_var: bool,
 ) -> Result<Expression> {
     let begin_i = stream.current_index();
     let mut stacks = ExpressionStacks::new();
 
-    let result = convert_expression(stream, scopes, &mut stacks, end_tokens, use_literal_retention, open_bracket_stack);
+    let result = convert_expression(stream, scopes, &mut stacks, end_tokens, use_literal_retention, open_bracket_stack, is_assign_var);
     if result.is_err() {
         stream.go_to_index(begin_i);
         return Err(result.unwrap_err());
@@ -77,7 +80,8 @@ fn convert_expression(
     stacks: &mut ExpressionStacks, 
     end_tokens: &[&str],
     use_literal_retention: bool,
-    open_bracket_stack: &mut i64
+    open_bracket_stack: &mut i64,
+    is_assign_var: bool,
 ) -> Result<()> {
 
     stream.next_multiple(-1);
@@ -121,7 +125,7 @@ fn convert_expression(
             try_add_operator(stacks, operator, stream.current_span())?;
         }
         else if let Some(var_ref) = try_get_variable(&possible_scopes) {
-            add_variable(stream, stacks, var_ref, use_literal_retention)?;
+            add_variable(stream, stacks, var_ref, use_literal_retention, is_assign_var)?;
         }
         else if is_function(stream, after_generic_index) {
             let function = get_function_call(stream, scopes)?;
@@ -446,8 +450,8 @@ fn add_index(
     Ok(())
 }
 
-fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref: &VariableRef, use_literal_retention: bool) -> Result<()> {
-    if var_ref.borrow().initializer.is_none() {
+fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref: &VariableRef, use_literal_retention: bool, is_assign_var: bool) -> Result<()> {
+    if var_ref.borrow().initializer.is_none() && !is_assign_var {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             stream.current_span(), 

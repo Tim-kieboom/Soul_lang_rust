@@ -1,7 +1,9 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Ident, NamedTuple, Tuple}, soul_type::soul_type::SoulType};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Ident, NamedTuple, Tuple}, soul_type::soul_type::SoulType}, utils::node_ref::NodeRef};
+
+pub type EnumDeclRef = NodeRef<InnerEnumDecl>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EnumDecl {
+pub struct InnerEnumDecl {
     pub name: Ident,
     pub variants: Vec<EnumVariant>,
     
@@ -11,14 +13,18 @@ pub struct EnumDecl {
     pub max_num: i64,
 }
 
+pub type UnionDeclRef = NodeRef<InnerUnionDecl>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct UnionDecl {
+pub struct InnerUnionDecl {
     pub name: Ident,
     pub variants: Vec<UnionVariant>,
 }
 
+pub type TypeEnumDeclRef = NodeRef<InnerTypeEnumDecl>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeEnumDecl {
+pub struct InnerTypeEnumDecl {
     pub name: Ident,
     pub types: Vec<SoulType>,
 }

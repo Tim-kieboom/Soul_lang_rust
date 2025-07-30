@@ -182,6 +182,16 @@ pub enum Modifier {
     Const,
 }
 
+impl Modifier {
+    pub fn is_mutable(&self) -> bool {
+        match self {
+            Modifier::Default => true,
+            Modifier::Literal |
+            Modifier::Const => false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeWrapper {
     Invalid,

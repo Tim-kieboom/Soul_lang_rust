@@ -5,10 +5,10 @@ use crate::steps::parser::get_statments::parse_field::try_get_field;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::objects::StructDecl;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::objects::{InnerStructDecl, StructDeclRef};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
-pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<StructDecl>> {
+pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<StructDeclRef>> {
     
     let struct_i = stream.current_index();
     if stream.next().is_none() {
@@ -74,12 +74,12 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
 
     return Ok(
         Spanned::new(
-            StructDecl{
+            StructDeclRef::new(InnerStructDecl{
                 name: Ident(stream[name_i].text.clone()), 
                 generics: generics_decl.generics, 
                 fields, 
                 implements: generics_decl.implements
-            },
+            }),
             stream.current_span().combine(&stream[struct_i].span)
         ),
     )

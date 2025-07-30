@@ -1,15 +1,15 @@
 use std::collections::HashSet;
+use crate::steps::step_interfaces::i_parser::scope::ScopeVisibility;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
-use crate::steps::step_interfaces::i_parser::scope::{ScopeVisibility};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::{EnumVariant, TypeEnumDecl};
-use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{spanned::Spanned, staments::enum_likes::EnumDecl}, scope::ScopeBuilder}, i_tokenizer::TokenStream};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::{EnumVariant, InnerEnumDecl, InnerTypeEnumDecl, TypeEnumDeclRef, UnionDeclRef};
+use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{spanned::Spanned, staments::enum_likes::EnumDeclRef}, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
-pub fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<TypeEnumDecl>> {
+pub fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<TypeEnumDeclRef>> {
         
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
         new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing typeEnum")
@@ -41,10 +41,29 @@ pub fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
     return Ok(
         Spanned::new(
-            TypeEnumDecl{name: Ident(stream[name_i].text.clone()), types}, 
+            TypeEnumDeclRef::new(InnerTypeEnumDecl{name: Ident(stream[name_i].text.clone()), types}), 
             stream.current_span().combine(&stream[type_enum_i].span),
         )
     );
+}
+
+pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<UnionDeclRef>> {
+      
+    fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
+        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing union")
+    }
+
+    let union_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    check_name(&stream.current_text())
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), format!("while trying to parse union {}", msg)))?;
+
+    
+
+    todo!()
 }
 
 pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<SoulType>> {
@@ -56,7 +75,7 @@ pub fn traverse_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuild
     Ok(())
 }
 
-pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<EnumDecl>> {
+pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<EnumDeclRef>> {
     
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
         new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing enum")
@@ -169,7 +188,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
 
     scopes.pop();
 
-    Ok(Spanned::new(EnumDecl{name, variants, max_num, min_num}, stream.current_span().combine(&stream[enum_i].span)))
+    Ok(Spanned::new(EnumDeclRef::new(InnerEnumDecl{name, variants, max_num, min_num}), stream.current_span().combine(&stream[enum_i].span)))
 }
 
 fn inner_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder, return_result: bool) -> Result<Vec<SoulType>> {

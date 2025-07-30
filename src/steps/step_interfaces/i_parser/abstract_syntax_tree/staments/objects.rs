@@ -16,16 +16,20 @@ pub struct InnerTraitDecl {
     pub implements: Vec<Ident>,
 }
 
+pub type StructDeclRef = NodeRef<InnerStructDecl>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct StructDecl {
+pub struct InnerStructDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
     pub implements: Vec<Ident>,
 }
 
+pub type ClassDeclRef = NodeRef<InnerClassDecl>;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct ClassDecl {
+pub struct InnerClassDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub fields: Vec<FieldDecl>,
