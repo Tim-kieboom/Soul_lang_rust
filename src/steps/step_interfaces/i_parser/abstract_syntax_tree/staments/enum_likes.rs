@@ -1,4 +1,8 @@
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Ident, NamedTuple, Tuple}, soul_type::soul_type::SoulType}, utils::node_ref::NodeRef};
+use std::collections::HashMap;
+
+use itertools::Itertools;
+
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, utils::node_ref::NodeRef};
 
 pub type EnumDeclRef = NodeRef<InnerEnumDecl>;
 
@@ -19,6 +23,7 @@ pub type UnionDeclRef = NodeRef<InnerUnionDecl>;
 pub struct InnerUnionDecl {
     pub name: Ident,
     pub variants: Vec<UnionVariant>,
+    pub byte_size: usize,
 }
 
 pub type TypeEnumDeclRef = NodeRef<InnerTypeEnumDecl>;
@@ -38,16 +43,23 @@ pub struct EnumVariant {
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnionVariant {
     pub name: Ident,
-    pub fields: Vec<UnionVariantKind>,
+    pub field: UnionVariantKind,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum UnionVariantKind {
-    Tuple(Tuple),
-    NamedTuple(NamedTuple)
+    Tuple(Vec<SoulType>),
+    NamedTuple(HashMap<Ident, SoulType>)
 }
 
-
+impl UnionVariantKind {
+    pub fn to_string(&self) -> String {
+        match self {
+            UnionVariantKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|el| el.to_string()).join(",")),
+            UnionVariantKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, el)| format!("{}: {}", name.0, el.to_string())).join(",")),
+        }
+    }
+}
 
 
 

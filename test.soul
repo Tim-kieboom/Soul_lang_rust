@@ -27,12 +27,23 @@ enumFunc() {
 	}
 }
 
-// union Num {
-// 	None(),
-// 	Int(int),
-// 	Uint(num: uint),
-// 	Float(f32),
-// }
+union Num {
+	None(),
+	Int(int),
+	Uint(num: uint),
+	Float(f32),
+}
+
+unionFunc() {
+	num := Num.Int(1)
+
+	is_int := num.Tag() == Num.Int.Tag()
+	// is_int = num typeof Num.Int
+
+	// if num typeof Num.Int(inner) {
+
+	// }
+}
 
 // switch() {
 // 	num := 12

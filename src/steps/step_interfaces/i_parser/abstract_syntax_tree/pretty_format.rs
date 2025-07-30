@@ -219,7 +219,7 @@ impl PrettyPrint for UnionDeclRef {
         let indent_str = indent(tab);
         let variants = this.variants
             .iter()
-            .map(|v| format!("{}{:?}", indent_str, v.fields))
+            .map(|v| format!("{}{}{}", indent_str, v.name.0, v.field.to_string()))
             .join(",\n");
         format!("Union {} >>\n{}", this.name.0, variants)
     }
