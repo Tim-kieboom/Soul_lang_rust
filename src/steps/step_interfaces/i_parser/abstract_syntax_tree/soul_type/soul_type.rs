@@ -26,7 +26,7 @@ impl TypeGenericKind {
 }
 
 impl SoulType {
-    pub fn new() -> Self {
+    pub fn none() -> Self {
         Self{ modifier: Modifier::Default, base: TypeKind::None, wrappers: vec![], generics: vec![] }
     } 
     

@@ -56,7 +56,7 @@ pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream
     }
     else { unreachable!() }
 
-    scopes.pop();
+    scopes.pop(stream.current_span());
     block.span = block.span.combine(&stream.current_span());
     Ok(block)
 }

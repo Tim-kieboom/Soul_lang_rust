@@ -37,7 +37,7 @@ union Num {
 unionFunc() {
 	num := Num.Int(1)
 
-	is_int := num.Tag() == Num.Int.Tag()
+	// is_int := num.Tag() == Num.Int.Tag()
 	// is_int = num typeof Num.Int
 
 	// if num typeof Num.Int(inner) {
@@ -45,21 +45,35 @@ unionFunc() {
 	// }
 }
 
-// switch() {
-// 	num := 12
-// 	match num {
-// 		1 => Println("is 1"),
-// 		21 => Println("is 21"),
-// 		12 => Println("is 12"),
-// 		_ => Println("default"),
-// 	}
 
-// 	string := "num" 
-// 	match string {
-// 		"num" => Println("yippie"),
-// 		"mun" => Println("eippiy"),
-// 		_ => Println("oh no"),
-// 	}
+lamdba() {
+	// const lamdbaSumTyped = (int a, int b) int => fall a + b
+	// // const lamdbaSumHalfTyped = int a, int b => fall a + b
+	// // const lamdbaSumReturnTyped = (a, b) int => fall a + b
+	// // const lamdbaSum = a, b => fall a + b
+	// const increment = a => a += 1
+	// const increment = a => a += 1
+	// lamdbaSumTyped(1,2)
+	// // lamdbaSum(1,2)
+
+	// genericSum<Func: Fn<int,int>int >(Func f)
+}
+
+switch() {
+	// num := 12
+	// match num {
+	// 	1 => Println("is 1"),
+	// 	21 => Println("is 21"),
+	// 	12 => Println("is 12"),
+	// 	_ => Println("default"),
+	// }
+
+	// string := "num" 
+	// match string {
+	// 	"num" => Println("yippie"),
+	// 	"mun" => Println("eippiy"),
+	// 	_ => Println("oh no"),
+	// }
 
 // 	tuple := (1, 2, 3)
 // 	match tuple {
@@ -68,10 +82,14 @@ unionFunc() {
 // 		_ => Println("not ordered"),
 // 	}
 
-// 	val := match 1 == 1 {
-// 		true => 12,
-// 		false => 21,
-// 	}
+	// val := match 1 == 1 {
+	// 	true => 12,
+	// 	false => {
+	// 		f := 21
+	// 		f += 1
+	// 		fall f
+	// 	},
+	// }
 
 // 	Num unionName = Num.Int(1)
 // 	match unionName {
@@ -79,7 +97,7 @@ unionFunc() {
 // 		Uint(num) => Println(num),
 // 		Float(num) => Println(num),
 // 	} 
-// }
+}
 
 class StrBuilder {
 	// static int runTimeStatic {Get;} = 1
@@ -138,6 +156,8 @@ sumGeneric<T>(T a, T b) T
 tuple() {
 	struct MyList{}
 
+	struct Data{int one; str two}
+
 	el := 1
 	runTimeTuple := (el,2,"hello")
 	runTimeTuple1 := (el,2,[1,2,3,],)
@@ -152,8 +172,11 @@ tuple() {
 	// (number, condition) := (el, true)
 	(field: int, name: bool) namedTuple = (field: el, name: true)
 	// (field, name) := (field: el, name: true) 
+	// data = Data(1, "jim")
+	// Data(one, two) := data
 
 	functionCall := func(el, 2, "hello")
+	functionCall = func(el, 2, "hello", option=1)
 
 	runTimeNamedTuple := (field: el, name: "hello")
 	ctor := MyList()
@@ -272,27 +295,39 @@ ifs() {
 		Println("else is true")
 	}
 
-	// val := if true {
-	// 	12
-	// }
-	// else {
-	// 	21
-	// }
-
-	// val := if true {
-	// 	12
-	// }
-	// else if false {
-	// 	32
-	// }
-	// else {
-	// 	21
-	// }
+	condition := true
+	val := condition == true ? 1 : 2
 
 	// Op<i32> num = None
-	// if num typeof Some(num) {
+	// if const Some(mut num) typeof num {
 	// 	Println(num)
 	// } 
+}
+
+whiles() {
+	
+	i := 0
+	while i++ < 10 {
+
+		if i % 3 == 0 {
+			break
+		}
+
+		Println("loop yay")		
+	}	
+	
+	// i = 0
+	// imod3 := while {
+
+	// 	if i++ % 3 == 0 {
+	// 		break i
+	// 	}
+	// }
+
+	// stack := List[1,2,3,4]
+	// while Some(number) typeof stack.Pop() {
+	// 	Println(f"number: {number}")
+	// }
 }
 
 str parse(this@, int a) int {
@@ -346,10 +381,6 @@ main() int {
 	for el in [1,2,3,4] {
 		Println(el)
 	} 
-
-	while 1 == 2 {
-		Println("unreachable")		
-	}
 
 	sum(1, 2)
 

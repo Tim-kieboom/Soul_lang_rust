@@ -1,6 +1,5 @@
 use itertools::Itertools;
-
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}, utils::node_ref::NodeRef};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}}, utils::node_ref::NodeRef};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnDecl {
@@ -69,6 +68,44 @@ impl FnDeclKind {
 }
 
 pub type FunctionSignatureRef = NodeRef<InnerFunctionSignature>; 
+
+pub type LambdaSignatureRef = NodeRef<InnerLambdaSignature>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LambdaMode {
+    Mut,
+    Const,
+    Consume,
+}
+
+impl LambdaMode {
+    pub fn get_lambda_name(&self) -> &'static str {
+        match self {
+            LambdaMode::Mut => "MutFn",
+            LambdaMode::Const => "ConstFn",
+            LambdaMode::Consume => "OnceFn",
+        } 
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct InnerLambdaSignature {
+    pub params: Vec<Spanned<Parameter>>,
+    pub return_type: Option<SoulType>,
+    pub mode: LambdaMode, 
+}
+
+impl LambdaSignatureRef {
+    pub fn to_type_string(&self) -> String {
+        let this = self.borrow();
+        format!(
+            "{}<{}>{}",
+            this.mode.get_lambda_name(),
+            this.params.iter().map(|el| el.node.ty.to_string()).join(","),
+            this.return_type.as_ref().map(|el| el.to_string()).unwrap_or("".into())
+        )
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InnerFunctionSignature {

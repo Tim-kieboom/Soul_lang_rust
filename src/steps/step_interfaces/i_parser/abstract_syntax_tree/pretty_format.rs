@@ -3,7 +3,7 @@ use std::sync::RwLockReadGuard;
 use itertools::Itertools;
 
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, StmtKind, VariableDecl}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
+    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableDecl}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -88,10 +88,12 @@ impl PrettyPrint for StmtKind {
             StmtKind::UnionDecl(union_decl) => union_decl.to_pretty(tab, is_last),
             StmtKind::TypeEnumDecl(type_enum) => type_enum.to_pretty(tab, is_last),
             StmtKind::TraitImpl(trait_impl) => trait_impl.to_pretty(tab, is_last),
-            StmtKind::Return(ret) => format!(
-                "{}Return >> return {};",
+            StmtKind::Return(ReturnLike{value, delete_list, kind}) => format!(
+                "{}Return >> {} {} >> free([{}])",
                 prefix,
-                ret.value.as_ref().map(|ty| ty.node.to_string()).unwrap_or_default()
+                kind.to_str(),
+                value.as_ref().map(|ty| ty.node.to_string()).unwrap_or_default(),
+                delete_list.iter().join(","),
             ),
             StmtKind::Assignment(assign) => format!(
                 "{}Assignment >> {} = {};",
@@ -101,10 +103,10 @@ impl PrettyPrint for StmtKind {
             ),
             StmtKind::If(if_decl) => if_decl.to_pretty(tab, is_last),
             StmtKind::While(while_decl) => {
-                let cond = while_decl.condition.node.to_string();
+                let cond = while_decl.condition.as_ref().map(|el| el.node.to_string()).unwrap_or("<empty>".into());
                 let body = while_decl.body.to_pretty(tab + 1, true);
                 format!(
-                    "{}While >> while ({})\n{}",
+                    "{}While >> while{}\n{}",
                     prefix,
                     cond,
                     body
@@ -128,7 +130,15 @@ impl PrettyPrint for StmtKind {
                     coll,
                     body
                 )
-            }
+            },
+            StmtKind::Switch(switch) =>format!(
+                "SwitchCase >> match {}\n{}", 
+                switch.condition.node.to_string(),
+                switch.cases.iter().enumerate().map(|(i, stmt)| {
+                    let is_last = i == switch.cases.len() - 1;
+                    stmt.do_fn.to_pretty(tab, is_last)
+                }).collect::<Vec<_>>().join("\n")
+            ),
         }
     }
 }

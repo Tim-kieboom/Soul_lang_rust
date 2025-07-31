@@ -77,7 +77,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         }
     }
     
-    scopes.pop();
+    scopes.pop(stream.current_span());
 
     if stream.current_text() != "}" {
         return Err(new_soul_error(

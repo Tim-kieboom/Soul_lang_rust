@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::collections::BTreeMap;
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned}};
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{function::LambdaSignatureRef, statment::{Block, VariableRef}}}};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
@@ -21,6 +21,10 @@ pub enum ExprKind {
     Binary(BinaryExpr),
     StaticField(StaticField),
     StaticMethode(StaticMethode),
+
+    Lambda(LambdaDecl),
+
+    Ternary(Ternary),
 
     Deref(BoxExpr),
     MutRef(BoxExpr),
@@ -145,6 +149,22 @@ impl ExprKind {
 
                 format!("{}.{}{}({})", callee.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
             },
+            ExprKind::Lambda(LambdaDecl{signature, arguments, body, capture:_}) => {
+                let sig = signature.borrow();
+                format!(
+                    "{}({}): {} => {}",
+                    sig.mode.get_lambda_name(),
+                    arguments.iter().map(|el| el.node.to_string()).join(","),
+                    sig.return_type.as_ref().unwrap_or(&SoulType::none()).to_string(),
+                    body.statments.iter().map(|el| el.node.to_pretty(0, false)).join(";")
+                )
+            },
+            ExprKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!(
+                "({}) ? {} : {}",
+                condition.node.to_string(),
+                if_branch.node.to_string(),
+                else_branch.node.to_string(),
+            ),
         }
     }
 
@@ -160,6 +180,8 @@ impl ExprKind {
             ExprKind::Field(..) |
             ExprKind::TypeOf(..) |
             ExprKind::Binary(..) |
+            ExprKind::Lambda(..) |
+            ExprKind::Ternary(..) |
             ExprKind::Literal(..) |
             ExprKind::Variable(..) |
             ExprKind::NamedTuple(..) |
@@ -184,7 +206,9 @@ impl ExprKind {
             ExprKind::TypeOf(_) => "typeof",
             ExprKind::Binary(_) => "binary",
             ExprKind::MutRef(_) => "MutRef",
+            ExprKind::Lambda(_) => "Lambda",
             ExprKind::Literal(_) => "Literal",
+            ExprKind::Ternary(_) => "Ternary",
             ExprKind::Variable(_) => "Valiable",
             ExprKind::ConstRef(_) => "ConstRef",
             ExprKind::NamedTuple(_) => "NamedTuple",
@@ -238,6 +262,34 @@ impl FnCall {
             arguments: self.arguments,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LambdaDecl {
+    pub signature: LambdaSignatureRef,
+    pub arguments: Vec<Expression>,
+    pub body: Block,
+    pub capture: Capture,
+} 
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Ternary {
+    pub condition: BoxExpr,
+    pub if_branch: BoxExpr,
+    pub else_branch: BoxExpr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Capture {
+    pub variable: VariableRef,
+    pub kind: CaptureKind,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CaptureKind {
+    ConstRef,
+    MutRef,
+    Consume,
 }
 
 #[derive(Debug, Clone, PartialEq)]

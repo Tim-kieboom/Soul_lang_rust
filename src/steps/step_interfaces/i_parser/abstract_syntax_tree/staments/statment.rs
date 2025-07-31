@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::{soul_type::SoulType}, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::NodeRef};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::NodeRef};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -22,10 +22,11 @@ pub enum StmtKind {
 
     TraitImpl(TraitImpl),
 
-    Return(Return),
+    Return(ReturnLike),
 
     Assignment(Assignment),
     If(IfDecl),
+    Switch(SwitchDecl),
     While(WhileDecl),
     For(ForDecl),
     Block(Block),
@@ -56,7 +57,7 @@ impl_in_stmt_kind!(
     UnionDecl => UnionDeclRef, 
     TypeEnumDecl => TypeEnumDeclRef, 
     TraitImpl => TraitImpl, 
-    Return => Return,
+    Return => ReturnLike,
     Assignment => Assignment, 
     If => IfDecl, 
     While => WhileDecl,
@@ -89,24 +90,25 @@ impl StmtKind {
 
     pub fn get_varaint_name(&self) -> &'static str {
         match self {
-            StmtKind::ExprStmt(_) => "ExprStmt",
-            StmtKind::VarDecl(_) => "VarDecl",
-            StmtKind::FnDecl(_) => "FnDecl",
-            StmtKind::ExtFnDecl(_) => "ExtFnDecl",
-            StmtKind::StructDecl(_) => "StructDecl",
-            StmtKind::ClassDecl(_) => "ClassDecl",
-            StmtKind::TraitDecl(_) => "TraitDecl",
-            StmtKind::EnumDecl(_) => "EnumDecl",
-            StmtKind::UnionDecl(_) => "UnionDecl",
-            StmtKind::TypeEnumDecl(_) => "TypeEnumDecl",
-            StmtKind::TraitImpl(_) => "TraitImpl",
-            StmtKind::Return(_) => "Return",
-            StmtKind::Assignment(_) => "Assignment",
             StmtKind::If(_) => "If",
+            StmtKind::For(_) => "for",
             StmtKind::While(_) => "While",
             StmtKind::Block(_) => "Block",
+            StmtKind::Switch(_) => "Switch",
+            StmtKind::Return(_) => "Return",
+            StmtKind::FnDecl(_) => "FnDecl",
+            StmtKind::VarDecl(_) => "VarDecl",
+            StmtKind::ExprStmt(_) => "ExprStmt",
+            StmtKind::EnumDecl(_) => "EnumDecl",
+            StmtKind::UnionDecl(_) => "UnionDecl",
+            StmtKind::ExtFnDecl(_) => "ExtFnDecl",
+            StmtKind::ClassDecl(_) => "ClassDecl",
+            StmtKind::TraitImpl(_) => "TraitImpl",
+            StmtKind::TraitDecl(_) => "TraitDecl",
+            StmtKind::StructDecl(_) => "StructDecl",
+            StmtKind::Assignment(_) => "Assignment",
             StmtKind::CloseBlock(_) => "CloseBlock",
-            StmtKind::For(_) => "for",
+            StmtKind::TypeEnumDecl(_) => "TypeEnumDecl",
         }
     }
 }
@@ -122,13 +124,32 @@ pub struct Block {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Return {
-    pub value: Option<Expression>
+pub struct ReturnLike {
+    pub value: Option<Expression>,
+    pub delete_list: Vec<DeleteList>,
+    pub kind: ReturnKind
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReturnKind {
+    Return,
+    Fall,
+    Break,
+}
+
+impl ReturnKind {
+    pub fn to_str(&self) -> &str {
+        match self {
+            ReturnKind::Return => "return",
+            ReturnKind::Fall => "fall",
+            ReturnKind::Break => "break",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CloseBlock {
-    pub delete_list: Vec<DeleteList>
+    pub delete_list: Vec<DeleteList>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -20,8 +20,8 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::fun
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, IfDecl, WhileDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, Return, Statment, StmtKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -72,33 +72,20 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
     match stream.current_text() {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
-            let return_i = stream.current_index();
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }  
-
-            let expr = get_expression(stream, scopes, &["\n", ";"])?;
-            let return_expr = if let ExprKind::Empty = expr.node {
-                None
-            }
-            else {
-                Some(expr)
-            };
-
-            let span = stream[return_i].span.combine(&stream.current_span());
-            return Ok(Some(Statment::new(StmtKind::Return(Return{value: return_expr}), span)));
+            let ret = get_return_like(stream, scopes, ReturnKind::Return)?;
+            return Ok(Some(Statment::new(StmtKind::Return(ret.node), ret.span)))
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::BreakLoop) => {
+            let ret = get_return_like(stream, scopes, ReturnKind::Break)?;
+            return Ok(Some(Statment::new(StmtKind::Return(ret.node), ret.span)))
+        }
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Fall) => {
+            let ret = get_return_like(stream, scopes, ReturnKind::Fall)?;
+            return Ok(Some(Statment::new(StmtKind::Return(ret.node), ret.span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => {
-            let while_i = stream.current_index();
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }  
-
-            let condition = get_expression(stream, scopes, &["{"])?;
-            let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-
-            let span = stream[while_i].span.combine(&stream.current_span());
-            return Ok(Some(Statment::new(StmtKind::While(WhileDecl{condition, body: block.node}), span)))
+            let while_decl = get_while(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::While(while_decl.node), while_decl.span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => {
             return add_for_loop(stream, scopes);
@@ -160,6 +147,8 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(Some(Statment::new(StmtKind::ClassDecl(class_decl.node), class_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::SwitchCase) => {
+            // let switch_decl = get_switch_case(stream, scopes)?;
+            // let name = swiut
             todo!()
         },
         _ => (),
@@ -361,6 +350,54 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     return Ok(Some(Statment::new(StmtKind::Assignment(assign.node), assign.span)));
 }
 
+fn get_while(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<WhileDecl>> {
+    let while_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }  
+
+    if stream.current_text() == "\n" {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }  
+    }
+
+    let condition = if stream.current_text() == "{" {
+        None
+    } 
+    else {
+        Some(get_expression(stream, scopes, &["{"])?)
+    };
+    
+    let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
+
+    let span = stream[while_i].span.combine(&stream.current_span());
+    Ok(Spanned::new(WhileDecl{condition, body: block.node}, span))
+}
+
+fn get_return_like(stream: &mut TokenStream, scopes: &mut ScopeBuilder, kind: ReturnKind) -> Result<Spanned<ReturnLike>> {
+    let return_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }  
+
+    let expr = get_expression(stream, scopes, &["\n", ";"])?;
+    let return_expr = if let ExprKind::Empty = expr.node {
+        None
+    }
+    else {
+        Some(expr)
+    };
+
+    let span = stream[return_i].span.combine(&stream.current_span());
+    Ok(Spanned::new(ReturnLike{value: return_expr, kind, delete_list: vec![] }, span))
+}
+
+fn get_switch_case(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<SwitchDecl>> {
+    todo!()
+}
+
 fn try_get_special_error(next_index: usize, stream: &TokenStream, has_type: bool, type_t: usize) -> Result<()> {
     if has_type && stream.is_valid_index(next_index+1) && stream[next_index+1].text == ":=" {
         return Err(new_soul_error(
@@ -426,7 +463,7 @@ fn add_for_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<O
         .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
     
     let name_i = stream.current_index();
-    let el_parameter = Spanned::new(Parameter{name: Ident(stream[name_i].text.clone()), ty: SoulType::new(), default_value: None}, stream[name_i].span);
+    let el_parameter = Spanned::new(Parameter{name: Ident(stream[name_i].text.clone()), ty: SoulType::none(), default_value: None}, stream[name_i].span);
     
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));

@@ -147,7 +147,7 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
         let (lit_retention, mut ty) = match &expr.node {
             ExprKind::Literal(literal) => (Some(expr.clone()), literal.to_soul_type()),
-            _ => (None, SoulType::new()),
+            _ => (None, SoulType::none()),
         };
 
         ty.modifier = modifier;

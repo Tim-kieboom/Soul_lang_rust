@@ -178,10 +178,12 @@ impl<'a> SoulNames<'a> {
             (NamesOtherKeyWords::ForLoop, "for"),
             (NamesOtherKeyWords::InForLoop, "in"),
             (NamesOtherKeyWords::WhileLoop, "while"),
-            (NamesOtherKeyWords::BreakLoop, "break"),
             (NamesOtherKeyWords::ContinueLoop, "continue"),
+
+            (NamesOtherKeyWords::BreakLoop, "break"),
             (NamesOtherKeyWords::Return, "return"),
-            
+            (NamesOtherKeyWords::Fall, "fall"),
+
             (NamesOtherKeyWords::Struct, "struct"),
             (NamesOtherKeyWords::Class, "class"),
             (NamesOtherKeyWords::Union, "union"),
@@ -278,8 +280,10 @@ pub enum NamesOtherKeyWords {
     ForLoop,
     InForLoop,
     ContinueLoop,
+
     BreakLoop,
     Return,
+    Fall,
 
     Struct,
     Class,

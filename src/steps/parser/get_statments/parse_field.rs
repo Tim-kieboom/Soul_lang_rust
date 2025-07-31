@@ -55,7 +55,11 @@ pub fn try_get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Opt
         None
     };
 
-    if stream.current_text() == "\n" || stream.current_text() == ";" {
+    if stream.current_text() == "}" {
+        stream.next_multiple(-1);
+        return Some(Ok(FieldDecl{name: Ident(stream[name_i].text.clone()), ty, default_value, vis: field_access }));
+    }
+    else if stream.current_text() == "\n" || stream.current_text() == ";" {
         return Some(Ok(FieldDecl{name: Ident(stream[name_i].text.clone()), ty, default_value, vis: field_access }));
     } 
 

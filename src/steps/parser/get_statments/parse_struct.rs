@@ -58,7 +58,7 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         fields.push(field);
     }
     
-    scopes.pop();
+    scopes.pop(stream.current_span());
 
     if stream.current_text() != "}" {
         return Err(new_soul_error(

@@ -73,7 +73,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         methodes.push(methode.node);
     }
 
-    scopes.pop();
+    scopes.pop(stream.current_span());
 
     if stream.current_text() != "}" {
         return Err(new_soul_error(

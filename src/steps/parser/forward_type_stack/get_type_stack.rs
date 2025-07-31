@@ -40,7 +40,7 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
     } 
        
     if stream.current_text() == "}" {
-        types.pop();
+        types.pop(stream.current_span());
         
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));

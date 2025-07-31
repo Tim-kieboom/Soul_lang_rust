@@ -1,5 +1,5 @@
-use std::collections::{BTreeMap, HashMap};
-use crate::{steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
+use std::{collections::{BTreeMap, HashMap}, process::exit};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -88,8 +88,8 @@ impl ScopeBuilder {
         self.scopes.push(parent_index, scope_visability);
     }
 
-    pub fn pop(&mut self) {
-        self.scopes.pop();
+    pub fn pop(&mut self, span: SoulSpan) {
+        self.scopes.pop(span);
     }
 
     pub fn is_in_global(&self) -> bool {
@@ -206,11 +206,12 @@ impl<T> InnerScopeBuilder<T> {
         self.scopes.push(InnerScope::<T>::new_child(self.current, parent_index, scope_visability));
     }
 
-    pub fn pop(&mut self) {
+    pub fn pop(&mut self, span: SoulSpan) {
         if let Some(parent_index) = self.scopes[self.current].parent_index {
             self.current = parent_index;
         } else {
-            panic!("Cannot pop the global scope");
+            println!("{}", new_soul_error(SoulErrorKind::UnmatchedParenthesis, span, "somewhere in program there is a '}}' without a '{{' (probably near the '}}' before this one)").to_err_message());
+            exit(1)
         }
     }
 

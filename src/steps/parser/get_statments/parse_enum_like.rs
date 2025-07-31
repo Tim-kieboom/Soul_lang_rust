@@ -175,7 +175,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         return Err(err_out_of_bounds(stream));
     }
 
-    scopes.pop();
+    scopes.pop(stream.current_span());
     Ok(Spanned::new(UnionDeclRef::new(InnerUnionDecl{name, variants, byte_size: 0/*unknown at this time*/}), stream[union_i].span.combine(&stream.current_span())))
 }
 
@@ -299,7 +299,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         return Err(err_out_of_bounds(stream));
     }
 
-    scopes.pop();
+    scopes.pop(stream.current_span());
 
     Ok(Spanned::new(EnumDeclRef::new(InnerEnumDecl{name, variants, max_num, min_num}), stream.current_span().combine(&stream[enum_i].span)))
 }

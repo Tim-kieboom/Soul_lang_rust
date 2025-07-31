@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::FunctionSignatureRef, statment::Lifetime}}};
+use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeSize {
@@ -33,6 +33,7 @@ pub enum TypeKind {
     Tuple(Vec<SoulType>),
     NamedTuple(HashMap<Ident, SoulType>),
     Function(Box<FunctionSignatureRef>),
+    Lambda(LambdaSignatureRef),
 
     Struct(Ident),
     Class(Ident),
@@ -122,6 +123,7 @@ impl TypeKind {
             TypeKind::TypeEnum(ident, ..) => ident.0.clone(),
             TypeKind::Generic(ident) => ident.0.clone(),
             TypeKind::LifeTime(ident) => ident.0.clone(),
+            TypeKind::Lambda(signature) => signature.to_type_string(),
         }
     }
 
@@ -171,6 +173,11 @@ impl TypeKind {
             TypeKind::TypeEnum(..) => "typeEnum",
             TypeKind::Generic(..) => "generic",
             TypeKind::LifeTime(..) => "lifetime",
+            TypeKind::Lambda(signature) => match signature.borrow().mode {
+                LambdaMode::Mut => "MutFn",
+                LambdaMode::Const => "ConstFn",
+                LambdaMode::Consume => "OnceFn",
+            },
         }
     }
 }

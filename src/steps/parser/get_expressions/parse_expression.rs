@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesTypeWrapper, SOUL_NAMES}, steps::{parser::get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::statment::VariableRef}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -170,10 +170,59 @@ fn end_expr_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &m
         try_add_field_or_methode(stream, scopes, stacks)?;
     }
 
+    if stream.peek().is_some_and(|token| token.text == "?") {
+        add_ternary(stream, scopes, stacks)?;
+    }
+
     if should_convert_to_ref(stacks) {
         add_ref(stream, scopes, stacks)?;
     }
 
+    Ok(())
+}
+
+fn add_ternary(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+    if stream.next_multiple(2).is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    let condition = if stacks.node_stack.len() == 1 {
+        Box::new(stacks.node_stack.pop().unwrap())
+    }
+    else {
+        let last_symbool = stacks.symbool_stack
+            .last()
+            .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "missing operator"))?; 
+        
+        merge_expressions(stacks, last_symbool.node.get_precedence())?;
+        Box::new(stacks.node_stack.pop().unwrap())
+    };
+
+    let if_branch = Box::new(get_expression(stream, scopes, &[":"])?);
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    let else_branch = Box::new(get_expression(stream, scopes, &[";", "\n", "}"])?);
+    stream.next_multiple(-1);
+
+    let span = condition.span.combine(&else_branch.span);
+    let ternary = Ternary{condition, if_branch, else_branch};
+    stacks.node_stack.push(Expression::new(ExprKind::Ternary(ternary), span));
     Ok(())
 }
 
@@ -306,12 +355,24 @@ fn try_add_operator(
     mut operator: OperatorKind,
     span: SoulSpan
 ) -> Result<()> {
-    fn last_precedence(stacks: &mut ExpressionStacks) -> u8 {
+
+    merge_expressions(stacks, operator.get_precedence())?;
+
+    if operator == OperatorKind::BinOp(BinOpKind::Sub) && 
+       is_minus_negative_unary(stacks) 
+    {
+        operator = OperatorKind::UnaryOp(UnaryOpKind::Neg)
+    }
+
+    stacks.symbool_stack.push(to_symbool(operator, span));
+    Ok(())
+}
+
+fn merge_expressions(stacks: &mut ExpressionStacks, current_precedence: u8) -> Result<()> {
+        fn last_precedence(stacks: &mut ExpressionStacks) -> u8 {
         stacks.symbool_stack.last().unwrap().node.get_precedence()
     }
     
-    let current_precedence = operator.get_precedence();
-
     while !stacks.symbool_stack.is_empty() &&
           last_precedence(stacks) >= current_precedence 
     {
@@ -325,13 +386,6 @@ fn try_add_operator(
         stacks.node_stack.push(expression);
     }
 
-    if operator == OperatorKind::BinOp(BinOpKind::Sub) && 
-       is_minus_negative_unary(stacks) 
-    {
-        operator = OperatorKind::UnaryOp(UnaryOpKind::Neg)
-    }
-
-    stacks.symbool_stack.push(to_symbool(operator, span));
     Ok(())
 }
 

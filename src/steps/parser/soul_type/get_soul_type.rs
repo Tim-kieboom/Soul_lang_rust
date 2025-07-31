@@ -40,7 +40,7 @@ impl FromTokenStream<SoulType> for SoulType {
 }
 
 fn inner_from_token_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Result<SoulType>> {
-    let mut soul_type = SoulType::new();
+    let mut soul_type = SoulType::none();
 
     soul_type.modifier = Modifier::from_str(stream.current_text());
     if soul_type.modifier != Modifier::Default {
