@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::collections::BTreeMap;
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{function::LambdaSignatureRef, statment::{Block, VariableRef}}}};
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableRef}}}};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
@@ -23,6 +23,7 @@ pub enum ExprKind {
     StaticMethode(StaticMethode),
 
     Lambda(LambdaDecl),
+    If(Box<IfDecl>),
 
     Ternary(Ternary),
 
@@ -165,12 +166,14 @@ impl ExprKind {
                 if_branch.node.to_string(),
                 else_branch.node.to_string(),
             ),
+            ExprKind::If(if_decl) => if_decl.to_pretty(0, true),
         }
     }
 
     pub fn is_any_ref(&self) -> bool {
         match self {
             ExprKind::Empty |
+            ExprKind::If(..) |
             ExprKind::Call(..) |
             ExprKind::Unary(..) |
             ExprKind::Index(..) |
@@ -196,6 +199,7 @@ impl ExprKind {
     pub fn get_variant_name(&self) -> &'static str {
         match self {
             ExprKind::Empty => "<empty>",
+            ExprKind::If(_) => "If",
             ExprKind::Index(_) => "index",
             ExprKind::Unary(_) => "unary",
             ExprKind::Call(_) => "FnCall",

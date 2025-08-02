@@ -4,6 +4,8 @@ use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abst
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
 
+pub const STATMENT_ENDS: &[&str] = &["\n", ";", "}"];
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
     ExprStmt(Expression),

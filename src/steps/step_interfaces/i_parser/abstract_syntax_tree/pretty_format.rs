@@ -147,9 +147,14 @@ impl PrettyPrint for ElseKind {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
         match self {
-            ElseKind::ElseIf(if_decl) => if_decl.to_pretty(tab, is_last),
+            ElseKind::ElseIf(if_decl) => format!(
+                "{}Else If >> else if {}\n{}",
+                prefix,
+                if_decl.node.condition.node.to_string(),
+                if_decl.node.body.to_pretty(tab + 1, true),
+            ),
             ElseKind::Else(block) => {
-                let body = block.to_pretty(tab + 1, true);
+                let body = block.node.to_pretty(tab + 1, true);
                 format!("{}Else >> else\n{}", prefix, body)
             }
         }

@@ -15,8 +15,7 @@
     return result;
 ----------------------------------------------
 */
-namespace __Soul_CompileConst_math__
-{
+namespace __Soul_CompileConst_math__ {
 
 constexpr double _CompileConst_exp(const double x, const uint32_t terms, const double result, const double term, const uint64_t i) noexcept
 {
@@ -28,8 +27,8 @@ constexpr double _CompileConst_exp(const double x, const uint32_t terms, const d
                     (result + term),
                     (term * (x / i)),
                     (i + 1)
-                ) :
-                result;
+                )
+                : result;
 }
 
 constexpr double _exp(const double x, const uint32_t terms) noexcept

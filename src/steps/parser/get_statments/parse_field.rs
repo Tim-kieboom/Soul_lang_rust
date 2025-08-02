@@ -32,7 +32,8 @@ pub fn try_get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Opt
         return Some(Err(err_out_of_bounds(stream)));
     }
 
-    if stream.current_text() == "\n" || stream.current_text() == ";" {
+    const END_TOKENS: &[&str] = &["\n", ";"];
+    if END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
         return Some(Ok(FieldDecl{name: Ident(stream[name_i].text.clone()), ty, default_value: None, vis: FieldAccess::default() }));
     } 
 
@@ -46,7 +47,7 @@ pub fn try_get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Opt
             return Some(Err(err_out_of_bounds(stream)));
         }
 
-        match get_expression(stream, scopes, &["\n", ";"]) {
+        match get_expression(stream, scopes, END_TOKENS) {
             Ok(val) => Some(val),
             Err(err) => return Some(Err(err)),
         }
@@ -59,7 +60,7 @@ pub fn try_get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Opt
         stream.next_multiple(-1);
         return Some(Ok(FieldDecl{name: Ident(stream[name_i].text.clone()), ty, default_value, vis: field_access }));
     }
-    else if stream.current_text() == "\n" || stream.current_text() == ";" {
+    else if END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
         return Some(Ok(FieldDecl{name: Ident(stream[name_i].text.clone()), ty, default_value, vis: field_access }));
     } 
 

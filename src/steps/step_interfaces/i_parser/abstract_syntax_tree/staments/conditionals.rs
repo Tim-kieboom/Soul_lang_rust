@@ -1,4 +1,4 @@
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, staments::statment::Block};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, spanned::Spanned, staments::statment::Block};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhileDecl {
@@ -34,8 +34,8 @@ pub struct CaseSwitch {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElseKind {
-    ElseIf(Box<IfDecl>),
-    Else(Block)
+    ElseIf(Box<Spanned<IfDecl>>),
+    Else(Spanned<Block>)
 }
 
 

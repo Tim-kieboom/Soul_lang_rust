@@ -35,13 +35,22 @@ union Num {
 }
 
 unionFunc() {
-	num := Num.Int(1)
+	// printNumInt(Num::Int num) {
+	// 	Println(num.0)
+	// }
+	
+	// num := Num::Int(1)
 
-	// is_int := num.Tag() == Num.Int.Tag()
-	// is_int = num typeof Num.Int
+	// is_int := num.Tag() == Num::Int.Tag()
+	
+	// if Num.Int(inner) typeof num {
+	// 	Assert(inner typeof int)
+	// }
 
-	// if num typeof Num.Int(inner) {
+	// if Num::Int intStruct typeof num {
+	// 	Assert(inner typeof Num::Int)
 
+	// 	printNumInt(intStruct)
 	// }
 }
 
@@ -281,7 +290,8 @@ assignment() {
 	foo &= 1
 	foo ^= 1
 	foo = foo log 100
-	foo = foo </ 100
+	foo = foo ** 2
+	foo = foo </ 2
 }
 
 ifs() {
@@ -296,12 +306,77 @@ ifs() {
 	}
 
 	condition := true
-	val := condition == true ? 1 : 2
+	val := condition ? 1 : 2
+	
+	cos1 := true ? 2 log 5
+			: false ? 3
+			: func()
+
+	con3 := if true {fall 2 log 5} 
+			else if false {fall 3}
+			else {fall func()}
 
 	// Op<i32> num = None
 	// if const Some(mut num) typeof num {
 	// 	Println(num)
 	// } 
+}
+
+rulesets() {
+
+	//default sum
+	int[] sum(this@) int {
+		sum := 0
+		for el in this {
+			sum += el
+		}
+	}
+
+	const int[] _sumIter(this@, uint i, int sum) int {
+		return if i >= this.Len() {
+			fall sum
+		}
+		else {
+			fall this._sumIter(i+1, sum + this[i])
+		}
+	}
+
+	//functional sum
+	const int[] sum(this@) int {
+		return this._sumIter(0, 0)
+	}
+
+	//comptime sum
+	Literal int[] sum(this@) int {
+		//even thou _sumIter is const not Literal it can still be called in Literal ruleset, 
+		//because if const gets Literal arguments it becames a Literal function so validats Literal ruleset  
+		return this._sumIter(0, 0)
+	}
+
+	int[] array = [1,2,3,4,5]
+	//default > functional so calls default
+	sum := array.sum()
+
+	// //add const to force at least const ruleset (so calls functional)
+	// insureConstSum := const array.sum()
+	// //add const to force Literal (this will prefere Literal but if all arguments are Literal and there is no Literal func const can also be called)
+	// insureLiteralSum := Literal array.sum()
+
+	// defaultBlock := {
+	// 	foo := 1
+	// 	foo += 1
+	// 	fall foo 
+	// }
+
+	// constVal := const {
+	// 	const f = 1
+	// 	const f2 = f + f2
+	// 	fall f2 ** 2
+	// }
+
+	// compTime := Literal {
+	// 	fall 10 log 100
+	// }
 }
 
 whiles() {

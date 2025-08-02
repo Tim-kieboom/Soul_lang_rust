@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::STATMENT_ENDS;
 use crate::steps::step_interfaces::i_parser::scope::ScopeVisibility;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
@@ -36,7 +37,7 @@ pub fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         return Err(err_out_of_bounds(stream));
     } 
     
-    if stream.current_text() != ";" && stream.current_text() != "\n" {
+    if !STATMENT_ENDS.iter().any(|sym| sym == stream.current_text()) {
         return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token: '{}' is incorrect end of typeEnum", stream.current_text())));
     }
 

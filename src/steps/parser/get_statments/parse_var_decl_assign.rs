@@ -9,7 +9,7 @@ use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Assignment, VariableDecl, VariableRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Assignment, VariableDecl, VariableRef, STATMENT_ENDS};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 
 static ASSIGN_END_TOKENS: Lazy<Vec<&str>> = Lazy::new(|| {
@@ -85,7 +85,7 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         return Err(err_out_of_bounds(stream));
     }
 
-    if stream.current_text() == "\n" || stream.current_text() == ";" {
+    if STATMENT_ENDS.iter().any(|sym| sym == stream.current_text())  {
 
         if scopes.is_in_global() {
             return Err(new_soul_error(
@@ -142,7 +142,7 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         }
 
         let begin_i = stream.current_index();
-        let expr = get_expression(stream, scopes, &[";", "\n"])
+        let expr = get_expression(stream, scopes, STATMENT_ENDS)
             .map_err(|err| pass_soul_error(err.get_last_kind(), stream[begin_i].span, format!("while trying to get assignment of variable: '{}'", &stream[var_name_index].text).as_str(), err))?;
 
         let (lit_retention, mut ty) = match &expr.node {
@@ -160,7 +160,7 @@ pub fn get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
     else {
         let begin_i = stream.current_index();
-        let expr = get_expression(stream, scopes, &[";", "\n"])
+        let expr = get_expression(stream, scopes, STATMENT_ENDS)
             .map_err(|err| pass_soul_error(err.get_last_kind(), stream[begin_i].span, format!("while trying to get assignment of variable: '{}'", &stream[var_name_index].text).as_str(), err))?;
 
         let lit_retention = match &expr.node {
@@ -189,7 +189,7 @@ pub fn get_assignment_with_var(variable: Expression, stream: &mut TokenStream, s
         return Err(err_out_of_bounds(stream));
     }
 
-    let expr = get_expression(stream, scopes, &["\n", ";"])?;
+    let expr = get_expression(stream, scopes, STATMENT_ENDS)?;
     
     let expression = get_compount_assignment(stream, symbool_i, &variable, expr)?;
     
@@ -227,7 +227,7 @@ pub fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Re
         return Err(err_out_of_bounds(stream));
     }
 
-    let expr = get_expression(stream, scopes, &["\n", ";"])?;
+    let expr = get_expression(stream, scopes, STATMENT_ENDS)?;
     
     let assign = if let Some(literal) = lit_retention {Expression::new(literal.node, variable.span)} else {variable.clone()};
     let expression = get_compount_assignment(stream, symbool_i, &assign, expr)?;
