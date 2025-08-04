@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 
 use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeSize {
     Bit8,
     Bit16,
@@ -12,7 +13,7 @@ pub enum TypeSize {
     Bit64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeKind {
 // Primitives
     None,
@@ -52,13 +53,13 @@ pub enum TypeKind {
     LifeTime(Ident),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum UntypedKind {
     UntypedInt,
     UntypedUint,
     UntypedFloat,
 }
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UnionType {
     pub union: Ident, 
     pub variant: Ident
@@ -197,7 +198,7 @@ impl TypeKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Modifier {
     Default,
     Literal,
@@ -214,7 +215,7 @@ impl Modifier {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeWrapper {
     Invalid,
     Array,
@@ -224,7 +225,7 @@ pub enum TypeWrapper {
     ConstPointer
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AnyRef {
     Invalid,
     ConstRef(Option<Lifetime>),

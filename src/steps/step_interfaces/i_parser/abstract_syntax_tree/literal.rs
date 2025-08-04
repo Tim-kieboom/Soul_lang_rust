@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use ordered_float::OrderedFloat;
 use crate::errors::soul_error::Result;
@@ -6,7 +7,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::so
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeSize, TypeWrapper};
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Literal {
     // basic
     Int(i64),
@@ -25,7 +26,7 @@ pub enum Literal {
     ProgramMemmory(Ident, LiteralType),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Hash, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub enum LiteralType {
     Int,
     Uint,

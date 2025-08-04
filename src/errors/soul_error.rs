@@ -1,8 +1,10 @@
 use std::{io::{BufRead, BufReader, Read}, result};
 
+use serde::{Deserialize, Serialize};
+
 use crate::utils::show_diff::{generate_highlighted_string};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SoulErrorKind {
     NoKind, // no kind selected
 
@@ -30,7 +32,7 @@ pub enum SoulErrorKind {
     UnexpectedEnd,
 }
 
-#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SoulSpan {
     pub line_number: usize,
     ///for multiline span

@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::soul_type::SoulType, spanned::Spanned, staments::function::{FnDecl, FnDeclKind, FunctionSignatureRef}, visibility::FieldAccess}, utils::node_ref::NodeRef};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TraitImpl {
     pub trait_name: Ident,
     pub for_type: SoulType,
@@ -8,7 +10,7 @@ pub struct TraitImpl {
 }
 pub type TraitDeclRef = NodeRef<InnerTraitDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerTraitDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
@@ -18,7 +20,7 @@ pub struct InnerTraitDecl {
 
 pub type StructDeclRef = NodeRef<InnerStructDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerStructDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
@@ -28,7 +30,7 @@ pub struct InnerStructDecl {
 
 pub type ClassDeclRef = NodeRef<InnerClassDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerClassDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
@@ -37,7 +39,7 @@ pub struct InnerClassDecl {
     pub implements: Vec<Ident>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldDecl {
     pub name: Ident,
     pub ty: SoulType,

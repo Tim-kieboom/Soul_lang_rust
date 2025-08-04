@@ -72,7 +72,7 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
     ])
 });
 
-const ALLOWED_COMMANDS: &[&str] = &["run", "build", "help"];
+const ALLOWED_COMMANDS: &[&str] = &["build", "help"];
 
 impl RunOptions {
     pub fn new(_args: Args) -> result::Result<Self, String> {
@@ -166,10 +166,12 @@ have fun :).
 
     Commands:
         build           info: Compile the selected file
-        Run             info: Compile and Run selected file
         help            info: prints this list you are reading
 
+    
     Options:
+        to chain args together you do '-option=arg1+arg2'
+
         -showOutput     info: select which steps in the compiler gets show to use in output folder (e.g. tokenizer, AST, ect..)
                         args: (Default)SHOW_NONE, SHOW_SOURCE, SHOW_TOKENIZER, SHOW_ABSTRACT_SYNTAX_TREE, SHOW_CPP_CONVERTION, SHOW_ALL 
 

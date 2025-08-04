@@ -1,19 +1,20 @@
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}}, utils::node_ref::NodeRef};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnDecl {
     pub signature: FunctionSignatureRef,
     pub body: Block, 
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExtFnDecl {
     pub signature: FunctionSignatureRef,
     pub body: Block,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum FnDeclKind {
     InternalFn(FunctionSignatureRef),
     Fn(FnDecl),
@@ -71,7 +72,7 @@ pub type FunctionSignatureRef = NodeRef<InnerFunctionSignature>;
 
 pub type LambdaSignatureRef = NodeRef<InnerLambdaSignature>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LambdaMode {
     Mut,
     Const,
@@ -88,7 +89,7 @@ impl LambdaMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerLambdaSignature {
     pub params: Vec<Spanned<Parameter>>,
     pub return_type: Option<SoulType>,
@@ -107,7 +108,7 @@ impl LambdaSignatureRef {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerFunctionSignature {
     pub name: Ident,
     /// Some() = an extension method
@@ -145,7 +146,7 @@ impl FunctionSignatureRef {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Parameter {
     pub name: Ident,
     pub ty: SoulType,

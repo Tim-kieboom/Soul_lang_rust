@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FieldAccess {
     /// None = use default (e.g. pub)
     pub get: Option<Visibility>, 
@@ -12,7 +14,7 @@ impl Default for FieldAccess  {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Visibility {
     Public,
     Private,

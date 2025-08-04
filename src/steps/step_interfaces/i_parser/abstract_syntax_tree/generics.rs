@@ -1,7 +1,8 @@
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GenericParam {
     pub name: Ident,
     pub constraint: Vec<TypeConstraint>,
@@ -9,7 +10,7 @@ pub struct GenericParam {
     pub default: Option<SoulType>, //only for typeGenerics
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GenericKind {
     Type,
     Lifetime
@@ -29,7 +30,7 @@ impl GenericParam {
     } 
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeConstraint {
     Trait(Ident),
     TypeEnum(Ident),

@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::NodeRef};
 
 pub type Statment = Spanned<StmtKind>;
@@ -6,7 +7,7 @@ pub type DeleteList = String;
 
 pub const STATMENT_ENDS: &[&str] = &["\n", ";", "}"];
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum StmtKind {
     ExprStmt(Expression),
     VarDecl(VariableRef),
@@ -115,24 +116,24 @@ impl StmtKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Lifetime {
     pub name: Ident,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Block {
     pub statments: Vec<Statment>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReturnLike {
     pub value: Option<Expression>,
     pub delete_list: Vec<DeleteList>,
     pub kind: ReturnKind
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ReturnKind {
     Return,
     Fall,
@@ -149,12 +150,12 @@ impl ReturnKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CloseBlock {
     pub delete_list: Vec<DeleteList>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Assignment {
     pub target: Expression,
     pub value: Expression,
@@ -162,7 +163,7 @@ pub struct Assignment {
 
 pub type VariableRef = NodeRef<VariableDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VariableDecl {
     pub name: Ident,
     pub ty: SoulType,
@@ -171,7 +172,7 @@ pub struct VariableDecl {
     pub lit_retention: Option<Expression>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SoulThis {
     pub ty: SoulType, 
     pub this: Option<SoulType>,

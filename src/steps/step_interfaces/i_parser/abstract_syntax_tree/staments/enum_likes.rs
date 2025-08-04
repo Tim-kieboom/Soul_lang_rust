@@ -1,12 +1,11 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
-
+use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, utils::node_ref::NodeRef};
 
 pub type EnumDeclRef = NodeRef<InnerEnumDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerEnumDecl {
     pub name: Ident,
     pub variants: Vec<EnumVariant>,
@@ -19,7 +18,7 @@ pub struct InnerEnumDecl {
 
 pub type UnionDeclRef = NodeRef<InnerUnionDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerUnionDecl {
     pub name: Ident,
     pub variants: Vec<UnionVariant>,
@@ -28,25 +27,25 @@ pub struct InnerUnionDecl {
 
 pub type TypeEnumDeclRef = NodeRef<InnerTypeEnumDecl>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerTypeEnumDecl {
     pub name: Ident,
     pub types: Vec<SoulType>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnumVariant {
     pub name: Ident,
     pub value: i64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UnionVariant {
     pub name: Ident,
     pub field: UnionVariantKind,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum UnionVariantKind {
     Tuple(Vec<SoulType>),
     NamedTuple(HashMap<Ident, SoulType>)

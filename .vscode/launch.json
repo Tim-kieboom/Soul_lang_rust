@@ -104,7 +104,7 @@
                 }
             },
             "args": [
-                "run", 
+                "build", 
                 "test.soul",
                 "-showOutput=SHOW_NONE",
                 "-showTime=SHOW_ALL"

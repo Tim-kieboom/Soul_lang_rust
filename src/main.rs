@@ -47,6 +47,7 @@ fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Resu
     }
 
     if run_option.show_outputs.contains(ShowOutputs::SHOW_SOURCE) {
+        let start = Instant::now(); 
         let file_path = format!("{}/steps/source.soulc", &run_option.output_dir);
         let contents = source_file.source_file
             .iter()
@@ -55,6 +56,10 @@ fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Resu
 
         write(file_path, contents)
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+
+        if run_option.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
+            println!("source_reader showOutput time: {:.2?}", start.elapsed());
+        }
     }
 
     Ok(source_file)
@@ -69,6 +74,7 @@ fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result
     }
 
     if run_option.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {
+        let start = Instant::now(); 
         let file_path = format!("{}/steps/tokenStream.soulc", &run_option.output_dir);
         let contents = token_stream.stream
             .ref_tokens()
@@ -78,6 +84,10 @@ fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result
 
         write(file_path, contents)
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+
+        if run_option.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
+            println!("tokenizers showOutput time: {:.2?}", start.elapsed());
+        }
     }
 
     Ok(token_stream)
@@ -90,8 +100,9 @@ fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<Pa
     if run_option.show_times.contains(ShowTimes::SHOW_PARSER) {
         println!("parser time: {:.2?}", start.elapsed());
     }
-    
+
     if run_option.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
+        let start = Instant::now(); 
         let file_path = format!("{}/steps/parserAST.soulc", &run_option.output_dir);
         let scopes_file_path = format!("{}/steps/parserScopes.soulc", &run_option.output_dir);
 
@@ -100,7 +111,12 @@ fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<Pa
 
         write(scopes_file_path, format!("{}", parse_response.scopes.to_pretty_string()))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+        
+        if run_option.show_times.contains(ShowTimes::SHOW_PARSER) {
+            println!("parser showOutput time: {:.2?}", start.elapsed());
+        }
     }
+    
 
     Ok(parse_response)
 }
@@ -121,8 +137,6 @@ impl<T> MainErrMap<T> for Result<T> {
         self.map_err(|child| pass_soul_error(SoulErrorKind::NoKind, SoulSpan::new(0, 0, 0), msg, child))
     }
 }
-
-
 
 
 
