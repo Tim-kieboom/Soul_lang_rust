@@ -17,6 +17,7 @@ pub struct RunOptions {
     pub pretty_cpp_code: bool,
     pub tab_char_len: u32,
     pub command: String,
+    pub sub_tree_path: String,
 } 
 
 type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send + Sync + 'static>;
@@ -24,7 +25,7 @@ type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send
 static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
     HashMap::from([
         (
-            "-showOutput",
+            "--showOutput",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.show_outputs = ShowOutputs::from_str(input)?;
@@ -32,7 +33,7 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             }) as ArgFunc
         ),
         (
-            "-outputDir",
+            "--outputDir",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.output_dir = input.to_string();
@@ -40,7 +41,7 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             }) as ArgFunc
         ),
         (
-            "-tabCharLen",
+            "--tabCharLen",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.tab_char_len = input.parse()
@@ -54,7 +55,7 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             }) as ArgFunc
         ),
         (
-            "-showTime",
+            "--showTime",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.show_times = ShowTimes::from_str(input)?;
@@ -69,6 +70,14 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
                 Ok(())
             }) as ArgFunc
         ),
+        (
+            "--subtreePath",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.sub_tree_path = input.into();
+                Ok(())
+            }) as ArgFunc
+        )
     ])
 });
 
@@ -84,7 +93,8 @@ impl RunOptions {
             pretty_cpp_code: false,
             output_dir: "output".to_string(),
             tab_char_len: 4,
-            command: String::new(),
+            command: "".into(),
+            sub_tree_path: "".into()
         };
 
         let mut args = _args.collect::<Vec<_>>();
@@ -170,22 +180,26 @@ have fun :).
 
     
     Options:
-        to chain args together you do '-option=arg1+arg2'
+        to call flag you do '-flag'
+        to call arg you do '--option=arg1'
+        to chain args together you do '--option=arg1+arg2'
 
-        -showOutput     info: select which steps in the compiler gets show to use in output folder (e.g. tokenizer, AST, ect..)
+        --showOutput     info: select which steps in the compiler gets show to use in output folder (e.g. tokenizer, AST, ect..)
                         args: (Default)SHOW_NONE, SHOW_SOURCE, SHOW_TOKENIZER, SHOW_ABSTRACT_SYNTAX_TREE, SHOW_CPP_CONVERTION, SHOW_ALL 
 
-        -prettyCppCode  info: make c++ output human readable
-                        args: <none>
+        -prettyCppCode  info: make c++ output human readable (no arguments its just a flag)
 
-        -showTime       info: select which steps in the compiler gets timed and this time printed on screan
+        --showTime       info: select which steps in the compiler gets timed and this time printed on screan
                         args: SHOW_NONE, (Default)SHOW_TOTAL, SHOW_SOURCE_READER, SHOW_TOKENIZER, SHOW_PARSER, SHOW_CODE_GENERATOR, SHOW_ALL 
         
-        -tabCharLen     info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will display the wrong char
-                        args: <any positive interger> 
+        --tabCharLen     info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will display the wrong char
+                        args: (Deafult)4, <any positive interger> 
 
-        -outputDir      info: the path of the output folder
-                        args: <any path>
+        --outputDir      info: the path of the output folder
+                        args: (Default)<empty>, <any path>
+        
+        --subtreePath    info: .bin file describing the subfile structure of the project if empty no subfiles
+                        args: (Default)<empty>, <any path>
 ";
 
     println!("{}", HELP_ARGS_LIST);

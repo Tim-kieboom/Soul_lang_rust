@@ -1,4 +1,6 @@
 use std::{collections::{BTreeMap, HashMap}, process::exit};
+use serde::{Deserialize, Serialize};
+
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
@@ -7,7 +9,7 @@ pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
 pub type Scope = InnerScope<Vec<ScopeKind>>;
 pub type TypeScope = InnerScope<TypeKind>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScopeBuilder {
     scopes: ScopeStack,
     types: Vec<TypeScope>,
@@ -15,11 +17,11 @@ pub struct ScopeBuilder {
     pub external_header: ExternalHeader,
 }
 
-#[derive(Debug, Hash, Clone, Copy)]
+#[derive(Debug, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct ProgramMemmoryId(pub usize);
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgramMemmory {
     pub store: BTreeMap<Literal, ProgramMemmoryId>,
     pub last_id: ProgramMemmoryId,
@@ -46,13 +48,13 @@ impl ProgramMemmory {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InnerScopeBuilder<T> {
     pub scopes: Vec<InnerScope<T>>,
     pub current: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerScope<T> {
     pub parent_index: Option<usize>,
     pub children: Vec<usize>,
@@ -74,6 +76,14 @@ impl ScopeBuilder {
 
     pub fn get_types(&self) -> &Vec<InnerScope<TypeKind>> {
         &self.types
+    }
+
+    pub fn get_global_scope(&self) -> &InnerScope<Vec<ScopeKind>>{
+        &self.scopes.scopes[InnerScopeBuilder::<()>::GLOBAL_SCOPE_INDEX]
+    }
+
+    pub fn get_global_types(&self) -> &InnerScope<TypeKind>{
+        &self.types[InnerScopeBuilder::<()>::GLOBAL_SCOPE_INDEX]
     }
 
     pub fn current_scope(&self) -> &InnerScope<Vec<ScopeKind>> {
@@ -343,13 +353,13 @@ impl<T> InnerScope<T> {
 
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScopeVisibility {
     All,         // Can access child -> parent -> ... -> global
     GlobalOnly,  // Can only access global scope
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScopeKind {
     Invalid(),
     Variable(VariableRef),

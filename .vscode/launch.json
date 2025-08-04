@@ -22,12 +22,12 @@
                 }
             },
             "args": [
-                "run", 
+                "build", 
                 "test.soul",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
-                "-prettyCppCode",
-                "-tabCharLen=4"
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
+                "--tabCharLen=4",
+                "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
         },
@@ -49,10 +49,10 @@
                 }
             },
             "args": [
-                "run", 
+                "build", 
                 "test.soul",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
                 "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}",
@@ -79,10 +79,10 @@
                 }
             },
             "args": [
-                "run", 
+                "build", 
                 "test.soul",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
                 "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
@@ -106,8 +106,8 @@
             "args": [
                 "build", 
                 "test.soul",
-                "-showOutput=SHOW_NONE",
-                "-showTime=SHOW_ALL"
+                "--showOutput=SHOW_NONE",
+                "--showTime=SHOW_ALL"
             ],
             "cwd": "${workspaceFolder}"
         }
