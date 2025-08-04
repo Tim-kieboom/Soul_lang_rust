@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::{BufReader, BufWriter}, path::Path, time::SystemTime};
+use std::{fs::{File, OpenOptions}, io::{BufReader, BufWriter}, path::Path, time::SystemTime};
 use crate::steps::step_interfaces::i_parser::{external_header::Header, parser_response::ParserResponse};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,21 +33,31 @@ impl SoulHeaderCache {
     }
 
     pub fn save_to_bin_file(&self, path: &str) -> ResErr<()> {
-        let file = File::create(path)?;
+        if let Some(parent) = Path::new(path).parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+    
+
+        let file = create_or_write(path)?;
         let writer = BufWriter::new(file);
         bincode::serialize_into(writer, self)?;
-        Ok(())
-    }
 
-    pub fn is_cache_up_to_date(&self, soul_file: &str) -> ResErr<bool> {
-        let file = File::open(soul_file)?;
-        let meta_data = file.metadata()?;
-        
-        Ok(meta_data.modified()? == self.mod_date.source_date)
+        let file = create_or_write(&format!("{}.date", path))?;
+        let writer = BufWriter::new(file);
+        bincode::serialize_into(writer, &self.mod_date)?;
+        Ok(())
     }
 }
 
 impl ModifiedDate {
+    
+    pub fn from_bin_file(path: &str) -> ResErr<ModifiedDate> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let data: ModifiedDate = bincode::deserialize_from(reader)?;
+        Ok(data)
+    }
+
     pub fn new(soul_file: &Path) -> ResErr<Self> {
         let file = File::open(soul_file)?;
         let data = file.metadata()?;
@@ -57,6 +67,12 @@ impl ModifiedDate {
     } 
 }
 
+fn create_or_write(path: &str) -> std::io::Result<File> {
+    OpenOptions::new()
+        .write(true)       
+        .create(true)     
+        .open(path)      
+}
 
 
 

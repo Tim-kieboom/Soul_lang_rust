@@ -26,7 +26,7 @@ enumFunc() {
 		Println("ogaboega (but int)")
 	}
 }
-
+ 
 union Num {
 	None(),
 	Int(int),
@@ -84,7 +84,7 @@ unionFunc() {
 	// 	_ => Println("idk")
 	// }
 }
-
+      
 
 lamdba() {
 	// const lamdbaSumTyped = (int a, int b) int => fall a + b
