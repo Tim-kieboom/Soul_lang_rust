@@ -35,22 +35,53 @@ union Num {
 }
 
 unionFunc() {
-	// printNumInt(Num::Int num) {
-	// 	Println(num.0)
-	// }
-	
-	// num := Num::Int(1)
+	printNumInt(Num::Int num) {
+		Println(num.0)
+	}
 
-	// is_int := num.Tag() == Num::Int.Tag()
-	
-	// if Num.Int(inner) typeof num {
+	num := Num::Int(1)
+	bool is_num = num typeof Num
+	bool is_int = num typeof Num::Int
+
+	// if typeof Num::Int(inner) = num {
 	// 	Assert(inner typeof int)
 	// }
-
-	// if Num::Int intStruct typeof num {
-	// 	Assert(inner typeof Num::Int)
+	// else if typeof Num::Uint(num: inner) = num {
+	// 	Assert(inner typeof uint)
+	// }
+	
+	// if typeof Num::Int intStruct = num {
+	// 	Assert(intStruct typeof Num::Int)
 
 	// 	printNumInt(intStruct)
+	// }
+
+	// if typeof Num::Int(inner) = &num {
+	// 	Assert(inner typeof &int)
+	// }
+
+	// if typeof Num::Int inner = @num {
+	// 	Assert(inner typeof @int)
+	// }
+
+	// match num {
+	// 	Num::None() => Println("none"),
+	// 	Num::Int(num) => Println(f"int({num})"),
+	// 	Num::Uint(num) => Println(f"uint({num})"),
+	// 	Num::Float(num) => Println(f"float({num})"),
+	// }
+
+	// match &num {
+	// 	Num::None() => Println("none"),
+	// 	Num::Int(num) => Println(f"int({num})"),
+	// 	Num::Uint(num) => Println(f"uint({num})"),
+	// 	Num::Float(num) => Println(f"float({num})"),
+	// }
+
+	// match @num {
+	// 	Num::Int(num) => Println(f"int({num})"),
+	// 	Num::Uint(num) => Println(f"uint({num})"),
+	// 	_ => Println("idk")
 	// }
 }
 
@@ -181,7 +212,7 @@ tuple() {
 	// (number, condition) := (el, true)
 	(field: int, name: bool) namedTuple = (field: el, name: true)
 	// (field, name) := (field: el, name: true) 
-	// data = Data(1, "jim")
+	// data := Data(one: 1, two: "jim")
 	// Data(one, two) := data
 
 	functionCall := func(el, 2, "hello")

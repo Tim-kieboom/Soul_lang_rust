@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::get_function_call, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::parse_block::get_block}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ElseKind, IfDecl}, statment::VariableRef}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind, ScopeVisibility}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::{get_ctor, get_function_call}, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::parse_block::get_block}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, TypeOfExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ElseKind, IfDecl}, statment::VariableRef}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind, ScopeVisibility}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -60,15 +60,15 @@ fn inner_get_expression(
     }
 
     if stacks.node_stack.len() > 1 {
-        let mut string_builder = String::new();
-        let last_index = stream.current_index()-1;
-        for i in begin_i..last_index {
-            string_builder.push_str(&stream[i].text);
-            string_builder.push(' ');
-        }
 
-        string_builder.push_str(&stream[last_index].text);
-        return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream[begin_i].span, format!("expression: '{}' is invalid (missing operator)", string_builder)))
+        let right = stacks.node_stack.pop().unwrap().node;
+        let left = stacks.node_stack.pop().unwrap().node;
+
+        return Err(new_soul_error(
+            SoulErrorKind::InvalidInContext, 
+            stream[begin_i].span, 
+            format!("expression: '{}' with '{}' is invalid (missing operator)", left.to_string(), right.to_string())
+        ))
     }
 
     Ok(stacks.node_stack.pop().unwrap())
@@ -132,19 +132,44 @@ fn convert_expression(
         else if let Some(var_ref) = try_get_variable(&possible_scopes) {
             add_variable(stream, stacks, var_ref, use_literal_retention, is_assign_var)?;
         }
-        else if is_function(stream, after_generic_index) {
-            let function = get_function_call(stream, scopes)?;
-            stacks.node_stack.push(Expression::new(ExprKind::Call(function.node), function.span));
-        }
         else if scopes.lookup_type(&stream.current_text()).is_some() {
             let ty_i = stream.current_index();
             let ty = SoulType::from_stream(stream, &scopes)?;
             let span = stream.current_span().combine(&stream[ty_i].span);
-
-            let spanned_ty = Spanned::new(ty, span);
-            while stream.peek().is_some_and(|token| token.text == ".") {
-                try_static_field_or_static_methode(&spanned_ty, stream, scopes, stacks)?;
+            
+            if stream.peek().is_some_and(|token| token.text == "(") {
+                let function = get_ctor(Spanned::new(ty, span), stream, scopes)?;
+                stacks.node_stack.push(Expression::new(ExprKind::Ctor(function.node), function.span));
             }
+            else {
+                let mut spanned_ty = Spanned::new(ty, span);
+                
+                while stream.peek().is_some_and(|token| token.text == "." || token.text == "::") {
+                    try_static_field_or_static_methode(&mut spanned_ty, stream, scopes, stacks)?;
+                }
+            }
+        }
+        else if is_function(stream, after_generic_index) {
+            let function = get_function_call(stream, scopes)?;
+            stacks.node_stack.push(Expression::new(ExprKind::Call(function.node), function.span));
+        }
+        else if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+            if stacks.node_stack.is_empty() {
+                return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to use 'typeof' without left expression (so '<missing-left> typeof <type>')"))
+            }
+
+            if let Some(sym) = stacks.symbool_stack.last() {
+                merge_expressions(stacks, sym.node.get_precedence())?;
+            }
+
+            let left = stacks.node_stack.pop().unwrap();
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            let ty = SoulType::from_stream(stream, scopes)?;
+            let span = left.span.combine(&stream.current_span());
+            stacks.node_stack.push(Expression::new(ExprKind::TypeOf(TypeOfExpr{left: Box::new(left), ty}), span));
         }
         else {
 
@@ -331,7 +356,7 @@ fn add_ternary(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut
     Ok(())
 }
 
-fn try_static_field_or_static_methode(ty: &Spanned<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+fn try_static_field_or_static_methode(ty: &mut Spanned<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
     if stream.next_multiple(2).is_none() {
         return Err(err_out_of_bounds(stream));
     }

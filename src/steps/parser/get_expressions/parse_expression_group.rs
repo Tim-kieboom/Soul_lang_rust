@@ -13,8 +13,8 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(group_i, stream));
             }
-            
-            Some(result?)
+            let ty = result?;
+            Some(ty)
         },
         None => None,
     };
@@ -46,7 +46,7 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
             Ok(Some(Expression::new(ExprKind::Array(Array{collection_type, element_type, values}), group_span)))
         }
         else {
-            if values.len() == 1 {
+            if values.len() == 1 && collection_type.is_none() {
                 Ok(Some(values[0].to_owned()))
             }
             else { 

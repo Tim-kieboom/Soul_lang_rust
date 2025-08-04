@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use crate::soul_names::check_name;
+use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
-use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::Lifetime;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeWrapper};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeWrapper, UnionType};
 
 impl FromTokenStream<SoulType> for SoulType {
     fn from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<SoulType> {
@@ -54,7 +54,7 @@ fn inner_from_token_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> R
         soul_type.base = get_tuple_type_kind(stream, scopes)?;
     }
     else {
-        soul_type.base = get_type_kind(stream.current(), scopes)?;
+        soul_type.base = get_type_kind(stream, scopes)?;
     }
 
     if stream.peek().is_some_and(|token| token.text == "<") {
@@ -325,10 +325,26 @@ fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: 
     }
 }
 
-fn get_type_kind(base: &Token, scopes: &ScopeBuilder) -> Result<TypeKind> {
-    scopes.lookup_type(base.text.as_str())
+fn get_type_kind(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind> {
+    let mut kind = scopes.lookup_type(stream.current_text())
         .cloned()
-        .ok_or(new_soul_error(SoulErrorKind::InvalidType, base.span, format!("type not found: '{}'", base.text)))
+        .ok_or(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("type not found: '{}'", stream.current_text())))?;
+
+    if stream.peek().is_some_and(|token| token.text == "::") {
+        
+        if stream.next_multiple(2).is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        let variant = Ident(stream.current_text().clone());
+        let union = match kind {
+            TypeKind::Union(ident) => ident,
+            _ => return Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), "'::' only allowed for union types")),
+        };
+        kind = TypeKind::UnionVariant(UnionType{union, variant})
+    }
+
+    Ok(kind)
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {

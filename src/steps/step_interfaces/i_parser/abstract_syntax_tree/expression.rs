@@ -1,6 +1,6 @@
 use itertools::Itertools;
-use std::collections::BTreeMap;
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableRef}}}};
+use std::collections::{BTreeMap, HashMap};
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableRef}}}};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
@@ -21,6 +21,9 @@ pub enum ExprKind {
     Binary(BinaryExpr),
     StaticField(StaticField),
     StaticMethode(StaticMethode),
+    UnwrapVariable(UnwrapVariable),
+
+    Ctor(FnCall),
 
     Lambda(LambdaDecl),
     If(Box<IfDecl>),
@@ -77,7 +80,7 @@ impl ExprKind {
             ExprKind::Empty => "<EmptyExpression>".to_string(),
             ExprKind::Literal(literal) => literal.to_string(),
             ExprKind::Variable(Variable{name}) => name.0.clone(),
-            ExprKind::TypeOf(type_of_expr) => type_of_expr.to_string(),
+            ExprKind::TypeOf(TypeOfExpr{left, ty }) => format!("{} {} {}", left.node.to_string(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof), ty.to_string()),
             ExprKind::Binary(BinaryExpr{left, operator, right}) => format!("({} {} {})", left.node.to_string(), operator.node.to_str(), right.node.to_string()),
             ExprKind::Index(Index{ collection, index }) => format!("{}[{}]", collection.node.to_string(), index.node.to_string()),
             ExprKind::Unary(UnaryExpr{ operator, expression }) => {
@@ -167,39 +170,53 @@ impl ExprKind {
                 else_branch.node.to_string(),
             ),
             ExprKind::If(if_decl) => if_decl.to_pretty(0, true),
+            ExprKind::Ctor(FnCall{callee, name, generics, arguments}) => {
+                let generics = if generics.is_empty() {
+                    String::new()
+                }
+                else {
+                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
+                };
+
+                if let Some(methode) = callee {
+                    format!("{}.{}{}({})", methode.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
+                }
+                else {
+                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
+                }
+            },
+            ExprKind::UnwrapVariable(UnwrapVariable{ty, kind}) => format!(
+                "<unwrap>{}{}",
+                ty.to_string(),
+                match kind {
+                    UnrwapKind::Binding(name) => name.0.clone(),
+                    UnrwapKind::Fields(fields) => format!(
+                        "({})", 
+                        fields
+                            .iter()
+                            .map(|el| format!("{}{}", el.1.as_ref().map(|name| format!("{}:", name.0)).unwrap_or(String::new()), el.0.0))
+                            .join(",")
+                    )
+                }
+            ),
         }
     }
 
     pub fn is_any_ref(&self) -> bool {
         match self {
-            ExprKind::Empty |
-            ExprKind::If(..) |
-            ExprKind::Call(..) |
-            ExprKind::Unary(..) |
-            ExprKind::Index(..) |
-            ExprKind::Deref(..) |
-            ExprKind::Array(..) |
-            ExprKind::Tuple(..) |
-            ExprKind::Field(..) |
-            ExprKind::TypeOf(..) |
-            ExprKind::Binary(..) |
-            ExprKind::Lambda(..) |
-            ExprKind::Ternary(..) |
-            ExprKind::Literal(..) |
-            ExprKind::Variable(..) |
-            ExprKind::NamedTuple(..) |
-            ExprKind::StaticMethode(..) |
-            ExprKind::StaticField(..) => false,
-            
             ExprKind::MutRef(..) |
             ExprKind::ConstRef(..) => true,
+
+            _ => false,
         }
     }
 
     pub fn get_variant_name(&self) -> &'static str {
         match self {
             ExprKind::Empty => "<empty>",
+
             ExprKind::If(_) => "If",
+            ExprKind::Ctor{..} => "Ctor",
             ExprKind::Index(_) => "index",
             ExprKind::Unary(_) => "unary",
             ExprKind::Call(_) => "FnCall",
@@ -216,37 +233,30 @@ impl ExprKind {
             ExprKind::Variable(_) => "Valiable",
             ExprKind::ConstRef(_) => "ConstRef",
             ExprKind::NamedTuple(_) => "NamedTuple",
-            ExprKind::StaticMethode(_) => "StaticCall",
             ExprKind::StaticField(_) => "StaticField",
+            ExprKind::StaticMethode(_) => "StaticCall",
+            ExprKind::UnwrapVariable(_) => "UnwrapVariable",
         }
     }
 
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum TypeOfExpr {
-    /// e.g. typeof int  (type reference)
-    Type(SoulType),
-    
-    /// e.g. typeof Union1.Variant(data) (variant pattern match)
-    VariantPattern {
-        union_type: SoulType,
-        variant_name: Ident,
-        binding: Option<Ident>,
-    },
-
-    /// e.g. typeof [int, i8, i16] for typeEnum
-    TypeEnum(Vec<SoulType>),
+pub struct TypeOfExpr {
+    pub left: BoxExpr,
+    pub ty: SoulType,
 }
 
-impl TypeOfExpr {
-    pub fn to_string(&self) -> String {
-        match self {
-            TypeOfExpr::Type(soul_type) => format!("typeof {}", soul_type.to_string()),
-            TypeOfExpr::VariantPattern { union_type, variant_name, binding } => format!("typeof {}.{}({})", union_type.to_string(), variant_name.0, binding.as_ref().map(|bind| bind.0.as_str()).unwrap_or("")),
-            TypeOfExpr::TypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
-        }
-    }
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnwrapVariable {
+    pub ty: SoulType,
+    pub kind: UnrwapKind,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum UnrwapKind {
+    Binding(Ident),
+    Fields(HashMap<Ident, Option<Ident>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -524,7 +534,7 @@ impl BinOpKind {
             Self::BitXor  => SOUL_NAMES.get_name(NamesOperator::BitWiseXor),
             Self::LogOr   => SOUL_NAMES.get_name(NamesOperator::LogicalOr),
             Self::LogAnd  => SOUL_NAMES.get_name(NamesOperator::LogicalAnd),
-            Self::Range  => SOUL_NAMES.get_name(NamesOperator::Range),
+            Self::Range   => SOUL_NAMES.get_name(NamesOperator::Range),
             Self::Invalid => "<invalid>",
         }
     }

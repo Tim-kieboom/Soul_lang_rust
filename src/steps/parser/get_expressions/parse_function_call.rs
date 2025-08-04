@@ -1,13 +1,62 @@
 use crate::soul_names::{check_name_allow_types};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::parser::get_expressions::parse_expression::{get_expression};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Arguments, FnCall, Ident};
 
+pub fn get_ctor(mut ty: Spanned<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnCall>> {
+    fn pass_err(err: SoulError, func_name: &str, stream: &TokenStream) -> SoulError {
+        pass_soul_error(
+            err.get_last_kind(), 
+            stream.current_span(), 
+            format!("while trying to get functionCall of: '{}'", func_name), 
+            err
+        )
+    }
+
+    let func_name_index = stream.current_index();    
+
+    match &ty.node.base {
+        TypeKind::Trait(..) |
+        TypeKind::Generic(..) |
+        TypeKind::LifeTime(..) |
+        TypeKind::TypeEnum(..)  => return Err(new_soul_error(SoulErrorKind::WrongType, ty.span, format!("type: '{}' does not have an constructor", ty.node.base.get_variant()))),
+
+        _ => (),
+    }
+
+    let name = Ident(ty.node.base.to_string());
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if ty.node.generics.iter().any(|el| matches!(el, TypeGenericKind::Lifetime(_))) {
+        return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "lifetime not allowed in generics of ctor"))
+    }
+
+    let generics = std::mem::take(&mut ty.node.generics)
+        .into_iter()
+        .filter_map(|el| {
+            if let TypeGenericKind::Type(soul_type) = el {
+                Some(soul_type)
+            } else {
+                unreachable!()
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let arguments = get_arguments(stream, scopes)
+        .map_err(|err| pass_err(err, &stream[func_name_index].text, stream))?;
+
+    let span = arguments.span.combine(&ty.span).combine(&stream[func_name_index].span);
+    Ok(Spanned::new(FnCall{callee: None, name, arguments: arguments.node, generics}, span))
+}
 
 pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FnCall>> {
     fn pass_err(err: SoulError, func_name: &str, stream: &TokenStream) -> SoulError {

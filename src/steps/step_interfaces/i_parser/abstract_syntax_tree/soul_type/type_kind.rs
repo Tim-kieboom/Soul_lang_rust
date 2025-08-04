@@ -44,6 +44,8 @@ pub enum TypeKind {
     // Rust-style Enums
     Union(Ident),
 
+    UnionVariant(UnionType),
+
     TypeEnum(Ident, Vec<SoulType>),
 
     Generic(Ident),
@@ -55,6 +57,17 @@ pub enum UntypedKind {
     UntypedInt,
     UntypedUint,
     UntypedFloat,
+}
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnionType {
+    pub union: Ident, 
+    pub variant: Ident
+}
+
+impl UnionType {
+    pub fn to_string(&self) -> String {
+        format!("{}::{}", self.union.0, self.variant.0)
+    }
 }
 
 impl TypeKind {
@@ -120,6 +133,7 @@ impl TypeKind {
             TypeKind::Trait(ident) => ident.0.clone(),
             TypeKind::Enum(ident) => ident.0.clone(),
             TypeKind::Union(ident) => ident.0.clone(),
+            TypeKind::UnionVariant(union_ty) => union_ty.to_string(),
             TypeKind::TypeEnum(ident, ..) => ident.0.clone(),
             TypeKind::Generic(ident) => ident.0.clone(),
             TypeKind::LifeTime(ident) => ident.0.clone(),
@@ -170,6 +184,7 @@ impl TypeKind {
             TypeKind::Trait(..) => "trait",
             TypeKind::Enum(..) => "enum",
             TypeKind::Union(..) => "union",
+            TypeKind::UnionVariant{..} => "unionVariant",
             TypeKind::TypeEnum(..) => "typeEnum",
             TypeKind::Generic(..) => "generic",
             TypeKind::LifeTime(..) => "lifetime",
