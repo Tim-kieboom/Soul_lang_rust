@@ -1,5 +1,4 @@
 pub mod i_source_reader;
-pub mod i_subfile_tree;
 pub mod i_tokenizer;
 pub mod i_parser;
 

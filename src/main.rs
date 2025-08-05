@@ -1,9 +1,10 @@
 extern crate soul_lang_rust;
 
+use hsoul::subfile_tree::SubFileTree;
 use itertools::Itertools;
 use threadpool::ThreadPool;
 use std::{fs::{write, File}, io::{BufReader, Read}, path::Path, process::exit, sync::{mpsc::channel, Arc}, time::{Instant, SystemTime}};
-use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::{get_header::get_header, parse::parse_tokens}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::{pretty_format::PrettyFormat, soul_header_cache::{ModifiedDate, SoulHeaderCache}}, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_subfile_tree::SubFileTree, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
+use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::{get_header::get_header, parse::parse_tokens}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::{pretty_format::PrettyFormat, soul_header_cache::{ModifiedDate, SoulHeaderCache}}, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 
 fn main() {
@@ -32,6 +33,7 @@ fn main() {
         let (reader, _) = get_file_reader(Path::new(&run_option.file_path)).main_err_map("while trying to get file reader")
             .inspect_err(|err| {eprintln!("{}", err.to_err_message()); exit(1);}).unwrap();
 
+        eprintln!("---------------------------------------------");  
         eprintln!("at char:line; !!error!! message\n\n{}\n", err.to_err_message());        
         eprintln!("{}", err.to_highlighed_message(reader));        
     }
@@ -56,6 +58,7 @@ fn compile_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
     let (sender, reciever) = channel();
 
     for file in files {
+        let file = format!("{file}.soul");
         let sender = sender.clone();
         let run_option = run_option.clone();
 
@@ -81,8 +84,9 @@ fn compile_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
             let (reader, _) = get_file_reader(Path::new(&file)).main_err_map("while trying to get file reader")
                 .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
             
-            eprintln!("\n{}\n", err.to_err_message());                
-            eprintln!("at subfile '{}':\n{}", file, err.to_highlighed_message(reader));  
+            eprintln!("---------------------------------------------");  
+            eprintln!("at subfile '{}':\n{}", file, err.to_err_message());  
+            eprintln!("\n{}\n", err.to_highlighed_message(reader));                
         }
         exit(1)
     }
@@ -96,14 +100,14 @@ fn parse_and_cache_file(run_option: Arc<RunOptions>, file_path: &Path) -> Result
         cache.is_some_and(|cache| cache.source_date == date)
     }
 
-    let (reader, _last_modified_date) = get_file_reader(file_path)
+    let (reader, last_modified_date) = get_file_reader(file_path)
         .main_err_map("while trying to get file reader")?;
 
-    // #[cfg(not(debug_assertions))]
-    if let Some(date) = _last_modified_date {
-        let cache = ModifiedDate::from_bin_file(&get_cache_path(&run_option, file_path)).ok();
-
-        if _is_cache_up_to_date(cache, date) {
+    if let Some(_date) = last_modified_date {
+        let _cache = ModifiedDate::from_bin_file(&get_cache_date_path(&run_option, file_path)).ok();
+        
+        #[cfg(not(debug_assertions))]
+        if _is_cache_up_to_date(_cache, _date) {
             println!("parse caching skiped for file: {}", file_path.to_str().unwrap());
             return Ok(());
         }
@@ -120,7 +124,11 @@ fn parse_and_cache_file(run_option: Arc<RunOptions>, file_path: &Path) -> Result
 }
 
 fn get_cache_path(run_option: &RunOptions, file_path: &Path) -> String {
-    format!("{}/parsedIncremental/{}.bin", &run_option.output_dir, file_path.to_str().unwrap())
+    format!("{}/parsedIncremental/{}", &run_option.output_dir, file_path.to_str().unwrap())
+}
+
+fn get_cache_date_path(run_option: &RunOptions, file_path: &Path) -> String {
+    format!("{}/parsedIncremental/{}.date", &run_option.output_dir, file_path.to_str().unwrap())
 }
 
 type ResErr<T> = std::result::Result<T, Box<dyn std::error::Error>>;

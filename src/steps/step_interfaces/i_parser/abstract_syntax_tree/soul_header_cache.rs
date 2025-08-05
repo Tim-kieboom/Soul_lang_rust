@@ -36,15 +36,18 @@ impl SoulHeaderCache {
         if let Some(parent) = Path::new(path).parent() {
             std::fs::create_dir_all(parent)?;
         }
-    
 
-        let file = create_or_write(path)?;
+        let file = create_or_write(&format!("{}.AST", path))?;
         let writer = BufWriter::new(file);
-        bincode::serialize_into(writer, self)?;
+        bincode::serialize_into(writer, &self.parser)?;
 
         let file = create_or_write(&format!("{}.date", path))?;
         let writer = BufWriter::new(file);
         bincode::serialize_into(writer, &self.mod_date)?;
+
+        let file = create_or_write(&format!("{}.header", path))?;
+        let writer = BufWriter::new(file);
+        bincode::serialize_into(writer, &self.header)?;
         Ok(())
     }
 }
