@@ -10,7 +10,7 @@ pub const STATMENT_ENDS: &[&str] = &["\n", ";", "}"];
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum StmtKind {
     ExprStmt(Expression),
-    VarDecl(VariableRef),
+    VarDecl(VariableKind),
 
     FnDecl(FnDecl),
     ExtFnDecl(ExtFnDecl),
@@ -50,7 +50,7 @@ macro_rules! impl_in_stmt_kind {
 }
 impl_in_stmt_kind!(
     ExprStmt => Expression, 
-    VarDecl => VariableRef, 
+    VarDecl => VariableKind, 
     FnDecl => FnDecl, 
     ExtFnDecl => ExtFnDecl, 
     StructDecl => StructDeclRef, 
@@ -170,6 +170,12 @@ pub struct VariableDecl {
     pub initializer: Option<Box<Expression>>,
     /// if 'foo := 1' and foo is not mutated yet lit_retention is Some and and is used instead of var
     pub lit_retention: Option<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum VariableKind {
+    Variable(VariableRef),
+    MultiVariable{vars: Vec<(Ident, VariableRef)>, ty: SoulType, initializer: Option<Box<Expression>>, lit_retention: Option<Expression>}
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

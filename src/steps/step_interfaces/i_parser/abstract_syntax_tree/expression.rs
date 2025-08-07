@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableRef}}}};
+use std::collections::BTreeMap;
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableKind, VariableRef}}}};
 
 pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
@@ -22,9 +22,9 @@ pub enum ExprKind {
     Binary(BinaryExpr),
     StaticField(StaticField),
     StaticMethode(StaticMethode),
-    UnwrapVariable(UnwrapVariable),
 
     Ctor(FnCall),
+    UnwrapVarDecl(Box<VariableKind>),
 
     Lambda(LambdaDecl),
     If(Box<IfDecl>),
@@ -186,20 +186,25 @@ impl ExprKind {
                     format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
                 }
             },
-            ExprKind::UnwrapVariable(UnwrapVariable{ty, kind}) => format!(
-                "<unwrap>{}{}",
-                ty.to_string(),
-                match kind {
-                    UnrwapKind::Binding(name) => name.0.clone(),
-                    UnrwapKind::Fields(fields) => format!(
-                        "({})", 
-                        fields
-                            .iter()
-                            .map(|el| format!("{}{}", el.1.as_ref().map(|name| format!("{}:", name.0)).unwrap_or(String::new()), el.0.0))
-                            .join(",")
-                    )
+            ExprKind::UnwrapVarDecl(var) => {
+                match var.as_ref() {
+                    VariableKind::Variable(node_ref) => {
+                        let node = node_ref.borrow();
+                        format!(
+                            "{} {} = {}",
+                            node.ty.to_string(),
+                            node.name.0,
+                            node.initializer.as_ref().map(|init| init.node.to_string()).unwrap_or(String::new())
+                        )
+                    },
+                    VariableKind::MultiVariable{vars, ty, initializer, ..} => format!(
+                        "{}({}) = {}", 
+                        ty.to_string(), 
+                        vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow().name.0.clone())).join(","),
+                        initializer.as_ref().map(|init| init.node.to_string()).unwrap_or(String::new()),
+                    ),
                 }
-            ),
+            },
         }
     }
 
@@ -236,7 +241,7 @@ impl ExprKind {
             ExprKind::NamedTuple(_) => "NamedTuple",
             ExprKind::StaticField(_) => "StaticField",
             ExprKind::StaticMethode(_) => "StaticCall",
-            ExprKind::UnwrapVariable(_) => "UnwrapVariable",
+            ExprKind::UnwrapVarDecl(_) => "UnwrapVarDecl",
         }
     }
 
@@ -246,18 +251,6 @@ impl ExprKind {
 pub struct TypeOfExpr {
     pub left: BoxExpr,
     pub ty: SoulType,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct UnwrapVariable {
-    pub ty: SoulType,
-    pub kind: UnrwapKind,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum UnrwapKind {
-    Binding(Ident),
-    Fields(HashMap<Ident, Option<Ident>>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

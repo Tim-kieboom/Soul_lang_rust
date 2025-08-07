@@ -17,11 +17,9 @@
 */
 namespace __Soul_CompileConst_math__ {
 
-constexpr double _CompileConst_exp(const double x, const uint32_t terms, const double result, const double term, const uint64_t i) noexcept
-{
-    return  (i <= terms) ?
-                _CompileConst_exp
-                (
+constexpr double _CompileConst_exp(const double x, const uint32_t terms, const double result, const double term, const uint64_t i) noexcept {
+
+    return  (i <= terms) ? _CompileConst_exp (
                     x,
                     terms,
                     (result + term),
@@ -31,14 +29,13 @@ constexpr double _CompileConst_exp(const double x, const uint32_t terms, const d
                 : result;
 }
 
-constexpr double _exp(const double x, const uint32_t terms) noexcept
-{
+constexpr double _exp(const double x, const uint32_t terms) noexcept {
+
     return _CompileConst_exp(x, terms, 1.0f, 1.0f, 1) - 1;
 }
 
 //calculates e^x
-constexpr double exp(const double x) noexcept
-{
+constexpr double exp(const double x) noexcept {
     return _exp(x, 20);
 }
 }

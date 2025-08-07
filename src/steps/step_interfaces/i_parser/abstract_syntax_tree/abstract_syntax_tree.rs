@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableRef}}}, utils::node_ref::NodeRef};
+use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableKind}}}, utils::node_ref::NodeRef};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AbstractSyntacTree {
@@ -24,7 +24,7 @@ pub enum GlobalKind {
     
     FuncDecl(FnDecl),
     ExtFuncDecl(ExtFnDecl),
-    VarDecl(VariableRef),
+    VarDecl(VariableKind),
     
     UnionDecl(UnionDeclRef),
     EnumDecl(EnumDeclRef),

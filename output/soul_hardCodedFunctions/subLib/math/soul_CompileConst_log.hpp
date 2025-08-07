@@ -47,15 +47,14 @@ struct __Soul_CompileConst_log_Result__ {
 constexpr double _CompileConst_log_Taylor(const double base, const double t, const double z, const double s, const uint8_t i) noexcept {
     constexpr uint8_t TAYLOR_ITERATIONS = 20;
 
-    return (i > TAYLOR_ITERATIONS) ? 
-                t 
-                : _CompileConst_log_Taylor(
-                    base, 
-                    t + (z * s / i), 
-                    z * base, 
-                    -s, 
-                    i + 1
-                );
+    return (i > TAYLOR_ITERATIONS) ? t 
+            : _CompileConst_log_Taylor(
+                base, 
+                t + (z * s / i), 
+                z * base, 
+                -s, 
+                i + 1
+            );
 }
 
 
@@ -66,13 +65,15 @@ constexpr double _CompileConst_log_Taylor(const __Soul_CompileConst_log_Result__
 constexpr __Soul_CompileConst_log_Result__ _CompileConst_log_lower(const double base, const int64_t powerAdjust) noexcept {
     constexpr double EULER_CONST = 2.718281828459045235f;
 
-    return (base < 0.25f) ? _CompileConst_log_lower(base * EULER_CONST, powerAdjust-1) : __Soul_CompileConst_log_Result__(base, powerAdjust);
+    return (base < 0.25f) ? _CompileConst_log_lower(base * EULER_CONST, powerAdjust-1) 
+            : __Soul_CompileConst_log_Result__(base, powerAdjust);
 }
 
 constexpr __Soul_CompileConst_log_Result__ _CompileConst_log_upper(const double base, const int64_t powerAdjust) noexcept {
     constexpr double EULER_CONST = 2.718281828459045235f;
 
-    return (base > 1.0f) ? _CompileConst_log_upper(base / EULER_CONST, powerAdjust+1) : __Soul_CompileConst_log_Result__(base, powerAdjust);
+    return (base > 1.0f) ? _CompileConst_log_upper(base / EULER_CONST, powerAdjust+1) 
+            : __Soul_CompileConst_log_Result__(base, powerAdjust);
 }
 
 constexpr __Soul_CompileConst_log_Result__ _CompileConst_log_upper(const __Soul_CompileConst_log_Result__ result) noexcept {
@@ -80,11 +81,10 @@ constexpr __Soul_CompileConst_log_Result__ _CompileConst_log_upper(const __Soul_
 }
 
 constexpr double log(const double base) noexcept {
-    return (base <= 0) ? 
-                0 
-                : _CompileConst_log_Taylor(
-                    _CompileConst_log_upper(_CompileConst_log_lower(base, 0))
-                );
+    return (base <= 0) ? 0 
+            : _CompileConst_log_Taylor(
+                _CompileConst_log_upper(_CompileConst_log_lower(base, 0))
+            );
 }
 
 constexpr double log(const double base, const double exponent) noexcept {

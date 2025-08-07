@@ -71,7 +71,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
     
     let mut access = FieldAccess::default();
 
-    if stream.current_text() != "{" {
+    if stream.current_text() != "[" {
         return Ok(access);
     }
 
@@ -109,7 +109,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
 
                 access.set = Some(Visibility::Public);
             },
-            "}" => {
+            "]" => {
                 if stream.next().is_none() {
                     return Err(err_out_of_bounds(stream));
                 }

@@ -19,12 +19,12 @@ constexpr int64_t round(const double number) noexcept {
 }
 
 constexpr double _pow_int(const double base, const int64_t exponent, const double result) noexcept {
-    return (exponent <= 0) ? result : _pow_int(base, exponent - 1, result * base);
+    return (exponent <= 0) ? result 
+            : _pow_int(base, exponent - 1, result * base);
 }
 
 constexpr double pow_int(const double base, const int64_t exponent) noexcept {
-    return (exponent < 0) ? 
-            1.0f / _pow_int(base, (exponent * -1) -1, base) 
+    return (exponent < 0) ? 1.0f / _pow_int(base, (exponent * -1) -1, base) 
             : _pow_int(base, exponent - 1, base);
 }
 
@@ -38,15 +38,11 @@ constexpr bool _isInteger(const double number) noexcept {
 }
 
 constexpr double pow(const double base, const double exponent) noexcept {
-    return (exponent == 0.0) ? 
-            1.0 
-            : (base == 0.0) ? 
-                0.0 
-                : (base == 1.0) ? 
-                    1.0 
-                    : (_isInteger(exponent)) ? 
-                        pow_int(base, (int64_t)exponent) //exponent DOESN'T have a decimal
-                        : pow_float(base, exponent); //exponent DOES have a decimal
+    return (exponent == 0.0) ? 1.0 
+            : (base == 0.0) ? 0.0 
+            : (base == 1.0) ? 1.0 
+            : (_isInteger(exponent)) ? pow_int(base, (int64_t)exponent) //exponent DOESN'T have a decimal
+            : pow_float(base, exponent); //exponent DOES have a decimal
                         
 }
 

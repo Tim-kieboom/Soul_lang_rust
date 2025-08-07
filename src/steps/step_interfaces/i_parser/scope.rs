@@ -1,7 +1,7 @@
 use std::{collections::{BTreeMap, HashMap}, process::exit};
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::{type_kind::TypeKind}, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -143,6 +143,15 @@ impl ScopeBuilder {
         self.scopes.insert_to_vec(name, kind)
     } 
 
+    pub fn add_variable(&mut self, var_decl: VariableDecl) -> Result<(), String> {
+        
+        let single_var = var_decl.name.0.clone();
+
+        let var_ref = VariableRef::new(var_decl);
+        self.insert(single_var, ScopeKind::Variable(var_ref));
+        return Ok(());
+    }
+
     pub fn insert_this(&mut self, this: Spanned<SoulThis>) {
         let this_var = ScopeKind::Variable(NodeRef::new(
             VariableDecl{
@@ -156,7 +165,7 @@ impl ScopeBuilder {
         self.scopes.insert_to_vec("this".into(), this_var);
     }
 
-    pub fn insert_type(&mut self, name: String, kind: TypeKind) -> std::result::Result<(), String> {
+    pub fn insert_type(&mut self, name: String, kind: TypeKind) -> Result<(), String> {
         let types = &mut self.types[self.scopes.current];
 
         if types.get(&name).is_some() {

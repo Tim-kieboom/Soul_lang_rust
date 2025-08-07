@@ -9,6 +9,14 @@ use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{spanned::S
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, SoulThis, StmtKind, VariableDecl, VariableRef};
 
 pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream, scopes: &mut ScopeBuilder, possible_this: Option<Spanned<SoulThis>>, params: Vec<Spanned<Parameter>>) -> Result<Spanned<Block>> {
+    inner_get_block(scope_visability, stream, scopes, possible_this, params, true)
+}
+
+pub fn get_block_no_scope_push<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream, scopes: &mut ScopeBuilder, possible_this: Option<Spanned<SoulThis>>, params: Vec<Spanned<Parameter>>) -> Result<Spanned<Block>> {
+    inner_get_block(scope_visability, stream, scopes, possible_this, params, false)
+}
+
+fn inner_get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream, scopes: &mut ScopeBuilder, possible_this: Option<Spanned<SoulThis>>, params: Vec<Spanned<Parameter>>, push_scope: bool) -> Result<Spanned<Block>> {
     
     if stream.current_text() != "{" {
         return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("'{}' is invalid token to start block should be '{{'", stream.current_text())));
@@ -18,8 +26,10 @@ pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream
         return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing block"))
     }
 
-    scopes.push(scope_visability);
-    
+    if push_scope {
+        scopes.push(scope_visability);
+    }
+
     if let Some(this) = possible_this {
         scopes.insert_this(this);
     }
@@ -56,7 +66,10 @@ pub fn get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStream
     }
     else { unreachable!() }
 
-    scopes.pop(stream.current_span());
+    if push_scope {
+        scopes.pop(stream.current_span());
+    }
+
     block.span = block.span.combine(&stream.current_span());
     Ok(block)
 }

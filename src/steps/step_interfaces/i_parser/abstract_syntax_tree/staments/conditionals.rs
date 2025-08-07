@@ -18,7 +18,7 @@ pub struct ForDecl {
 pub struct IfDecl {
     pub condition: Expression,
     pub body: Block,
-    pub else_branchs: Vec<ElseKind>,
+    pub else_branchs: Vec<Spanned<ElseKind>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

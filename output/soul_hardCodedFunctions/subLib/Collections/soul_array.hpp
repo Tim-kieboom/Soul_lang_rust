@@ -4,8 +4,7 @@
 #include "soul_Range.hpp"
 
 template<typename T>
-class __Soul_ARRAY_Iterator__
-{
+class __Soul_ARRAY_Iterator__ {
 private:
     T* ptr;
 
@@ -30,8 +29,7 @@ public:
 };
 
 template<typename T>
-class __Soul_ARRAY_ConstIterator__
-{
+class __Soul_ARRAY_ConstIterator__ {
 private:
     const T* ptr;
 
@@ -56,8 +54,7 @@ public:
 }; 
 
 template <typename T>
-struct __Soul_ARRAY__
-{
+struct __Soul_ARRAY__ {
     /// if array is span then __f_spanPtr = __f_spanPtr + offset so can not be used for delete so use this ptr
     T* __f_OGPtr = nullptr;
     /// is arrayPtr + offset

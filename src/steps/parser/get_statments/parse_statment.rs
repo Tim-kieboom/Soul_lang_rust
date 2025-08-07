@@ -6,6 +6,7 @@ use crate::steps::parser::get_statments::parse_trait::get_trait;
 use crate::steps::parser::get_statments::parse_block::get_block;
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
+use crate::steps::parser::get_statments::parse_if_else::{get_else, get_if};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
@@ -20,7 +21,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::ty
 use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
 use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_var_decl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, SwitchDecl, WhileDecl};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind, STATMENT_ENDS};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
@@ -91,19 +92,14 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return add_for_loop(stream, scopes);
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
-            let if_i = stream.current_index();
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
-            }  
-
-            let condition = get_expression(stream, scopes, &["{"])?;
-            let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-
-            let span = stream[if_i].span.combine(&stream.current_span());
-            return Ok(Some(Statment::new(StmtKind::If(IfDecl{condition, body: block.node, else_branchs: vec![]}), span)))
+            let if_decl = get_if(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::If(if_decl.node), if_decl.span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
             add_else(stream, scopes, node_scope)?;
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
             return Ok(None);
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Type) => {
@@ -154,12 +150,36 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         _ => (),
     }
 
+    if stream.current_text() == "(" {
+        let unwrap_var_decl = get_var_decl(stream, scopes)?;
+        return Ok(Some(
+            Statment::from_kind(
+                unwrap_var_decl.node, 
+                unwrap_var_decl.span
+            )
+        ))
+    }
+
     let first_type_i = stream.current_index();
     let possible_res_type = SoulType::try_from_stream(stream, scopes);
     let has_valid_type = possible_res_type.as_ref().is_some_and(|res| res.is_ok());
 
     if let Some(result_ty) = possible_res_type {
         let _ty = result_ty?;
+
+        let peek1_token = stream.peek()
+            .ok_or(err_out_of_bounds(stream))?;
+
+        if peek1_token.text == "(" {
+            stream.go_to_index(first_type_i);
+            let unwrap_var_decl = get_var_decl(stream, scopes)?;
+            return Ok(Some(
+                Statment::from_kind(
+                    unwrap_var_decl.node, 
+                    unwrap_var_decl.span
+                )
+            ))
+        }
 
         let peek2_token = stream.peek_multiple(2)
             .ok_or(err_out_of_bounds(stream))?;
@@ -418,7 +438,7 @@ enum FunctionKind {
 
 fn try_add_else_to_if_branch<'a>(
     scope: &mut StatmentBuilder,
-    else_branch: ElseKind, 
+    else_branch: Spanned<ElseKind>, 
     span: SoulSpan
 ) -> Result<()> {
     
@@ -437,7 +457,7 @@ fn try_add_else_to_if_branch<'a>(
     if let Some(last) = block.borrow_mut().node.statments.last_mut() {
         
         if let StmtKind::If(node) = &mut last.node {
-            if node.else_branchs.last().is_some_and(|branch| matches!(branch, ElseKind::Else(_))) {
+            if node.else_branchs.last().is_some_and(|branch| matches!(branch.node, ElseKind::Else(_))) {
                 return Err(new_soul_error(SoulErrorKind::InvalidInContext, span, "'else' or 'else if' can not go after 'else' stsament"))
             }
 
@@ -488,31 +508,7 @@ fn add_for_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<O
 
 fn add_else(stream: &mut TokenStream, scopes: &mut ScopeBuilder, node_scope: &mut StatmentBuilder) -> Result<()> {
     let else_i = stream.current_index();
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    } 
-
-    let else_branch = if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::If) {
-        
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream));
-        } 
-
-        let condition = get_expression(stream, scopes, &["{"])?;
-        let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-        
-        let span = stream[else_i].span.combine(&stream.current_span());
-        ElseKind::ElseIf(Box::new(Spanned::new(IfDecl{body: block.node, condition, else_branchs: vec![]}, span)))
-    }
-    else {
-        let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-        ElseKind::Else(block)
-    };
-
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    } 
-
+    let else_branch = get_else(stream, scopes)?;
     try_add_else_to_if_branch(node_scope, else_branch, stream[else_i].span)?;
 
     Ok(())

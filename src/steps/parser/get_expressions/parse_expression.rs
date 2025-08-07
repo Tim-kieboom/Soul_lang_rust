@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::{get_ctor, get_function_call}, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::parse_block::get_block}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, TypeOfExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ElseKind, IfDecl}, statment::VariableRef}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind, ScopeVisibility}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::{get_ctor, get_function_call}, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::parse_if_else::{get_else, get_if}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, TypeOfExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::ElseKind, statment::{VariableRef}}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -202,54 +202,27 @@ fn try_add_statment_expression(stream: &mut TokenStream, scopes: &mut ScopeBuild
 }
 
 fn add_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+    
+    fn else_err(stream: &TokenStream) -> SoulError {
+        new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "can not have 'else' without an 'if'")
+    }
+    
     loop {
 
         match stream.current_text().as_str() {
             val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
-                let if_i = stream.current_index();
-                if stream.next().is_none() {
-                    return Err(err_out_of_bounds(stream));
-                }  
-
-                let condition = get_expression(stream, scopes, &["{"])?;
-                let body = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-
-                if !stream.peek().is_some_and(|token| token.text == SOUL_NAMES.get_name(NamesOtherKeyWords::Else)) {
-                    return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "if you are using 'if' as expression it needs an 'else' after"))
-                }
-
-                let span = stream[if_i].span.combine(&stream.current_span());
-                stacks.node_stack.push(Expression::new(ExprKind::If(Box::new(IfDecl{condition, body: body.node, else_branchs: vec![]})), span));
+                let if_decl = get_if(stream, scopes)?;
+                stacks.node_stack.push(Expression::new(ExprKind::If(Box::new(if_decl.node)), if_decl.span));
             },
             val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
-                let else_i = stream.current_index();
-                if stream.next().is_none() {
-                    return Err(err_out_of_bounds(stream));
-                } 
-                
-                fn else_err(stream: &TokenStream) -> SoulError {
-                    new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "can not have 'else' without an 'if'")
-                }
 
                 let mut expr = stacks.node_stack.pop()
                     .ok_or(else_err(stream))?;
 
-                let (else_branch, is_else_if) = if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::If) {
-                    
-                    if stream.next().is_none() {
-                        return Err(err_out_of_bounds(stream));
-                    } 
-
-                    let condition = get_expression(stream, scopes, &["{"])?;
-                    let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-
-                    let span = stream[else_i].span.combine(&stream.current_span());
-                    (ElseKind::ElseIf(Box::new(Spanned::new(IfDecl{body: block.node, condition, else_branchs: vec![]}, span))), true)
-                }
-                else {
-                    let block = get_block(ScopeVisibility::All, stream, scopes, None, vec![])?;
-
-                    (ElseKind::Else(block), false)
+                let else_branch = get_else(stream, scopes)?;
+                let is_else_if = match &else_branch.node {
+                    ElseKind::ElseIf(_) => true,
+                    ElseKind::Else(_) => false,
                 };
 
                 if let ExprKind::If(if_decl) = &mut expr.node {
@@ -262,8 +235,9 @@ fn add_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut Expr
                 stacks.node_stack.push(expr);
                 
                 if is_else_if {
+
                     if !stream.peek().is_some_and(|token| token.text == SOUL_NAMES.get_name(NamesOtherKeyWords::Else)) {
-                        return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("Expected 'else' or 'else if' after 'if', but found '{}'", stream.current_text())))
+                        return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("Expected 'else' or 'else if' after 'if', but found '{}'", stream.peek().unwrap().text)))
                     }
                 }
                 else {
@@ -635,29 +609,31 @@ fn add_index(
 }
 
 fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref: &VariableRef, use_literal_retention: bool, is_assign_var: bool) -> Result<()> {
-    if var_ref.borrow().initializer.is_none() && !is_assign_var {
+    
+    let var = var_ref.borrow();
+    let variable = Variable{name: var.name.clone()};
+
+    if var.initializer.is_none() && !is_assign_var {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             stream.current_span(), 
-            format!("'{}' can not be used before it is assigned", var_ref.borrow().name.0)
+            format!("'{}' can not be used before it is assigned", variable.name.0)
         ));
     }
-
-    let variable = Variable{name: var_ref.borrow().name.clone()};
     
-    if let Some(literal) = &var_ref.borrow().lit_retention {
-        
+    if let Some(literal) = var.lit_retention.clone() {
+    
         if use_literal_retention {
             stacks.node_stack.push(literal.clone());
+            return Ok(());
         }
-        else {
-            stacks.node_stack.push(Expression::new(ExprKind::Variable(variable), stream.current_span()));
-        }
-
-        return Ok(());
     }
 
-    stacks.node_stack.push(Expression::new(ExprKind::Variable(variable), stream.current_span()));
+    stacks.node_stack.push(Expression::new(
+        ExprKind::Variable(variable), 
+        stream.current_span()
+    ));
+
     Ok(())
 }
 

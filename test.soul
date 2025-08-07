@@ -35,6 +35,9 @@ union Num {
 }
 
 unionFunc() {
+
+	type Foo typeof Num
+
 	printNumInt(Num::Int num) {
 		Println(num.0)
 	}
@@ -43,26 +46,38 @@ unionFunc() {
 	bool is_num = num typeof Num
 	bool is_int = num typeof Num::Int
 
-	// if typeof Num::Int(inner) = num {
-	// 	Assert(inner typeof int)
-	// }
-	// else if typeof Num::Uint(num: inner) = num {
-	// 	Assert(inner typeof uint)
-	// }
-	
-	// if typeof Num::Int intStruct = num {
-	// 	Assert(intStruct typeof Num::Int)
+	Num::Int(number) = num
 
-	// 	printNumInt(intStruct)
-	// }
+	if typeof Num::Int(inner) = num {
+		Assert(inner typeof int)
+	}
+	else if typeof Num::Uint(num: inner) = num {
+		Assert(inner typeof uint)
+	}
 
-	// if typeof Num::Int(inner) = &num {
-	// 	Assert(inner typeof &int)
-	// }
+	let fl = if typeof Num::Int(inner) = num {
+		fall f32(inner)
+	}
+	else if typeof Num::Uint(num: inner) = num {
+		fall f32(inner)
+	}
+	else {
+		fall 0.0
+	}
 
-	// if typeof Num::Int inner = @num {
-	// 	Assert(inner typeof @int)
-	// }
+	if typeof Num::Int intStruct = num {
+		Assert(intStruct typeof Num::Int)
+
+		printNumInt(intStruct)
+	}
+
+	if typeof Num::Int(inner) = &num {
+		Assert(inner typeof int&)
+	}
+
+	if typeof Num::Int inner = @num {
+		Assert(inner typeof int@)
+	}
 
 	// match num {
 	// 	Num::None() => Println("none"),
@@ -115,12 +130,12 @@ switch() {
 	// 	_ => Println("oh no"),
 	// }
 
-// 	tuple := (1, 2, 3)
-// 	match tuple {
-// 		val if val.0 < val.1 && val.1 < val.2 => Println("ordered"),
-// 		val if val.0 > val.1 && val.1 > val.2 => Println("rev ordered"),
-// 		_ => Println("not ordered"),
-// 	}
+	// 	tuple := (1, 2, 3)
+	// 	match tuple {
+	// 		val if val.0 < val.1 && val.1 < val.2 => Println("ordered"),
+	// 		val if val.0 > val.1 && val.1 > val.2 => Println("rev ordered"),
+	// 		_ => Println("not ordered"),
+	// 	}
 
 	// val := match 1 == 1 {
 	// 	true => 12,
@@ -131,17 +146,17 @@ switch() {
 	// 	},
 	// }
 
-// 	Num unionName = Num::Int(1)
-// 	match unionName {
-// 		Int(num) => Println(num),
-// 		Uint(num) => Println(num),
-// 		Float(num) => Println(num),
-// 	} 
+	// 	Num unionName = Num::Int(1)
+	// 	match unionName {
+	// 		Int(num) => Println(num),
+	// 		Uint(num) => Println(num),
+	// 		Float(num) => Println(num),
+	// 	} 
 }
 
 class StrBuilder {
-	// static int runTimeStatic {Get;} = 1
-	// Literal int compileTimeStatic {Get;} = 1 
+	// static int runTimeStatic [Get;] = 1
+	Literal int compileTimeStatic [Get;] = 1 
 
 	str buffer
 
@@ -192,11 +207,9 @@ sumGeneric<T>(T a, T b) T
 	return a + b
 }
 
-
 tuple() {
+	struct Data{int number; str two}
 	struct MyList{}
-
-	struct Data{int one; str two}
 
 	el := 1
 	runTimeTuple := (el,2,"hello")
@@ -209,11 +222,19 @@ tuple() {
 	(int, bool) tuple = (el, true)
 	int first = tuple.0
 	bool second = tuple.1
-	// (number, condition) := (el, true)
+	(number, condition) := (el, true)
 	(field: int, name: bool) namedTuple = (field: el, name: true)
-	// (field, name) := (field: el, name: true) 
-	// data := Data(one: 1, two: "jim")
-	// Data(one, two) := data
+	(field, name) := (field: el, name: true) 
+	data := Data(number: 1, two: "jim")
+	data2 := Data(number: 1, two: "jim")
+	Data(one, two) = data
+
+	if typeof Data(one: first, two) = data2 {
+		// Println(f"({first}, {two})")
+	}
+	if typeof (int, bool)(one, two) = tuple {
+		// Println(f"({one}, {two})")
+	}
 
 	functionCall := func(el, 2, "hello")
 	functionCall = func(el, 2, "hello", option=1)
@@ -303,8 +324,10 @@ array() {
 	]
 }
 
+	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])
 varDecl() {
-	struct List{}
+	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])
+	struct MyList{}
 	int forwardDecl
 	
 	let untyped
@@ -313,7 +336,7 @@ varDecl() {
 	const constUntyped
 	constUntyped = 1 //turns untyped to int from none
 
-	list := List[]
+	list := MyList[]
 	list.Push(1) //turns arr to List<int> from List<none> 
 
 	a := 1
@@ -322,7 +345,6 @@ varDecl() {
 	Literal d = (1, 2, 3)
 
 
-	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])
 
 	json := (field: 1, foo: (1, 2, 3), arr: [1,2,3])
 	MyJson typedjson = (field: 1, foo: (1, 2, 3), arr: [1,2,3])
@@ -362,20 +384,25 @@ ifs() {
 	}
 
 	condition := true
-	val := condition ? 1 : 2
+	val := condition ? "if true" : "if false"
 	
 	cos1 := true ? 2 log 5
-			: false ? 3
-			: func()
+		    : false ? 3
+		    : func()
 
 	con3 := if true {fall 2 log 5} 
 			else if false {fall 3}
 			else {fall func()}
 
-	// Op<i32> num = None
-	// if const Some(mut num) typeof num {
-	// 	Println(num)
-	// } 
+	union Or{One(i32), Other(str)}
+	
+	const or = Or::One(1)
+	if typeof Or::One(num) = or {
+		Println(num)
+	}
+	else if typeof Or::Other(text) = @or {
+		Println(text)
+	}
 }
 
 rulesets() {
@@ -448,7 +475,7 @@ whiles() {
 	}	
 	
 	// i = 0
-	// imod3 := while {
+	// imod3 := while true {
 
 	// 	if i++ % 3 == 0 {
 	// 		break i
@@ -456,8 +483,8 @@ whiles() {
 	// }
 
 	// stack := List[1,2,3,4]
-	// while Some(number) typeof stack.Pop() {
-	// 	Println(f"number: {number}")
+	// while typeof Some(number) = stack.Pop() {
+	// 	Println(number)
 	// }
 }
 
@@ -499,7 +526,7 @@ typeEnum SystemNumber typeof[int, uint]
 struct Foo<T> { 
 	str name
 	f32 float = 0.2
-	int foo {Get; set;} = 1
+	int foo [Get; set;] = 1
 	T generic
 }
 

@@ -8,7 +8,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Span
 use crate::steps::parser::forward_type_stack::get_type_stack::forward_declarde_type_stack;
 use crate::steps::step_interfaces::i_parser::scope::{ProgramMemmory, ScopeBuilder, ScopeKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableDecl, VariableRef};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, StatmentBuilder};
 
 pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
@@ -61,7 +61,7 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
         let var = ScopeKind::Variable(var_ref.clone());
 
         scopes.insert_global(name.0, var);
-        tree.root.push(Spanned::new(GlobalKind::VarDecl(var_ref), first_span));
+        tree.root.push(Spanned::new(GlobalKind::VarDecl(VariableKind::Variable(var_ref)), first_span));
     }
 
     Ok(ParserResponse{tree, scopes})

@@ -1,11 +1,10 @@
 extern crate soul_lang_rust;
 
-use hsoul::subfile_tree::SubFileTree;
 use itertools::Itertools;
 use threadpool::ThreadPool;
+use hsoul::subfile_tree::SubFileTree;  
 use std::{fs::{write, File}, io::{BufReader, Read}, path::Path, process::exit, sync::{mpsc::channel, Arc}, time::{Instant, SystemTime}};
 use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::{get_header::get_header, parse::parse_tokens}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::{pretty_format::PrettyFormat, soul_header_cache::{ModifiedDate, SoulHeaderCache}}, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
-
 
 fn main() {
 
@@ -14,28 +13,15 @@ fn main() {
         Err(msg) => {eprintln!("!!invalid compiler argument!!\n{msg}"); return;},
     };
 
+    let start = Instant::now();
+
     if let Err(err) = create_output_dir(&run_option) {
         eprintln!("{}", err.to_string());
         return;
     }
     
-    let start = Instant::now();
-
-    if !run_option.sub_tree_path.is_empty() {
-
-        match compile_all_subfiles(run_option.clone()) {
-            Ok(()) => (),
-            Err(msg) => {eprintln!("{}", msg.to_err_message()); return;},
-        }
-    }
-
-    if let Err(err) = parse_and_cache_file(run_option.clone(), Path::new(&run_option.file_path), ) {
-        let (reader, _) = get_file_reader(Path::new(&run_option.file_path)).main_err_map("while trying to get file reader")
-            .inspect_err(|err| {eprintln!("{}", err.to_err_message()); exit(1);}).unwrap();
-
-        eprintln!("---------------------------------------------");  
-        eprintln!("at char:line; !!error!! message\n\n{}\n", err.to_err_message());        
-        eprintln!("{}", err.to_highlighed_message(reader));        
+    if !parse_and_cache_files(&run_option) {
+        return;
     }
 
     if run_option.show_times.contains(ShowTimes::SHOW_TOTAL) {
@@ -48,7 +34,30 @@ fn create_output_dir(run_option: &RunOptions) -> std::io::Result<()> {
     std::fs::create_dir_all(format!("{}/parsedIncremental", &run_option.output_dir))
 }
 
-fn compile_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
+fn parse_and_cache_files(run_option: &Arc<RunOptions>) -> bool {
+    let mut no_errors = true;
+    if !run_option.sub_tree_path.is_empty() {
+
+        if let Err(err) = parse_and_cache_all_subfiles(run_option.clone()) {
+            eprintln!("{}", err.to_err_message()); 
+            no_errors = false;
+        }
+    }
+
+    if let Err(err) = parse_and_cache_file(run_option.clone(), Path::new(&run_option.file_path)) {
+        let (reader, _) = get_file_reader(Path::new(&run_option.file_path)).main_err_map("while trying to get file reader")
+            .inspect_err(|err| {eprintln!("{}", err.to_err_message()); exit(1);}).unwrap();
+
+        eprintln!("---------------------------------------------");  
+        eprintln!("at line:col; !!error!! message\n\n{}\n", err.to_err_message());        
+        eprintln!("{}", err.to_highlighed_message(reader));        
+        no_errors = false;
+    }
+
+    return no_errors;
+}
+
+fn parse_and_cache_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
     let sub_tree = SubFileTree::from_bin_file(Path::new(&run_option.sub_tree_path))
         .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, SoulSpan::new(0,0,0), format!("!!internal error!! while trying to get subfilesTree\n{}", msg.to_string())))?;
     
@@ -79,7 +88,7 @@ fn compile_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
     }
 
     if !errors.is_empty() {
-        eprintln!("at char:line; !!error!! message\n");        
+        eprintln!("at line:col; !!error!! message\n");        
         for (err, file) in errors {
             let (reader, _) = get_file_reader(Path::new(&file)).main_err_map("while trying to get file reader")
                 .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
@@ -103,12 +112,13 @@ fn parse_and_cache_file(run_option: Arc<RunOptions>, file_path: &Path) -> Result
     let (reader, last_modified_date) = get_file_reader(file_path)
         .main_err_map("while trying to get file reader")?;
 
+    
     if let Some(_date) = last_modified_date {
-        let _cache = ModifiedDate::from_bin_file(&get_cache_date_path(&run_option, file_path)).ok();
+        let _cache_date = ModifiedDate::from_bin_file(&get_cache_date_path(&run_option, file_path)).ok();
         
         #[cfg(not(debug_assertions))]
-        if _is_cache_up_to_date(_cache, _date) {
-            println!("parse caching skiped for file: {}", file_path.to_str().unwrap());
+        if _is_cache_up_to_date(_cache_date, _date) {
+            println!("using cache for file: {}", file_path.to_str().unwrap());
             return Ok(());
         }
     }
@@ -240,10 +250,6 @@ impl<T> MainErrMap<T> for Result<T> {
         self.map_err(|child| pass_soul_error(SoulErrorKind::NoKind, SoulSpan::new(0, 0, 0), msg, child))
     }
 }
-
-
-
-
 
 
 

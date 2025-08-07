@@ -1,9 +1,6 @@
 use std::sync::RwLockReadGuard;
-
 use itertools::Itertools;
-
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{
-    abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableDecl}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -78,7 +75,7 @@ impl PrettyPrint for StmtKind {
         let prefix = tree_prefix(tab, is_last);
         match self {
             StmtKind::ExprStmt(expr) => format!("{}ExprStmt<{}> >> {};", prefix, expr.node.get_variant_name(), expr.node.to_string()),
-            StmtKind::VarDecl(var_ref) => var_ref.borrow().to_pretty(tab, is_last),
+            StmtKind::VarDecl(var_ref) => var_ref.to_pretty(tab, is_last),
             StmtKind::FnDecl(fn_decl) => fn_decl.to_pretty(tab, is_last),
             StmtKind::ExtFnDecl(ext_fn) => ext_fn.to_pretty(tab, is_last),
             StmtKind::StructDecl(struc) => struc.to_pretty(tab, is_last),
@@ -171,7 +168,7 @@ impl PrettyPrint for IfDecl {
 
         for (i, e) in self.else_branchs.iter().enumerate() {
             let last = i == self.else_branchs.len() - 1;
-            output.push(e.to_pretty(tab + 1, last));
+            output.push(e.node.to_pretty(tab + 1, last));
         }
 
         output.join("\n")
@@ -188,7 +185,7 @@ impl PrettyPrint for GlobalKind {
             GlobalKind::TraitImpl(impl_block) => impl_block.to_pretty(tab, true),
             GlobalKind::FuncDecl(fn_decl) => fn_decl.to_pretty(tab, true),
             GlobalKind::ExtFuncDecl(fn_decl) => fn_decl.to_pretty(tab, true),
-            GlobalKind::VarDecl(var) => var.borrow().to_pretty(tab, true),
+            GlobalKind::VarDecl(var) => var.to_pretty(tab, true),
             GlobalKind::EnumDecl(enum_decl) => enum_decl.to_pretty(tab, true),
             GlobalKind::UnionDecl(union_decl) => union_decl.to_pretty(tab, true),
             GlobalKind::TypeEnumDecl(type_enum) => type_enum.to_pretty(tab, true),
@@ -278,7 +275,7 @@ impl PrettyPrint for ClassDeclRef {
         };
         let header = format!("{}Class {}{} >>", prefix, this.name.0, generics);
 
-        let last_index = this.fields.len() - 1;
+        let last_index = this.fields.len().saturating_sub(1);
         let is_empty = this.methodes.is_empty();
 
         let fields = this.fields.iter().enumerate().map(|(i, f)| {
@@ -296,6 +293,7 @@ impl PrettyPrint for ClassDeclRef {
                 .unwrap_or_default();
             format!("{}{} {}: {}{}", field_prefix, access, f.name.0, f.ty.to_string(), default)
         });
+
 
         let len = this.methodes.len();
         let methods = this.methodes.iter().enumerate().map(|(i, m)| {
@@ -408,14 +406,27 @@ impl PrettyPrint for Block {
     }
 }
 
-impl PrettyPrint for VariableDecl {
+impl PrettyPrint for VariableKind {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let init = match &self.initializer {
-            Some(expr) => format!(" = {}", expr.node.to_string()),
-            None => "".to_string(),
-        };
-        format!("{}Var {} {}{}", prefix, self.ty.to_string(), self.name.0, init)
+        match self {
+            VariableKind::Variable(node_ref) => {
+                let node = node_ref.borrow();
+                let init = match &node.initializer {
+                    Some(expr) => format!(" = {}", expr.node.to_string()),
+                    None => "".to_string(),
+                };
+                format!("{}Var {} {}{}", prefix, node.ty.to_string(), node.name.0, init)
+            },
+            VariableKind::MultiVariable{vars, ty, initializer, lit_retention:_} => {
+                
+                let init = match &initializer {
+                    Some(expr) => format!(" = {}", expr.node.to_string()),
+                    None => "".to_string(),
+                };
+                format!("{}Var {} ({}){}", prefix, ty.to_string(), vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow().name.0)).join(","), init)
+            },
+        }
     }
 }
 
