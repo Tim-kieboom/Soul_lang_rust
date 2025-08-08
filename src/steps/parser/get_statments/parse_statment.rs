@@ -387,6 +387,21 @@ fn get_while(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Span
     let condition = if stream.current_text() == "{" {
         None
     } 
+    else if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        } 
+
+        let var_decl = get_unwrap_var(stream, scopes)?;
+        if stream.current_text() == "\n" {
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            } 
+        }
+
+        Some(Expression::new(ExprKind::UnwrapVarDecl(Box::new(var_decl.node)), var_decl.span))
+    }
     else {
         Some(get_expression(stream, scopes, &["{"])?)
     };

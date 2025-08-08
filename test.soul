@@ -83,20 +83,39 @@ unionFunc() {
 	if typeof Num::Int inner = @num {
 		Assert(inner typeof int@)
 	}
+
+	num = Num::Vec2(1, 23)
+	while typeof Num::Vec2(x, y) = @num {
+
+		num = Num::Int(1)
+	}
 }
       
 
 lamdba() {
 	// const lamdbaSumTyped = (int a, int b) int => fall a + b
-	// // const lamdbaSumHalfTyped = int a, int b => fall a + b
+	// // const lamdbaSumHalfTyped = (int a, int b) => fall a + b
 	// // const lamdbaSumReturnTyped = (a, b) int => fall a + b
-	// // const lamdbaSum = a, b => fall a + b
 	// const increment = a => a += 1
 	// const increment = a => a += 1
 	// lamdbaSumTyped(1,2)
 	// // lamdbaSum(1,2)
 
-	// genericSum<Func: Fn<int,int>int >(Func f)
+	// genericSum<Func: Fn<int,int>int >(int a, int b, Func f) {
+	// 	return f(a, b)
+	// }
+
+	// genericSum<Func: ConstFn<str,int>int >(str a, int b, Func f) {
+	// 	return f(a, b)
+	// }
+
+	// genericSum<Func: MutFn<int[],int>int >(int[] a, int b, Func f) {
+	// 	return f(a, b)
+	// }
+
+	// res15 := genericSum(5, 10, (one, two) => one + two)
+	// res15 = genericSum("5", 10, (text, two) => text.Parse() + two)
+	// res15 = genericSum([2, 3], 10, (arr, two) => arr.Sum() + two)
 }
 
 switch() {
@@ -532,4 +551,83 @@ struct Foo<T> {
 	str name
 	f32 float = 0.2
 	int foo [Get; set;] = 1
-	T 
+	T generic
+}
+
+main() int {
+
+	sum(int a, int b) int {
+		return a + b 
+	}
+
+	for el in [1,2,3,4] {
+		Println(el)
+	} 
+
+	sum(1, 2)
+
+	sum(
+		1,
+		2
+	)
+
+	Println("hello world")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
