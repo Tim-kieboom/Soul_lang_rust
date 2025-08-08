@@ -156,7 +156,7 @@ pub struct Parameter {
 impl Parameter {
     pub fn to_string(&self) -> String {
         match &self.default_value {
-            Some(value) => format!("{} {} = {}", self.ty.to_string(), self.name.0, value.node.to_string()),
+            Some(value) => format!("{} {} = {}", self.ty.to_string(), self.name.0, value.node.to_string(0)),
             None => format!("{} {}", self.ty.to_string(), self.name.0),
         }
     }

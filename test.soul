@@ -115,27 +115,28 @@ lamdba() {
 }
 
 switch() {
-	// num := 12
-	// match num {
-	// 	1 => Println("is 1"),
-	// 	21 => Println("is 21"),
-	// 	12 => Println("is 12"),
-	// 	_ => Println("default"),
-	// }
+	num := 12
+	match num {
+		1 => Println("is 1"),
+		21 => Println("is 21"),
+		12 => Println("is 12"),
+		_ => Println("default"),
+	}
 
-	// string := "num" 
-	// match string {
-	// 	"num" => Println("yippie"),
-	// 	"mun" => Println("eippiy"),
-	// 	_ => Println("oh no"),
-	// }
+	text := "num" 
+	match text {
+		"num" => Println("yippie"),
+		"mun" => Println("eippiy"),
+		_ => Println("oh no"),
+	}
 
-	// 	tuple := (1, 2, 3)
-	// 	match tuple {
-	// 		val if val.0 < val.1 && val.1 < val.2 => Println("ordered"),
-	// 		val if val.0 > val.1 && val.1 > val.2 => Println("rev ordered"),
-	// 		_ => Println("not ordered"),
-	// 	}
+	tuple := (1, 2, 3)
+	match tuple {
+		val if val.0 < val.1 && val.1 < val.2 => Println("ordered"),
+		val if val.0 == val.1 && val.1 == val.2 => Println("eq"),
+		val if val.0 > val.1 && val.1 > val.2 => Println("rev ordered"),
+		_ => Println("not ordered"),
+	}
 
 	// val := match 1 == 1 {
 	// 	true => 12,
@@ -245,6 +246,7 @@ tuple() {
 	runTimeNamedTuple3 := MyList(field: el, name: "hello")
 }
 
+
 array() {
 	class MyList{
 		int[] buffer
@@ -324,7 +326,6 @@ array() {
 	]
 }
 
-	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])
 varDecl() {
 	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])
 	struct MyList{}
@@ -549,7 +550,6 @@ main() int {
 
 	Println("hello world")
 }
-
 
 
 

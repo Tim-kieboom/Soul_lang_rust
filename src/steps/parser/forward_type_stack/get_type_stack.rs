@@ -1,11 +1,10 @@
 use once_cell::sync::Lazy;
-
+use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::soul_names::{NamesInternalType, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeVisibility, TypeScopeStack};
-use crate::steps::step_interfaces::i_tokenizer::TokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize};
 
 pub fn forward_declarde_type_stack(stream: &mut TokenStream) -> Result<TypeScopeStack> {
     let mut types = TypeScopeStack::new();
@@ -23,7 +22,68 @@ pub fn forward_declarde_type_stack(stream: &mut TokenStream) -> Result<TypeScope
     Ok(types)
 }
 
+fn parse_lambda_scope(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()> {
+    let mut open_curly_bracket_stack = 0i64;
+    let mut open_round_bracket_stack = 0i64;
+    types.push_current(ScopeVisibility::All);
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    if stream.current_text() == "{" {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    loop {
+
+        match stream.current_text().as_str() {
+            "(" => open_round_bracket_stack += 1,
+            ")" => open_round_bracket_stack -= 1,
+            "{" => open_curly_bracket_stack += 1,
+            "}" => open_curly_bracket_stack += 1,
+            "=>" => parse_lambda_scope(types, stream)?,
+            "\n" => {
+                if open_curly_bracket_stack == 0 && open_round_bracket_stack == 0 {
+                    types.pop(stream.current_span());
+                    break Ok(());
+                }
+            }
+            _ => (),
+        }
+
+
+        if open_curly_bracket_stack < 0 || open_round_bracket_stack < 0 {
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            types.pop(stream.current_span());
+            break Ok(());
+        }
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+}
+
 fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()> {
+
+    if stream.current_text() == "=>" {
+        parse_lambda_scope(types, stream)?;
+    }
 
     if stream.current_text() == "{}" {
         
@@ -38,10 +98,11 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             return Err(err_out_of_bounds(stream));
         }
     } 
-       
+    
     if stream.current_text() == "}" {
-        types.pop(stream.current_span());
         
+        types.try_pop(stream.current_span())?;
+
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
         }

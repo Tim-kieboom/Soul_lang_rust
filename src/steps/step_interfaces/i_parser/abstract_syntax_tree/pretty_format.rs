@@ -1,6 +1,6 @@
 use std::sync::RwLockReadGuard;
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{CaseDoKind, ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -74,7 +74,7 @@ impl PrettyPrint for StmtKind {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
         match self {
-            StmtKind::ExprStmt(expr) => format!("{}ExprStmt<{}> >> {};", prefix, expr.node.get_variant_name(), expr.node.to_string()),
+            StmtKind::ExprStmt(expr) => format!("{}ExprStmt<{}> >> {};", prefix, expr.node.get_variant_name(), expr.node.to_string(tab)),
             StmtKind::VarDecl(var_ref) => var_ref.to_pretty(tab, is_last),
             StmtKind::FnDecl(fn_decl) => fn_decl.to_pretty(tab, is_last),
             StmtKind::ExtFnDecl(ext_fn) => ext_fn.to_pretty(tab, is_last),
@@ -89,18 +89,18 @@ impl PrettyPrint for StmtKind {
                 "{}Return >> {} {} >> free([{}])",
                 prefix,
                 kind.to_str(),
-                value.as_ref().map(|ty| ty.node.to_string()).unwrap_or_default(),
+                value.as_ref().map(|ty| ty.node.to_string(tab)).unwrap_or_default(),
                 delete_list.iter().join(","),
             ),
             StmtKind::Assignment(assign) => format!(
                 "{}Assignment >> {} = {};",
                 prefix,
-                assign.target.node.to_string(),
-                assign.value.node.to_string()
+                assign.target.node.to_string(tab),
+                assign.value.node.to_string(tab)
             ),
             StmtKind::If(if_decl) => if_decl.to_pretty(tab, is_last),
             StmtKind::While(while_decl) => {
-                let cond = while_decl.condition.as_ref().map(|el| el.node.to_string()).unwrap_or("<empty>".into());
+                let cond = while_decl.condition.as_ref().map(|el| el.node.to_string(tab)).unwrap_or("<empty>".into());
                 let body = while_decl.body.to_pretty(tab + 1, true);
                 format!(
                     "{}While >> while{}\n{}",
@@ -118,7 +118,7 @@ impl PrettyPrint for StmtKind {
             ),
             StmtKind::For(for_decl) => {
                 let el = for_decl.element.0.clone();
-                let coll = for_decl.collection.node.to_string();
+                let coll = for_decl.collection.node.to_string(tab);
                 let body = for_decl.body.to_pretty(tab + 1, true);
                 format!(
                     "{}For >> for {} in {}\n{}",
@@ -130,12 +130,21 @@ impl PrettyPrint for StmtKind {
             },
             StmtKind::Switch(switch) =>format!(
                 "SwitchCase >> match {}\n{}", 
-                switch.condition.node.to_string(),
+                switch.condition.node.to_string(tab),
                 switch.cases.iter().enumerate().map(|(i, stmt)| {
                     let is_last = i == switch.cases.len() - 1;
-                    stmt.do_fn.to_pretty(tab, is_last)
+                    format!("\t{} => {}", stmt.if_expr.node.to_string(tab), stmt.do_fn.to_pretty(tab, is_last))
                 }).collect::<Vec<_>>().join("\n")
             ),
+        }
+    }
+}
+
+impl PrettyPrint for CaseDoKind {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        match self {
+            CaseDoKind::Block(block) => block.to_pretty(tab, is_last),
+            CaseDoKind::Expression(spanned) => spanned.node.to_string(tab),
         }
     }
 }
@@ -147,7 +156,7 @@ impl PrettyPrint for ElseKind {
             ElseKind::ElseIf(if_decl) => format!(
                 "{}Else If >> else if {}\n{}",
                 prefix,
-                if_decl.node.condition.node.to_string(),
+                if_decl.node.condition.node.to_string(tab),
                 if_decl.node.body.to_pretty(tab + 1, true),
             ),
             ElseKind::Else(block) => {
@@ -161,7 +170,7 @@ impl PrettyPrint for ElseKind {
 impl PrettyPrint for IfDecl {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let cond = self.condition.node.to_string();
+        let cond = self.condition.node.to_string(tab);
         let mut output = vec![format!("{}If >> if ({})", prefix, cond)];
 
         output.push(self.body.to_pretty(tab + 1, true));
@@ -289,7 +298,7 @@ impl PrettyPrint for ClassDeclRef {
             };
             let default = f.default_value
                 .as_ref()
-                .map(|v| format!(" = {}", v.node.to_string()))
+                .map(|v| format!(" = {}", v.node.to_string(tab)))
                 .unwrap_or_default();
             format!("{}{} {}: {}{}", field_prefix, access, f.name.0, f.ty.to_string(), default)
         });
@@ -338,7 +347,7 @@ impl PrettyPrint for StructDeclRef {
                 let last = i == self.borrow().fields.len() - 1;
                 let inner_prefix = tree_prefix(tab + 1, last);
                 if let Some(value) = &f.default_value {
-                    format!("{}{} {} {} = {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false), value.node.to_string())
+                    format!("{}{} {} {} = {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false), value.node.to_string(tab))
                 } else {
                     format!("{}{} {} {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false))
                 }
@@ -413,7 +422,7 @@ impl PrettyPrint for VariableKind {
             VariableKind::Variable(node_ref) => {
                 let node = node_ref.borrow();
                 let init = match &node.initializer {
-                    Some(expr) => format!(" = {}", expr.node.to_string()),
+                    Some(expr) => format!(" = {}", expr.node.to_string(tab)),
                     None => "".to_string(),
                 };
                 format!("{}Var {} {}{}", prefix, node.ty.to_string(), node.name.0, init)
@@ -421,7 +430,7 @@ impl PrettyPrint for VariableKind {
             VariableKind::MultiVariable{vars, ty, initializer, lit_retention:_} => {
                 
                 let init = match &initializer {
-                    Some(expr) => format!(" = {}", expr.node.to_string()),
+                    Some(expr) => format!(" = {}", expr.node.to_string(tab)),
                     None => "".to_string(),
                 };
                 format!("{}Var {} ({}){}", prefix, ty.to_string(), vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow().name.0)).join(","), init)

@@ -1,7 +1,7 @@
 use std::{collections::{BTreeMap, HashMap}, process::exit};
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::{type_kind::TypeKind}, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
+use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, external_header::ExternalHeader}, utils::{node_ref::NodeRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -166,6 +166,11 @@ impl ScopeBuilder {
     }
 
     pub fn insert_type(&mut self, name: String, kind: TypeKind) -> Result<(), String> {
+        #[cfg(debug_assertions)]
+        if self.scopes.current > self.types.len() -1 {
+            return Ok(());
+        }
+
         let types = &mut self.types[self.scopes.current];
 
         if types.get(&name).is_some() {
@@ -184,6 +189,11 @@ impl ScopeBuilder {
         let mut current_index = Some(self.scopes.current);
 
         while let Some(index) = current_index {
+            #[cfg(debug_assertions)]
+            if index > self.types.len() -1 {
+                break;
+            }
+            
             let scope = &self.types[index];
 
             if let Some(kind) = scope.get(name) {
@@ -231,6 +241,16 @@ impl<T> InnerScopeBuilder<T> {
         } else {
             println!("{}", new_soul_error(SoulErrorKind::UnmatchedParenthesis, span, "somewhere in program there is a '}}' without a '{{' (probably near the '}}' before this one)").to_err_message());
             exit(1)
+        }
+    }
+
+    pub fn try_pop(&mut self, span: SoulSpan) -> Result<(), SoulError> {
+        if let Some(parent_index) = self.scopes[self.current].parent_index {
+            self.current = parent_index;
+            Ok(())
+        } 
+        else {
+            Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, span, "somewhere in program there is a '}}' without a '{{' (probably near the '}}' before this one)"))
         }
     }
 

@@ -67,7 +67,7 @@ fn inner_get_expression(
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             stream[begin_i].span, 
-            format!("expression: '{}' with '{}' is invalid (missing operator)", left.to_string(), right.to_string())
+            format!("expression: '{}' with '{}' is invalid (missing operator)", left.to_string(0), right.to_string(0))
         ))
     }
 
@@ -349,7 +349,23 @@ fn try_add_field_or_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder,
     }
 
     if stream.peek().is_some_and(|token| token.text == "<" || token.text == "(") {
-        add_methode(stream, scopes, stacks)
+        let start_i = stream.current_index();
+        let result = add_methode(stream, scopes, stacks);
+
+        // if for example 'val.0 < val.1' this is seen as a methode 
+        // because of the '.' in 'val.0' before '<' (the '<' makes it seem like a genric in methode)
+        // so is methode failas it might be a field instead
+        if let Err(err) = result {
+
+            stream.go_to_index(start_i);
+            match add_field(stream, stacks) {
+                Ok(val) => Ok(val),
+                Err(_) => Err(err),
+            }
+        }
+        else {
+            result
+        }
     }
     else {
         add_field(stream, stacks)
@@ -388,7 +404,11 @@ fn add_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut
     let object = stacks.node_stack.pop()
         .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
 
-    let mut func = get_function_call(stream, scopes)?;
+    let mut func = match get_function_call(stream, scopes) {
+        Ok(val) => val,
+        Err(err) => {stacks.node_stack.push(object); return Err(err)},
+    };
+
     func.node.callee = Some(Box::new(object));
     stacks.node_stack.push(Expression::new(ExprKind::Call(func.node), func.span));
     Ok(())

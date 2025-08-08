@@ -50,6 +50,24 @@ impl TokenStream {
         &self.tokens[self.index.max(0) as usize]
     }
 
+    pub fn current_starts_with(&self, strs: &[&str]) -> bool {
+        if self.index < 0 {
+            return false
+        }
+
+        let start = self.index as usize;
+        let end = start + strs.len();
+
+        if end > self.tokens.len() {
+            return false
+        }
+
+        self.tokens[start..end]
+            .iter()
+            .map(|token| token.text.as_str())
+            .eq(strs.iter().copied())
+    }
+
     pub fn current_text(&self) -> &String {
         &self.tokens[self.index.max(0) as usize].text
     }

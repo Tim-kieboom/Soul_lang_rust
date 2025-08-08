@@ -30,8 +30,14 @@ pub struct SwitchDecl {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CaseSwitch {
     pub if_expr: Expression,
-    pub do_fn: Block,
+    pub do_fn: CaseDoKind,
 } 
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CaseDoKind {
+    Block(Block),
+    Expression(Expression),
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ElseKind {

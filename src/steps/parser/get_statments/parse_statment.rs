@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
-use crate::steps::parser::get_statments::parse_block::get_block;
+use crate::steps::parser::get_statments::parse_block::{get_block, get_block_no_scope_push};
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_statments::parse_if_else::{get_else, get_if};
@@ -14,15 +14,15 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Span
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::parser::get_statments::parse_enum_like::{get_enum, get_type_enum, get_union};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Ident};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
 use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
 use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_var_decl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{ElseKind, ForDecl, SwitchDecl, WhileDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind, STATMENT_ENDS};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{CaseDoKind, CaseSwitch, ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind, VariableDecl, VariableRef, STATMENT_ENDS};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -143,9 +143,8 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             return Ok(Some(Statment::new(StmtKind::ClassDecl(class_decl.node), class_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::SwitchCase) => {
-            // let switch_decl = get_switch_case(stream, scopes)?;
-            // let name = swiut
-            todo!()
+            let switch_decl = get_switch_case(stream, scopes)?;
+            return Ok(Some(Statment::new(StmtKind::Switch(switch_decl.node), switch_decl.span)))
         },
         _ => (),
     }
@@ -334,7 +333,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                     stream.go_to_index(begin_i);
                     let expr = get_expression(stream, scopes, STATMENT_ENDS)?;
                     if !matches!(expr.node, ExprKind::Call(..)) {
-                        return Err(new_soul_error(SoulErrorKind::InternalError, expr.span, format!("internal error get_expression in function call did not return function call, expr: '{}'", expr.node.to_string())))
+                        return Err(new_soul_error(SoulErrorKind::InternalError, expr.span, format!("internal error get_expression in function call did not return function call, expr: '{}'", expr.node.to_string(0))))
                     }
 
                     let span = expr.span;
@@ -416,7 +415,125 @@ fn get_return_like(stream: &mut TokenStream, scopes: &mut ScopeBuilder, kind: Re
 }
 
 fn get_switch_case(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<SwitchDecl>> {
-    todo!()
+    let match_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let condition = get_expression(stream, scopes, &["\n", "{"])?;
+    if stream.current_text() == "\n" {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
+    if stream.current_text() != "{" {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token: '{}' should be '{{'", stream.current_text())))
+    }
+
+    scopes.push(ScopeVisibility::All);
+
+    let mut cases = vec![];
+    let result = loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        scopes.push(ScopeVisibility::All);
+
+        let if_expr = if stream.peek().is_some_and(|token| token.text == SOUL_NAMES.get_name(NamesOtherKeyWords::If)) {
+            let var_name = stream.current_text().clone();
+            if stream.next_multiple(2).is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            let var = ScopeKind::Variable(
+                VariableRef::new(VariableDecl{
+                    name: Ident(var_name.clone()), 
+                    ty: SoulType::none(), 
+                    initializer: Some(Box::new(condition.clone())), 
+                    lit_retention: None,
+                })
+            );
+            scopes.insert(var_name, var);
+            let if_condition = get_expression(stream, scopes, &["=>"])?;
+            let span = if_condition.span;
+
+            let if_decl = Box::new(IfDecl{condition: if_condition, body: Block{statments: vec![]}, else_branchs: vec![]});
+            Expression::new(ExprKind::If(if_decl), span)
+        }
+        else if stream.current_text() == "_" {
+            let expr = Expression::new(ExprKind::Default, stream.current_span());
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+            expr
+        }
+        else {
+            get_expression(stream, scopes, &["=>"])?
+        };
+
+        if stream.current_text() != "=>" {
+            return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' should be '=>'", stream.current_text())))
+        }
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        let do_fn = if stream.current_text() == "{" {
+            CaseDoKind::Block(get_block_no_scope_push(ScopeVisibility::All, stream, scopes, None, vec![])?.node)
+        }
+        else {
+            let expr = CaseDoKind::Expression(get_expression(stream, scopes, &[",", "\n", "}"])?);
+            if stream.current_text() == "\n" {
+
+                if stream.next().is_none() {
+                    return Err(err_out_of_bounds(stream));
+                }
+
+                if stream.current_text() != "}" {
+                    return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}', should be '}}'", stream.current_text())))
+                }
+            }
+
+            expr
+        };
+
+        cases.push(CaseSwitch{if_expr, do_fn});
+        scopes.pop(stream.current_span());
+        
+        if stream.current_text() == "}" {
+            stream.next();
+            break Ok(Spanned::new(SwitchDecl{condition, cases}, stream[match_i].span.combine(&stream.current_span())));
+        }
+        else if stream.current_starts_with(&[",", "}"]) {
+            stream.next_multiple(2);
+            break Ok(Spanned::new(SwitchDecl{condition, cases}, stream[match_i].span.combine(&stream.current_span())));
+        }
+        else if stream.current_starts_with(&[",", "\n", "}"]) {
+            stream.next_multiple(3);
+            break Ok(Spanned::new(SwitchDecl{condition, cases}, stream[match_i].span.combine(&stream.current_span())));
+        }
+
+    };
+
+    result
 }
 
 fn try_get_special_error(next_index: usize, stream: &TokenStream, has_type: bool, type_t: usize) -> Result<()> {
