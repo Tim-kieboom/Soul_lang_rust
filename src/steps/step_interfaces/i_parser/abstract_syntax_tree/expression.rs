@@ -37,6 +37,7 @@ pub enum ExprKind {
     ConstRef(BoxExpr),
 
     Array(Array),
+    ArrayFiller(ArrayFiller),
     Tuple(Tuple),
     NamedTuple(NamedTuple),
 }
@@ -59,6 +60,13 @@ pub struct Array {
     pub element_type: Option<SoulType>,
     pub values: Vec<Expression>,
 } 
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ArrayFiller {
+    pub amount: BoxExpr,
+    pub index: Option<VariableRef>,
+    pub fill_expr: BoxExpr,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tuple {
@@ -222,6 +230,12 @@ impl ExprKind {
                     ),
                 }
             },
+            ExprKind::ArrayFiller(ArrayFiller{amount, index, fill_expr}) => format!(
+                "[for {} {} => {}]",
+                index.as_ref().map(|el| format!("{} in", el.borrow().name.0)).unwrap_or(String::new()),
+                amount.node.to_string(0),
+                fill_expr.node.to_string(0),
+            ),
         }
     }
 
@@ -257,6 +271,7 @@ impl ExprKind {
             ExprKind::Variable(_) => "Valiable",
             ExprKind::ConstRef(_) => "ConstRef",
             ExprKind::NamedTuple(_) => "NamedTuple",
+            ExprKind::ArrayFiller(_) => "ArrayFiller",
             ExprKind::StaticField(_) => "StaticField",
             ExprKind::StaticMethode(_) => "StaticCall",
             ExprKind::UnwrapVarDecl(_) => "UnwrapVarDecl",

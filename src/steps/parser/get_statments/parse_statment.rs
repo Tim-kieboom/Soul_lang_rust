@@ -1,10 +1,8 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
-use std::io::Empty;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
-use crate::steps::parser::get_statments::parse_block::{get_block, get_block_no_scope_push};
 use crate::steps::parser::get_statments::parse_struct::get_struct;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::get_statments::parse_if_else::{get_else, get_if};
@@ -12,18 +10,19 @@ use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::parser::parse_generic_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::get_statments::parse_function_decl::get_function_decl;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::parser::get_statments::parse_block::{get_block, get_block_no_scope_push};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::parser::get_statments::parse_enum_like::{get_enum, get_type_enum, get_union};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
 use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
-use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_unwrap_var, get_var_decl, get_variable_kind, parse_union_binding, parse_unwrap_pattern, VarKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{CaseDoKind, CaseSwitch, ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind, VariableDecl, VariableKind, VariableRef, STATMENT_ENDS};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind, VariableDecl, VariableRef, STATMENT_ENDS};
+use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_unwrap_var, get_var_decl, get_variable_kind, parse_union_binding, parse_unwrap_pattern, VarKind};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()

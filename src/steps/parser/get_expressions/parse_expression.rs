@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::{get_ctor, get_function_call}, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::parse_if_else::{get_else, get_if}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, TypeOfExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::ElseKind, statment::{VariableRef}}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::{get_ctor, get_function_call}, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::parse_if_else::{get_else, get_if}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{ArrayFiller, BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, TypeOfExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{conditionals::ElseKind, statment::{VariableDecl, VariableRef}}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind, ScopeVisibility}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -92,6 +92,17 @@ fn convert_expression(
         // (YES there are 2 is_end_token() this is because of traverse_brackets() mutates the iterator DONT REMOVE PLZ)
         if is_end_token(stream.current(), end_tokens, *open_bracket_stack) {
             return Ok(());
+        }
+
+        if stream.current_starts_with(&["[", "for"]) {
+            let filler_i = stream.current_index();
+
+            if add_array_filler(stream, scopes, stacks)? {
+                end_expr_loop(stream, scopes, stacks)?;
+                continue;
+            }
+
+            stream.go_to_index(filler_i);
         }
 
         let literal_begin = stream.current_index();
@@ -188,7 +199,50 @@ fn convert_expression(
     }   
 
     Err(err_out_of_bounds(stream))
-} 
+}
+
+fn add_array_filler(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<bool> {
+    let array_filler_i = stream.current_index(); 
+    stream.next_multiple(2);
+    let is_indexed = stream.peek().is_some_and(|token| token.text == "in");
+
+    scopes.push(ScopeVisibility::All);
+    let index = if is_indexed {
+        let name = Ident(stream.current_text().clone());
+        let index_var = scopes.add_variable(VariableDecl{
+            name, 
+            ty: SoulType::from_type_kind(TypeKind::SystemUint), 
+            initializer: Some(Box::new(Expression::new(ExprKind::Empty, SoulSpan::new(0,0,0)))),
+            lit_retention: None,
+        }).map_err(|msg| new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), msg))?;
+
+        if stream.next_multiple(2).is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        Some(index_var)
+    }
+    else {
+        None
+    };
+
+    let amount = get_expression(stream, scopes, &["=>", "{"])?;
+    if stream.current_text() == "{" {
+        scopes.remove_current(stream.current_span());
+        return Ok(false);
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let filler = get_expression(stream, scopes, &["]"])?;
+    
+    let span = stream[array_filler_i].span.combine(&stream.current_span());
+    let array_filler = ArrayFiller{amount: Box::new(amount), fill_expr: Box::new(filler), index};
+    stacks.node_stack.push(Expression::new(ExprKind::ArrayFiller(array_filler), span));
+    Ok(true)
+}
 
 fn try_add_statment_expression(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<bool> {
     match stream.current_text().as_str() {

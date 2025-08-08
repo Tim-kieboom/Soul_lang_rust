@@ -94,6 +94,10 @@ impl ScopeBuilder {
         self.scopes.push_current(scope_visability);
     }
 
+    pub fn remove_current(&mut self, span: SoulSpan) {
+        self.scopes.remove_current(span);
+    }
+
     pub fn push_from(&mut self, parent_index: usize, scope_visability: ScopeVisibility) {
         self.scopes.push(parent_index, scope_visability);
     }
@@ -143,13 +147,13 @@ impl ScopeBuilder {
         self.scopes.insert_to_vec(name, kind)
     } 
 
-    pub fn add_variable(&mut self, var_decl: VariableDecl) -> Result<(), String> {
+    pub fn add_variable(&mut self, var_decl: VariableDecl) -> Result<VariableRef, String> {
         
         let single_var = var_decl.name.0.clone();
 
         let var_ref = VariableRef::new(var_decl);
-        self.insert(single_var, ScopeKind::Variable(var_ref));
-        return Ok(());
+        self.insert(single_var, ScopeKind::Variable(var_ref.clone()));
+        return Ok(var_ref);
     }
 
     pub fn insert_this(&mut self, this: Spanned<SoulThis>) {
@@ -233,6 +237,19 @@ impl<T> InnerScopeBuilder<T> {
         self.current = self.scopes.len();
         self.scopes[parent_index].children.push(self.current);
         self.scopes.push(InnerScope::<T>::new_child(self.current, parent_index, scope_visability));
+    }
+
+    pub fn remove_current(&mut self, span: SoulSpan) {
+        let current = self.current;
+        if let Some(parent_index) = self.scopes[self.current].parent_index {
+            self.current = parent_index;
+            let self_index = self.scopes[parent_index].children.iter().enumerate().find(|(_i, el)| **el == current).unwrap().0;
+            self.scopes[parent_index].children.remove(self_index);
+        } 
+        else {
+            println!("{}", new_soul_error(SoulErrorKind::UnexpectedEnd, span, "can not remove global scope").to_err_message());
+            exit(1)
+        }
     }
 
     pub fn pop(&mut self, span: SoulSpan) {

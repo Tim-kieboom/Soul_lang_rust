@@ -304,9 +304,9 @@ array() {
 		2,
 	]
 
-	// arrayFiller := [for 5 => 0] //returns [0,0,0,0,0]
-	// arrayFiller_idx := [for i in 5 => i] // returns [1,2,3,4,5]
-	// arrayFiller_2D := [for 5 => [for 2 => 0]] //returns [[0,0],[0,0],[0,0],[0,0],[0,0]]
+	arrayFiller := [for 5 => 0] //returns [0,0,0,0,0]
+	arrayFiller_idx := [for i in 5 => i] // returns [1,2,3,4,5]
+	arrayFiller_2D := [for 5 => [for 2 => 0]] //returns [[0,0],[0,0],[0,0],[0,0],[0,0]]
 
 	map := MyHashMap[(str, i32):
 		("stuff",  1), 
