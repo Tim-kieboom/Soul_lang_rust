@@ -20,7 +20,6 @@ pub struct ScopeBuilder {
 #[derive(Debug, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct ProgramMemmoryId(pub usize);
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgramMemmory {
     pub store: BTreeMap<Literal, ProgramMemmoryId>,
@@ -68,6 +67,11 @@ pub struct InnerScope<T> {
 impl ScopeBuilder {
     pub fn new(type_stack: TypeScopeStack, external_header: ExternalHeader) -> Self {
         Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes, external_header }
+    }
+
+    pub fn __consume_to_tuple(self) -> (ScopeStack, Vec<TypeScope>, ProgramMemmory, ExternalHeader) {
+        let Self{scopes, types, global_literal, external_header} = self;
+        (scopes, types, global_literal, external_header)
     }
 
     pub fn get_scopes(&self) -> &InnerScopeBuilder<Vec<ScopeKind>> {
