@@ -176,7 +176,7 @@ pub fn inner_get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder, f
     }
 }
 
-fn parse_unwrap_pattern(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<HashMap<Ident, Option<Ident>>> {
+pub fn parse_unwrap_pattern(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<HashMap<Ident, Option<Ident>>> {
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
         new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get initialization of variable")
     }
@@ -247,7 +247,7 @@ fn parse_unwrap_pattern(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> 
     Ok(idents)
 }
 
-fn parse_union_binding(possible_types: &Option<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Ident> {
+pub fn parse_union_binding(possible_types: &Option<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Ident> {
     if possible_types.is_none() {
         return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "missing type"))
     }
@@ -258,7 +258,7 @@ fn parse_union_binding(possible_types: &Option<SoulType>, stream: &mut TokenStre
     Ok(Ident(stream[var_name_index].text.clone()))
 }
 
-fn get_variable_kind(var_kind: VarKind, ty: SoulType, scopes: &mut ScopeBuilder, lit_retention: Option<Spanned<ExprKind>>, initializer: Option<BoxExpr>) -> VariableKind {
+pub fn get_variable_kind(var_kind: VarKind, ty: SoulType, scopes: &mut ScopeBuilder, lit_retention: Option<Spanned<ExprKind>>, initializer: Option<BoxExpr>) -> VariableKind {
     match var_kind {
         VarKind::Variable(ident) |
         VarKind::UnionBinding(ident) => {
@@ -411,7 +411,7 @@ fn try_get_variable<'a>(possible_scopes: &'a Option<&Vec<ScopeKind>>) -> Option<
         })
 }
 
-enum VarKind {
+pub enum VarKind {
     Variable(Ident),
     Unwrap(HashMap<Ident, Option<Ident>>),
     UnionBinding(Ident),

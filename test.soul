@@ -32,6 +32,8 @@ union Num {
 	Int(int),
 	Uint(num: uint),
 	Float(f32),
+	Vec2(x: f32, y: f32),
+	Vec3(f32, f32, f32),
 }
 
 unionFunc() {
@@ -53,6 +55,9 @@ unionFunc() {
 	}
 	else if typeof Num::Uint(num: inner) = num {
 		Assert(inner typeof uint)
+	}
+	else if typeof Num::Vec2(x, y) = num {
+		Assert(x typeof f32 && y typeof f32) 
 	}
 
 	let fl = if typeof Num::Int(inner) = num {
@@ -78,26 +83,6 @@ unionFunc() {
 	if typeof Num::Int inner = @num {
 		Assert(inner typeof int@)
 	}
-
-	// match num {
-	// 	Num::None() => Println("none"),
-	// 	Num::Int(num) => Println(f"int({num})"),
-	// 	Num::Uint(num) => Println(f"uint({num})"),
-	// 	Num::Float(num) => Println(f"float({num})"),
-	// }
-
-	// match &num {
-	// 	Num::None() => Println("none"),
-	// 	Num::Int(num) => Println(f"int({num})"),
-	// 	Num::Uint(num) => Println(f"uint({num})"),
-	// 	Num::Float(num) => Println(f"float({num})"),
-	// }
-
-	// match @num {
-	// 	Num::Int(num) => Println(f"int({num})"),
-	// 	Num::Uint(num) => Println(f"uint({num})"),
-	// 	_ => Println("idk")
-	// }
 }
       
 
@@ -135,7 +120,7 @@ switch() {
 		val if val.0 < val.1 && val.1 < val.2 => Println("ordered"),
 		val if val.0 == val.1 && val.1 == val.2 => Println("eq"),
 		val if val.0 > val.1 && val.1 > val.2 => Println("rev ordered"),
-		_ => Println("not ordered"),
+		_ => Println("no order"),
 	}
 
 	// val := match 1 == 1 {
@@ -147,14 +132,33 @@ switch() {
 	// 	},
 	// }
 
-	// 	Num unionName = Num::Int(1)
-	// 	match unionName {
-	// 		Int(num) => Println(num),
-	// 		Uint(num) => Println(num),
-	// 		Float(num) => Println(num),
-	// 	} 
-}
+	Num unionName = Num::Int(1)
 
+	match @unionName {
+		Num::Int(num) => Println(num),
+		Num::Uint uintVariant => Println(uintVariant.num),
+		Num::Float(num) => Println(num),
+		Num::Vec2(x, y) => Println(x),
+		Num::Vec3(x, y, z) => Println(x),
+	} 
+
+	match &unionName {
+		Num::Int(num) => Println(num),
+		Num::Uint uintVariant => Println(uintVariant.num),
+		Num::Float(num) => Println(num),
+		Num::Vec2(x, y) => Println(x),
+		Num::Vec3(x, y, z) => Println(x),
+	} 
+
+	match unionName {
+		Num::Int(num) => Println(num),
+		Num::Uint uintVariant => Println(uintVariant.num),
+		Num::Float(num) => Println(num),
+		Num::Vec2(x, y) => Println(x),
+		Num::Vec3(x, y, z) => Println(x),
+	} 
+}
+ 
 class StrBuilder {
 	// static int runTimeStatic [Get;] = 1
 	Literal int compileTimeStatic [Get;] = 1 
@@ -528,52 +532,4 @@ struct Foo<T> {
 	str name
 	f32 float = 0.2
 	int foo [Get; set;] = 1
-	T generic
-}
-
-main() int {
-
-	sum(int a, int b) int {
-		return a + b 
-	}
-
-	for el in [1,2,3,4] {
-		Println(el)
-	} 
-
-	sum(1, 2)
-
-	sum(
-		1,
-		2
-	)
-
-	Println("hello world")
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	T 

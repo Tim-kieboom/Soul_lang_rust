@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
+use std::io::Empty;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
@@ -20,9 +21,9 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::so
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
 use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
-use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_var_decl};
+use crate::steps::parser::get_statments::parse_var_decl_assign::{get_assignment, get_assignment_with_var, get_unwrap_var, get_var_decl, get_variable_kind, parse_union_binding, parse_unwrap_pattern, VarKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{CaseDoKind, CaseSwitch, ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind, VariableDecl, VariableRef, STATMENT_ENDS};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{Block, CloseBlock, ReturnKind, ReturnLike, Statment, StmtKind, VariableDecl, VariableKind, VariableRef, STATMENT_ENDS};
 
 static ASSIGN_SYMBOOLS_SET: Lazy<HashSet<&&str>> = Lazy::new(|| {
     SOUL_NAMES.assign_symbools.iter().map(|(_, str)| str).collect::<HashSet<&&str>>()
@@ -469,6 +470,28 @@ fn get_switch_case(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resul
 
             let if_decl = Box::new(IfDecl{condition: if_condition, body: Block{statments: vec![]}, else_branchs: vec![]});
             Expression::new(ExprKind::If(if_decl), span)
+        }
+        else if stream.peek().is_some_and(|token| token.text == "::") {
+            let union_i = stream.current_index();
+            
+            let union_variant = Some(SoulType::from_stream(stream, scopes)?);
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            let var_kind = if stream.current_text() == "(" {
+                VarKind::Unwrap(parse_unwrap_pattern(stream, scopes)?)
+            }
+            else {
+                VarKind::UnionBinding(parse_union_binding(&union_variant, stream, scopes)?)
+            };
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+
+            let span = stream.current_span().combine(&stream[union_i].span);
+            Expression::new(ExprKind::UnwrapVarDecl(Box::new(get_variable_kind(var_kind, union_variant.unwrap(), scopes, None, Some(Box::new(Expression::new(ExprKind::Empty, SoulSpan::new(0,0,0))))))), span)
         }
         else if stream.current_text() == "_" {
             let expr = Expression::new(ExprKind::Default, stream.current_span());

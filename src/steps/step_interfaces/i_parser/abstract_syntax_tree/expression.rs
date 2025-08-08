@@ -208,14 +208,14 @@ impl ExprKind {
                     VariableKind::Variable(node_ref) => {
                         let node = node_ref.borrow();
                         format!(
-                            "{} {} = {}",
+                            "<unwrap>{} {} = {}",
                             node.ty.to_string(),
                             node.name.0,
                             node.initializer.as_ref().map(|init| init.node.to_string(tab)).unwrap_or(String::new())
                         )
                     },
                     VariableKind::MultiVariable{vars, ty, initializer, ..} => format!(
-                        "{}({}) = {}", 
+                        "<unwrap>{}({}) = {}", 
                         ty.to_string(), 
                         vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow().name.0.clone())).join(","),
                         initializer.as_ref().map(|init| init.node.to_string(tab)).unwrap_or(String::new()),
