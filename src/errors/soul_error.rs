@@ -107,13 +107,12 @@ impl SoulError {
         Self { kinds: vec![kind], spans: Vec::from([span]), msgs: Vec::from([msg]), backtrace }
     }
 
-    fn get_message_stack(&self) -> String {
+    fn get_message_stack(&self) -> Vec<String> {
         self.spans.iter()
             .zip(self.msgs.iter())
             .rev()
             .map(|(span, msg)| format!("at {}:{}; !!error!! {}", span.line_number, span.line_offset, msg))
             .collect::<Vec<_>>()
-            .join("\n")
     }
 
     pub fn get_kinds(&self) -> &Vec<SoulErrorKind> {
@@ -132,7 +131,7 @@ impl SoulError {
     }
 
     #[cfg(not(feature = "throw_result"))]
-    pub fn to_err_message(&self) -> String {
+    pub fn to_err_message(&self) -> Vec<String> {
         self.get_message_stack()
     }
 
@@ -170,8 +169,9 @@ impl SoulError {
     }
 
     #[cfg(feature = "throw_result")]
-    pub fn to_err_message(&self) -> String {
-        format!("{}\n\n{}", self.backtrace, self.get_message_stack())
+    pub fn to_err_message(&self) -> Vec<String> {
+        let mut stack = vec![self.backtrace.clone(), "\n", "\n"];
+        stack.extend_from_slice(self.get_message_stack());
     }
 
     #[cfg(feature = "throw_result")]

@@ -2,6 +2,7 @@ use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_s
 
 trait AstVisitable {
     fn visit_ast(&mut self, node: &mut AbstractSyntacTree);
+    
     fn visit_global_node(&mut self, node: &mut GlobalNode);
     fn visit_expression(&mut self, node: &mut Expression);
     fn visit_statment(&mut self, node: &mut Statment);

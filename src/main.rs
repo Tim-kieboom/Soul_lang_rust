@@ -3,8 +3,8 @@ extern crate soul_lang_rust;
 use itertools::Itertools;
 use threadpool::ThreadPool;
 use hsoul::subfile_tree::SubFileTree;  
-use std::{fs::{write, File}, io::{BufReader, Read}, path::Path, process::exit, sync::{mpsc::channel, Arc}, time::{Instant, SystemTime}};
-use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::{get_header::get_header, parse::parse_tokens}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::{pretty_format::PrettyFormat, soul_header_cache::{ModifiedDate, SoulHeaderCache}}, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
+use std::{fs::{write, File}, io::{stderr, BufReader, Read}, path::Path, process::exit, sync::{mpsc::channel, Arc}, time::{Instant, SystemTime}};
+use soul_lang_rust::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::{get_header::get_header, parse::parse_tokens}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::{pretty_format::PrettyFormat, soul_header_cache::{ModifiedDate, SoulHeaderCache}}, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::{LogLevel, LogMode, Logger}};
 
 fn main() {
 
@@ -13,51 +13,77 @@ fn main() {
         Err(msg) => {eprintln!("!!invalid compiler argument!!\n{msg}"); return;},
     };
 
+    let inner_logger = if let Some(path) = &run_option.log_path {
+        match Logger::with_file_path(path, run_option.log_mode, run_option.log_level) {
+            Ok(val) => val,
+            Err(err) => {eprintln!("while trying to get file based logger: {err}"); return},
+        }
+    }
+    else {
+        Logger::new(stderr(), run_option.log_mode, run_option.log_level)
+    };
+
+    let logger = Arc::new(inner_logger);
     let start = Instant::now();
 
     if let Err(err) = create_output_dir(&run_option) {
-        eprintln!("{}", err.to_string());
+        logger.error(err.to_string());
         return;
     }
     
-    if !parse_and_cache_files(&run_option) {
+    if !parse_and_cache_files(&run_option, &logger) {
         return;
     }
 
+    // let faults = generate_code(&run_option);
+
+    // for fault in faults {
+    //     let is_error = fault.is_error();
+    //     let inner = fault.consume(); 
+    // }
+
     if run_option.show_times.contains(ShowTimes::SHOW_TOTAL) {
-        println!("Total time: {:.2?}", start.elapsed());
+        logger.info(format!("Total time: {:.2?}", start.elapsed()));
     }
 }
 
-fn create_output_dir(run_option: &RunOptions) -> std::io::Result<()> {
-    std::fs::create_dir_all(format!("{}/steps", &run_option.output_dir))?;
-    std::fs::create_dir_all(format!("{}/parsedIncremental", &run_option.output_dir))
-}
+// fn generate_code(run_option: &Arc<RunOptions>) -> Vec<SoulFault> {
 
-fn parse_and_cache_files(run_option: &Arc<RunOptions>) -> bool {
+// }
+
+fn parse_and_cache_files(run_option: &Arc<RunOptions>, logger: &Arc<Logger>) -> bool {
     let mut no_errors = true;
     if !run_option.sub_tree_path.is_empty() {
 
-        if let Err(err) = parse_and_cache_all_subfiles(run_option.clone()) {
-            eprintln!("{}", err.to_err_message()); 
+        if let Err(err) = parse_and_cache_all_subfiles(run_option.clone(), logger) {
+            for line in err.to_err_message() {
+                logger.error(line);
+            } 
             no_errors = false;
         }
     }
 
-    if let Err(err) = parse_and_cache_file(run_option.clone(), Path::new(&run_option.file_path)) {
+    if let Err(err) = parse_and_cache_file(run_option.clone(), Path::new(&run_option.file_path), logger.clone()) {
         let (reader, _) = get_file_reader(Path::new(&run_option.file_path)).main_err_map("while trying to get file reader")
-            .inspect_err(|err| {eprintln!("{}", err.to_err_message()); exit(1);}).unwrap();
+            .inspect_err(|err| {
+                for line in err.to_err_message() {
+                    logger.error(line);
+                } 
+                exit(1);
+            }).unwrap();
 
-        eprintln!("---------------------------------------------");  
-        eprintln!("at line:col; !!error!! message\n\n{}\n", err.to_err_message());        
-        eprintln!("{}", err.to_highlighed_message(reader));        
+        logger.error("---------------------------------------------");
+        for line in err.to_err_message() {
+            logger.error(line);
+        } 
+        logger.error(format!("\n{}", err.to_highlighed_message(reader)));
         no_errors = false;
     }
 
     return no_errors;
 }
 
-fn parse_and_cache_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
+fn parse_and_cache_all_subfiles(run_option: Arc<RunOptions>, logger: &Arc<Logger>) -> Result<()> {
     let sub_tree = SubFileTree::from_bin_file(Path::new(&run_option.sub_tree_path))
         .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, SoulSpan::new(0,0,0), format!("!!internal error!! while trying to get subfilesTree\n{}", msg.to_string())))?;
     
@@ -71,8 +97,9 @@ fn parse_and_cache_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
         let sender = sender.clone();
         let run_option = run_option.clone();
 
+        let log = logger.clone();
         pool.execute(move || {
-            let result = parse_and_cache_file(run_option, Path::new(&file));
+            let result = parse_and_cache_file(run_option, Path::new(&file), log);
             sender.send((result, file)).expect("channel receiver should be alive");
         });
     }
@@ -88,14 +115,17 @@ fn parse_and_cache_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
     }
 
     if !errors.is_empty() {
-        eprintln!("at line:col; !!error!! message\n");        
+        logger.error("at line:col; !!error!! message\n");        
         for (err, file) in errors {
             let (reader, _) = get_file_reader(Path::new(&file)).main_err_map("while trying to get file reader")
-                .inspect_err(|err| panic!("{}", err.to_err_message())).unwrap();
+                .inspect_err(|err| panic!("{}", err.to_err_message().join("\n"))).unwrap();
             
-            eprintln!("---------------------------------------------");  
-            eprintln!("at subfile '{}':\n{}", file, err.to_err_message());  
-            eprintln!("\n{}\n", err.to_highlighed_message(reader));                
+            logger.error("---------------------------------------------");  
+            logger.error(format!("at subfile '{}':", file));
+            for line in err.to_err_message() {
+                logger.error(line);
+            }
+            logger.error(format!("\n{}\n", err.to_highlighed_message(reader)));                
         }
         exit(1)
     }
@@ -103,7 +133,7 @@ fn parse_and_cache_all_subfiles(run_option: Arc<RunOptions>) -> Result<()> {
     Ok(())
 }
 
-fn parse_and_cache_file(run_option: Arc<RunOptions>, file_path: &Path) -> Result<()> {
+fn parse_and_cache_file(run_option: Arc<RunOptions>, file_path: &Path, logger: Arc<Logger>) -> Result<()> {
 
     fn _is_cache_up_to_date(cache: Option<ModifiedDate>, date: SystemTime) -> bool {
         cache.is_some_and(|cache| cache.source_date == date)
@@ -118,19 +148,24 @@ fn parse_and_cache_file(run_option: Arc<RunOptions>, file_path: &Path) -> Result
         
         #[cfg(not(debug_assertions))]
         if _is_cache_up_to_date(_cache_date, _date) {
-            println!("using cache for file: {}", file_path.to_str().unwrap());
+            logger.info(format!("using cache for file: {}", file_path.to_str().unwrap()));
             return Ok(());
         }
     }
 
-    let source_response = source_reader(reader, &run_option).main_err_map("in source_reader")?;
-    let token_response = tokenizer(source_response, &run_option).main_err_map("in tokenizer")?;
-    let parser_response = parser(token_response, &run_option).main_err_map("in parser")?;
+    let source_response = source_reader(reader, &run_option, &logger).main_err_map("in source_reader")?;
+    let token_response = tokenizer(source_response, &run_option, &logger).main_err_map("in tokenizer")?;
+    let parser_response = parser(token_response, &run_option, &logger).main_err_map("in parser")?;
 
     cache_parser(parser_response, &run_option, file_path)
         .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, SoulSpan::new(0,0,0), format!("!!internal error!! while trying to cache parsed file\n{}", msg.to_string())))?;
 
     Ok(())
+}
+
+fn create_output_dir(run_option: &RunOptions) -> std::io::Result<()> {
+    std::fs::create_dir_all(format!("{}/steps", &run_option.output_dir))?;
+    std::fs::create_dir_all(format!("{}/parsedIncremental", &run_option.output_dir))
 }
 
 fn get_cache_path(run_option: &RunOptions, file_path: &Path) -> String {
@@ -150,13 +185,13 @@ fn cache_parser(parser_response: ParserResponse, run_option: &RunOptions, file_p
     Ok(())
 }
 
-fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Result<SourceFileResponse> {
+fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions, logger: &Arc<Logger>) -> Result<SourceFileResponse> {
     let tab_as_spaces = " ".repeat(run_option.tab_char_len as usize);
     
     let start = Instant::now(); 
     let source_file = read_source_file(reader, &tab_as_spaces)?;
     if run_option.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
-        println!("source_reader time: {:.2?}", start.elapsed());
+        logger.info(format!("source_reader time: {:.2?}", start.elapsed()));
     }
 
     if run_option.show_outputs.contains(ShowOutputs::SHOW_SOURCE) {
@@ -171,19 +206,19 @@ fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions) -> Resu
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
 
         if run_option.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
-            println!("source_reader showOutput time: {:.2?}", start.elapsed());
+            logger.info(format!("source_reader showOutput time: {:.2?}", start.elapsed()));
         }
     }
 
     Ok(source_file)
 }
 
-fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result<TokenizeResonse> {
+fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions, logger: &Logger) -> Result<TokenizeResonse> {
     
     let start = Instant::now(); 
     let token_stream = tokenize(source_file)?;
     if run_option.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
-        println!("tokenizers time: {:.2?}", start.elapsed());
+        logger.info(format!("tokenizers time: {:.2?}", start.elapsed()));
     }
 
     if run_option.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {
@@ -199,19 +234,19 @@ fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions) -> Result
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
 
         if run_option.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
-            println!("tokenizers showOutput time: {:.2?}", start.elapsed());
+            logger.info(format!("tokenizers showOutput time: {:.2?}", start.elapsed()));
         }
     }
 
     Ok(token_stream)
 }
 
-fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<ParserResponse> {
+fn parser(token_response: TokenizeResonse, run_option: &RunOptions, logger: &Arc<Logger>) -> Result<ParserResponse> {
     
     let start = Instant::now(); 
     let parse_response = parse_tokens(token_response)?;
     if run_option.show_times.contains(ShowTimes::SHOW_PARSER) {
-        println!("parser time: {:.2?}", start.elapsed());
+        logger.info(format!("parser time: {:.2?}", start.elapsed()));
     }
 
     if run_option.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
@@ -226,7 +261,7 @@ fn parser(token_response: TokenizeResonse, run_option: &RunOptions) -> Result<Pa
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
         
         if run_option.show_times.contains(ShowTimes::SHOW_PARSER) {
-            println!("parser showOutput time: {:.2?}", start.elapsed());
+            logger.info(format!("parser showOutput time: {:.2?}", start.elapsed()));
         }
     }
     

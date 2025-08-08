@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::TypeKind, scope::{ScopeKind}};
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Header {

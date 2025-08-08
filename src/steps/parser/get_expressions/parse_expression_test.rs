@@ -34,7 +34,7 @@ fn test_simple_literal() {
     let mut scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Int(42))
@@ -42,7 +42,7 @@ fn test_simple_literal() {
 
     stream = stream_from_strs(&["-42", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Int(-42))
@@ -51,7 +51,7 @@ fn test_simple_literal() {
     stream = stream_from_strs(&["4.2", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Float(OrderedFloat(4.2)))
@@ -60,7 +60,7 @@ fn test_simple_literal() {
     stream = stream_from_strs(&["0b11010", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Uint(0b11010))
@@ -69,7 +69,7 @@ fn test_simple_literal() {
     stream = stream_from_strs(&["0xfa13", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Uint(0xfa13))
@@ -78,7 +78,7 @@ fn test_simple_literal() {
     stream = stream_from_strs(&["'c'", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Char('c'))
@@ -87,7 +87,7 @@ fn test_simple_literal() {
     stream = stream_from_strs(&["true", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Bool(true))
@@ -96,7 +96,7 @@ fn test_simple_literal() {
     stream = stream_from_strs(&["'c'", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Char('c'))
@@ -115,7 +115,7 @@ fn test_complex_literal() {
     let mut scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::Str("string".into()))
@@ -130,7 +130,7 @@ fn test_complex_literal() {
     ]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_0".into()), LiteralType::Array(Box::new(LiteralType::Int))))
@@ -154,7 +154,7 @@ fn test_complex_literal() {
     scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_0".into()), LiteralType::Tuple(vec![
@@ -176,7 +176,7 @@ fn test_complex_literal() {
     scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_0".into()), LiteralType::NamedTuple(BTreeMap::from([
@@ -195,7 +195,7 @@ fn test_simple_binary() {
     let mut scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
 
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let res = result.unwrap();
 
     let should_be = Expression::new(
@@ -212,7 +212,7 @@ fn test_simple_binary() {
     stream = stream_from_strs(&["1", "==", "2", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
 
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let res = result.unwrap();
 
     let should_be = Expression::new(
@@ -229,7 +229,7 @@ fn test_simple_binary() {
     stream = stream_from_strs(&["\"hello \"", "+", "\"world\"", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
 
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let res = result.unwrap();
 
     let should_be = Expression::new(
@@ -276,7 +276,7 @@ fn test_multiple_binary() {
     let mut scope = empty_scope();
     let mut stream = stream_from_strs(&["(","1", "+", "2", ")", "*", "3", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     // (1 + 2) * 3
     let should_be = Expression::new(ExprKind::Binary(BinaryExpr::new(
@@ -303,7 +303,7 @@ fn test_multiple_binary() {
 
     stream = stream_from_strs(&["(","1", "+", "2", "*", "3", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     // (1 + (2 * 3))
     let should_be = Expression::new(ExprKind::Binary(BinaryExpr::new(
@@ -335,7 +335,7 @@ fn test_simple_unary() {
     let mut stream = stream_from_strs(&["!", "true", "\n"]);
     let mut scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     let should_be = Expression::new(
         ExprKind::Unary(UnaryExpr{
@@ -354,7 +354,7 @@ fn test_simple_unary() {
 
     stream = stream_from_strs(&["-", "1", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     let should_be = Expression::new(
         ExprKind::Unary(UnaryExpr{
@@ -372,7 +372,7 @@ fn test_simple_unary() {
 
     stream = stream_from_strs(&["(","-", "2", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     let should_be = ExprKind::Unary(UnaryExpr{
         operator: UnaryOp::new(UnaryOpKind::Neg, SoulSpan::new(0,1,1)), 
@@ -386,7 +386,7 @@ fn test_simple_unary() {
 
     stream = stream_from_strs(&["++", "1", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     let should_be =  Expression::new(
         ExprKind::Unary(UnaryExpr{
@@ -404,7 +404,7 @@ fn test_simple_unary() {
 
     stream = stream_from_strs(&["2", "++", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     let should_be =  Expression::new(
         ExprKind::Unary(UnaryExpr{
@@ -426,7 +426,7 @@ fn test_unary_in_binary() {
     let mut stream = stream_from_strs(&["-", "1", "+", "8", "\n"]);
     let mut scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     let should_be = ExprKind::Binary(BinaryExpr::new(
         Expression::new(ExprKind::Unary(UnaryExpr{
@@ -449,7 +449,7 @@ fn test_unary_in_binary() {
 
     stream = stream_from_strs(&["(", "-", "1", ")", "+", "8", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
     let should_be = ExprKind::Binary(BinaryExpr::new(
         Expression::new(ExprKind::Unary(UnaryExpr{
@@ -577,7 +577,7 @@ fn test_group_expressions() {
         Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
     ];
 
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Array(Array{collection_type: None, element_type: None, values: values.clone()})
@@ -616,7 +616,7 @@ fn test_group_expressions() {
         ),
     ];
 
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Array(Array{collection_type: None, element_type: None, values: values.clone()})
@@ -641,7 +641,7 @@ fn test_group_expressions() {
         Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
     ];
 
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Tuple(Tuple{values: values.clone()})
@@ -667,7 +667,7 @@ fn test_group_expressions() {
         ),
     ];
 
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::Tuple(Tuple{values: values.clone()})
@@ -691,7 +691,7 @@ fn test_group_expressions() {
         (Ident("field3".into()), Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,30,1))),
     ]);
 
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::NamedTuple(NamedTuple{values: values.clone(), object_type: None })
@@ -714,7 +714,7 @@ fn test_group_expressions() {
         (Ident("field3".into()), Expression::new(ExprKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::NamedTuple(BTreeMap::from([(Ident("field".into()), LiteralType::Int)])))), SoulSpan::new(0,38,1))),
     ]);
 
-    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExprKind::NamedTuple(NamedTuple{values: values.clone(), object_type: None })
@@ -743,7 +743,7 @@ fn test_function_call() {
 
     let mut stream = stream_from_strs(&["Println", "(", "\"hello world\"" ,")" , "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let should_be = Expression::new(
         ExprKind::Call(FnCall{
             callee: None, 
@@ -761,7 +761,7 @@ fn test_function_call() {
     
     stream = stream_from_strs(&["sum", "(", "1", ",", "2", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let should_be = Expression::new(
         ExprKind::Call(FnCall{
             callee: None, 
@@ -780,7 +780,7 @@ fn test_function_call() {
 
     stream = stream_from_strs(&["sum", "()", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let should_be = Expression::new(
         ExprKind::Call(FnCall{
             callee: None, 
@@ -796,7 +796,7 @@ fn test_function_call() {
 
     stream = stream_from_strs(&["sum", "(", "one", "=", "1", ",", "two", "=", "2", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let should_be = Expression::new(
         ExprKind::Call(FnCall{
             callee: None, 
@@ -815,7 +815,7 @@ fn test_function_call() {
 
     stream = stream_from_strs(&["sum", "(", "1", ",", "two", "=", "2", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let should_be = Expression::new(
         ExprKind::Call(FnCall{
             callee: None, 
@@ -834,7 +834,7 @@ fn test_function_call() {
 
     stream = stream_from_strs(&["sum", "(", "one", "=", "1", ",", "2", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message());
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let should_be = Expression::new(
         ExprKind::Call(FnCall{
             callee: None, 
@@ -853,13 +853,13 @@ fn test_function_call() {
     stream = stream_from_strs(&["sum", "(", "1", ",", "2", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
-    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::UnexpectedEnd, "{}", not_closing_fn.unwrap_err().to_err_message());
+    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::UnexpectedEnd, "{}", not_closing_fn.unwrap_err().to_err_message().join("\n"));
 
 
     stream = stream_from_strs(&["sum", "(", "1", ",", "name", ":", ")", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
-    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::ArgError, "{}", not_closing_fn.unwrap_err().to_err_message());
+    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::ArgError, "{}", not_closing_fn.unwrap_err().to_err_message().join("\n"));
 }
 
 // #[test]

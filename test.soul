@@ -196,7 +196,7 @@ class StrBuilder {
 		this.buffer = ""
 	}
 
-	Len(this@) uint {
+	Len(this@) uint2 {
 		return this.buffer.Len()
 	}
 

@@ -5,6 +5,8 @@ use std::env::Args;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
+use crate::utils::logger::{LogLevel, LogMode};
+
 use super::show_times::ShowTimes;
 use super::show_output::ShowOutputs;
 
@@ -18,6 +20,9 @@ pub struct RunOptions {
     pub tab_char_len: u32,
     pub command: String,
     pub sub_tree_path: String,
+    pub log_path: Option<String>,
+    pub log_level: LogLevel,
+    pub log_mode: LogMode
 } 
 
 type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send + Sync + 'static>;
@@ -77,7 +82,31 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
                 options.sub_tree_path = input.into();
                 Ok(())
             }) as ArgFunc
-        )
+        ),
+        (
+            "--logPath",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_path = Some(input.into());
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--logLevel",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_level = LogLevel::from_str(input);
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--logMode",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_mode = LogMode::from_str(input)?;
+                Ok(())
+            }) as ArgFunc
+        ),
     ])
 });
 
@@ -94,7 +123,10 @@ impl RunOptions {
             output_dir: "output".to_string(),
             tab_char_len: 4,
             command: "".into(),
-            sub_tree_path: "".into()
+            sub_tree_path: "".into(),
+            log_level: LogLevel::Any,
+            log_mode: LogMode::ShowAll,
+            log_path: None,
         };
 
         let mut args = _args.collect::<Vec<_>>();
@@ -177,29 +209,37 @@ have fun :).
     Commands:
         build           info: Compile the selected file
         help            info: prints this list you are reading
-
     
     Options:
         to call flag you do '-flag'
         to call arg you do '--option=arg1'
         to chain args together you do '--option=arg1+arg2'
 
-        --showOutput     info: select which steps in the compiler gets show to use in output folder (e.g. tokenizer, AST, ect..)
-                        args: (Default)SHOW_NONE, SHOW_SOURCE, SHOW_TOKENIZER, SHOW_ABSTRACT_SYNTAX_TREE, SHOW_CPP_CONVERTION, SHOW_ALL 
+        --showOutput    info: select which steps in the compiler gets show to use in output folder (e.g. tokenizer, AST, ect..)
+                        args(chainable): (Default)SHOW_NONE, SHOW_SOURCE, SHOW_TOKENIZER, SHOW_ABSTRACT_SYNTAX_TREE, SHOW_CPP_CONVERTION, SHOW_ALL 
 
         -prettyCppCode  info: make c++ output human readable (no arguments its just a flag)
 
-        --showTime       info: select which steps in the compiler gets timed and this time printed on screan
-                        args: SHOW_NONE, (Default)SHOW_TOTAL, SHOW_SOURCE_READER, SHOW_TOKENIZER, SHOW_PARSER, SHOW_CODE_GENERATOR, SHOW_ALL 
+        --showTime      info: select which steps in the compiler gets timed and this time printed on screan
+                        args(chainable): SHOW_NONE, (Default)SHOW_TOTAL, SHOW_SOURCE_READER, SHOW_TOKENIZER, SHOW_PARSER, SHOW_CODE_GENERATOR, SHOW_ALL 
         
-        --tabCharLen     info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will display the wrong char
+        --tabCharLen    info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will display the wrong char
                         args: (Deafult)4, <any positive interger> 
 
-        --outputDir      info: the path of the output folder
+        --outputDir     info: the path of the output folder
                         args: (Default)<empty>, <any path>
         
-        --subtreePath    info: .bin file describing the subfile structure of the project if empty no subfiles
+        --subtreePath   info: .bin file describing the subfile structure of the project if empty no subfiles
                         args: (Default)<empty>, <any path>
+
+        --logPath       info: if not empty logs to file of given filePath instead of terminal
+                        args: (Default)<empty>, <any path>
+        
+        --logLevel      info: the lowest level that will be show
+                        args: (Default)ANY, ERROR, WARNING, INFO, DEBUG  
+
+        --logMode       info: what info will be show when a massage in printed 
+                        args(chainable): (Default)SHOW_ALL, SHOW_DATE, SHOW_LEVEL  
 ";
 
     println!("{}", HELP_ARGS_LIST);

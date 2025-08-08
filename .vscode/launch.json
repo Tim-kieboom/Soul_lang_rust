@@ -12,9 +12,9 @@
                 "args": [
                     "build",
                     "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust",
-                    "--features",
-                    "dev_mode"
+                    "--package=soul_lang_rust"
+                    // "--features",
+                    // "dev_mode"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",
@@ -27,6 +27,7 @@
                 "--showOutput=SHOW_ALL",
                 "--showTime=SHOW_ALL",
                 "--tabCharLen=4",
+                "--logMode=SHOW_LEVEL",
                 "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"

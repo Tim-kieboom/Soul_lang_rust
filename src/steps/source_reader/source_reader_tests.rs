@@ -79,7 +79,7 @@ fn should_source_reader_work() {
 	let amount_of_spaces_in_tab = 4;
 	let reader = BufReader::new(Cursor::new(TEST_FILE.as_bytes()));
 	let source_file = read_source_file(reader, &" ".repeat(amount_of_spaces_in_tab))
-		.inspect_err(|err| panic!("{}", err.to_err_message()))
+		.inspect_err(|err| panic!("{}", err.to_err_message().join("\n")))
 		.unwrap();
 
 	let file = source_file.source_file.iter().map(|file_line| &file_line.line).join("\n");

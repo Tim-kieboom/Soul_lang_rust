@@ -251,7 +251,7 @@ impl<T> InnerScopeBuilder<T> {
             self.scopes[parent_index].children.remove(self_index);
         } 
         else {
-            println!("{}", new_soul_error(SoulErrorKind::UnexpectedEnd, span, "can not remove global scope").to_err_message());
+            println!("{}", new_soul_error(SoulErrorKind::UnexpectedEnd, span, "can not remove global scope").to_err_message().join("\n"));
             exit(1)
         }
     }
@@ -260,7 +260,7 @@ impl<T> InnerScopeBuilder<T> {
         if let Some(parent_index) = self.scopes[self.current].parent_index {
             self.current = parent_index;
         } else {
-            println!("{}", new_soul_error(SoulErrorKind::UnmatchedParenthesis, span, "somewhere in program there is a '}}' without a '{{' (probably near the '}}' before this one)").to_err_message());
+            println!("{}", new_soul_error(SoulErrorKind::UnmatchedParenthesis, span, "somewhere in program there is a '}}' without a '{{' (probably near the '}}' before this one)").to_err_message().join("\n"));
             exit(1)
         }
     }

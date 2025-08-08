@@ -46,7 +46,7 @@ fn does_format_str_line_work() {
     
     for line in &source_file {
         let result = format_string(line.clone());
-        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
+        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message().join("\n"));
         results.push(result.unwrap());
     }
 
