@@ -170,8 +170,9 @@ impl SoulError {
 
     #[cfg(feature = "throw_result")]
     pub fn to_err_message(&self) -> Vec<String> {
-        let mut stack = vec![self.backtrace.clone(), "\n", "\n"];
-        stack.extend_from_slice(self.get_message_stack());
+        let mut stack = vec![format!("\n{}\n", self.backtrace.clone())];
+        stack.extend_from_slice(self.get_message_stack().as_slice());
+        stack
     }
 
     #[cfg(feature = "throw_result")]

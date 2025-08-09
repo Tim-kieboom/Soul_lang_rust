@@ -8,7 +8,7 @@ use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::parser_response::ParserResponse;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::parser::forward_type_stack::get_type_stack::forward_declarde_type_stack;
-use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ProgramMemmory, ScopeBuilder, ScopeKind};
+use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ProgramMemmory, ScopeBuilder, ScopeKind, SoulPagePath};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, StatmentBuilder};
@@ -29,12 +29,14 @@ pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>) 
             .collect::<Vec<(usize, &str)>>()
     );
 
-    let external_pages = if let Some(files) = sub_files {
+    let mut external_pages = if let Some(files) = sub_files {
         ExternalPages::from_files(files.iter())
     }
     else {
         ExternalPages::new()
     };
+
+    load_std_libs(&mut external_pages);
 
     let mut scopes = ScopeBuilder::new(type_stack, external_pages);
     let mut scope_ref = StatmentBuilder::Global(NodeRef::new(tree.root));    
@@ -74,6 +76,22 @@ pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>) 
 
     Ok(ParserResponse{tree, scopes})
 }
+
+fn load_std_libs(external_pages: &mut ExternalPages) {
+    external_pages.store.insert(SoulPagePath("std::fmt".into()));
+    external_pages.store.insert(SoulPagePath("std::test".into()));
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 

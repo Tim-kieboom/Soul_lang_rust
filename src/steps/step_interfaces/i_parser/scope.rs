@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::{BTreeMap, HashMap}, path::{Component, PathBuf}, process::exit};
+use std::{collections::{BTreeMap, HashMap, HashSet}, path::{Component, Path, PathBuf}, process::exit};
 use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}}, utils::{node_ref::NodeRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
@@ -13,7 +13,7 @@ pub struct ScopeBuilder {
     scopes: ScopeStack,
     types: Vec<TypeScope>,
     pub global_literal: ProgramMemmory,
-    pub external_books: ExternalPages,
+    pub external_pages: ExternalPages,
 }
 
 #[derive(Debug, Hash, Clone, Copy, Serialize, Deserialize)]
@@ -56,7 +56,7 @@ impl SoulPagePath {
             
             if let Component::Normal(os_str) = component {
                 if soul_path.len() > 0 {
-                    soul_path.push('.');
+                    soul_path.push_str("::");
                 }
 
                 if components.peek().is_none() {
@@ -75,22 +75,31 @@ impl SoulPagePath {
 
         Self(soul_path)
     } 
+
+    pub fn to_path(&self) -> PathBuf {
+        let mut path = PathBuf::new();
+
+        for token in self.0.split("::") {
+            path.push(Path::new(token));
+        }
+        path
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalPages {
-    pub store: HashMap<SoulPagePath, String>
+    pub store: HashSet<SoulPagePath>
 }
 
 impl ExternalPages {
-    pub fn new() -> Self {
-        Self{store: HashMap::new()}
+    pub fn new() -> Self { 
+        Self{store: HashSet::new()}
     }
 
     pub fn from_files<'a, I: Iterator<Item = &'a PathBuf>>(sub_files: I) -> Self {
         let mut this = Self::new();
         for file in sub_files {
-            this.store.insert(SoulPagePath::from_path(file), file.to_string_lossy().to_string());
+            this.store.insert(SoulPagePath::from_path(file));
         }
 
         this
@@ -116,16 +125,20 @@ pub struct InnerScope<T> {
 
 impl ScopeBuilder {
     pub fn new(type_stack: TypeScopeStack, external_books: ExternalPages) -> Self {
-        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes, external_books }
+        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes, external_pages: external_books }
     }
 
     pub fn __consume_to_tuple(self) -> (ScopeStack, Vec<TypeScope>, ProgramMemmory, ExternalPages) {
-        let Self{scopes, types, global_literal, external_books} = self;
+        let Self{scopes, types, global_literal, external_pages: external_books} = self;
         (scopes, types, global_literal, external_books)
     }
 
     pub fn get_scopes(&self) -> &InnerScopeBuilder<Vec<ScopeKind>> {
         &self.scopes
+    }
+
+    pub fn is_external_header(&self, path: &SoulPagePath) -> bool {
+        self.external_pages.store.contains(path)
     }
 
     pub fn get_types(&self) -> &Vec<InnerScope<TypeKind>> {

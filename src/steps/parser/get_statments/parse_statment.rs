@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
+use crate::steps::parser::soul_type::get_soul_type::FromWithPath;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::parser::get_statments::parse_class::get_class;
 use crate::steps::parser::get_statments::parse_trait::get_trait;
@@ -17,7 +18,7 @@ use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, Sc
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
-use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options};
+use crate::steps::parser::get_expressions::parse_expression::{get_expression, get_expression_options, get_page_path};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::StatmentBuilder;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::conditionals::{CaseDoKind, CaseSwitch, ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl};
@@ -164,64 +165,11 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
     let has_valid_type = possible_res_type.as_ref().is_some_and(|res| res.is_ok());
 
     if let Some(result_ty) = possible_res_type {
-        let _ty = result_ty?;
+        let _ = result_ty?;
 
-        let peek1_token = stream.peek()
-            .ok_or(err_out_of_bounds(stream))?;
-
-        if peek1_token.text == "(" {
-            stream.go_to_index(first_type_i);
-            let unwrap_var_decl = get_var_decl(stream, scopes)?;
-            return Ok(Some(
-                Statment::from_kind(
-                    unwrap_var_decl.node, 
-                    unwrap_var_decl.span
-                )
-            ))
-        }
-
-        let peek2_token = stream.peek_multiple(2)
-            .ok_or(err_out_of_bounds(stream))?;
-
-        if peek2_token.text == "(" {
-            stream.go_to_index(first_type_i);
-            let func = get_function_decl(None, stream, scopes)?;
-            scopes.add_function(&func.node);
-            return Ok(Some(func.node.consume_to_statment(func.span)));
-        }
-        else if peek2_token.text == "=" || STATMENT_ENDS.iter().any(|sym| sym == &peek2_token.text) {
-            stream.go_to_index(first_type_i);
-            let var = get_var_decl(stream, scopes)?;
-            return Ok(Some(
-                Statment::from_kind(
-                    var.node, 
-                    var.span
-                ))
-            );
-        }
-
-        let symbool_index = if peek2_token.text == ">" {
-            let begin_gen_i = stream.current_index();
-            get_symbool_after_generic(stream, begin_gen_i)?;
-            let sym = stream.current_index();
-            
-            stream.go_to_index(begin_gen_i);
-            sym
-        }
-        else {
-            stream.current_index()
-        };
-
-        let symbool = &stream[symbool_index].text;
-        if symbool == "=" || STATMENT_ENDS.iter().any(|sym| sym == symbool) {
-            stream.go_to_index(first_type_i);
-            let var = get_var_decl(stream, scopes)?;
-            return Ok(Some(
-                Statment::from_kind(
-                    var.node, 
-                    var.span
-                ))
-            );
+        match try_get_from_type(first_type_i, stream, scopes)? {
+            Some(val) => return Ok(Some(val)),
+            None => (),
         }
     }
     else if Modifier::from_str(stream.current_text()) != Modifier::Default || stream.current_text() == "let" {
@@ -263,6 +211,23 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             );
         }
     }
+    else if stream.peek().is_some_and(|token| token.text == "::")  {
+        
+        let first_type_i = stream.current_index();
+        match get_expression(stream, scopes, STATMENT_ENDS) {
+            Ok(val) => return Ok(Some(Statment::new(StmtKind::ExprStmt(val), stream.current_span().combine(&stream[first_type_i].span)))),
+            Err(_) => (),
+        }
+        
+        stream.go_to_index(first_type_i);
+        SoulType::from_stream_with_path(stream, scopes)?;
+
+        match try_get_from_type(first_type_i, stream, scopes)? {
+            Some(val) => return Ok(Some(val)),
+            None => (),
+        }
+    }
+
 
     let type_i = stream.current_index();
     let peek_i: i64 = if SoulType::from_stream(stream, scopes).is_ok() {
@@ -332,7 +297,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                 FunctionKind::FunctionCall => {
                     stream.go_to_index(begin_i);
                     let expr = get_expression(stream, scopes, STATMENT_ENDS)?;
-                    if !matches!(expr.node, ExprKind::Call(..)) {
+                    if !matches!(expr.node, ExprKind::Call(..)) && !matches!(expr.node, ExprKind::ExternalExpression(_)) {
                         return Err(new_soul_error(SoulErrorKind::InternalError, expr.span, format!("internal error get_expression in function call did not return function call, expr: '{}'", expr.node.to_string(0))))
                     }
 
@@ -368,6 +333,68 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
     let assign = get_assignment(stream, scopes)?;
     return Ok(Some(Statment::new(StmtKind::Assignment(assign.node), assign.span)));
+}
+
+fn try_get_from_type(first_type_i: usize, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statment>> {
+    let peek1_token = stream.peek()
+        .ok_or(err_out_of_bounds(stream))?;
+
+    if peek1_token.text == "(" {
+        stream.go_to_index(first_type_i);
+        let unwrap_var_decl = get_var_decl(stream, scopes)?;
+        return Ok(Some(
+            Statment::from_kind(
+                unwrap_var_decl.node, 
+                unwrap_var_decl.span
+            )
+        ))
+    }
+
+    let peek2_token = stream.peek_multiple(2)
+        .ok_or(err_out_of_bounds(stream))?;
+
+    if peek2_token.text == "(" {
+        stream.go_to_index(first_type_i);
+        let func = get_function_decl(None, stream, scopes)?;
+        scopes.add_function(&func.node);
+        return Ok(Some(func.node.consume_to_statment(func.span)));
+    }
+    else if peek2_token.text == "=" || STATMENT_ENDS.iter().any(|sym| sym == &peek2_token.text) {
+        stream.go_to_index(first_type_i);
+        let var = get_var_decl(stream, scopes)?;
+        return Ok(Some(
+            Statment::from_kind(
+                var.node, 
+                var.span
+            ))
+        );
+    }
+
+    let symbool_index = if peek2_token.text == ">" {
+        let begin_gen_i = stream.current_index();
+        get_symbool_after_generic(stream, begin_gen_i)?;
+        let sym = stream.current_index();
+        
+        stream.go_to_index(begin_gen_i);
+        sym
+    }
+    else {
+        stream.current_index()
+    };
+
+    let symbool = &stream[symbool_index].text;
+    if symbool == "=" || STATMENT_ENDS.iter().any(|sym| sym == symbool) {
+        stream.go_to_index(first_type_i);
+        let var = get_var_decl(stream, scopes)?;
+        return Ok(Some(
+            Statment::from_kind(
+                var.node, 
+                var.span
+            ))
+        );
+    }
+
+    return Ok(None);
 }
 
 fn get_while(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<WhileDecl>> {

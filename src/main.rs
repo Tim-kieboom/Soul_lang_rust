@@ -1,7 +1,7 @@
 extern crate soul_lang_rust;
 
-use std::{io::stderr, process::exit, result, sync::Arc, time::Instant};
 use colored::Colorize;
+use std::{io::stderr, process::exit, result, sync::Arc, time::Instant};
 use soul_lang_rust::{cache_file::cache_files, run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::logger::Logger};
 
 fn main() {
@@ -51,17 +51,17 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>) {
 }
 
 fn get_logger(run_option: &RunOptions) -> result::Result<Logger, String> {
-    Ok(
-        if let Some(path) = &run_option.log_path {
-            match Logger::with_file_path(path, run_option.log_mode, run_option.log_level) {
-                Ok(val) => val,
-                Err(err) => return Err(format!("while trying to get file based logger: {err}")),
-            }
+    let logger = if let Some(path) = &run_option.log_path {
+        match Logger::with_file_path(path, run_option.log_mode, run_option.log_level) {
+            Ok(val) => val,
+            Err(err) => return Err(format!("while trying to get file based logger: {err}")),
         }
-        else {
-            Logger::new(stderr(), run_option.log_mode, run_option.log_level)
-        }
-    )
+    }
+    else {
+        Logger::new(stderr(), run_option.log_mode, run_option.log_level)
+    };
+    
+    Ok(logger)
 }
 
 fn create_output_dir(run_option: &RunOptions) -> std::io::Result<()> {

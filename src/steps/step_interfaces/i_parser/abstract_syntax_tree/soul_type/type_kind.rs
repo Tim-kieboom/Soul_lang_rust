@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}};
+use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}, scope::SoulPagePath}};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeSize {
@@ -46,11 +46,23 @@ pub enum TypeKind {
     Union(Ident),
 
     UnionVariant(UnionType),
+    ExternalType(ExternalType),
 
     TypeEnum(Ident, Vec<SoulType>),
 
     Generic(Ident),
     LifeTime(Ident),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ExternalType {
+    pub path: SoulPagePath,
+    pub name: Ident,
+}
+impl ExternalType {
+    pub fn to_string(&self) -> String {
+        format!("{}::{}", self.path.0, self.name.0)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -139,6 +151,7 @@ impl TypeKind {
             TypeKind::Generic(ident) => ident.0.clone(),
             TypeKind::LifeTime(ident) => ident.0.clone(),
             TypeKind::Lambda(signature) => signature.to_type_string(),
+            TypeKind::ExternalType(ty) => ty.to_string(),
         }
     }
 
@@ -194,6 +207,7 @@ impl TypeKind {
                 LambdaMode::Const => "ConstFn",
                 LambdaMode::Consume => "OnceFn",
             },
+            TypeKind::ExternalType(..) => "ExternalType",
         }
     }
 }

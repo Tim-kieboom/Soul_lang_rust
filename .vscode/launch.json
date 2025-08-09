@@ -12,9 +12,9 @@
                 "args": [
                     "build",
                     "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust"
-                    // "--features",
-                    // "dev_mode"
+                    "--package=soul_lang_rust",
+                    "--features",
+                    "dev_mode"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",

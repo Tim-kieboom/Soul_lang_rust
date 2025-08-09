@@ -1,4 +1,6 @@
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::{get_ctor, get_function_call}, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::parse_if_else::{get_else, get_if}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{ArrayFiller, BinOp, BinOpKind, ExprKind, Expression, Field, Ident, Index, OperatorKind, StaticField, Ternary, TypeOfExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{conditionals::ElseKind, statment::{VariableDecl, VariableRef}}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind, ScopeVisibility}}, i_tokenizer::{Token, TokenStream}}}};
+use std::path::{Path, PathBuf};
+
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan}, soul_names::{NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::{get_expressions::{parse_expression_group::try_get_expression_group, parse_function_call::{get_ctor, get_function_call}, parse_operator_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression}, symbool::{to_symbool, Symbool, SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, get_statments::{parse_if_else::{get_else, get_if}}}, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{ArrayFiller, BinOp, BinOpKind, ExprKind, Expression, ExternalExpression, Field, Ident, Index, OperatorKind, StaticField, Ternary, TypeOfExpr, UnaryOp, UnaryOpKind, Variable}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::{TypeKind, UnionType}}, spanned::Spanned, staments::{conditionals::ElseKind, statment::{VariableDecl, VariableRef}}}, parser_response::FromTokenStream, scope::{ProgramMemmory, ScopeBuilder, ScopeKind, ScopeVisibility, SoulPagePath}}, i_tokenizer::{Token, TokenStream}}}};
 
 const CLOSED_A_BRACKET: bool = true;
 
@@ -87,6 +89,7 @@ fn convert_expression(
     stream.next_multiple(-1);
 
     while stream.next().is_some() {
+        let mut is_page_path = false;
 		
         // for catching ')' as endToken, 
         // (YES there are 2 is_end_token() this is because of traverse_brackets() mutates the iterator DONT REMOVE PLZ)
@@ -98,7 +101,7 @@ fn convert_expression(
             let filler_i = stream.current_index();
 
             if add_array_filler(stream, scopes, stacks)? {
-                end_expr_loop(stream, scopes, stacks)?;
+                end_expr_loop(stream, scopes, stacks, is_page_path)?;
                 continue;
             }
 
@@ -110,7 +113,7 @@ fn convert_expression(
 
         if let Some(literal) = possible_literal {
             add_literal(literal, stream, scopes, stacks);
-            end_expr_loop(stream, scopes, stacks)?;
+            end_expr_loop(stream, scopes, stacks, is_page_path)?;
             continue;
         }
         else {
@@ -118,13 +121,13 @@ fn convert_expression(
 
             if let Some(group) = try_get_expression_group(stream, scopes)? {
                 stacks.node_stack.push(group);
-                end_expr_loop(stream, scopes, stacks)?;
+                end_expr_loop(stream, scopes, stacks, is_page_path)?;
                 continue;
             }
         }
 
         if try_add_statment_expression(stream, scopes, stacks)? {
-            end_expr_loop(stream, scopes, stacks)?;
+            end_expr_loop(stream, scopes, stacks, is_page_path)?;
             continue;
         }
 
@@ -182,6 +185,36 @@ fn convert_expression(
             let span = left.span.combine(&stream.current_span());
             stacks.node_stack.push(Expression::new(ExprKind::TypeOf(TypeOfExpr{left: Box::new(left), ty}), span));
         }
+        else if !stacks.pages_stack.is_empty() {
+            if stream.peek().is_some_and(|token| token.text == "::") {
+                let ty_i = stream.current_index();
+                let union = Ident(stream.current_text().clone());
+                stream.next_multiple(2);
+                let variant = Ident(stream.current_text().clone());
+                let external_union = SoulType::from_type_kind(TypeKind::UnionVariant(UnionType{union, variant}));
+                let span = stream.current_span().combine(&stream[ty_i].span);
+                
+                if stream.peek().is_some_and(|token| token.text == "(") {
+                    let function = get_ctor(Spanned::new(external_union, span), stream, scopes)?;
+                    stacks.node_stack.push(Expression::new(ExprKind::Ctor(function.node), function.span));
+                }
+                else {
+                    let mut spanned_ty = Spanned::new(external_union, span);
+                    
+                    while stream.peek().is_some_and(|token| token.text == "." || token.text == "::") {
+                        try_static_field_or_static_methode(&mut spanned_ty, stream, scopes, stacks)?;
+                    }
+                }
+            }
+            else {
+                stacks.node_stack.push(Expression::new(ExprKind::Variable(Variable{name: Ident(stream.current_text().clone())}), stream.current_span()));
+            }
+        }
+        else if stream.peek().is_some_and(|token| token.text == "::") {
+            let page_path = get_page_path(stream, scopes)?;
+            stacks.pages_stack.push(page_path);
+            is_page_path = true;
+        }
         else {
 
             if let Err(err) = try_get_special_error(stream, scopes, literal_begin) {
@@ -195,10 +228,43 @@ fn convert_expression(
             ));
         }
 
-        end_expr_loop(stream, scopes, stacks)?;
+        end_expr_loop(stream, scopes, stacks, is_page_path)?;
     }   
 
     Err(err_out_of_bounds(stream))
+}
+
+pub fn get_page_path(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Spanned<SoulPagePath>> {
+    let path_i = stream.current_index();
+    let mut path = PathBuf::from(Path::new(stream.current_text()));
+    loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.peek_multiple(2).is_some_and(|token| token.text != "::") {
+            break;
+        }
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        path.push(Path::new(stream.current_text()));
+    }
+
+    let mut page_path = SoulPagePath::from_path(&path);
+    if !scopes.is_external_header(&page_path) {
+        path.pop();
+        stream.next_multiple(-2);
+        page_path = SoulPagePath::from_path(&path);
+        
+        if !scopes.is_external_header(&page_path) {
+            return Err(new_soul_error(SoulErrorKind::InvalidType, stream[path_i].span.combine(&stream.current_span()), format!("path: '{}' not found", page_path.0)))
+        }
+    }
+
+    Ok(Spanned::new(page_path, stream[path_i].span.combine(&stream.current_span())))
 }
 
 fn add_array_filler(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<bool> {
@@ -311,22 +377,33 @@ fn add_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut Expr
     Ok(())
 }
 
-fn end_expr_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+fn end_expr_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks, is_page_path: bool) -> Result<()> {
     
     if stream.peek().is_some_and(|token| token.text == "[") {
         add_index(stream, scopes, stacks)?;
     }
-
+    
     while stream.peek().is_some_and(|token| token.text == ".") {
         try_add_field_or_methode(stream, scopes, stacks)?;
     }
-
+    
     if stream.peek().is_some_and(|token| token.text == "?") {
         add_ternary(stream, scopes, stacks)?;
     }
-
+    
     if should_convert_to_ref(stacks) {
         add_ref(stream, scopes, stacks)?;
+    }
+
+    if !is_page_path {
+
+        if let Some(Spanned{node: path, span: path_span}) = stacks.pages_stack.pop() {
+            let expr = stacks.node_stack.pop()
+                .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span().combine(&path_span), format!("path: '{}' called without expression", path.0)))?;
+            
+            let span = expr.span.combine(&path_span);
+            stacks.node_stack.push(Expression::new(ExprKind::ExternalExpression(ExternalExpression{path, expr: Box::new(expr)}), span));
+        }
     }
 
     Ok(())
@@ -814,10 +891,11 @@ pub struct ExpressionStacks {
     pub symbool_stack: Vec<Symbool>,
     pub ref_stack: Vec<String>,
     pub node_stack: Vec<Expression>,
+    pub pages_stack: Vec<Spanned<SoulPagePath>>,
 }
 impl ExpressionStacks {
     pub fn new() -> Self {
-        Self { symbool_stack: vec![], ref_stack: vec![], node_stack: vec![] }
+        Self { symbool_stack: vec![], ref_stack: vec![], pages_stack: vec![], node_stack: vec![] }
     }
 }
 

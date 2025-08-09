@@ -1,5 +1,5 @@
-use std::{collections::HashMap, fs::File, io::{self, BufReader}};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, fs::File, io::{self, BufReader}, path::Path};
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::TypeKind, scope::{ExternalPages, ScopeKind}};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,7 +18,7 @@ impl Header {
         Self{scope: Vec::from(scope), types: Vec::from(types)}
     }
 
-    pub fn from_bin_file(path: &str) -> io::Result<Header> {
+    pub fn from_bin_file<P: AsRef<Path>>(path: &P) -> io::Result<Header> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let data: Header = bincode::deserialize_from(reader)
@@ -30,8 +30,8 @@ impl Header {
 impl ExternalHeader {
     pub fn new(pages: ExternalPages) -> io::Result<Self> {
         let mut store = HashMap::new();
-        for (name, path) in pages.store {
-            let header = Header::from_bin_file(&path)?;
+        for name in pages.store {
+            let header = Header::from_bin_file(&name.to_path())?;
             store.insert(name.0, header);
         }
 

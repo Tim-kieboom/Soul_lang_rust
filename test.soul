@@ -1,9 +1,16 @@
 
 main() {
-    arg := std::fmt::Arg(1)
-    // Println(f"hello {1}")
+    v := Or::Int(1)
+    variant := std::test::Union::One(1)
+    arg := std::test::GlobalVar
+    sum := std::test::Sum(1, 2)
+    std::test::Println("hello")
+    std::test::TestType foo = 1
+
+    Println(f"hello {sum}")
 } 
 
+union Or{One(int)}
 
 
 

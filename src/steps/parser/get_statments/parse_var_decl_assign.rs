@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 
+use crate::steps::parser::soul_type::get_soul_type::FromWithPath;
 use crate::steps::step_interfaces::i_parser::scope::ScopeKind;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
@@ -38,7 +39,7 @@ pub fn inner_get_var_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder, f
     }
 
     let begin_i = stream.current_index();
-    let possible_type = match SoulType::try_from_stream(stream, scopes) {
+    let possible_type = match SoulType::try_from_stream_with_path(stream, scopes) {
         Some(result) => {
             let ty = result?;
             if stream.next().is_none() {
