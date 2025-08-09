@@ -111,7 +111,7 @@ impl SoulError {
         self.spans.iter()
             .zip(self.msgs.iter())
             .rev()
-            .map(|(span, msg)| format!("at {}:{}; !!error!! {}", span.line_number, span.line_offset, msg))
+            .map(|(span, msg)| format!("at {}:{}; {}", span.line_number, span.line_offset, msg))
             .collect::<Vec<_>>()
     }
 

@@ -26,6 +26,7 @@ ego-tree = { version = "0.10.0", features = ["serde"] }
 threadpool = "1.8.1"
 hsoul = { path = "hsoul" }
 chrono = "0.4.41"
+colored = "3.0.0"
 
 [[bench]]
 name = "my_benchmark"

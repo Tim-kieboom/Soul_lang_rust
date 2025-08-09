@@ -1,6 +1,7 @@
 use std::{fmt::Display, fs::OpenOptions, io::{self, Write}, sync::{Arc, Mutex}};
 use bitflags::bitflags;
 use chrono::Local;
+use colored::Colorize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
@@ -67,6 +68,11 @@ pub struct Logger {
     output: Arc<Mutex<Box<dyn Write + Send>>>,
 }
 
+pub struct Options{pub colored: bool}
+impl Default for Options {
+    fn default() -> Self {Self{colored: true}}
+}
+
 impl Logger {
     pub fn new<T: Write + Send + 'static>(output: T, mode: LogMode, level: LogLevel) -> Self {
         Self{ level, mode, output: Arc::new(Mutex::new(Box::new(output))) }
@@ -86,7 +92,7 @@ impl Logger {
         now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
     }
 
-    fn log<S: Display>(&self, level: LogLevel, message: S) {
+    fn log<S: Display>(&self, level: LogLevel, message: S, options: Options) {
         if level <= self.level {
             let mut log_msg = String::new();
 
@@ -106,16 +112,55 @@ impl Logger {
             log_msg.push('\n');
 
             let mut output = self.output.lock().unwrap();
-            let _ = output.write_all(log_msg.as_bytes());
+            let color_msg = if options.colored {
+                match level {
+                    LogLevel::Error => log_msg.red(),
+                    LogLevel::Warning => log_msg.yellow(),
+                    LogLevel::Info => log_msg.blue(),
+                    LogLevel::Debug => log_msg.purple(),
+                    LogLevel::Any => log_msg.purple(),
+                }.to_string()
+            }
+            else {
+                log_msg
+            };
+
+            let msg = color_msg.as_bytes();
+            
+            let _ = output.write_all(msg);
             let _ = output.flush();
         }
     }
 
-    pub fn error<S: Display>(&self, msg: S) { self.log(LogLevel::Error, &msg); }
-    pub fn warn<S: Display>(&self, msg: S) { self.log(LogLevel::Warning, &msg); }
-    pub fn info<S: Display>(&self, msg: S) { self.log(LogLevel::Info, &msg); }
-    pub fn debug<S: Display>(&self, msg: S) { self.log(LogLevel::Debug, &msg); }
+    pub fn error<S: Display>(&self, msg: S) { self.log(LogLevel::Error, &msg, Options::default()); }
+    pub fn warn<S: Display>(&self, msg: S) { self.log(LogLevel::Warning, &msg, Options::default()); }
+    pub fn info<S: Display>(&self, msg: S) { self.log(LogLevel::Info, &msg, Options::default()); }
+    pub fn debug<S: Display>(&self, msg: S) { self.log(LogLevel::Debug, &msg, Options::default()); }
+
+    pub fn error_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Error, &msg, options); }
+    pub fn warn_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Warning, &msg, options); }
+    pub fn info_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Info, &msg, options); }
+    pub fn debug_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Debug, &msg, options); }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

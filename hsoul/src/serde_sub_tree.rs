@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::sync::Arc;
 use ego_tree::{NodeRef, Tree};
 use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde::de::{Visitor, SeqAccess};
@@ -19,7 +21,7 @@ struct SerializableNode {
 
 impl SubFileTree {
 
-    pub fn get_all_file_paths(&self) -> Vec<String> {
+    pub fn get_all_file_paths(&self) -> Arc<[PathBuf]> {
         let mut result = Vec::with_capacity(self.files_len);
         let root = self.tree.root();
         let mut stack = Vec::new();
@@ -33,7 +35,6 @@ impl SubFileTree {
                 TreeNodeKind::Folder => {
                     let mut new_path = path.clone();
                     new_path.push(node_value.name.clone());
-
                     for child in node.children().rev() {
                         stack.push((child, new_path.clone()));
                     }
@@ -45,12 +46,12 @@ impl SubFileTree {
                         full_path.push('/');
                     }
                     full_path.push_str(&node_value.name);
-                    result.push(full_path);
+                    result.push(PathBuf::from_str(&full_path).expect("should be path"));
                 }
             }
         }
 
-        result
+        Arc::from(result)
     }
 
     fn flatten_tree(tree: &Tree<TreeNode>) -> Vec<SerializableNode> {
@@ -186,12 +187,55 @@ impl<'de> Deserialize<'de> for SubFileTree {
                 Ok(SubFileTree {
                     tree,
                     files_len,
-                })
+                     })
             }
         }
 
         deserializer.deserialize_seq(SubFileTreeVisitor)
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

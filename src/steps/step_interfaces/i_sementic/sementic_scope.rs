@@ -1,3 +1,5 @@
+use std::io;
+
 use serde::{Deserialize, Serialize};
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::TypeKind, external_header::ExternalHeader, scope::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind, ScopeStack, ScopeVisibility, TypeScope}};
 
@@ -17,14 +19,14 @@ pub struct InnerScopeVisitor {
 }
 
 impl ScopeVisitor {
-    pub fn new(builder: ScopeBuilder) -> Self {
-        let (scopes, types, global_literal, external_header) = builder.__consume_to_tuple();
-        Self {
+    pub fn new(builder: ScopeBuilder) -> io::Result<Self> {
+        let (scopes, types, global_literal, external_pages) = builder.__consume_to_tuple();
+        Ok(Self{
             scopes: InnerScopeVisitor::new(scopes),
             types,
             global_literal,
-            external_header
-        }
+            external_header: ExternalHeader::new(external_pages)?,
+        })
     }
 
     pub fn reset(&mut self) {

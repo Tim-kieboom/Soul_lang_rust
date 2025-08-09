@@ -1,20 +1,21 @@
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use crate::utils::node_ref::NodeRef;
 use crate::errors::soul_error::{Result, SoulSpan};
 use crate::steps::step_interfaces::i_tokenizer::TokenizeResonse;
 use crate::steps::parser::get_statments::parse_statment::get_statment;
-use crate::steps::step_interfaces::i_parser::external_header::ExternalHeader;
 use crate::steps::step_interfaces::i_parser::parser_response::ParserResponse;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::parser::forward_type_stack::get_type_stack::forward_declarde_type_stack;
-use crate::steps::step_interfaces::i_parser::scope::{ProgramMemmory, ScopeBuilder, ScopeKind};
+use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ProgramMemmory, ScopeBuilder, ScopeKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, StatmentBuilder};
 
-pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
+pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>) -> Result<ParserResponse> {
     let mut tree = AbstractSyntacTree{root: Vec::new()};
     let mut stream = tokens.stream;
-
 
     let type_stack = forward_declarde_type_stack(&mut stream)?;
     stream.reset();
@@ -28,7 +29,14 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
             .collect::<Vec<(usize, &str)>>()
     );
 
-    let mut scopes = ScopeBuilder::new(type_stack, ExternalHeader::new());
+    let external_pages = if let Some(files) = sub_files {
+        ExternalPages::from_files(files.iter())
+    }
+    else {
+        ExternalPages::new()
+    };
+
+    let mut scopes = ScopeBuilder::new(type_stack, external_pages);
     let mut scope_ref = StatmentBuilder::Global(NodeRef::new(tree.root));    
     loop {
 
@@ -66,20 +74,6 @@ pub fn parse_tokens(tokens: TokenizeResonse) -> Result<ParserResponse> {
 
     Ok(ParserResponse{tree, scopes})
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

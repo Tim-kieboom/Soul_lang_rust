@@ -1,0 +1,633 @@
+//comment 1
+/*comment 2*/
+
+enum Alphabet {
+	A,B,C,D,E,F,G,H,I,
+	J,K,L,N,M,O,P,Q,R,
+	S,T,U,V,W,X,Y,Z
+}
+
+enum NumberedEnum {
+	One = 1,
+	Two = 0b1010,
+	Three = -1,
+	Four = 0xff,
+}
+
+enumFunc() {
+	letter := Alphabet.A
+	if letter == Alphabet.A {
+		Println(letter)
+	}
+	else if letter > Alphabet.B {
+		Println("ogaboega")
+	}
+	else if int(letter) > int(NumberedEnum.One) {
+		Println("ogaboega (but int)")
+	}
+}
+
+union Num {
+	None(),
+	Int(int),
+	Uint(num: uint),
+	Float(f32),
+	Vec2(x: f32, y: f32),
+	Vec3(f32, f32, f32),
+}
+
+unionFunc() {
+
+	type Foo typeof Num
+
+	printNumInt(Num::Int num) {
+		Println(num.0)
+	}
+
+	num := Num::Int(1)
+	bool is_num = num typeof Num
+	bool is_int = num typeof Num::Int
+
+	Num::Int(number) = num
+
+	if typeof Num::Int(inner) = num {
+		Assert(inner typeof int)
+	}
+	else if typeof Num::Uint(num: inner) = num {
+		Assert(inner typeof uint)
+	}
+	else if typeof Num::Vec2(x, y) = num {
+		Assert(x typeof f32 && y typeof f32) 
+	}
+
+	let fl = if typeof Num::Int(inner) = num {
+		fall f32(inner)
+	}
+	else if typeof Num::Uint(num: inner) = num {
+		fall f32(inner)
+	}
+	else {
+		fall 0.0
+	}
+
+	if typeof Num::Int intStruct = num {
+		Assert(intStruct typeof Num::Int)
+
+		printNumInt(intStruct)
+	}
+
+	if typeof Num::Int(inner) = &num {
+		Assert(inner typeof int&)
+	}
+
+	if typeof Num::Int inner = @num {
+		Assert(inner typeof int@)
+	}
+
+	num = Num::Vec2(1, 23)
+	while typeof Num::Vec2(x, y) = @num {
+
+		num = Num::Int(1)
+	}
+}
+      
+
+lamdba() {
+	// const lamdbaSumTyped = (int a, int b) int => fall a + b
+	// // const lamdbaSumHalfTyped = (int a, int b) => fall a + b
+	// // const lamdbaSumReturnTyped = (a, b) int => fall a + b
+	// const increment = a => a += 1
+	// const increment = a => a += 1
+	// lamdbaSumTyped(1,2)
+	// // lamdbaSum(1,2)
+
+	// genericSum<Func: Fn<int,int>int >(int a, int b, Func f) {
+	// 	return f(a, b)
+	// }
+
+	// genericSum<Func: ConstFn<str,int>int >(str a, int b, Func f) {
+	// 	return f(a, b)
+	// }
+
+	// genericSum<Func: MutFn<int[],int>int >(int[] a, int b, Func f) {
+	// 	return f(a, b)
+	// }
+
+	// res15 := genericSum(5, 10, (one, two) => one + two)
+	// res15 = genericSum("5", 10, (text, two) => text.Parse() + two)
+	// res15 = genericSum([2, 3], 10, (arr, two) => arr.Sum() + two)
+}
+
+switch() {
+	num := 12
+	match num {
+		1 => Println("is 1"),
+		21 => Println("is 21"),
+		12 => Println("is 12"),
+		_ => Println("default"),
+	}
+
+	text := "num" 
+	match text {
+		"num" => Println("yippie"),
+		"mun" => Println("eippiy"),
+		_ => Println("oh no"),
+	}
+
+	tuple := (1, 2, 3)
+	match tuple {
+		val if val.0 < val.1 && val.1 < val.2 => Println("ordered"),
+		val if val.0 == val.1 && val.1 == val.2 => Println("eq"),
+		val if val.0 > val.1 && val.1 > val.2 => Println("rev ordered"),
+		_ => Println("no order"),
+	}
+
+	// val := match 1 == 1 {
+	// 	true => 12,
+	// 	false => {
+	// 		f := 21
+	// 		f += 1
+	// 		fall f
+	// 	},
+	// }
+
+	Num unionName = Num::Int(1)
+
+	match @unionName {
+		Num::Int(num) => Println(num),
+		Num::Uint uintVariant => Println(uintVariant.num),
+		Num::Float(num) => Println(num),
+		Num::Vec2(x, y) => Println(x),
+		Num::Vec3(x, y, z) => Println(x),
+	} 
+
+	match &unionName {
+		Num::Int(num) => Println(num),
+		Num::Uint uintVariant => Println(uintVariant.num),
+		Num::Float(num) => Println(num),
+		Num::Vec2(x, y) => Println(x),
+		Num::Vec3(x, y, z) => Println(x),
+	} 
+
+	match unionName {
+		Num::Int(num) => Println(num),
+		Num::Uint uintVariant => Println(uintVariant.num),
+		Num::Float(num) => Println(num),
+		Num::Vec2(x, y) => Println(x),
+		Num::Vec3(x, y, z) => Println(x),
+	} 
+}
+ 
+class StrBuilder {
+	// static int runTimeStatic [Get;] = 1
+	Literal int compileTimeStatic [Get;] = 1 
+
+	str buffer
+
+	Ctor::[](str[] arr) {
+		this.buffer = ""
+
+		for el in arr {
+			this.buffer += el
+		} 
+	}
+
+	Ctor() {
+		this.buffer = ""
+	}
+
+	Len(this@) uint {
+		return this.buffer.Len()
+	}
+
+	Push(this&, str s) {
+		this.buffer += s
+	}
+
+	IntoStr(this) str {
+		return this.buffer
+	}
+}
+
+testClass() {
+	sb := StrBuilder()
+	sb = StrBuilder["hello ", "world"]
+	len := sb.Len()
+	sb.Push(" test")
+	Println(sb.IntoStr())
+	hash := "str".Hash()
+	hash = func().Hash()
+	hash = 1.Hash()
+}
+
+sum(int a, int b) int {
+	return a + b
+}
+
+sumGeneric<T>(T a, T b) T 
+// where 
+// 	T: Add 
+{
+	return a + b
+}
+
+tuple() {
+	struct Data{int number; str two}
+	struct MyList{}
+
+	el := 1
+	runTimeTuple := (el,2,"hello")
+	runTimeTuple1 := (el,2,[1,2,3,],)
+	
+	t := (1,2,3,)
+	runTimeTuple2 := (el,t,2)
+	runTimeTuple3 := (el,(1,2,3,),2)
+
+	(int, bool) tuple = (el, true)
+	int first = tuple.0
+	bool second = tuple.1
+	(number, condition) := (el, true)
+	(field: int, name: bool) namedTuple = (field: el, name: true)
+	(field, name) := (field: el, name: true) 
+	data := Data(number: 1, two: "jim")
+	data2 := Data(number: 1, two: "jim")
+	Data(one, two) = data
+
+	if typeof Data(one: first, two) = data2 {
+		// Println(f"({first}, {two})")
+	}
+	if typeof (int, bool)(one, two) = tuple {
+		// Println(f"({one}, {two})")
+	}
+
+	functionCall := func(el, 2, "hello")
+	functionCall = func(el, 2, "hello", option=1)
+
+	runTimeNamedTuple := (field: el, name: "hello")
+	ctor := MyList()
+	runTimeNamedTuple2 := MyList(:)
+	runTimeNamedTuple3 := MyList(field: el, name: "hello")
+}
+
+
+array() {
+	class MyList{
+		int[] buffer
+		Ctor::[](int[] arr) {
+			this.buffer = arr
+		}
+	}
+	type Element typeof (str, i32)
+	class MyHashMap{
+
+		Element[] buffer
+
+		Ctor::[](Element[] arr) {
+			this.buffer = arr
+		}
+
+		Ctor::[]((str, i32)[] arr) {
+			this.buffer = arr
+		}
+	}
+	
+	array := [int: 1,2,3,4,5,6]
+	el := array[0]
+	span := array[1..2]
+	runTimeArray := [el, 1, 2,]
+	runTimeArray1 := [int: el, 1, 2]
+	runTimeArray2 := MyList[el, 1, 2,]
+	runTimeArray3 := MyList[int: el, 1, 2]
+	runTimeArray4 := [int:
+		el, 
+		1, 
+		2,
+	]
+
+	arrayFiller := [for 5 => 0] //returns [0,0,0,0,0]
+	arrayFiller_idx := [for i in 5 => i] // returns [1,2,3,4,5]
+	arrayFiller_2D := [for 5 => [for 2 => 0]] //returns [[0,0],[0,0],[0,0],[0,0],[0,0]]
+
+	map := MyHashMap[(str, i32):
+		("stuff",  1), 
+		("things", 2)
+	]
+	map = MyHashMap[Element:
+		("stuff",  1), 
+		("things", 2)
+	]
+
+	el2 := [el, 1, 2,][0]
+
+	runTime2DArray  := [
+		[el,1], 
+		[1,2,34]
+	]
+	runTime2DArray2 := [int[]: 
+		[1,2,34],
+		[el,1], 
+	]
+	runTime3DArray  := [
+		[
+			[el,1],
+			[1,2]
+		], 
+		[
+			[1,2],
+			[2,34]
+		]
+	]
+	runTime3DArray2 := [int[][]: 
+		[
+			[1,2],
+			[2,34],
+		],
+		[
+			[el,1],
+			[1,2],
+		], 
+	]
+}
+
+varDecl() {
+	type MyJson typeof (field: int, foo: (int,int,int), arr: int[])
+	struct MyList{}
+	int forwardDecl
+	
+	let untyped
+	untyped = 1 //turns untyped to int from none
+
+	const constUntyped
+	constUntyped = 1 //turns untyped to int from none
+
+	list := MyList[]
+	list.Push(1) //turns arr to List<int> from List<none> 
+
+	a := 1
+	let b = 1
+	const c = "hello world"
+	Literal d = (1, 2, 3)
+
+
+
+	json := (field: 1, foo: (1, 2, 3), arr: [1,2,3])
+	MyJson typedjson = (field: 1, foo: (1, 2, 3), arr: [1,2,3])
+	
+	int foo1 = 1
+	const int foo2 = 1
+	Literal int foo3 = 1 
+}
+
+assignment() {
+	int foo = 1
+	Println(foo)
+	foo += 2
+	Println(foo)
+
+	foo += 1; foo -= 1; \
+	foo *= 1
+	foo /= 1
+	foo %= 1
+	foo |= 1
+	foo &= 1
+	foo ^= 1
+	foo = foo log 100
+	foo = foo ** 2
+	foo = foo </ 2
+}
+
+ifs() {
+	if true {
+		Println("true is true")
+	}
+	else if false {
+		Println("false is true")
+	}
+	else {
+		Println("else is true")
+	}
+
+	condition := true
+	val := condition ? "if true" : "if false"
+	
+	cos1 := true ? 2 log 5
+		    : false ? 3
+		    : func()
+
+	con3 := if true {fall 2 log 5} 
+			else if false {fall 3}
+			else {fall func()}
+
+	union Or{One(i32), Other(str)}
+	
+	const or = Or::One(1)
+	if typeof Or::One(num) = or {
+		Println(num)
+	}
+	else if typeof Or::Other(text) = @or {
+		Println(text)
+	}
+}
+
+rulesets() {
+
+	//default sum
+	int[] sum(this@) int {
+		sum := 0
+		for el in this {
+			sum += el
+		}
+	}
+
+	const int[] _sumIter(this@, uint i, int sum) int {
+		return if i >= this.Len() {
+			fall sum
+		}
+		else {
+			fall this._sumIter(i+1, sum + this[i])
+		}
+	}
+
+	//functional sum
+	const int[] sum(this@) int {
+		return this._sumIter(0, 0)
+	}
+
+	//comptime sum
+	Literal int[] sum(this@) int {
+		//even thou _sumIter is const not Literal it can still be called in Literal ruleset, 
+		//because if const gets Literal arguments it becames a Literal function so validats Literal ruleset  
+		return this._sumIter(0, 0)
+	}
+
+	int[] array = [1,2,3,4,5]
+	//default > functional so calls default
+	sum := array.sum()
+
+	// //add const to force at least const ruleset (so calls functional)
+	// insureConstSum := const array.sum()
+	// //add const to force Literal (this will prefere Literal but if all arguments are Literal and there is no Literal func const can also be called)
+	// insureLiteralSum := Literal array.sum()
+
+	// defaultBlock := {
+	// 	foo := 1
+	// 	foo += 1
+	// 	fall foo 
+	// }
+
+	// constVal := const {
+	// 	const f = 1
+	// 	const f2 = f + f2
+	// 	fall f2 ** 2
+	// }
+
+	// compTime := Literal {
+	// 	fall 10 log 100
+	// }
+}
+
+whiles() {
+	
+	i := 0
+	while i++ < 10 {
+
+		if i % 3 == 0 {
+			break
+		}
+
+		Println("loop yay")		
+	}	
+	
+	// i = 0
+	// imod3 := while true {
+
+	// 	if i++ % 3 == 0 {
+	// 		break i
+	// 	}
+	// }
+
+	// stack := List[1,2,3,4]
+	// while typeof Some(number) = stack.Pop() {
+	// 	Println(number)
+	// }
+}
+
+str parse(this@, int a) int {
+	return int(1)	
+}
+
+uint sum(this, uint a) uint {
+	return this + a
+}
+
+int sum(this, int a) int {
+	return this + a
+}
+
+struct Ref<'a, T> {
+	T'a@ inner
+}
+
+// Ref<'a, T> Ctor<'a, T>(T'a@ ref) {
+// 	return Ref(inner: ref)
+// }
+
+type string typeof str
+
+struct Far<T> 
+where 
+	T: SystemNumber + Add + typeof[int, uint] 
+{
+	T foo
+}
+
+trait Add<O, R = O> {
+	Add(this, O other) R
+}
+
+typeEnum SystemNumber typeof[int, uint] 
+
+struct Foo<T> { 
+	str name
+	f32 float = 0.2
+	int foo [Get; set;] = 1
+	T generic
+}
+
+main() int {
+
+	sum(int a, int b) int {
+		return a + b 
+	}
+
+	for el in [1,2,3,4] {
+		Println(el)
+	} 
+
+	sum(1, 2)
+
+	sum(
+		1,
+		2
+	)
+
+	Println("hello world")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
