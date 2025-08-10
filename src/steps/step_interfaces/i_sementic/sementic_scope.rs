@@ -9,6 +9,7 @@ pub struct ScopeVisitor {
     types: Vec<TypeScope>,
     pub global_literal: ProgramMemmory,
     pub external_header: ExternalHeader,
+    pub project_name: String,
 }
 
 
@@ -20,12 +21,13 @@ pub struct InnerScopeVisitor {
 
 impl ScopeVisitor {
     pub fn new(builder: ScopeBuilder) -> io::Result<Self> {
-        let (scopes, types, global_literal, external_pages) = builder.__consume_to_tuple();
+        let (scopes, types, global_literal, external_pages, project_name) = builder.__consume_to_tuple();
         Ok(Self{
             scopes: InnerScopeVisitor::new(scopes),
             types,
             global_literal,
             external_header: ExternalHeader::new(external_pages)?,
+            project_name,
         })
     }
 

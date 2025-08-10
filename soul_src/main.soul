@@ -1,0 +1,33 @@
+main() {
+    union Or{One(int)}
+    v := Or::Int(1)
+    variant := soul_src::std::test::Union::One(1)
+    arg := soul_src::std::test::GlobalVar
+    sum := soul_src::std::test::Sum(1, 2)
+    soul_src::std::test::MyPrintln("hello")
+    this::std::test::TestType foo = 1
+
+    Println(f"hello {sum}")
+} 
+
+// using() {
+//     use source_src::std::test::Sum
+//     use source_src::std::test{Union, TestType}
+//     one := Union::One(1)
+//     TestType ty = 1
+//     res := Sum(1,2)
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

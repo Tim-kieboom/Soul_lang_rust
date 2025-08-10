@@ -14,6 +14,7 @@ pub struct ScopeBuilder {
     types: Vec<TypeScope>,
     pub global_literal: ProgramMemmory,
     pub external_pages: ExternalPages,
+    pub project_name: String,
 }
 
 #[derive(Debug, Hash, Clone, Copy, Serialize, Deserialize)]
@@ -124,13 +125,13 @@ pub struct InnerScope<T> {
 }
 
 impl ScopeBuilder {
-    pub fn new(type_stack: TypeScopeStack, external_books: ExternalPages) -> Self {
-        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), types: type_stack.scopes, external_pages: external_books }
+    pub fn new(type_stack: TypeScopeStack, external_books: ExternalPages, project_name: String) -> Self {
+        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), project_name, types: type_stack.scopes, external_pages: external_books }
     }
 
-    pub fn __consume_to_tuple(self) -> (ScopeStack, Vec<TypeScope>, ProgramMemmory, ExternalPages) {
-        let Self{scopes, types, global_literal, external_pages: external_books} = self;
-        (scopes, types, global_literal, external_books)
+    pub fn __consume_to_tuple(self) -> (ScopeStack, Vec<TypeScope>, ProgramMemmory, ExternalPages, String) {
+        let Self{scopes, types, global_literal, external_pages: external_books, project_name} = self;
+        (scopes, types, global_literal, external_books, project_name)
     }
 
     pub fn get_scopes(&self) -> &InnerScopeBuilder<Vec<ScopeKind>> {

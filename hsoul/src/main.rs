@@ -9,7 +9,7 @@ fn main() {
     let first = match args.next() {
         Some(val) => val,
         None => {
-            eprintln!("program should at least have 1 argument"); 
+            eprintln!("program should at least have 1 argument (first arg is output file_path and second is root_folder of soul project if empty root is current)"); 
             return;
         },
     };

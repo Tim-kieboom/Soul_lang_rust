@@ -236,7 +236,13 @@ fn convert_expression(
 
 pub fn get_page_path(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Spanned<SoulPagePath>> {
     let path_i = stream.current_index();
-    let mut path = PathBuf::from(Path::new(stream.current_text()));
+    let mut path = if stream.current_text() == "this" {
+        PathBuf::from(Path::new(&scopes.project_name))
+    }
+    else {
+        PathBuf::from(Path::new(stream.current_text()))
+    };
+
     loop {
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
@@ -257,10 +263,12 @@ pub fn get_page_path(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<
     if !scopes.is_external_header(&page_path) {
         path.pop();
         stream.next_multiple(-2);
+        let old_page = page_path;
         page_path = SoulPagePath::from_path(&path);
-        
+
         if !scopes.is_external_header(&page_path) {
-            return Err(new_soul_error(SoulErrorKind::InvalidType, stream[path_i].span.combine(&stream.current_span()), format!("path: '{}' not found", page_path.0)))
+            let path_str = if page_path.0.is_empty() {&old_page.0} else {&page_path.0};
+            return Err(new_soul_error(SoulErrorKind::InvalidType, stream[path_i].span.combine(&stream.current_span()), format!("path: '{}' not found", path_str)))
         }
     }
 

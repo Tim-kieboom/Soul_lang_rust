@@ -2,11 +2,9 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use once_cell::sync::Lazy;
-
 use crate::steps::parser::soul_type::get_soul_type::FromWithPath;
 use crate::steps::step_interfaces::i_parser::scope::ScopeKind;
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;

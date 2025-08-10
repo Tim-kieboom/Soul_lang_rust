@@ -21,7 +21,7 @@ fn stream_from_strs(tokens: &[&str]) -> TokenStream {
 }
 
 fn dummy_scopes() -> ScopeBuilder {
-    ScopeBuilder::new(TypeScopeStack::new(), ExternalPages::new())
+    ScopeBuilder::new(TypeScopeStack::new(), ExternalPages::new(), "test".into())
 }
 
 #[test]

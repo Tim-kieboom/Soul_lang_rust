@@ -19,7 +19,7 @@ fn main() {
     // }
 
     if run_options.show_times.contains(ShowTimes::SHOW_TOTAL) {
-        logger.debug(format!("Total time: {:.2?}", start.elapsed()));
+        logger.info(format!("Total time: {:.2?}", start.elapsed()));
     }
 }
 
@@ -65,8 +65,8 @@ fn get_logger(run_option: &RunOptions) -> result::Result<Logger, String> {
 }
 
 fn create_output_dir(run_option: &RunOptions) -> std::io::Result<()> {
-    std::fs::create_dir_all(format!("{}/steps", &run_option.output_dir))?;
-    std::fs::create_dir_all(format!("{}/parsedIncremental", &run_option.output_dir))
+    std::fs::create_dir_all(format!("{}/steps", run_option.output_dir.to_string_lossy()))?;
+    std::fs::create_dir_all(format!("{}/parsedIncremental", run_option.output_dir.to_string_lossy()))
 }
 
 // fn generate_code(run_option: &Arc<RunOptions>) -> Vec<SoulFault> {

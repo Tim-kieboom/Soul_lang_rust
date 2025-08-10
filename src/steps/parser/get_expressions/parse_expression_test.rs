@@ -19,7 +19,7 @@ fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
 }
 
 fn empty_scope() -> ScopeBuilder {
-    ScopeBuilder::new(TypeScopeStack::new(), ExternalPages::new())
+    ScopeBuilder::new(TypeScopeStack::new(), ExternalPages::new(), "test".into())
 }
 
 fn soul_mem_name(id: usize) -> Ident {

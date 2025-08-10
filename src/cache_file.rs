@@ -5,9 +5,9 @@ use std::{fs::File, io::BufReader, path::{Path, PathBuf}, process::exit, sync::{
 use crate::{errors::soul_error::Result, steps::step_interfaces::i_parser::abstract_syntax_tree::soul_header_cache::ModifiedDate};
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, run_options::run_options::RunOptions, steps::{parser::get_header::get_header, step_interfaces::i_parser::{abstract_syntax_tree::soul_header_cache::SoulHeaderCache, parser_response::ParserResponse}}, utils::logger::Logger};
 
-pub fn cache_files(run_option: &Arc<RunOptions>, logger: &Arc<Logger>) -> bool {
+pub fn cache_files(run_option: &Arc<RunOptions>, logger: &Arc<Logger>) {
 
-    let sub_files = if !run_option.sub_tree_path.is_empty() {
+    let sub_files = if !run_option.sub_tree_path.as_os_str().is_empty() {
         
         let files = match get_sub_files(run_option) {
             Ok(val) => val,
@@ -44,7 +44,6 @@ pub fn cache_files(run_option: &Arc<RunOptions>, logger: &Arc<Logger>) -> bool {
         logger.error(format!("\n{}", err.to_highlighed_message(reader)));
     }
 
-    exit(1);
 }
 
 fn get_sub_files(run_option: &Arc<RunOptions>) -> Result<Arc<[PathBuf]>> {
@@ -133,18 +132,17 @@ fn cache_file(run_option: Arc<RunOptions>, sub_files: Option<Arc<[PathBuf]>>, fi
 }
 
 fn get_cache_path(run_option: &RunOptions, file_path: &Path) -> String {
-    format!("{}/parsedIncremental/{}", &run_option.output_dir, file_path.to_str().unwrap())
+    format!("{}/parsedIncremental/{}", run_option.output_dir.to_string_lossy(), file_path.to_str().unwrap())
 }
 
 fn get_cache_date_path(run_option: &RunOptions, file_path: &Path) -> String {
-    format!("{}/parsedIncremental/{}.date", &run_option.output_dir, file_path.to_str().unwrap())
+    format!("{}/parsedIncremental/{}.date", run_option.output_dir.to_string_lossy(), file_path.to_str().unwrap())
 }
 
 type ResErr<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 fn cache_parser(parser_response: ParserResponse, run_option: &RunOptions, file_path: &Path) -> ResErr<()> {
     let header = get_header(&parser_response.scopes);
     let cache = SoulHeaderCache::new(file_path, header, parser_response)?;
-
     cache.save_to_bin_file(&get_cache_path(run_option, file_path))?;
     Ok(())
 }

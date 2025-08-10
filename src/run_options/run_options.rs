@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::num::ParseIntError;
+use std::path::PathBuf;
 use std::result;
 use std::env::Args;
 use once_cell::sync::Lazy;
@@ -11,16 +12,16 @@ use super::show_times::ShowTimes;
 use super::show_output::ShowOutputs;
 
 pub struct RunOptions {
-    pub file_path: String, 
+    pub file_path: PathBuf, 
     pub is_file_path_raw_file_str: bool, 
     pub show_times: ShowTimes,
     pub show_outputs: ShowOutputs,
-    pub output_dir: String,
+    pub output_dir: PathBuf,
     pub pretty_cpp_code: bool,
     pub tab_char_len: u32,
     pub command: String,
-    pub sub_tree_path: String,
-    pub log_path: Option<String>,
+    pub sub_tree_path: PathBuf,
+    pub log_path: Option<PathBuf>,
     pub log_level: LogLevel,
     pub log_mode: LogMode
 } 
@@ -41,7 +42,7 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             "--outputDir",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
-                options.output_dir = input.to_string();
+                options.output_dir = PathBuf::from(input);
                 Ok(())
             }) as ArgFunc
         ),
@@ -115,12 +116,12 @@ const ALLOWED_COMMANDS: &[&str] = &["build", "help"];
 impl RunOptions {
     pub fn new(_args: Args) -> result::Result<Self, String> {
         let mut options = Self {
-            file_path: String::new(),
+            file_path: PathBuf::new(),
             is_file_path_raw_file_str: false,
             show_outputs: ShowOutputs::SHOW_NONE,
             show_times: ShowTimes::SHOW_TOTAL,
             pretty_cpp_code: false,
-            output_dir: "output".to_string(),
+            output_dir: PathBuf::from("output"),
             tab_char_len: 4,
             command: "".into(),
             sub_tree_path: "".into(),
@@ -160,7 +161,7 @@ impl RunOptions {
         if !errors.is_empty() {
             Err(errors.join("\n"))
         } 
-        else if options.file_path.is_empty() {
+        else if options.file_path.as_os_str().is_empty() {
             Err("Missing file path argument (type 'soul help' for more info).".to_string())
         } 
         else {
@@ -188,7 +189,7 @@ fn pocess_arg(arg: &String, options: &mut RunOptions, file_path_set: &mut bool, 
         }
     } 
     else if !*file_path_set {
-        options.file_path = arg.clone();
+        options.file_path = PathBuf::from(arg);
         *file_path_set = true;
     } 
     else {

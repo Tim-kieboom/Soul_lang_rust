@@ -13,7 +13,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, StatmentBuilder};
 
-pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>) -> Result<ParserResponse> {
+pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>, project_name: String) -> Result<ParserResponse> {
     let mut tree = AbstractSyntacTree{root: Vec::new()};
     let mut stream = tokens.stream;
 
@@ -38,7 +38,7 @@ pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>) 
 
     load_std_libs(&mut external_pages);
 
-    let mut scopes = ScopeBuilder::new(type_stack, external_pages);
+    let mut scopes = ScopeBuilder::new(type_stack, external_pages, project_name);
     let mut scope_ref = StatmentBuilder::Global(NodeRef::new(tree.root));    
     loop {
 
@@ -79,7 +79,7 @@ pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>) 
 
 fn load_std_libs(external_pages: &mut ExternalPages) {
     external_pages.store.insert(SoulPagePath("std::fmt".into()));
-    external_pages.store.insert(SoulPagePath("std::test".into()));
+    // external_pages.store.insert(SoulPagePath("std::test".into()));
 }
 
 

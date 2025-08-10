@@ -1,4 +1,4 @@
-use std::{fmt::Display, fs::OpenOptions, io::{self, Write}, sync::{Arc, Mutex}};
+use std::{fmt::Display, fs::OpenOptions, io::{self, Write}, path::PathBuf, sync::{Arc, Mutex}};
 use bitflags::bitflags;
 use chrono::Local;
 use colored::Colorize;
@@ -78,7 +78,7 @@ impl Logger {
         Self{ level, mode, output: Arc::new(Mutex::new(Box::new(output))) }
     }
 
-    pub fn with_file_path(path: &str, mode: LogMode, level: LogLevel) -> io::Result<Self> {
+    pub fn with_file_path(path: &PathBuf, mode: LogMode, level: LogLevel) -> io::Result<Self> {
         let file = OpenOptions::new().append(true).create(true).open(path)?;
         Ok(Self {
             level,
