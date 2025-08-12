@@ -147,6 +147,18 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
             let switch_decl = get_switch_case(stream, scopes)?;
             return Ok(Some(Statment::new(StmtKind::Switch(switch_decl.node), switch_decl.span)))
         },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Use) => {
+            loop {
+                if stream.next().is_none() {
+                    return Err(err_out_of_bounds(stream));
+                }
+
+                if STATMENT_ENDS.iter().any(|el| el == stream.current_text()) {
+                    break;
+                }
+            }
+            return Ok(None)
+        },
         _ => (),
     }
 
@@ -166,6 +178,22 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
     if let Some(result_ty) = possible_res_type {
         let _ = result_ty?;
+
+        match try_get_from_type(first_type_i, stream, scopes)? {
+            Some(val) => return Ok(Some(val)),
+            None => (),
+        }
+    }
+    else if stream.peek().is_some_and(|token| token.text == "::")  {
+        
+        let first_type_i = stream.current_index();
+        match get_expression(stream, scopes, STATMENT_ENDS) {
+            Ok(val) => return Ok(Some(Statment::new(StmtKind::ExprStmt(val), stream.current_span().combine(&stream[first_type_i].span)))),
+            Err(_) => (),
+        }
+        
+        stream.go_to_index(first_type_i);
+        SoulType::from_stream_with_path(stream, scopes)?;
 
         match try_get_from_type(first_type_i, stream, scopes)? {
             Some(val) => return Ok(Some(val)),
@@ -209,22 +237,6 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                     var.span
                 ))
             );
-        }
-    }
-    else if stream.peek().is_some_and(|token| token.text == "::")  {
-        
-        let first_type_i = stream.current_index();
-        match get_expression(stream, scopes, STATMENT_ENDS) {
-            Ok(val) => return Ok(Some(Statment::new(StmtKind::ExprStmt(val), stream.current_span().combine(&stream[first_type_i].span)))),
-            Err(_) => (),
-        }
-        
-        stream.go_to_index(first_type_i);
-        SoulType::from_stream_with_path(stream, scopes)?;
-
-        match try_get_from_type(first_type_i, stream, scopes)? {
-            Some(val) => return Ok(Some(val)),
-            None => (),
         }
     }
 

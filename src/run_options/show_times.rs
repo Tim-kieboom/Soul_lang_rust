@@ -9,6 +9,7 @@ bitflags! {
         const SHOW_SOURCE_READER = 0b0001_0000;
         const SHOW_TOKENIZER = 0b0000_0010;
         const SHOW_PARSER = 0b0000_0100;
+        const SHOW_SEMENTIC_ANALYSER = 0b0001_0000;
         const SHOW_CODE_GENERATOR = 0b0000_1000;
         const SHOW_ALL = 0b1111_1111;
     }
@@ -19,7 +20,8 @@ const OPTIONS: &[(&str, ShowTimes)] = &[
     ("SHOW_SOURCE_READER", ShowTimes::SHOW_SOURCE_READER),
     ("SHOW_TOKENIZER", ShowTimes::SHOW_TOKENIZER),
     ("SHOW_PARSER", ShowTimes::SHOW_PARSER),
-    ("SHOW_CODE_GENERATOR", ShowTimes::SHOW_CODE_GENERATOR)
+    ("SHOW_SEMENTIC_ANALYSER", ShowTimes::SHOW_SEMENTIC_ANALYSER),
+    ("SHOW_CODE_GENERATOR", ShowTimes::SHOW_CODE_GENERATOR),
 ];
 
 impl ShowTimes {

@@ -1,21 +1,21 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs::File, io::{self, BufReader}, path::Path};
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::TypeKind, scope::{ExternalPages, ScopeKind}};
+use crate::{cache_file::get_cache_path_header, run_options::run_options::RunOptions, steps::step_interfaces::i_parser::{abstract_syntax_tree::{soul_type::type_kind::TypeKind}, scope::{ExternalPages, IsInternalLib, ScopeKind, SoulPagePath}}};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Header {
-    pub scope: Vec<ScopeKind>,
-    pub types: Vec<TypeKind>,
+    pub scope: HashMap<String, ScopeKind>,
+    pub types: HashMap<String, TypeKind>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalHeader {
-    pub store: HashMap<String, Header>, 
+    pub store: HashMap<SoulPagePath, Header>, 
 }
 
 impl Header {
-    pub fn from<const N: usize, const M: usize>(scope: [ScopeKind; N], types: [TypeKind; M]) -> Self {
-        Self{scope: Vec::from(scope), types: Vec::from(types)}
+    pub fn from<const N: usize, const M: usize>(scope: [(String, ScopeKind); N], types: [(String, TypeKind); M]) -> Self {
+        Self{scope: HashMap::from(scope), types: HashMap::from(types)}
     }
 
     pub fn from_bin_file<P: AsRef<Path>>(path: &P) -> io::Result<Header> {
@@ -28,17 +28,25 @@ impl Header {
 }
 
 impl ExternalHeader {
-    pub fn new(pages: ExternalPages) -> io::Result<Self> {
+    pub fn new(pages: ExternalPages, run_options: &RunOptions) -> io::Result<Self> {
         let mut store = HashMap::new();
-        for name in pages.store {
-            let header = Header::from_bin_file(&name.to_path())?;
-            store.insert(name.0, header);
+        for (name, is_internal) in pages.pages {
+            if is_internal == IsInternalLib(true) {
+                continue;
+            }
+
+            const ADD_SOUL_EXTENTION: bool = true;
+            let path = get_cache_path_header(run_options, &name.to_path_buf(ADD_SOUL_EXTENTION));
+            let header = Header::from_bin_file(&path)
+                .map_err(|err| io::Error::new(err.kind(), format!("while trying to get header.bin from: '{}', {}", path.to_string_lossy(), err.to_string())))?;
+            
+            store.insert(name, header);
         }
 
         Ok(Self{store})
     }
 
-    pub fn from<const N: usize>(arr: [(String, Header); N]) -> Self {
+    pub fn from<const N: usize>(arr: [(SoulPagePath, Header); N]) -> Self {
         Self{store: HashMap::from(arr)}
     }
 
@@ -55,14 +63,6 @@ impl ExternalHeader {
         Ok(data)
     }
 }
-
-
-
-
-
-
-
-
 
 
 

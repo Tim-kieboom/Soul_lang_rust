@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use ego_tree::{NodeId, Tree};
+use std::path::{Path, PathBuf};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone)]

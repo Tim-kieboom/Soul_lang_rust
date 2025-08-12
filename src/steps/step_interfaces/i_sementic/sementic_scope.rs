@@ -1,7 +1,7 @@
 use std::io;
 
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::TypeKind, external_header::ExternalHeader, scope::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind, ScopeStack, ScopeVisibility, TypeScope}};
+use crate::{run_options::run_options::RunOptions, steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::TypeKind, external_header::ExternalHeader, scope::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind, ScopeStack, ScopeVisibility, TypeScope}}};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScopeVisitor {
@@ -20,13 +20,13 @@ pub struct InnerScopeVisitor {
 }
 
 impl ScopeVisitor {
-    pub fn new(builder: ScopeBuilder) -> io::Result<Self> {
+    pub fn new(builder: ScopeBuilder, run_options: &RunOptions) -> io::Result<Self> {
         let (scopes, types, global_literal, external_pages, project_name) = builder.__consume_to_tuple();
         Ok(Self{
             scopes: InnerScopeVisitor::new(scopes),
             types,
             global_literal,
-            external_header: ExternalHeader::new(external_pages)?,
+            external_header: ExternalHeader::new(external_pages, run_options)?,
             project_name,
         })
     }
@@ -50,6 +50,14 @@ impl ScopeVisitor {
     pub fn is_in_global(&self) -> bool {
         self.scopes.is_in_global()
     } 
+
+    pub fn get_scopes(&self) -> &InnerScopeVisitor {
+        &self.scopes
+    }
+
+    pub fn get_types(&self) -> &Vec<InnerScope<TypeKind>> {
+        &self.types
+    }
 
     ///only looks in current scope
     pub fn flat_lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {

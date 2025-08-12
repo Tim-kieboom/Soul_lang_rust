@@ -78,7 +78,6 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
                 name: Ident(stream[name_i].text.clone()), 
                 generics: generics_decl.generics, 
                 fields, 
-                implements: generics_decl.implements
             }),
             stream.current_span().combine(&stream[struct_i].span)
         ),

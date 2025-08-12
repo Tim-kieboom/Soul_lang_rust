@@ -3,11 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableKind, VariableRef}}}, scope::SoulPagePath}};
 
-pub type Expression = Spanned<ExprKind>;
 pub type BoxExpr = Box<Expression>;
-
 pub type BinOp = Spanned<BinOpKind>;
 pub type UnaryOp = Spanned<UnaryOpKind>;
+pub type Expression = Spanned<ExprKind>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ExprKind {

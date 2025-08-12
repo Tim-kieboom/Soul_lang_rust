@@ -1,6 +1,7 @@
+use hsoul::subfile_tree::{SubFileTree, TreeNode, TreeNodeKind};
 use serde::{Deserialize, Serialize};
-use std::{collections::{BTreeMap, HashMap, HashSet}, path::{Component, Path, PathBuf}, process::exit};
-use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}}, utils::{node_ref::NodeRef, push::Push}};
+use std::{collections::{BTreeMap, HashMap}, path::{Component, Path, PathBuf}, process::exit, sync::Arc};
+use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}}, utils::{node_ref::MultiRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -77,33 +78,100 @@ impl SoulPagePath {
         Self(soul_path)
     } 
 
-    pub fn to_path(&self) -> PathBuf {
+    pub fn to_path_buf(&self, add_soul_extention: bool) -> PathBuf {
         let mut path = PathBuf::new();
 
         for token in self.0.split("::") {
             path.push(Path::new(token));
         }
-        path
+        
+        if add_soul_extention {
+            append_extension(&path, "soul")
+        }
+        else {
+            path
+        }
+    }
+
+    pub fn get_last_name(&self) -> String {
+        self.0
+            .split("::")
+            .last()
+            .unwrap_or("")
+            .to_string()
     }
 }
 
+fn append_extension(path: &Path, ext: &str) -> PathBuf {
+    let mut os_string = path.as_os_str().to_owned();
+    os_string.push(".");
+    os_string.push(ext);
+    PathBuf::from(os_string)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct IsInternalLib(pub bool);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalPages {
-    pub store: HashSet<SoulPagePath>
+    pub pages: HashMap<SoulPagePath, IsInternalLib>,
+    pub books: HashMap<SoulPagePath, IsInternalLib>,
 }
 
 impl ExternalPages {
     pub fn new() -> Self { 
-        Self{store: HashSet::new()}
+        Self{pages: HashMap::new(), books: HashMap::new()}
     }
 
-    pub fn from_files<'a, I: Iterator<Item = &'a PathBuf>>(sub_files: I) -> Self {
-        let mut this = Self::new();
-        for file in sub_files {
-            this.store.insert(SoulPagePath::from_path(file));
+    pub fn from_subfile_tree(subfile_tree: Arc<SubFileTree>) -> Self { 
+        
+        fn to_soul_path(path: &Vec<String>, node_value: &TreeNode) -> SoulPagePath {
+            let mut full_path = String::new();
+            if !path.is_empty() {
+                full_path.push_str(&path.join("::"));
+                full_path.push_str("::");
+            }
+            full_path.push_str(&node_value.name);
+            SoulPagePath(full_path)
         }
 
-        this
+        let root = subfile_tree.tree.root();
+        let mut stack = Vec::new();
+        
+        let mut pages = HashMap::with_capacity(subfile_tree.files_len);
+        let mut books = HashMap::with_capacity(subfile_tree.files_len);
+
+        stack.push((root, Vec::new()));
+        while let Some((node, path)) = stack.pop() {
+            let node_value = node.value();
+
+            match node_value.kind {
+                TreeNodeKind::Folder => {
+                    let mut new_path = path.clone();
+                    new_path.push(node_value.name.clone());
+                    books.insert(to_soul_path(&path, node_value), IsInternalLib(false));
+
+                    for child in node.children().rev() {
+                        stack.push((child, new_path.clone()));
+                        books.insert(to_soul_path(&path, node_value), IsInternalLib(false));
+                    }
+                }
+                TreeNodeKind::File => {
+                    
+                    pages.insert(to_soul_path(&path, node_value), IsInternalLib(false));
+                }
+            }
+        }
+
+        Self{pages, books}
+    }
+
+    pub fn push_internal(&mut self, path: SoulPagePath) {
+        self.pages.insert(path, IsInternalLib(true));
+    }
+
+    pub fn push(&mut self, path: SoulPagePath) {
+        self.pages.insert(path, IsInternalLib(false));
     }
 }
 
@@ -125,8 +193,12 @@ pub struct InnerScope<T> {
 }
 
 impl ScopeBuilder {
-    pub fn new(type_stack: TypeScopeStack, external_books: ExternalPages, project_name: String) -> Self {
-        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), project_name, types: type_stack.scopes, external_pages: external_books }
+    pub fn new(external_books: ExternalPages, project_name: String) -> Self {
+        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), project_name, types: vec![], external_pages: external_books }
+    }
+
+    pub fn fill_with_type_stack(&mut self, type_stack: TypeScopeStack) {
+        self.types = type_stack.scopes;
     }
 
     pub fn __consume_to_tuple(self) -> (ScopeStack, Vec<TypeScope>, ProgramMemmory, ExternalPages, String) {
@@ -138,8 +210,24 @@ impl ScopeBuilder {
         &self.scopes
     }
 
-    pub fn is_external_header(&self, path: &SoulPagePath) -> bool {
-        self.external_pages.store.contains(path)
+    pub fn is_external_page_or_book(&self, path: &SoulPagePath) -> Option<IsInternalLib> {
+        if let Some(res) = self.is_external_book(path) {
+            Some(res)
+        }
+        else if let Some(res) = self.is_external_page(path) {
+            Some(res)
+        }
+        else {
+            None
+        }
+    }
+
+    pub fn is_external_page(&self, path: &SoulPagePath) -> Option<IsInternalLib> {
+        self.external_pages.pages.get(path).cloned()
+    }
+
+    pub fn is_external_book(&self, path: &SoulPagePath) -> Option<IsInternalLib> {
+        self.external_pages.books.get(path).cloned()
     }
 
     pub fn get_types(&self) -> &Vec<InnerScope<TypeKind>> {
@@ -156,6 +244,10 @@ impl ScopeBuilder {
 
     pub fn current_scope(&self) -> &InnerScope<Vec<ScopeKind>> {
         &self.scopes.scopes[self.scopes.current]
+    }
+
+    pub fn current_index(&self) -> usize {
+        self.scopes.current
     }
 
     pub fn push(&mut self, scope_visability: ScopeVisibility) {
@@ -225,7 +317,7 @@ impl ScopeBuilder {
     }
 
     pub fn insert_this(&mut self, this: Spanned<SoulThis>) {
-        let this_var = ScopeKind::Variable(NodeRef::new(
+        let this_var = ScopeKind::Variable(MultiRef::new(
             VariableDecl{
                 name: Ident("this".into()), 
                 ty: this.node.ty, 
@@ -260,9 +352,13 @@ impl ScopeBuilder {
     pub fn lookup_type(&self, name: &str) -> Option<&TypeKind> {
         let mut current_index = Some(self.scopes.current);
 
+        if self.types.is_empty() {
+            return None;
+        }
+
         while let Some(index) = current_index {
             #[cfg(debug_assertions)]
-            if index > self.types.len() -1 {
+            if index > self.types.len() {
                 break;
             }
             
@@ -436,6 +532,30 @@ impl<T> InnerScopeBuilder<T> {
     }
 }
 
+pub trait LookUpScope<T> {fn lookup(&self, name: &str, current: usize) -> Option<&T>;}
+impl LookUpScope<TypeKind> for Vec<InnerScope<TypeKind>> {
+    fn lookup(&self, name: &str, current: usize) -> Option<&TypeKind> {
+        let mut current_index = Some(current);
+
+        while let Some(index) = current_index {
+            let scope = &self[index];
+
+            if let Some(kinds) = scope.get(name) {
+                return Some(kinds);
+            }
+
+            match scope.visibility_mode {
+                ScopeVisibility::All => current_index = scope.parent_index,
+                ScopeVisibility::GlobalOnly => {
+                    current_index = if index == 0 { None } else { Some(0) };
+                }
+            }
+        }
+
+        None
+    }
+}
+
 impl<T> InnerScope<T> {
     pub fn new_global() -> Self {
         Self {
@@ -489,7 +609,7 @@ pub enum ScopeKind {
     TypeEnum(TypeEnumDeclRef),
 }
 
-pub type OverloadedFunctions = NodeRef<Vec<FnDeclKind>>;
+pub type OverloadedFunctions = MultiRef<Vec<FnDeclKind>>;
 
 impl OverloadedFunctions {
     pub fn from_fn(decl: FnDecl) -> Self {

@@ -1,24 +1,21 @@
-use std::path::PathBuf;
 use std::sync::Arc;
-
-use crate::utils::node_ref::NodeRef;
+use hsoul::subfile_tree::SubFileTree;
+use crate::utils::node_ref::MultiRef;
 use crate::errors::soul_error::{Result, SoulSpan};
 use crate::steps::step_interfaces::i_tokenizer::TokenizeResonse;
 use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::parser_response::ParserResponse;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::steps::parser::forward_type_stack::get_type_stack::forward_declarde_type_stack;
-use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ProgramMemmory, ScopeBuilder, ScopeKind, SoulPagePath};
+use crate::steps::parser::forward_type_stack::get_type_stack::get_scope_from_type_stack;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExprKind, Expression};
+use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ProgramMemmory, ScopeKind, SoulPagePath};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, StatmentBuilder};
 
-pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>, project_name: String) -> Result<ParserResponse> {
+pub fn parse_tokens(tokens: TokenizeResonse, subfile_tree: Option<Arc<SubFileTree>>, project_name: String) -> Result<ParserResponse> {
     let mut tree = AbstractSyntacTree{root: Vec::new()};
     let mut stream = tokens.stream;
 
-    let type_stack = forward_declarde_type_stack(&mut stream)?;
-    stream.reset();
     #[cfg(feature="dev_mode")]
     println!( // this print is to be able to see what token is at what index because rust debugger sucks
         "\ntokenizer:\n{:?}\n", 
@@ -29,17 +26,19 @@ pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>, 
             .collect::<Vec<(usize, &str)>>()
     );
 
-    let mut external_pages = if let Some(files) = sub_files {
-        ExternalPages::from_files(files.iter())
+    let mut external_pages = if let Some(tree) = subfile_tree {
+        ExternalPages::from_subfile_tree(tree)
     }
     else {
         ExternalPages::new()
     };
-
     load_std_libs(&mut external_pages);
 
-    let mut scopes = ScopeBuilder::new(type_stack, external_pages, project_name);
-    let mut scope_ref = StatmentBuilder::Global(NodeRef::new(tree.root));    
+    let mut scopes = get_scope_from_type_stack(&mut stream, external_pages, project_name)?;
+    stream.reset();
+
+
+    let mut scope_ref = StatmentBuilder::Global(MultiRef::new(tree.root));    
     loop {
 
         if let Some(statment) = get_statment(&mut scope_ref, &mut stream, &mut scopes)? {
@@ -78,8 +77,7 @@ pub fn parse_tokens(tokens: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>, 
 }
 
 fn load_std_libs(external_pages: &mut ExternalPages) {
-    external_pages.store.insert(SoulPagePath("std::fmt".into()));
-    // external_pages.store.insert(SoulPagePath("std::test".into()));
+    external_pages.push_internal(SoulPagePath("std::fmt".into()));
 }
 
 

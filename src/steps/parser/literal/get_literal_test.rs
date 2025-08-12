@@ -7,7 +7,7 @@ use crate::errors::soul_error::{SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
-use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder, TypeScopeStack};
+use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Literal, LiteralType};
 
 fn token<T: Into<String>>(text: T) -> Token {
@@ -21,7 +21,7 @@ fn stream_from_strs(tokens: &[&str]) -> TokenStream {
 }
 
 fn dummy_scopes() -> ScopeBuilder {
-    ScopeBuilder::new(TypeScopeStack::new(), ExternalPages::new(), "test".into())
+    ScopeBuilder::new(ExternalPages::new(), "test".into())
 }
 
 #[test]

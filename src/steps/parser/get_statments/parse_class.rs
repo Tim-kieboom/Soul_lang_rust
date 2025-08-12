@@ -58,7 +58,10 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     loop {
         
         let is_field = match try_get_field(stream, scopes) {
-            Some(result) => {fields.push(result?); true},
+            Some(result) => {
+                fields.push(result?); 
+                true
+            },
             None => false,
         };
 
@@ -97,7 +100,6 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
                 name: Ident(stream[name_i].text.clone()), 
                 generics: generics_decl.generics, 
                 fields, 
-                implements: generics_decl.implements,
                 methodes,
             }),
             stream.current_span().combine(&stream[class_i].span)

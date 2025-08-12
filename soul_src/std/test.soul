@@ -2,14 +2,14 @@ union Union {
     One(int),
     Two(f32),
 }
-
+ 
 const GlobalVar = 1
 
 Sum(int a, int b) int {
     return a + b
 }
-
-MyPrintln(str msg) {
+  
+MyPrintln(str msg) { 
     Println(msg)
 } 
 

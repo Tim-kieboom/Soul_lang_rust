@@ -1,20 +1,30 @@
+use hsoul::subfile_tree::SubFileTree;
 use itertools::Itertools;
-use std::{env, fs::write, io::{BufReader, Read}, path::PathBuf, sync::Arc, time::Instant};
-use crate::{run_options::run_options::RunOptions, steps::step_interfaces::{i_parser::parser_response::ParserResponse, i_source_reader::SourceFileResponse}, utils::logger::Logger};
+use std::{env, fs::write, io::{BufReader, Read}, sync::Arc, time::Instant};
+use crate::{run_options::run_options::RunOptions, steps::{sementic_analyser::sementic::sementic_analyse_ast, step_interfaces::{i_parser::parser_response::ParserResponse, i_sementic::sementic_respone::SementicAnalyserResponse, i_source_reader::SourceFileResponse}}, utils::{logger::{Logger}, node_ref::MultiRef, time_logs::TimeLogs}};
 use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::abstract_syntax_tree::pretty_format::PrettyFormat, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
-pub fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions, logger: &Arc<Logger>) -> Result<SourceFileResponse> {
-    let tab_as_spaces = " ".repeat(run_option.tab_char_len as usize);
+pub struct RunStepsInfo<'a> {
+    pub logger: &'a Arc<Logger>, 
+    pub current_path: &'a String,
+    pub run_options: &'a RunOptions, 
+    pub time_log: &'a MultiRef<TimeLogs>,
+}
+
+pub fn source_reader<'a, R: Read>(reader: BufReader<R>, info: &RunStepsInfo<'a>) -> Result<SourceFileResponse> {
+    let tab_as_spaces = " ".repeat(info.run_options.tab_char_len as usize);
     
     let start = Instant::now(); 
     let source_file = read_source_file(reader, &tab_as_spaces)?;
-    if run_option.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
-        logger.info(format!("source_reader time: {:.2?}", start.elapsed()));
+    if info.run_options.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
+        info.time_log
+            .borrow_mut()
+            .push(&info.current_path, "source_reader time", start.elapsed());
     }
 
-    if run_option.show_outputs.contains(ShowOutputs::SHOW_SOURCE) {
+    if info.run_options.show_outputs.contains(ShowOutputs::SHOW_SOURCE) {
         let start = Instant::now(); 
-        let file_path = format!("{}/steps/source.soulc", run_option.output_dir.to_string_lossy());
+        let file_path = format!("{}/steps/source.soulc", info.run_options.output_dir.to_string_lossy());
         let contents = source_file.source_file
             .iter()
             .map(|line| &line.line)
@@ -23,25 +33,29 @@ pub fn source_reader<R: Read>(reader: BufReader<R>, run_option: &RunOptions, log
         write(file_path, contents)
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
 
-        if run_option.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
-            logger.info(format!("source_reader showOutput time: {:.2?}", start.elapsed()));
+        if info.run_options.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
+            info.time_log
+                .borrow_mut()
+                .push(&info.current_path, "source_reader showOutput time", start.elapsed());
         }
     }
 
     Ok(source_file)
 }
 
-pub fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions, logger: &Logger) -> Result<TokenizeResonse> {
+pub fn tokenizer<'a>(source_file: SourceFileResponse, info: &RunStepsInfo<'a>) -> Result<TokenizeResonse> {
     
     let start = Instant::now(); 
     let token_stream = tokenize(source_file)?;
-    if run_option.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
-        logger.info(format!("tokenizers time: {:.2?}", start.elapsed()));
+    if info.run_options.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
+        info.time_log
+            .borrow_mut()
+            .push(&info.current_path, "tokenizers time", start.elapsed());
     }
 
-    if run_option.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {
+    if info.run_options.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {
         let start = Instant::now(); 
-        let file_path = format!("{}/steps/tokenStream.soulc", run_option.output_dir.to_string_lossy());
+        let file_path = format!("{}/steps/tokenStream.soulc", info.run_options.output_dir.to_string_lossy());
         let contents = token_stream.stream
             .ref_tokens()
             .iter()
@@ -51,19 +65,21 @@ pub fn tokenizer(source_file: SourceFileResponse, run_option: &RunOptions, logge
         write(file_path, contents)
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
 
-        if run_option.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
-            logger.info(format!("tokenizers showOutput time: {:.2?}", start.elapsed()));
+        if info.run_options.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
+            info.time_log
+                .borrow_mut()
+                .push(&info.current_path, "tokenizers showOutput time", start.elapsed());
         }
     }
 
     Ok(token_stream)
 }
 
-pub fn parser(token_response: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>, run_option: &RunOptions, logger: &Arc<Logger>) -> Result<ParserResponse> {
+pub fn parser<'a>(token_response: TokenizeResonse, sub_files: Option<Arc<SubFileTree>>, info: &RunStepsInfo<'a>) -> Result<ParserResponse> {
     
     let start = Instant::now(); 
 
-    let absulute_path = env::current_dir().unwrap().join(run_option.file_path.clone());
+    let absulute_path = env::current_dir().unwrap().join(info.run_options.file_path.clone());
     let project_name = absulute_path
         .parent()
         .expect("file_path should have parent (if not maybe file is in root of pc)")
@@ -73,14 +89,16 @@ pub fn parser(token_response: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>
         .to_string();
 
     let parse_response = parse_tokens(token_response, sub_files, project_name)?;
-    if run_option.show_times.contains(ShowTimes::SHOW_PARSER) {
-        logger.info(format!("parser time: {:.2?}", start.elapsed()));
+    if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
+        info.time_log
+            .borrow_mut()
+            .push(&info.current_path, "parser time", start.elapsed());
     }
 
-    if run_option.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
+    if info.run_options.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
         let start = Instant::now(); 
-        let file_path = format!("{}/steps/parserAST.soulc", run_option.output_dir.to_string_lossy());
-        let scopes_file_path = format!("{}/steps/parserScopes.soulc", run_option.output_dir.to_string_lossy());
+        let file_path = format!("{}/steps/parserAST.soulc", info.run_options.output_dir.to_string_lossy());
+        let scopes_file_path = format!("{}/steps/parserScopes.soulc", info.run_options.output_dir.to_string_lossy());
 
         write(file_path, format!("{}", parse_response.tree.to_pretty_string()))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
@@ -88,8 +106,10 @@ pub fn parser(token_response: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>
         write(scopes_file_path, format!("{}", parse_response.scopes.to_pretty_string()))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
         
-        if run_option.show_times.contains(ShowTimes::SHOW_PARSER) {
-            logger.info(format!("parser showOutput time: {:.2?}", start.elapsed()));
+        if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
+            info.time_log
+                .borrow_mut()
+                .push(&info.current_path, "parser showOutput time", start.elapsed());
         }
     }
     
@@ -97,7 +117,37 @@ pub fn parser(token_response: TokenizeResonse, sub_files: Option<Arc<[PathBuf]>>
     Ok(parse_response)
 }
 
+pub fn sementic_analyse<'a>(parser_response: ParserResponse, info: &RunStepsInfo<'a>) -> Result<SementicAnalyserResponse> {
+    let start = Instant::now(); 
 
+    let response = sementic_analyse_ast(parser_response, info.run_options)?;
+
+    if info.run_options.show_times.contains(ShowTimes::SHOW_SEMENTIC_ANALYSER) {
+        info.time_log
+            .borrow_mut()
+            .push(&info.current_path, "sementic_analyser time", start.elapsed());
+    }
+
+    if info.run_options.show_outputs.contains(ShowOutputs::SHOW_SEMENTIC_ANALYSER) {
+        let start = Instant::now(); 
+        let file_path = format!("{}/steps/sementicAST.soulc", info.run_options.output_dir.to_string_lossy());
+        let scopes_file_path = format!("{}/steps/sementicScopes.soulc", info.run_options.output_dir.to_string_lossy());
+
+        write(file_path, format!("{}", response.tree.to_pretty_string()))
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+
+        write(scopes_file_path, format!("{}", response.scope.to_pretty_string()))
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+        
+        if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
+            info.time_log
+                .borrow_mut()
+                .push(&info.current_path, "sementic_analyser showOutput time", start.elapsed());
+        }
+    }
+
+    Ok(response)
+}
 
 
 

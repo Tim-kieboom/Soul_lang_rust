@@ -177,7 +177,7 @@ fn get_function_signature(modifier: Modifier, calle_body: Option<Spanned<&SoulTh
     }
 
     let span = stream[begin_i].span.combine(&stream.current_span());
-    let signature = Spanned::new(FunctionSignatureRef::new(InnerFunctionSignature{name, calle, generics: generics.generics, params, return_type, modifier}), span);
+    let signature = Spanned::new(FunctionSignatureRef::new(InnerFunctionSignature{name, calle, generics: generics.generics, params, return_type, modifier, span}), span);
     check_function_with_scope(scopes, &signature)?;
     
     Ok(signature.node)

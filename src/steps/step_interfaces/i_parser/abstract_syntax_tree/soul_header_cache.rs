@@ -17,7 +17,7 @@ pub struct ModifiedDate {
 type ResErr<T> = std::result::Result<T, Box<dyn std::error::Error>>; 
 impl SoulHeaderCache {
 
-    pub fn new(soul_file: &Path, header: Header, parser: ParserResponse,) -> ResErr<Self> {
+    pub fn new(soul_file: &Path, header: Header, parser: ParserResponse) -> ResErr<Self> {
         Ok(Self{
             mod_date: ModifiedDate::new(soul_file)?, 
             header, 
@@ -25,27 +25,27 @@ impl SoulHeaderCache {
         })
     }
 
-    pub fn from_bin_file(path: &str) -> ResErr<SoulHeaderCache> {
+    pub fn ast_from_bin_file<P: AsRef<Path>>(path: &P) -> ResErr<ParserResponse> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let cache: SoulHeaderCache = bincode::deserialize_from(reader)?;
+        let cache: ParserResponse = bincode::deserialize_from(reader)?;
         Ok(cache)
     }
 
-    pub fn save_to_bin_file(&self, path: &str) -> ResErr<()> {
-        if let Some(parent) = Path::new(path).parent() {
+    pub fn save_to_bin_file<P: AsRef<Path>>(&self, path: &P) -> ResErr<()> {
+        if let Some(parent) = path.as_ref().parent() {
             std::fs::create_dir_all(parent)?;
         }
 
-        let file = create_or_write(&format!("{}.AST", path))?;
+        let file = create_or_write(&format!("{}.AST", path.as_ref().to_string_lossy()))?;
         let writer = BufWriter::new(file);
         bincode::serialize_into(writer, &self.parser)?;
 
-        let file = create_or_write(&format!("{}.date", path))?;
+        let file = create_or_write(&format!("{}.date", path.as_ref().to_string_lossy()))?;
         let writer = BufWriter::new(file);
         bincode::serialize_into(writer, &self.mod_date)?;
 
-        let file = create_or_write(&format!("{}.header", path))?;
+        let file = create_or_write(&format!("{}.header", path.as_ref().to_string_lossy()))?;
         let writer = BufWriter::new(file);
         bincode::serialize_into(writer, &self.header)?;
         Ok(())
@@ -54,7 +54,7 @@ impl SoulHeaderCache {
 
 impl ModifiedDate {
     
-    pub fn from_bin_file(path: &str) -> ResErr<ModifiedDate> {
+    pub fn from_bin_file<P: AsRef<Path>>(path: P) -> ResErr<ModifiedDate> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let data: ModifiedDate = bincode::deserialize_from(reader)?;

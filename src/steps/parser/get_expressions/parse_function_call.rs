@@ -157,7 +157,7 @@ fn get_arguments(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     Err(err_out_of_bounds(stream))
 }
 
-fn get_generics(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Spanned<Vec<SoulType>>> {
+fn get_generics(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Vec<SoulType>>> {
     let mut generics = Vec::new();
 
     if stream.current_text() != "<" {

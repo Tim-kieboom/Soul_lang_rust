@@ -1,7 +1,7 @@
 pub mod fault;
 pub mod ast_visitors;
 pub mod sementic_scope;
-pub mod sementic_result;
+pub mod sementic_respone;
 
 
 

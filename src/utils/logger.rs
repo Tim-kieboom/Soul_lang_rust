@@ -1,7 +1,9 @@
-use std::{fmt::Display, fs::OpenOptions, io::{self, Write}, path::PathBuf, sync::{Arc, Mutex}};
+use std::{fmt::Display, fs::OpenOptions, io::{self, BufReader, Read, Seek, Write}, path::PathBuf, sync::{Arc, Mutex}};
 use bitflags::bitflags;
 use chrono::Local;
 use colored::Colorize;
+
+use crate::errors::soul_error::SoulError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
@@ -68,9 +70,19 @@ pub struct Logger {
     output: Arc<Mutex<Box<dyn Write + Send>>>,
 }
 
-pub struct Options{pub colored: bool}
-impl Default for Options {
-    fn default() -> Self {Self{colored: true}}
+#[derive(Debug, Clone)]
+pub struct LogOptions {
+    pub colored: bool,
+    pub highlight_soul: bool,
+}
+impl LogOptions {
+    pub fn new(colored: bool, highlight_soul: bool) -> Self {
+        Self{colored, highlight_soul}
+    }
+    pub const fn const_default() -> Self {Self{colored: true, highlight_soul: false}}
+}
+impl Default for LogOptions {
+    fn default() -> Self {Self{colored: true, highlight_soul: false}}
 }
 
 impl Logger {
@@ -92,7 +104,7 @@ impl Logger {
         now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
     }
 
-    fn log<S: Display>(&self, level: LogLevel, message: S, options: Options) {
+    fn log<S: Display>(&self, level: LogLevel, message: S, options: &LogOptions) {
         if level <= self.level {
             let mut log_msg = String::new();
 
@@ -132,15 +144,23 @@ impl Logger {
         }
     }
 
-    pub fn error<S: Display>(&self, msg: S) { self.log(LogLevel::Error, &msg, Options::default()); }
-    pub fn warn<S: Display>(&self, msg: S) { self.log(LogLevel::Warning, &msg, Options::default()); }
-    pub fn info<S: Display>(&self, msg: S) { self.log(LogLevel::Info, &msg, Options::default()); }
-    pub fn debug<S: Display>(&self, msg: S) { self.log(LogLevel::Debug, &msg, Options::default()); }
+    fn log_soul_error<R: Read + Seek>(&self, level: LogLevel, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
+        self.log(level, "---------------------------------------------", options);
+        for line in soul_error.to_err_message() {
+            self.log(level, line, options);
+        }
+        self.log(level, format!("\n{}", soul_error.to_highlighed_message(reader)), options);
+    }
 
-    pub fn error_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Error, &msg, options); }
-    pub fn warn_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Warning, &msg, options); }
-    pub fn info_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Info, &msg, options); }
-    pub fn debug_options<S: Display>(&self, msg: S, options: Options) { self.log(LogLevel::Debug, &msg, options); }
+    pub fn error<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Error, &msg, options); }
+    pub fn warn<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Warning, &msg, options); }
+    pub fn info<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Info, &msg, options); }
+    pub fn debug<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Debug, &msg, options); }
+    
+    pub fn soul_error<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Error, soul_error, reader, options); }
+    pub fn soul_warn<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Warning, soul_error, reader, options); }
+    pub fn soul_info<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Info, soul_error, reader, options); }
+    pub fn soul_debug<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Debug, soul_error, reader, options); }
 }
 
 

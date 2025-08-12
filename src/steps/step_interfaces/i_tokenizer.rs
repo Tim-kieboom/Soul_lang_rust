@@ -88,6 +88,10 @@ impl TokenStream {
         self.peek_multiple(1)
     }
 
+    pub fn peek_is(&self, text: &str) -> bool {
+        self.peek().is_some_and(|token| token.text == text)
+    }
+
     pub fn is_valid_index(&self, index: usize) -> bool {
         index < self.tokens.len()
     }

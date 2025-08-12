@@ -8,6 +8,7 @@ bitflags! {
         const SHOW_TOKENIZER = 0b0000_0001;
         const SHOW_SOURCE = 0b0000_1000;
         const SHOW_ABSTRACT_SYNTAX_TREE = 0b0000_0010;
+        const SHOW_SEMENTIC_ANALYSER = 0b0001_0000;
         const SHOW_CPP_CONVERTION = 0b0000_0100;
         const SHOW_ALL = 0b1111_1111;
     }
@@ -17,7 +18,8 @@ const OPTIONS: &[(&str, ShowOutputs)] = &[
     ("SHOW_SOURCE", ShowOutputs::SHOW_SOURCE),
     ("SHOW_TOKENIZER", ShowOutputs::SHOW_TOKENIZER),
     ("SHOW_ABSTRACT_SYNTAX_TREE", ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE),
-    ("SHOW_CPP_CONVERTION", ShowOutputs::SHOW_CPP_CONVERTION)
+    ("SHOW_SEMENTIC_ANALYSER", ShowOutputs::SHOW_SEMENTIC_ANALYSER),
+    ("SHOW_CPP_CONVERTION", ShowOutputs::SHOW_CPP_CONVERTION),
 ];
 
 impl ShowOutputs {

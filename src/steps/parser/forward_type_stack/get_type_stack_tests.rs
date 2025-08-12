@@ -1,6 +1,6 @@
 use std::collections::{HashMap};
 
-use crate::{assert_eq_show_diff, steps::{parser::forward_type_stack::get_type_stack::forward_declarde_type_stack, step_interfaces::i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::type_kind::{TypeKind, TypeSize}}, scope::{InnerScope, ScopeVisibility}}, tokenizer::tokenizer_test}};
+use crate::{assert_eq_show_diff, steps::{parser::forward_type_stack::get_type_stack::get_scope_from_type_stack, step_interfaces::i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::type_kind::{TypeKind, TypeSize}}, scope::{ExternalPages, InnerScope, ScopeVisibility}}, tokenizer::tokenizer_test}};
 
 const TEST_FILE: &str = r#"
 trait Strable {}
@@ -42,7 +42,7 @@ fn get_type_stack_should_work() {
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap().stream;
 
-    let type_stack = forward_declarde_type_stack(&mut stream)
+    let scopes = get_scope_from_type_stack(&mut stream, ExternalPages::new(), "test".into())
         .inspect_err(|err| panic!("{:?}", err))
         .unwrap();
 
@@ -160,7 +160,7 @@ fn get_type_stack_should_work() {
             visibility_mode: ScopeVisibility::All,
         },
     ];
-    assert_eq_show_diff!(type_stack.scopes, should_be);
+    assert_eq_show_diff!(scopes.get_types(), &should_be);
 }
 
 

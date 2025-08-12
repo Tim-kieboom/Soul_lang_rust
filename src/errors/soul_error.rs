@@ -1,4 +1,4 @@
-use std::{io::{BufRead, BufReader, Read}, result};
+use std::{io::{BufRead, BufReader, Read, Seek, SeekFrom}, result};
 
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +26,7 @@ pub enum SoulErrorKind {
 
     InvalidStringFormat, // if f"..." has incorrect argument
     InvalidInContext,
+    InvalidPath,
     InvalidName,
     InvalidType,
 
@@ -135,7 +136,7 @@ impl SoulError {
         self.get_message_stack()
     }
 
-    pub fn to_highlighed_message<R: Read>(&self, reader: BufReader<R>) -> String {
+    pub fn to_highlighed_message<R: Read + Seek>(&self, reader: &mut BufReader<R>) -> String {
 
         //an error that is not in any line number in the source code
         const NON_SPANABLE_ERROR: usize = 0;
@@ -153,7 +154,7 @@ impl SoulError {
             first_span.line_number
         };
 
-        let lines: Vec<String> = reader.lines()
+        let lines: Vec<String> = reader.by_ref().lines()
             .enumerate()
             .filter_map(|(idx, line)| {
                 if idx+1 >= start && idx < end {
@@ -163,7 +164,8 @@ impl SoulError {
                 }
             })
             .collect();
-
+        
+        reader.seek(SeekFrom::Start(0)).expect("bufreader could not go back to start");
 
         generate_highlighted_string(first_span.line_number, lines.as_slice(), &[(start, first_span.line_offset, first_span.line_offset+first_span.len)])
     }

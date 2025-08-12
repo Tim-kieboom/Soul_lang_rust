@@ -1,13 +1,12 @@
-use std::fs::File;
-use std::io::{BufReader, BufWriter};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-use std::sync::Arc;
-use ego_tree::{NodeRef, Tree};
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
-use serde::de::{Visitor, SeqAccess};
-use serde::ser::SerializeSeq;
 use std::fmt;
+use std::fs::File;
+use std::str::FromStr;
+use serde::ser::SerializeSeq;
+use ego_tree::{NodeRef, Tree};
+use std::path::{Path, PathBuf};
+use serde::de::{Visitor, SeqAccess};
+use std::io::{BufReader, BufWriter};
+use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use crate::subfile_tree::{SubFileTree, TreeNode, TreeNodeKind};
 
 type ResErr<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -21,7 +20,7 @@ struct SerializableNode {
 
 impl SubFileTree {
 
-    pub fn get_all_file_paths(&self) -> Arc<[PathBuf]> {
+    pub fn get_all_file_paths(&self) -> Vec<PathBuf> {
         let mut result = Vec::with_capacity(self.files_len);
         let root = self.tree.root();
         let mut stack = Vec::new();
@@ -51,7 +50,7 @@ impl SubFileTree {
             }
         }
 
-        Arc::from(result)
+        result
     }
 
     fn flatten_tree(tree: &Tree<TreeNode>) -> Vec<SerializableNode> {

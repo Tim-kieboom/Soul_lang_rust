@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::NodeRef};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::MultiRef};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -161,7 +161,7 @@ pub struct Assignment {
     pub value: Expression,
 }
 
-pub type VariableRef = NodeRef<VariableDecl>;
+pub type VariableRef = MultiRef<VariableDecl>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VariableDecl {

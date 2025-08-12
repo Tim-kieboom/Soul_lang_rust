@@ -7,7 +7,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::I
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::literal::Literal, parser_response::FromTokenStream, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
 impl FromTokenStream<Literal> for Literal {
-    fn try_from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<Self>> {
+    fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<Self>> {
         let begin_i = stream.current_index();
 
         let possible_result = inner_from_stream(stream, scopes);
@@ -22,7 +22,7 @@ impl FromTokenStream<Literal> for Literal {
         }
     }
     
-    fn from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal> {
+    fn from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Literal> {
         
         let begin_i = stream.current_index();
 

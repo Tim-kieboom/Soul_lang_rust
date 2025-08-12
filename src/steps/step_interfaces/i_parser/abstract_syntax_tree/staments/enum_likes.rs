@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, utils::node_ref::NodeRef};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, utils::node_ref::MultiRef};
 
-pub type EnumDeclRef = NodeRef<InnerEnumDecl>;
+pub type EnumDeclRef = MultiRef<InnerEnumDecl>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerEnumDecl {
@@ -16,7 +16,7 @@ pub struct InnerEnumDecl {
     pub max_num: i64,
 }
 
-pub type UnionDeclRef = NodeRef<InnerUnionDecl>;
+pub type UnionDeclRef = MultiRef<InnerUnionDecl>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerUnionDecl {
@@ -25,7 +25,7 @@ pub struct InnerUnionDecl {
     pub byte_size: usize,
 }
 
-pub type TypeEnumDeclRef = NodeRef<InnerTypeEnumDecl>;
+pub type TypeEnumDeclRef = MultiRef<InnerTypeEnumDecl>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerTypeEnumDecl {

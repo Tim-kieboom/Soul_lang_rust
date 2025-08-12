@@ -1,0 +1,4 @@
+type Public typeof int
+type private typeof int
+  
+ 

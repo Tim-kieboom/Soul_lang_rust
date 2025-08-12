@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use crate::soul_names::check_name;
-use crate::steps::parser::get_expressions::parse_expression::get_page_path;
+use crate::steps::parser::get_expressions::parse_path::get_page_path;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
@@ -8,15 +8,15 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::I
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::Lifetime;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalType, Modifier, TypeKind, TypeWrapper, UnionType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalType, Modifier, TypeKind, TypeWrapper, UnionKind, UnionType};
 
 pub trait FromWithPath {
-    fn try_from_stream_with_path(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<SoulType>>;
-    fn from_stream_with_path(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<SoulType>;
+    fn try_from_stream_with_path(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<SoulType>>;
+    fn from_stream_with_path(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType>;
 }
 
 impl FromTokenStream<SoulType> for SoulType {
-    fn from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<SoulType> {
+    fn from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType> {
         let begin_index = stream.current_index();
 
         let result = inner_from_token_stream(stream, scopes, false);
@@ -30,7 +30,7 @@ impl FromTokenStream<SoulType> for SoulType {
         }
     }
 
-    fn try_from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<SoulType>> {
+    fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<SoulType>> {
         let begin_index = stream.current_index();
 
         let result = inner_from_token_stream(stream, scopes, false);
@@ -47,7 +47,7 @@ impl FromTokenStream<SoulType> for SoulType {
 
 impl FromWithPath for SoulType {
 
-    fn from_stream_with_path(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<SoulType> {
+    fn from_stream_with_path(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType> {
         let begin_index = stream.current_index();
 
         let result = inner_from_token_stream(stream, scopes, true);
@@ -61,7 +61,7 @@ impl FromWithPath for SoulType {
         }
     }
 
-    fn try_from_stream_with_path(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Option<Result<SoulType>> {
+    fn try_from_stream_with_path(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<SoulType>> {
         let begin_index = stream.current_index();
 
         let result = inner_from_token_stream(stream, scopes, true);
@@ -76,7 +76,7 @@ impl FromWithPath for SoulType {
     }
 }
 
-fn inner_from_token_stream(stream: &mut TokenStream, scopes: &ScopeBuilder, with_path: bool) -> Result<Result<SoulType>> {
+fn inner_from_token_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder, with_path: bool) -> Result<Result<SoulType>> {
     let mut soul_type = SoulType::none();
 
     soul_type.modifier = Modifier::from_str(stream.current_text());
@@ -153,7 +153,7 @@ fn inner_from_token_stream(stream: &mut TokenStream, scopes: &ScopeBuilder, with
     Ok(Ok(soul_type))
 }
 
-fn get_tuple_type_kind(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind> {
+fn get_tuple_type_kind(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<TypeKind> {
     if stream.peek_multiple(2).is_some_and(|token| token.text == ":") {
         get_named_tuple(stream, scopes)
     }
@@ -162,7 +162,7 @@ fn get_tuple_type_kind(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Resul
     }
 }
 
-fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind> {
+fn get_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<TypeKind> {
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     } 
@@ -227,7 +227,7 @@ fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind
     Err(err_out_of_bounds(stream))
 }
 
-fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<TypeKind> {
+fn get_named_tuple(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<TypeKind> {
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     } 
@@ -318,7 +318,7 @@ fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Ty
     Err(err_out_of_bounds(stream))
 }
 
-fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<()> {
+fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
     if stream.next_multiple(2).is_none() {
         return Err(err_out_of_bounds(stream));
     }
@@ -364,7 +364,7 @@ fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: 
     }
 }
 
-fn get_type_kind(stream: &mut TokenStream, scopes: &ScopeBuilder, with_path: bool) -> Result<TypeKind> {
+fn get_type_kind(stream: &mut TokenStream, scopes: &mut ScopeBuilder, with_path: bool) -> Result<TypeKind> {
     let possible_kind = scopes.lookup_type(stream.current_text())
         .cloned();
     
@@ -379,18 +379,22 @@ fn get_type_kind(stream: &mut TokenStream, scopes: &ScopeBuilder, with_path: boo
     }
 }
 
-fn get_union_or_page(possible_kind: Option<TypeKind>, stream: &mut TokenStream, scopes: &ScopeBuilder, with_path: bool) -> Result<TypeKind> {
+fn get_union_or_page(possible_kind: Option<TypeKind>, stream: &mut TokenStream, scopes: &mut ScopeBuilder, with_path: bool) -> Result<TypeKind> {
     if let Some(kind) = possible_kind {
         if stream.next_multiple(2).is_none() {
             return Err(err_out_of_bounds(stream));
         }
 
         let variant = Ident(stream.current_text().clone());
-        let union = match kind {
-            TypeKind::Union(ident) => ident,
-            _ => return Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), "'::' only allowed for union types")),
-        };
-        Ok(TypeKind::UnionVariant(UnionType{union, variant}))
+        match kind {
+            TypeKind::Union(union) => Ok(TypeKind::UnionVariant(UnionType{union: UnionKind::Union(union), variant})),
+            TypeKind::ExternalType(ext_ty) => Ok(TypeKind::UnionVariant(UnionType{union: UnionKind::External(ext_ty), variant})),
+            TypeKind::ExternalPath{name:_, path} => {
+                get_type_kind(stream, scopes, with_path)?;
+                Ok(TypeKind::ExternalType(ExternalType{path, name: Ident(stream.current_text().clone())}))
+            },
+            _ => Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), format!("'::' only allowed for union types, type: '{}'", kind.get_variant()))),
+        }
     }
     else {
         if !with_path {
@@ -402,7 +406,7 @@ fn get_union_or_page(possible_kind: Option<TypeKind>, stream: &mut TokenStream, 
             return Err(err_out_of_bounds(stream));
         }
 
-        Ok(TypeKind::ExternalType(ExternalType{name: Ident(stream.current_text().clone()), path}))
+        Ok(TypeKind::ExternalType(ExternalType{name: Ident(stream.current_text().clone()), path: path.path}))
     }
 }
 

@@ -2,19 +2,20 @@ use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::step_interfaces::i_parser::{external_header::Header};
 
 pub fn get_header(scopes: &ScopeBuilder) -> Header {
-    let mut header = Header{scope: vec![], types: vec![]};
+    let mut header = Header::from([], []);
     
     for (name, scopes) in &scopes.get_global_scope().symbols {
         
         if starts_with_capital(name.as_str()) {
-            header.scope.extend_from_slice(scopes.as_slice());
+            
+            header.scope.extend(scopes.iter().map(|el| (name.clone(), el.clone())));
         }
     }
 
     for (name, ty) in &scopes.get_global_types().symbols {
         
         if starts_with_capital(name.as_str()) {
-            header.types.push(ty.clone());
+            header.types.insert(name.clone(), ty.clone());
         }
     }
 

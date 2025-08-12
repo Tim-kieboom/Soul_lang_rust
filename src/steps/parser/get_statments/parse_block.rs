@@ -1,4 +1,4 @@
-use crate::utils::node_ref::NodeRef;
+use crate::utils::node_ref::MultiRef;
 use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeKind, ScopeVisibility};
@@ -48,7 +48,7 @@ fn inner_get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStre
 
     let mut block = Spanned::new(Block{statments:vec![]}, stream.current_span());
     
-    let mut scope_ref = StatmentBuilder::Block(NodeRef::new(block));
+    let mut scope_ref = StatmentBuilder::Block(MultiRef::new(block));
     loop {
         
         if let Some(statment) = get_statment(&mut scope_ref, stream, scopes)? {

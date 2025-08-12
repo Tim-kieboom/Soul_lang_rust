@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}}, utils::node_ref::NodeRef};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}}, utils::node_ref::MultiRef};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnDecl {
@@ -68,9 +68,9 @@ impl FnDeclKind {
     }
 }
 
-pub type FunctionSignatureRef = NodeRef<InnerFunctionSignature>; 
+pub type FunctionSignatureRef = MultiRef<InnerFunctionSignature>; 
 
-pub type LambdaSignatureRef = NodeRef<InnerLambdaSignature>;
+pub type LambdaSignatureRef = MultiRef<InnerLambdaSignature>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LambdaMode {
@@ -118,6 +118,7 @@ pub struct InnerFunctionSignature {
     pub return_type: Option<SoulType>,
     ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
     pub modifier: Modifier,
+    pub span: SoulSpan,
 }
 
 

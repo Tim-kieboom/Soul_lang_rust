@@ -47,6 +47,7 @@ pub enum TypeKind {
 
     UnionVariant(UnionType),
     ExternalType(ExternalType),
+    ExternalPath{name: Ident, path: SoulPagePath},
 
     TypeEnum(Ident, Vec<SoulType>),
 
@@ -73,13 +74,22 @@ pub enum UntypedKind {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UnionType {
-    pub union: Ident, 
+    pub union: UnionKind, 
     pub variant: Ident
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum UnionKind {
+    Union(Ident),
+    External(ExternalType),
 }
 
 impl UnionType {
     pub fn to_string(&self) -> String {
-        format!("{}::{}", self.union.0, self.variant.0)
+        match &self.union {
+            UnionKind::Union(ident) => format!("{}::{}", ident.0, self.variant.0),
+            UnionKind::External(external_type) => format!("{}::{}", external_type.to_string(), self.variant.0),
+        }
     }
 }
 
@@ -152,6 +162,7 @@ impl TypeKind {
             TypeKind::LifeTime(ident) => ident.0.clone(),
             TypeKind::Lambda(signature) => signature.to_type_string(),
             TypeKind::ExternalType(ty) => ty.to_string(),
+            TypeKind::ExternalPath{name, ..} => format!("<path>{}", name.0),
         }
     }
 
@@ -208,6 +219,7 @@ impl TypeKind {
                 LambdaMode::Consume => "OnceFn",
             },
             TypeKind::ExternalType(..) => "ExternalType",
+            TypeKind::ExternalPath{..} => "ExternalPath",
         }
     }
 }

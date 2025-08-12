@@ -93,7 +93,6 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
                 name: Ident(stream[name_i].text.clone()), 
                 generics: generics_decl.generics, 
                 methodes, 
-                implements: generics_decl.implements
             }),
             stream.current_span().combine(&stream[struct_i].span)
         ),

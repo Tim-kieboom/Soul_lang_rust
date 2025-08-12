@@ -1,42 +1,39 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::soul_type::SoulType, spanned::Spanned, staments::function::{FnDecl, FnDeclKind, FunctionSignatureRef}, visibility::FieldAccess}, utils::node_ref::NodeRef};
+use crate::{steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::soul_type::SoulType, spanned::Spanned, staments::function::{FnDeclKind, FunctionSignatureRef}, visibility::FieldAccess}}, utils::node_ref::MultiRef};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TraitImpl {
     pub trait_name: Ident,
     pub for_type: SoulType,
-    pub methodes: Vec<FnDecl>,
+    pub methodes: Vec<Spanned<FnDeclKind>>,
 }
-pub type TraitDeclRef = NodeRef<InnerTraitDecl>;
+pub type TraitDeclRef = MultiRef<InnerTraitDecl>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerTraitDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
     pub methodes: Vec<FunctionSignatureRef>,
-    pub implements: Vec<Ident>,
 }
 
-pub type StructDeclRef = NodeRef<InnerStructDecl>;
+pub type StructDeclRef = MultiRef<InnerStructDecl>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerStructDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
-    pub fields: Vec<FieldDecl>,
-    pub implements: Vec<Ident>,
+    pub fields: Vec<Spanned<FieldDecl>>,
 }
 
-pub type ClassDeclRef = NodeRef<InnerClassDecl>;
+pub type ClassDeclRef = MultiRef<InnerClassDecl>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerClassDecl {
     pub name: Ident,
     pub generics: Vec<GenericParam>,
-    pub fields: Vec<FieldDecl>,
+    pub fields: Vec<Spanned<FieldDecl>>,
     pub methodes: Vec<Spanned<FnDeclKind>>,
-    pub implements: Vec<Ident>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

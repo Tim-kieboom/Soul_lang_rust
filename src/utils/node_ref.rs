@@ -2,11 +2,11 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone)]
-pub struct NodeRef<T: Serialize> {
+pub struct MultiRef<T: Serialize> {
     inner: Arc<RwLock<T>>
 }
 
-impl<T: Serialize> Serialize for NodeRef<T> {
+impl<T: Serialize> Serialize for MultiRef<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer {
@@ -14,7 +14,7 @@ impl<T: Serialize> Serialize for NodeRef<T> {
     }
 }
 
-impl<'de, T> Deserialize<'de> for NodeRef<T>
+impl<'de, T> Deserialize<'de> for MultiRef<T>
 where
     T: Deserialize<'de> + Serialize,
 {
@@ -23,12 +23,12 @@ where
         D: Deserializer<'de>,
     {
         let value = T::deserialize(deserializer)?;
-        Ok(NodeRef { inner: Arc::new(RwLock::new(value)) })
+        Ok(MultiRef { inner: Arc::new(RwLock::new(value)) })
     }
 }
 
 
-impl<T: Serialize> NodeRef<T> {
+impl<T: Serialize> MultiRef<T> {
     pub fn new(var: T) -> Self {
         Self { inner: Arc::new(RwLock::new(var)) }
     }
@@ -48,7 +48,7 @@ impl<T: Serialize> NodeRef<T> {
     }
 }
 
-impl<T: Serialize> PartialEq for NodeRef<T> {
+impl<T: Serialize> PartialEq for MultiRef<T> {
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.inner, &other.inner)
     }

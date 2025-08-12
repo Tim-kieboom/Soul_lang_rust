@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableKind}}}, utils::node_ref::NodeRef};
+use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableKind}}}, utils::node_ref::MultiRef};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AbstractSyntacTree {
@@ -10,8 +10,8 @@ pub type GlobalNode = Spanned<GlobalKind>;
 
 #[derive(Debug)]
 pub enum StatmentBuilder {
-    Global(NodeRef<Vec<GlobalNode>>),
-    Block(NodeRef<Spanned<Block>>),
+    Global(MultiRef<Vec<GlobalNode>>),
+    Block(MultiRef<Spanned<Block>>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

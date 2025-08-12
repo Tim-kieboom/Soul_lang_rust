@@ -1,6 +1,6 @@
 use std::sync::RwLockReadGuard;
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{CaseDoKind, ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{CaseDoKind, ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}}, i_sementic::sementic_scope::ScopeVisitor};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -8,6 +8,29 @@ pub trait PrettyFormat {
 
 pub trait PrettyPrint {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String;
+}
+
+impl PrettyFormat for ScopeVisitor {
+    fn to_pretty_string(&self) -> String {
+        format!(
+            "scopes: [\n\t{}\n]\ntypes: [\n\t{}\n]",
+            self.get_scopes()
+                .scopes
+                .iter()
+                .map(|scope| format!(
+                    "scope{}: [\n\t\t{}\n\t]", 
+                    scope.self_index, 
+                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
+                )).join(",\n\t"),
+            self.get_types()
+                .iter()
+                .map(|scope| format!(
+                    "scope{}: [\n\t\t{}\n\t]", 
+                    scope.self_index, 
+                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
+                )).join(",\n\t"),
+        )
+    }
 }
 
 impl PrettyFormat for ScopeBuilder {
@@ -261,7 +284,7 @@ impl PrettyPrint for TraitImpl {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let mut methods = self.methodes
             .iter()
-            .map(|fn_decl| fn_decl.to_pretty(tab + 1, true))
+            .map(|fn_decl| fn_decl.node.to_pretty(tab + 1, true))
             .join("\n\n");
 
         if methods.is_empty() {
@@ -290,17 +313,17 @@ impl PrettyPrint for ClassDeclRef {
         let fields = this.fields.iter().enumerate().map(|(i, f)| {
             let is_last_field = i == last_index && is_empty;
             let field_prefix = tree_prefix(tab + 1, is_last_field);
-            let access = match (&f.vis.get, &f.vis.set) {
+            let access = match (&f.node.vis.get, &f.node.vis.set) {
                 (Some(Visibility::Public), Some(Visibility::Public)) => "{Get;Set;}",
                 (Some(Visibility::Public), _) => "{Get;}",
                 (_, Some(Visibility::Public)) => "{Set;}",
                 _ => "",
             };
-            let default = f.default_value
+            let default = f.node.default_value
                 .as_ref()
                 .map(|v| format!(" = {}", v.node.to_string(tab)))
                 .unwrap_or_default();
-            format!("{}{} {}: {}{}", field_prefix, access, f.name.0, f.ty.to_string(), default)
+            format!("{}{} {}: {}{}", field_prefix, access, f.node.name.0, f.node.ty.to_string(), default)
         });
 
 
@@ -346,10 +369,10 @@ impl PrettyPrint for StructDeclRef {
             .map(|(i, f)| {
                 let last = i == self.borrow().fields.len() - 1;
                 let inner_prefix = tree_prefix(tab + 1, last);
-                if let Some(value) = &f.default_value {
-                    format!("{}{} {} {} = {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false), value.node.to_string(tab))
+                if let Some(value) = &f.node.default_value {
+                    format!("{}{} {} {} = {}", inner_prefix, f.node.ty.to_string(), f.node.name.0, f.node.vis.to_pretty(0, false), value.node.to_string(tab))
                 } else {
-                    format!("{}{} {} {}", inner_prefix, f.ty.to_string(), f.name.0, f.vis.to_pretty(0, false))
+                    format!("{}{} {} {}", inner_prefix, f.node.ty.to_string(), f.node.name.0, f.node.vis.to_pretty(0, false))
                 }
             })
             .join("\n");

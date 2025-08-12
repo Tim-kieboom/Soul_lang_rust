@@ -93,15 +93,43 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Throw_result executable SOURCE_FILE 'soul_lang_rust'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust",
+                    "--features",
+                    "throw_result,dev_mode"
+                ],
+                "filter": {
+                    "name": "soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "build", 
+                "soul_src\\main.soul",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
+                "--subtreePath=soul_src\\soul_subfiles.tree.bin",
+                "-prettyCppCode"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_BACKTRACE": "1"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Release executable 'soul_lang_rust' SHOW_ALL",
             "cargo": {
                 "args": [
                     "build",
                     "--release",
                     "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust",
-                    "--features",
-                    "dev_mode"
+                    "--package=soul_lang_rust"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",
@@ -113,6 +141,32 @@
                 "test.soul",
                 "--showOutput=SHOW_ALL",
                 "--showTime=SHOW_ALL",
+                "-prettyCppCode"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release executable SOURCE_FILE 'soul_lang_rust' SHOW_ALL",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust"
+                ],
+                "filter": {
+                    "name": "soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "build", 
+                "soul_src\\main.soul",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
+                "--subtreePath=soul_src\\soul_subfiles.tree.bin",
                 "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"

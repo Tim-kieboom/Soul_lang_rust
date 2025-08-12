@@ -1,3 +1,4 @@
+pub mod parse_path;
 pub mod parse_expression;
 pub mod parse_function_call;
 

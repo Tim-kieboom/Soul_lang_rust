@@ -1,28 +1,31 @@
 use once_cell::sync::Lazy;
+use crate::steps::parser::get_expressions::parse_path::{get_page_path_type_stack, PagePathKind};
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::soul_names::{NamesInternalType, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
-use crate::steps::step_interfaces::i_parser::scope::{ScopeVisibility, TypeScopeStack};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize};
+use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder, ScopeVisibility, SoulPagePath, TypeScopeStack};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalType, TypeKind, TypeSize};
 
-pub fn forward_declarde_type_stack(stream: &mut TokenStream) -> Result<TypeScopeStack> {
+pub fn get_scope_from_type_stack(stream: &mut TokenStream, external_books: ExternalPages, project_name: String) -> Result<ScopeBuilder> {
     let mut types = TypeScopeStack::new();
+    let mut scopes = ScopeBuilder::new(external_books, project_name);
     add_default_type_kind(&mut types);
 
     loop {
 
-        parse_type(&mut types, stream)?;
+        parse_type(&mut types, &mut scopes, stream)?;
 
         if stream.next().is_none() {
             break;
         }
     }
 
-    Ok(types)
+    scopes.fill_with_type_stack(types);
+    Ok(scopes)
 }
 
-fn parse_lambda_scope(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()> {
+fn parse_lambda_scope(types: &mut TypeScopeStack, scopes: &mut ScopeBuilder, stream: &mut TokenStream) -> Result<()> {
     let mut open_curly_bracket_stack = 0i64;
     let mut open_round_bracket_stack = 0i64;
     types.push_current(ScopeVisibility::All);
@@ -52,7 +55,7 @@ fn parse_lambda_scope(types: &mut TypeScopeStack, stream: &mut TokenStream) -> R
             ")" => open_round_bracket_stack -= 1,
             "{" => open_curly_bracket_stack += 1,
             "}" => open_curly_bracket_stack += 1,
-            "=>" => parse_lambda_scope(types, stream)?,
+            "=>" => parse_lambda_scope(types, scopes, stream)?,
             "\n" => {
                 if open_curly_bracket_stack == 0 && open_round_bracket_stack == 0 {
                     types.pop(stream.current_span());
@@ -79,10 +82,10 @@ fn parse_lambda_scope(types: &mut TypeScopeStack, stream: &mut TokenStream) -> R
 
 }
 
-fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()> {
+fn parse_type(types: &mut TypeScopeStack, scopes: &mut ScopeBuilder, stream: &mut TokenStream) -> Result<()> {
 
     if stream.current_text() == "=>" {
-        parse_lambda_scope(types, stream)?;
+        parse_lambda_scope(types, scopes, stream)?;
     }
 
     if stream.current_text() == "{}" {
@@ -165,6 +168,9 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
             let ty = TypeKind::Class(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty)
         },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Use) => {
+            parse_use(stream, scopes, types)?
+        },
         _ => true,
     };
 
@@ -173,6 +179,100 @@ fn parse_type(types: &mut TypeScopeStack, stream: &mut TokenStream) -> Result<()
     }
 
     Ok(())
+}
+
+fn parse_use(stream: &mut TokenStream, scopes: &mut ScopeBuilder, types: &mut TypeScopeStack) -> Result<bool> {
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let PagePathKind{path, is_page} = get_page_path_type_stack(stream, scopes, &types)?.node;
+    if !is_page || stream.current_text() == "\n" || stream.current_text() == ";" {
+        let name = Ident(path.get_last_name());
+        let duplicate = !types.insert(name.0.clone(), TypeKind::ExternalPath{name, path: path.clone()});
+        if duplicate {
+            return Err(new_soul_error(
+                SoulErrorKind::InvalidInContext, 
+                stream.current_span(), 
+                format!("path: '{}' is already included in scope", path.0)
+            ));
+        }
+        return Ok(true)
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    let names = if stream.current_text() == "[" {
+        parse_multi_use(stream, types, &path)?
+    }
+    else {
+        vec![stream.current_text().clone()]
+    };
+    
+    for name in names {
+        
+        if types.current_mut().symbols.contains_key(&name) {
+            return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("a type of name: '{}' already exists", name)))
+        }
+
+        let ty = TypeKind::ExternalType(ExternalType{name: Ident(name.clone()), path: path.clone()});
+        types.insert(name, ty);
+    }
+
+    Ok(true)
+}
+
+fn parse_multi_use(stream: &mut TokenStream, types: &mut TypeScopeStack, path: &SoulPagePath) -> Result<Vec<String>> {
+    
+    let mut names = vec![];
+    loop {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "\n" {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream));
+            }
+        }
+
+        if stream.current_text() == "this" {
+            let name = Ident(path.get_last_name());
+            let duplicate = !types.insert(name.0.clone(), TypeKind::ExternalPath{name, path: path.clone()});
+            if duplicate {
+                return Err(new_soul_error(
+                    SoulErrorKind::InvalidInContext, 
+                    stream.current_span(), 
+                    format!("path: '{}' is already included in scope", path.0)
+                ));
+            }
+        }
+        else {
+            names.push(stream.current_text().clone());
+        }
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if stream.current_text() == "," {
+            continue;
+        }
+        else if stream.current_text() == "]" {
+            break Ok(names)
+        }
+        else {
+            return Err(new_soul_error(
+                SoulErrorKind::UnexpectedToken, 
+                stream.current_span(), 
+                format!("token: '{}' should be ',' or ']'", stream.current_text())
+            ))
+        }
+    }
 }
 
 fn add_default_type_kind(types: &mut TypeScopeStack) {
@@ -214,8 +314,6 @@ static INTERNAL_TYPES: Lazy<Vec<(&str, TypeKind)>> = Lazy::new(|| vec![
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
 }
-
-
 
 
 
