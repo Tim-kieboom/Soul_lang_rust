@@ -12,5 +12,5 @@ Sum(int a, int b) int {
 MyPrintln(str msg) { 
     Println(msg)
 } 
-
+ 
 type TestType typeof int

@@ -126,9 +126,12 @@ fn cache_file<'a>(run_option: Arc<RunOptions>, sub_files: Option<Arc<SubFileTree
     let path_string = file_path.to_string_lossy().to_string();
     let info = RunStepsInfo{current_path: &path_string, logger: &logger, run_options: &run_option, time_log: &time_log};
 
-    let source_response = source_reader(reader, &info).main_err_map("in source_reader")?;
-    let token_response = tokenizer(source_response, &info).main_err_map("in tokenizer")?;
-    let parser_response = parser(token_response, sub_files, &info).main_err_map("in parser")?;
+    let mut path = PathBuf::from(file_path);
+    let file_name = path.file_name().expect("path has filename").to_string_lossy().to_string();
+    path.pop();
+    let source_response = source_reader(reader, &info, &path, &file_name).main_err_map("in source_reader")?;
+    let token_response = tokenizer(source_response, &info, &path, &file_name).main_err_map("in tokenizer")?;
+    let parser_response = parser(token_response, sub_files, &info, &path, &file_name).main_err_map("in parser")?;
 
     cache_parser(parser_response, &run_option, file_path)
         .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, SoulSpan::new(0,0,0), format!("!!internal error!! while trying to cache parsed file\n{}", msg.to_string())))?;
