@@ -1,35 +1,37 @@
 use crate::{errors::soul_error::SoulError};
 
-///could be error or warning
-pub enum SoulFault {
-    Error(SoulError),
-    Warning(SoulError),
-    Note(SoulError),
+///could be error or warning or note
+pub struct SoulFault {
+    pub err: SoulError, 
+    pub kind: SoulFaultKind,
+}
+
+#[derive(Debug, PartialEq, PartialOrd)]
+pub enum SoulFaultKind {
+    Error,
+    Warning,
+    Note,
 }
 
 impl SoulFault {
 
+    pub fn new_error(err: SoulError) -> Self {
+        Self { err, kind: SoulFaultKind::Error }
+    }
+
+    pub fn new_warning(err: SoulError) -> Self {
+        Self { err, kind: SoulFaultKind::Warning }
+    }
+
+    pub fn new_note(err: SoulError) -> Self {
+        Self { err, kind: SoulFaultKind::Note }
+    }
+
     pub fn is_error(&self) -> bool {
-        match self {
-            SoulFault::Error(_) => true,
-            SoulFault::Note(_) |
-            SoulFault::Warning(_) => false,
-        }
-    }
-
-    pub fn get_soul_error(&self) -> &SoulError {
-        match self {
-            SoulFault::Note(soul_error) => soul_error,
-            SoulFault::Error(soul_error) => soul_error,
-            SoulFault::Warning(soul_error) => soul_error,
-        }
-    }
-
-    pub fn consume(self) -> SoulError {
-        match self {
-            SoulFault::Note(soul_error) => soul_error,
-            SoulFault::Error(soul_error) => soul_error,
-            SoulFault::Warning(soul_error) => soul_error,
+        match self.kind {
+            SoulFaultKind::Error => true,
+            SoulFaultKind::Note |
+            SoulFaultKind::Warning => false,
         }
     }
 }

@@ -1,0 +1,44 @@
+use soul_src::std::test::Union
+const globalVariant = soul_src::std::test::Union::One(1)
+const v = Union::One(1)
+const arg = this::std::test::GlobalVar
+
+thisMain() {
+    union Or{One(int)}
+    v := Or::One(1)
+
+    gvar := this::std::test::GlobalVar
+    sum := this::std::test::Sum(1, 2)
+    this::std::test::MyPrintln("hello")
+    this::std::test::TestType foo = 1
+
+    arr := [for i in this::std::test::GlobalVar => i]
+
+    use std::fmt::[Arg, FormatArgs]
+ 
+    Arg arg = Arg(1) 
+    arg = std::fmt::Arg(1) 
+    arg = Arg(1, pretty=true) 
+    fstr := FormatArgs("foo ", arg)
+
+    Println(f"hello {sum} {#sum}")
+} 
+
+using() {
+    use this::std
+    use std::test
+    use test::Union
+    use test::[TestType, Sum]
+    use this::std::otherTest::[this, Public]
+
+    one := Union::One(1)
+    one = test::Union::One(1)
+    one = std::test::Union::One(1)
+    one = this::std::test::Union::One(1)
+    TestType ty = 1
+    test::TestType ty2 = 1
+    res := Sum(1,2)
+
+    Public a = 1
+    otherTest::Public a2 = 1
+}

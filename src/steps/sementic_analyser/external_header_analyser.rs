@@ -223,7 +223,7 @@ impl ExternalHeaderAnalyser {
         let header = match self.get_scope().external_header.store.get(&node.path) {
             Some(val) => val,
             None => {
-                self.add_fault(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidPath, span, format!("path: '{}' could not be found", node.path.0)))); 
+                self.add_fault(SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidPath, span, format!("path: '{}' could not be found", node.path.0)))); 
                 return;
             },
         };
@@ -231,7 +231,7 @@ impl ExternalHeaderAnalyser {
 
         if let Err(msg) = header_contains(&header, &node.expr.node) {
             
-            self.add_fault(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("{} with path: '{}'", msg, node.path.0))));
+            self.add_fault(SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("{} with path: '{}'", msg, node.path.0))));
             return;
         }
     }
@@ -439,13 +439,13 @@ impl ExternalHeaderAnalyser {
             let header = match self.get_scope().external_header.store.get(&external_type.node.path) {
                 Some(val) => val,
                 None => {
-                    return Some(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidPath, span, format!("path: '{}' could not be found", external_type.node.path.0)))); 
+                    return Some(SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidPath, span, format!("path: '{}' could not be found", external_type.node.path.0)))); 
                 },
             };
 
             
             if !header.types.contains_key(&external_type.node.name.0) && !header.scope.contains_key(&external_type.node.name.0)  {
-                return Some(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("'{}' does not exist in path: '{}'", external_type.node.name.0, external_type.node.path.0))));
+                return Some(SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("'{}' does not exist in path: '{}'", external_type.node.name.0, external_type.node.path.0))));
             }
         }
         None
