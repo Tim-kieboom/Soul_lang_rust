@@ -3,9 +3,22 @@ use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps
 impl AstVisitable for ExternalHeaderAnalyser {
     fn visit_ast(&mut self, node: &mut AbstractSyntacTree) {
         
+        let mut temp_faults = vec![];
+        for scope in self.get_scope().get_types() {
+            
+            for ty in scope.symbols.values() {
+                if let Some(fault) = self.check_type_kind(ty, None) {
+                    temp_faults.push(fault);
+                }
+            }
+        }
+
+        self.extent_faults(temp_faults, true);
+
         for node in node.root.iter_mut() {
             self.visit_global_node(node);
         }
+
     }
 
     fn visit_global_node(&mut self, node: &mut GlobalNode) {
@@ -380,9 +393,11 @@ impl ExternalHeaderAnalyser {
         
         let (mut signature, body) = match &mut fn_kind.node {
             FnDeclKind::Fn(FnDecl{signature, body}) => (signature, body),
+            FnDeclKind::Ctor(FnDecl{signature, body}) => (signature, body),
             FnDeclKind::ExtFn(ExtFnDecl{signature, body}) => (signature, body),
-
+            
             FnDeclKind::InternalFn(_) => return,
+            FnDeclKind::InternalCtor(_) => return,
         };
 
         self.check_fn_signature(&mut signature);
@@ -411,25 +426,34 @@ impl ExternalHeaderAnalyser {
 
     fn check_type(&mut self, ty: &SoulType, span: SoulSpan) {
 
-        if let TypeKind::ExternalType(external_type) = &ty.base {
+        if let Some(fault) = self.check_type_kind(&ty.base, Some(span)) {
+            self.add_fault(fault);
+        }
+    }
 
-            let header = match self.get_scope().external_header.store.get(&external_type.path) {
+    fn check_type_kind(&self, ty: &TypeKind, span: Option<SoulSpan>) -> Option<SoulFault> {
+
+        if let TypeKind::ExternalType(external_type) = &ty {
+
+            let span = if let Some(val) = span {val} else {external_type.span};
+            let header = match self.get_scope().external_header.store.get(&external_type.node.path) {
                 Some(val) => val,
                 None => {
-                    self.add_fault(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidPath, span, format!("path: '{}' could not be found", external_type.path.0)))); 
-                    return;
+                    return Some(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidPath, span, format!("path: '{}' could not be found", external_type.node.path.0)))); 
                 },
             };
 
-            if !header.types.contains_key(&external_type.name.0) {
-                self.add_fault(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("'{}' does not exist in path: '{}'", external_type.name.0, external_type.path.0))));
-                return;
+            
+            if !header.types.contains_key(&external_type.node.name.0) && !header.scope.contains_key(&external_type.node.name.0)  {
+                return Some(SoulFault::Error(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("'{}' does not exist in path: '{}'", external_type.node.name.0, external_type.node.path.0))));
             }
         }
+        None
     }
 }
 
 fn header_contains(header: &Header, expr: &ExprKind) -> Result<(), String> {
+
     let expr_name = match &expr {
         ExprKind::Call(fn_call) => &fn_call.name.0,
         ExprKind::Ctor(fn_call) => &fn_call.name.0,
@@ -440,11 +464,13 @@ fn header_contains(header: &Header, expr: &ExprKind) -> Result<(), String> {
     if expr_name.contains("::") {
         let mut splits = expr_name.split("::");
         let (union_name, variant_name) = (splits.next().unwrap(), splits.next().unwrap());
-        let union = header.scope.get(union_name)
+        let kinds = header.scope.get(union_name)
             .ok_or(format!("union is not in external page"))?;
 
+        let union = kinds.into_iter().find(|el| matches!(el, ScopeKind::Union(_)));
+
         let has_variant = match union {
-            ScopeKind::Union(node_ref) => node_ref.borrow().variants.iter().any(|variant| variant.name.0 == variant_name),
+            Some(ScopeKind::Union(node_ref)) => node_ref.borrow().variants.iter().any(|variant| variant.name.0 == variant_name),
             _ => return Err(format!("found type: '{}' but type is not union", union_name))
         };
 
@@ -455,13 +481,13 @@ fn header_contains(header: &Header, expr: &ExprKind) -> Result<(), String> {
         return Ok(())
     }
 
-    let kind = header.scope.get(expr_name)
+    let kinds = header.scope.get(expr_name)
         .ok_or(format!("expression is not in external page"))?;
 
     let (correct_type, kind_name) = match expr {
-        ExprKind::Ctor(_) => (matches!(kind, ScopeKind::Functions(_)), "Ctor"),
-        ExprKind::Call(_) => (matches!(kind, ScopeKind::Functions(_)), "function"),
-        ExprKind::Variable(_) => (matches!(kind, ScopeKind::Variable(_)), "variable"),
+        ExprKind::Ctor(_) => (kinds.iter().any(|kind| matches!(kind, ScopeKind::Functions(_))), "Ctor"),
+        ExprKind::Call(_) => (kinds.iter().any(|kind| matches!(kind, ScopeKind::Functions(_))), "function"),
+        ExprKind::Variable(_) => (kinds.iter().any(|kind| matches!(kind, ScopeKind::Variable(_))), "variable"),
         _ => unreachable!(),
     };
 

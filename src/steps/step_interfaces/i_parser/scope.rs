@@ -109,8 +109,8 @@ fn append_extension(path: &Path, ext: &str) -> PathBuf {
     PathBuf::from(os_string)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct IsInternalLib(pub bool);
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct IsInternalLib(pub Option<PathBuf>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalPages {
@@ -149,16 +149,15 @@ impl ExternalPages {
                 TreeNodeKind::Folder => {
                     let mut new_path = path.clone();
                     new_path.push(node_value.name.clone());
-                    books.insert(to_soul_path(&path, node_value), IsInternalLib(false));
+                    books.insert(to_soul_path(&path, node_value), IsInternalLib(None));
 
                     for child in node.children().rev() {
                         stack.push((child, new_path.clone()));
-                        books.insert(to_soul_path(&path, node_value), IsInternalLib(false));
+                        books.insert(to_soul_path(&path, node_value), IsInternalLib(None));
                     }
                 }
                 TreeNodeKind::File => {
-                    
-                    pages.insert(to_soul_path(&path, node_value), IsInternalLib(false));
+                    pages.insert(to_soul_path(&path, node_value), IsInternalLib(None));
                 }
             }
         }
@@ -166,12 +165,44 @@ impl ExternalPages {
         Self{pages, books}
     }
 
-    pub fn push_internal(&mut self, path: SoulPagePath) {
-        self.pages.insert(path, IsInternalLib(true));
+    pub fn push_internal(&mut self, path: SoulPagePath, mut path_to_bin: PathBuf) {
+        if self.pages.contains_key(&path) {
+            return;
+        }
+        
+        let mut path_buf = path.to_path_buf(false);
+        self.pages.insert(path, IsInternalLib(Some(path_to_bin.clone())));
+        
+        while !path_buf.pop() && !path_to_bin.pop() {
+            let path_exist = self.books.insert(
+                SoulPagePath::from_path(&path_buf), 
+                IsInternalLib(Some(path_to_bin.clone()))
+            ).is_some();
+
+            if path_exist {
+                break;
+            }
+        }
     }
 
     pub fn push(&mut self, path: SoulPagePath) {
-        self.pages.insert(path, IsInternalLib(false));
+        if self.pages.contains_key(&path) {
+            return;
+        }
+
+        let mut path_buf = path.to_path_buf(false);
+        self.pages.insert(path, IsInternalLib(None));
+
+        while !path_buf.pop() {
+            let path_exist = self.books.insert(
+                SoulPagePath::from_path(&path_buf), 
+                IsInternalLib(None)
+            ).is_some();
+
+            if path_exist {
+                break;
+            }
+        }
     }
 }
 

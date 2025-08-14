@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use crate::errors::soul_error::{new_soul_error, Result};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::ExternalPath;
 use crate::steps::step_interfaces::i_parser::scope::LookUpScope;
 use crate::{errors::soul_error::{SoulError, SoulErrorKind}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{soul_type::type_kind::TypeKind, spanned::Spanned}, scope::{InnerScope, ScopeBuilder, SoulPagePath, TypeScopeStack}}, i_tokenizer::TokenStream}};
 
@@ -92,7 +93,7 @@ fn resolve_first_path(
     if stream.current_text() == "this" {
         return Ok(PathBuf::from(Path::new(&scopes.project_name)));
     }
-    if let Some(TypeKind::ExternalPath { path, .. }) =
+    if let Some(TypeKind::ExternalPath(Spanned{node: ExternalPath{path, .. }, ..})) =
         types.lookup(&stream.current_text(), current_index)
     {
         let mut path = path.to_path_buf(false);

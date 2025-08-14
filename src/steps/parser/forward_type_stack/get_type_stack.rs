@@ -1,11 +1,12 @@
 use once_cell::sync::Lazy;
 use crate::steps::parser::get_expressions::parse_path::{get_page_path_type_stack, PagePathKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::soul_names::{NamesInternalType, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder, ScopeVisibility, SoulPagePath, TypeScopeStack};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalType, TypeKind, TypeSize};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalPath, ExternalType, TypeKind, TypeSize};
 
 pub fn get_scope_from_type_stack(stream: &mut TokenStream, external_books: ExternalPages, project_name: String) -> Result<ScopeBuilder> {
     let mut types = TypeScopeStack::new();
@@ -189,7 +190,7 @@ fn parse_use(stream: &mut TokenStream, scopes: &mut ScopeBuilder, types: &mut Ty
     let PagePathKind{path, is_page} = get_page_path_type_stack(stream, scopes, &types)?.node;
     if !is_page || stream.current_text() == "\n" || stream.current_text() == ";" {
         let name = Ident(path.get_last_name());
-        let duplicate = !types.insert(name.0.clone(), TypeKind::ExternalPath{name, path: path.clone()});
+        let duplicate = !types.insert(name.0.clone(), TypeKind::ExternalPath(Spanned::new(ExternalPath{name, path: path.clone()}, stream.current_span())));
         if duplicate {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
@@ -208,23 +209,23 @@ fn parse_use(stream: &mut TokenStream, scopes: &mut ScopeBuilder, types: &mut Ty
         parse_multi_use(stream, types, &path)?
     }
     else {
-        vec![stream.current_text().clone()]
+        vec![Spanned::new(stream.current_text().clone(), stream.current_span())]
     };
     
-    for name in names {
+    for Spanned{node: name, span} in names {
         
         if types.current_mut().symbols.contains_key(&name) {
-            return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("a type of name: '{}' already exists", name)))
+            return Err(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("a type of name: '{}' already exists", name)))
         }
 
-        let ty = TypeKind::ExternalType(ExternalType{name: Ident(name.clone()), path: path.clone()});
+        let ty = TypeKind::ExternalType(Spanned::new(ExternalType{name: Ident(name.clone()), path: path.clone()}, span));
         types.insert(name, ty);
     }
 
     Ok(true)
 }
 
-fn parse_multi_use(stream: &mut TokenStream, types: &mut TypeScopeStack, path: &SoulPagePath) -> Result<Vec<String>> {
+fn parse_multi_use(stream: &mut TokenStream, types: &mut TypeScopeStack, path: &SoulPagePath) -> Result<Vec<Spanned<String>>> {
     
     let mut names = vec![];
     loop {
@@ -242,7 +243,7 @@ fn parse_multi_use(stream: &mut TokenStream, types: &mut TypeScopeStack, path: &
 
         if stream.current_text() == "this" {
             let name = Ident(path.get_last_name());
-            let duplicate = !types.insert(name.0.clone(), TypeKind::ExternalPath{name, path: path.clone()});
+            let duplicate = !types.insert(name.0.clone(), TypeKind::ExternalPath(Spanned::new(ExternalPath{name, path: path.clone()}, stream.current_span())));
             if duplicate {
                 return Err(new_soul_error(
                     SoulErrorKind::InvalidInContext, 
@@ -252,7 +253,7 @@ fn parse_multi_use(stream: &mut TokenStream, types: &mut TypeScopeStack, path: &
             }
         }
         else {
-            names.push(stream.current_text().clone());
+            names.push(Spanned::new(stream.current_text().clone(), stream.current_span()));
         }
 
         if stream.next().is_none() {

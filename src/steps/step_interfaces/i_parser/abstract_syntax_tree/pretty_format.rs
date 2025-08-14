@@ -346,8 +346,10 @@ impl PrettyPrint for FnDeclKind {
 
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         match self {
-            FnDeclKind::Fn(fn_decl) => fn_decl.to_pretty(tab, is_last),
             FnDeclKind::InternalFn(node_ref) => node_ref.to_string(),
+            FnDeclKind::Fn(fn_decl) => fn_decl.to_pretty(tab, is_last),
+            FnDeclKind::InternalCtor(multi_ref) => multi_ref.to_string(),
+            FnDeclKind::Ctor(fn_decl) => fn_decl.to_pretty(tab, is_last),
             FnDeclKind::ExtFn(ext_fn_decl) => ext_fn_decl.to_pretty(tab, is_last),
         }
     }

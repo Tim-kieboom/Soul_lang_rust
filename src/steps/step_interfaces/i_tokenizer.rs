@@ -42,7 +42,7 @@ impl TokenStream {
         &self.tokens
     } 
 
-    pub fn iter(&self) -> Iter<Token> {
+    pub fn iter(&'_ self) -> Iter<'_, Token> {
         self.tokens.iter()
     }
 

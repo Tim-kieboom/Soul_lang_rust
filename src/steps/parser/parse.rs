@@ -1,8 +1,10 @@
 use std::sync::Arc;
+use std::path::PathBuf;
 use hsoul::subfile_tree::SubFileTree;
 use crate::utils::node_ref::MultiRef;
 use crate::errors::soul_error::{Result, SoulSpan};
 use crate::steps::step_interfaces::i_tokenizer::TokenizeResonse;
+use crate::meta_data::internal_functions_headers::INTERNAL_LIB_DIR;
 use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::parser_response::ParserResponse;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
@@ -77,7 +79,12 @@ pub fn parse_tokens(tokens: TokenizeResonse, subfile_tree: Option<Arc<SubFileTre
 }
 
 fn load_std_libs(external_pages: &mut ExternalPages) {
-    external_pages.push_internal(SoulPagePath("std::fmt".into()));
+    let dir = PathBuf::from(INTERNAL_LIB_DIR);
+    let mut fmt = dir.clone();
+    fmt.push("std");
+    fmt.push("fmt.soul.header");
+
+    external_pages.push_internal(SoulPagePath("std::fmt".into()), fmt);
 }
 
 

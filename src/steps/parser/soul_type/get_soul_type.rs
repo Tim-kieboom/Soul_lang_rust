@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use crate::soul_names::check_name;
 use crate::steps::parser::get_expressions::parse_path::get_page_path;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
@@ -8,7 +9,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::I
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::Lifetime;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalType, Modifier, TypeKind, TypeWrapper, UnionKind, UnionType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalPath, ExternalType, Modifier, TypeKind, TypeWrapper, UnionKind, UnionType};
 
 pub trait FromWithPath {
     fn try_from_stream_with_path(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<SoulType>>;
@@ -388,10 +389,10 @@ fn get_union_or_page(possible_kind: Option<TypeKind>, stream: &mut TokenStream, 
         let variant = Ident(stream.current_text().clone());
         match kind {
             TypeKind::Union(union) => Ok(TypeKind::UnionVariant(UnionType{union: UnionKind::Union(union), variant})),
-            TypeKind::ExternalType(ext_ty) => Ok(TypeKind::UnionVariant(UnionType{union: UnionKind::External(ext_ty), variant})),
-            TypeKind::ExternalPath{name:_, path} => {
+            TypeKind::ExternalType(ext_ty) => Ok(TypeKind::UnionVariant(UnionType{union: UnionKind::External(ext_ty.node), variant})),
+            TypeKind::ExternalPath(Spanned{node: ExternalPath{name:_, path}, span}) => {
                 get_type_kind(stream, scopes, with_path)?;
-                Ok(TypeKind::ExternalType(ExternalType{path, name: Ident(stream.current_text().clone())}))
+                Ok(TypeKind::ExternalType(Spanned::new(ExternalType{path, name: Ident(stream.current_text().clone())}, span)))
             },
             _ => Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), format!("'::' only allowed for union types, type: '{}'", kind.get_variant()))),
         }
@@ -406,7 +407,7 @@ fn get_union_or_page(possible_kind: Option<TypeKind>, stream: &mut TokenStream, 
             return Err(err_out_of_bounds(stream));
         }
 
-        Ok(TypeKind::ExternalType(ExternalType{name: Ident(stream.current_text().clone()), path: path.path}))
+        Ok(TypeKind::ExternalType(Spanned::new(ExternalType{name: Ident(stream.current_text().clone()), path: path.path}, stream.current_span())))
     }
 }
 

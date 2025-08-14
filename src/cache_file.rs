@@ -17,7 +17,7 @@ pub fn cache_files(run_option: &Arc<RunOptions>, logger: &Arc<Logger>, time_log:
                 for line in err.to_err_message() {
                     logger.error(line, DEFAULT_LOG_OPTIONS);
                 } 
-
+                logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
                 exit(1);
             },
         };
@@ -35,10 +35,12 @@ pub fn cache_files(run_option: &Arc<RunOptions>, logger: &Arc<Logger>, time_log:
                 for line in err.to_err_message() {
                     logger.error(line, DEFAULT_LOG_OPTIONS);
                 } 
+                logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
                 exit(1);
             }).unwrap();
 
         logger.soul_error(&err, &mut reader, DEFAULT_LOG_OPTIONS);
+        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
         exit(1);
     }
 
@@ -96,6 +98,7 @@ fn cache_all_subfiles(run_option: Arc<RunOptions>, subfiles_tree: Arc<SubFileTre
             }
             logger.error(format!("\n{}", err.to_highlighed_message(&mut reader)), DEFAULT_LOG_OPTIONS);              
         }
+        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
         exit(1)
     }
 }

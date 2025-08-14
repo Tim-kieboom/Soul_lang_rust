@@ -1,6 +1,7 @@
 pub mod run_options;
 pub mod cache_file;
 pub mod soul_names; 
+pub mod meta_data;
 pub mod run_steps;
 pub mod errors;
 pub mod utils;

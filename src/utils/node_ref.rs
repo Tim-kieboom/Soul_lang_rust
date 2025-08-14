@@ -33,11 +33,11 @@ impl<T: Serialize> MultiRef<T> {
         Self { inner: Arc::new(RwLock::new(var)) }
     }
 
-    pub fn borrow(&self) -> RwLockReadGuard<T> {
+    pub fn borrow(&'_ self) -> RwLockReadGuard<'_, T> {
         self.inner.read().unwrap()
     } 
 
-    pub fn borrow_mut(&self) -> RwLockWriteGuard<T> {
+    pub fn borrow_mut(&'_ self) -> RwLockWriteGuard<'_, T> {
         self.inner.write().unwrap()
     } 
 

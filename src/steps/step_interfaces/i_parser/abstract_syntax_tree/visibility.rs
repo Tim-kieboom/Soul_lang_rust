@@ -8,6 +8,16 @@ pub struct FieldAccess {
     pub set: Option<Visibility>, 
 }
 
+impl FieldAccess {
+    pub fn new_public() -> Self {
+        Self{ get: Some(Visibility::Public), set: Some(Visibility::Public)}
+    }
+
+    pub fn new_private() -> Self {
+        Self{ get: Some(Visibility::Private), set: Some(Visibility::Private)}
+    }
+}
+
 impl Default for FieldAccess  {
     fn default() -> Self {
         Self { get: None, set: None }

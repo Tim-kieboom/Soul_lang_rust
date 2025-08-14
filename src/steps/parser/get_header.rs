@@ -8,7 +8,7 @@ pub fn get_header(scopes: &ScopeBuilder) -> Header {
         
         if starts_with_capital(name.as_str()) {
             
-            header.scope.extend(scopes.iter().map(|el| (name.clone(), el.clone())));
+            header.scope.insert(name.clone(), scopes.clone());
         }
     }
 

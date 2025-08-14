@@ -1,5 +1,5 @@
 use crate::soul_names::{check_name_allow_types};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalPath, ExternalType, TypeKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
@@ -26,11 +26,10 @@ pub fn get_ctor(mut ty: Spanned<SoulType>, stream: &mut TokenStream, scopes: &mu
         TypeKind::Generic(..) |
         TypeKind::LifeTime(..) |
         TypeKind::TypeEnum(..)  => return Err(new_soul_error(SoulErrorKind::WrongType, ty.span, format!("type: '{}' does not have an constructor", ty.node.base.get_variant()))),
-
         _ => (),
     }
 
-    let name = Ident(ty.node.base.to_string());
+    let name = Ident(ty.node.base.to_name_string());
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));

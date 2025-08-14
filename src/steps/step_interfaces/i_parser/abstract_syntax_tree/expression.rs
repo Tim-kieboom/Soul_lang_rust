@@ -387,7 +387,7 @@ pub struct Arguments {
 impl Arguments {
     pub fn to_string(&self) -> String {
         if let Some(optional) = &self.name {
-            format!("{}: {}", optional.0, self.expression.node.to_string(0))
+            format!("{}= {}", optional.0, self.expression.node.to_string(0))
         }
         else {
             self.expression.node.to_string(0)

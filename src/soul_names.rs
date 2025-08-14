@@ -56,28 +56,28 @@ pub fn check_name(name: &str) -> result::Result<(), String> {
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SoulNames<'a> {
+pub struct SoulNames {
     #[serde(borrow)]
-    pub parse_tokens: Vec<&'a str>,
+    pub parse_tokens: Vec<&'static str>,
     #[serde(borrow)]
-    pub type_modifiers: HashMap<NamesTypeModifiers, &'a str>,
+    pub type_modifiers: HashMap<NamesTypeModifiers, &'static str>,
     #[serde(borrow)]
-    pub internal_types: HashMap<NamesInternalType, &'a str>,
+    pub internal_types: HashMap<NamesInternalType, &'static str>,
     #[serde(borrow)]
-    pub type_wappers: HashMap<NamesTypeWrapper, &'a str>,
+    pub type_wappers: HashMap<NamesTypeWrapper, &'static str>,
     #[serde(borrow)]
-    pub operator_names: HashMap<NamesOperator, &'a str>,
+    pub operator_names: HashMap<NamesOperator, &'static str>,
     #[serde(borrow)]
-    pub iligal_names: HashSet<&'a str>,
+    pub iligal_names: HashSet<&'static str>,
     #[serde(borrow)]
-    pub type_less_iligal_names: HashSet<&'a str>,
+    pub type_less_iligal_names: HashSet<&'static str>,
     #[serde(borrow)]
-    pub other_keywords_names: HashMap<NamesOtherKeyWords, &'a str>,
+    pub other_keywords_names: HashMap<NamesOtherKeyWords, &'static str>,
     #[serde(borrow)]
-    pub assign_symbools: HashMap<NamesAssignType, &'a str>,
+    pub assign_symbools: HashMap<NamesAssignType, &'static str>,
 }
 
-impl<'a> SoulNames<'a> {
+impl SoulNames {
     fn new() -> Self {
         let type_wappers = HashMap::from([
             (NamesTypeWrapper::ConstRef, "@"),
@@ -244,7 +244,7 @@ impl<'a> SoulNames<'a> {
         }
     }
 
-    pub fn get_name<T: std::fmt::Debug + SoulNameEnum<'a>>(&self, key: T) -> &'a str {
+    pub fn get_name<T: std::fmt::Debug + SoulNameEnum>(&self, key: T) -> &'static str {
         key.get_name(self).expect(format!("Internal Error: in SOUL_NAMES.get_name() name: {:?}, is not defined", key).as_str())
     }
 
@@ -258,14 +258,14 @@ impl<'a> SoulNames<'a> {
     }
 }
 
-pub trait SoulNameEnum<'a> { 
-    fn get_name(&self, key_tokens: &SoulNames<'a>) -> Option<&'a str>; 
+pub trait SoulNameEnum { 
+    fn get_name(&self, key_tokens: &SoulNames) -> Option<&'static str>; 
 }
 
 macro_rules! impl_soul_name_enum {
     ($t:ty, $field:ident) => (
-        impl<'a> SoulNameEnum<'a> for $t {
-            fn get_name(&self, key_tokens: &SoulNames<'a>) -> Option<&'a str> {
+        impl SoulNameEnum for $t {
+            fn get_name(&self, key_tokens: &SoulNames) -> Option<&'static str> {
                 key_tokens.$field.get(self).map(|v| &**v)
             }
         }

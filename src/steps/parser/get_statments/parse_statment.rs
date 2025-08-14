@@ -201,10 +201,13 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         }
     }
     else if Modifier::from_str(stream.current_text()) != Modifier::Default || stream.current_text() == "let" {
-        let peek2_token = stream.peek_multiple(2)
-            .ok_or(err_out_of_bounds(stream))?;
+        let peek2_i = stream.current_index() + 2;
+        
+        if stream.peek_multiple(2).is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
 
-        if peek2_token.text == "=" || STATMENT_ENDS.iter().any(|sym| sym == &peek2_token.text) {
+        if stream[peek2_i].text == "=" || STATMENT_ENDS.iter().any(|sym| sym == &stream[peek2_i].text) {
             stream.go_to_index(first_type_i);
             let var = get_var_decl(stream, scopes)?;
             return Ok(Some(
@@ -214,8 +217,15 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                 ))
             );
         }
+        else if stream[peek2_i].text == ":=" {
+            return Err(new_soul_error(
+                SoulErrorKind::InvalidInContext, 
+                stream[peek2_i].span, 
+                format!("can not use ':=' with a typed variable declaration (do 'foo := <value>' or 'int foo = <value>' not 'tin foo := <value>')")
+            ));
+        }
 
-        let symbool_index = if peek2_token.text == ">" {
+        let symbool_index = if stream[peek2_i].text == ">" {
             let begin_gen_i = stream.current_index();
             get_symbool_after_generic(stream, begin_gen_i)?;
             let sym = stream.current_index();
@@ -237,6 +247,13 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                     var.span
                 ))
             );
+        }
+        else if stream[peek2_i].text == ":=" {
+            return Err(new_soul_error(
+                SoulErrorKind::InvalidInContext, 
+                stream[peek2_i].span, 
+                format!("can not use ':=' with a typed variable declaration (do 'foo := <value>' or 'int foo = <value>' not 'tin foo := <value>')")
+            ));
         }
     }
 
@@ -362,16 +379,19 @@ fn try_get_from_type(first_type_i: usize, stream: &mut TokenStream, scopes: &mut
         ))
     }
 
-    let peek2_token = stream.peek_multiple(2)
-        .ok_or(err_out_of_bounds(stream))?;
+    let peek2_i = stream.current_index() + 2; 
+    
+    if stream.peek_multiple(2).is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
 
-    if peek2_token.text == "(" {
+    if stream[peek2_i].text == "(" {
         stream.go_to_index(first_type_i);
         let func = get_function_decl(None, stream, scopes)?;
         scopes.add_function(&func.node);
         return Ok(Some(func.node.consume_to_statment(func.span)));
     }
-    else if peek2_token.text == "=" || STATMENT_ENDS.iter().any(|sym| sym == &peek2_token.text) {
+    else if stream[peek2_i].text == "=" || STATMENT_ENDS.iter().any(|sym| sym == &stream[peek2_i].text) {
         stream.go_to_index(first_type_i);
         let var = get_var_decl(stream, scopes)?;
         return Ok(Some(
@@ -381,8 +401,15 @@ fn try_get_from_type(first_type_i: usize, stream: &mut TokenStream, scopes: &mut
             ))
         );
     }
+    else if stream[peek2_i].text == ":=" {
+        return Err(new_soul_error(
+            SoulErrorKind::InvalidInContext, 
+            stream[peek2_i].span, 
+            format!("can not use ':=' with a typed variable declaration (do 'foo := <value>' or 'int foo = <value>' not 'tin foo := <value>')")
+        ));
+    }
 
-    let symbool_index = if peek2_token.text == ">" {
+    let symbool_index = if stream[peek2_i].text == ">" {
         let begin_gen_i = stream.current_index();
         get_symbool_after_generic(stream, begin_gen_i)?;
         let sym = stream.current_index();
@@ -404,6 +431,13 @@ fn try_get_from_type(first_type_i: usize, stream: &mut TokenStream, scopes: &mut
                 var.span
             ))
         );
+    }
+    else if stream[peek2_i].text == ":=" {
+        return Err(new_soul_error(
+            SoulErrorKind::InvalidInContext, 
+            stream[peek2_i].span, 
+            format!("can not use ':=' with a typed variable declaration (do 'foo := <value>' or 'int foo = <value>' not 'tin foo := <value>')")
+        ));
     }
 
     return Ok(None);

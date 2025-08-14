@@ -1,13 +1,19 @@
 extern crate soul_lang_rust;
 
 use colored::Colorize;
-use std::{io::stderr, process::exit, result, sync::Arc, time::{Instant}};
-use soul_lang_rust::{cache_file::{cache_files, get_cache_path_ast, get_file_reader}, errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, run_options::{run_options::RunOptions, show_times::ShowTimes}, run_steps::{sementic_analyse, RunStepsInfo}, steps::step_interfaces::{i_parser::abstract_syntax_tree::soul_header_cache::SoulHeaderCache, i_sementic::fault::SoulFault}, utils::{logger::{LogMode, LogOptions, Logger}, node_ref::MultiRef, time_logs::{format_duration, TimeLogs}}, MainErrMap};
+use std::{io::stderr, process::exit, result, sync::Arc, time::Instant};
+use soul_lang_rust::{cache_file::{cache_files, get_cache_path_ast, get_file_reader}, errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, meta_data::internal_functions_headers::load_std_headers, run_options::{run_options::RunOptions, show_times::ShowTimes}, run_steps::{sementic_analyse, RunStepsInfo}, steps::step_interfaces::{i_parser::abstract_syntax_tree::soul_header_cache::SoulHeaderCache, i_sementic::fault::SoulFault}, utils::{logger::{LogOptions, Logger}, node_ref::MultiRef, time_logs::{format_duration, TimeLogs}}, MainErrMap};
 
 const DEFAULT_LOG_OPTIONS: &'static LogOptions = &LogOptions::const_default();
 
 fn main() {
     let (run_options, logger, time_log) = init();
+    
+    #[cfg(debug_assertions)]
+    if let Err(err) = load_std_headers() {
+        eprintln!("{}", err.to_string());
+        eprintln!("build interupted because of 1 error");
+    }
 
     let start = Instant::now();
     
@@ -15,11 +21,16 @@ fn main() {
 
     let faults = generate_code(&run_options, &logger, &time_log);
 
-    log_faults(faults, &run_options, &logger);
+    let error_count = log_faults(faults, &run_options, &logger);
     log_times(time_log, &run_options, &logger);
 
     if run_options.show_times.contains(ShowTimes::SHOW_TOTAL) {
         logger.info(format!("Total time: {}", format_duration(start.elapsed())), DEFAULT_LOG_OPTIONS);    
+    }
+
+    if error_count > 0 {
+        logger.error(format!("build failed because of {} error{}", error_count, if error_count > 1 {"s"} else {""}), DEFAULT_LOG_OPTIONS);
+        return
     }
 }
 
@@ -40,7 +51,7 @@ fn log_times(times: MultiRef<TimeLogs>, run_option: &RunOptions, logger: &Arc<Lo
     }
 }
 
-fn log_faults(faults: Vec<SoulFault>, run_options: &RunOptions, logger: &Arc<Logger>) {
+fn log_faults(faults: Vec<SoulFault>, run_options: &RunOptions, logger: &Arc<Logger>) -> usize {
     let (mut reader, _) = get_file_reader(std::path::Path::new(&run_options.file_path))
         .main_err_map("while trying to get file reader")
         .inspect_err(|err| exit_error(err, &logger))
@@ -50,14 +61,20 @@ fn log_faults(faults: Vec<SoulFault>, run_options: &RunOptions, logger: &Arc<Log
     let warning_options = LogOptions{colored: true, highlight_soul: false};
     let note_options = LogOptions{colored: true, highlight_soul: false};
 
+    let mut error_count = 0; 
     for fault in faults {
 
         match &fault {
-            SoulFault::Error(soul_error) => logger.soul_error(soul_error, &mut reader, &error_options),
+            SoulFault::Error(soul_error) => {
+                error_count += 1;
+                logger.soul_error(soul_error, &mut reader, &error_options)
+            },
             SoulFault::Warning(soul_error) => logger.soul_warn(soul_error, &mut reader, &warning_options),
             SoulFault::Note(soul_error) => logger.soul_info(soul_error, &mut reader, &note_options),
         }
     }
+
+    error_count
 }
 
 fn init() -> (Arc<RunOptions>, Arc<Logger>, MultiRef<TimeLogs>) {
@@ -75,12 +92,14 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>, MultiRef<TimeLogs>) {
         Ok(val) => Arc::new(val),
         Err(err) => {
             eprintln!("{}", err.red()); 
+            eprintln!("build interrupted because of 1 error");
             exit(1)
         },
     };
 
     if let Err(err) = create_output_dir(&run_options) {
         logger.error(err.to_string(), DEFAULT_LOG_OPTIONS);
+        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
         exit(1)
     }
 
@@ -111,10 +130,13 @@ fn generate_code(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_log: 
     let parser_responese = match SoulHeaderCache::ast_from_bin_file(&path) {
         Ok(val) => val,
         Err(err) => {
-            for line in new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), format!("while trying to open main files: '{}' cache: {}", path.to_string_lossy(), err.to_string())).to_err_message() {
-                logger.error(line, DEFAULT_LOG_OPTIONS);
-            }
-            exit(1) 
+            let err = new_soul_error(
+                SoulErrorKind::ReaderError, 
+                SoulSpan::new(0,0,0), 
+                format!("while trying to open main files: '{}' cache: {}", path.to_string_lossy(), err.to_string())
+            );
+            exit_error(&err, logger);
+            unreachable!()
         },
     };
 
@@ -124,10 +146,8 @@ fn generate_code(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_log: 
     let sementic_response = match sementic_analyse(parser_responese, &info) {
         Ok(val) => val,
         Err(err) => {
-            for line in err.to_err_message() {
-                logger.error(line, DEFAULT_LOG_OPTIONS);
-            }
-            exit(1) 
+            exit_error(&err, logger);
+            unreachable!()
         },
     };
 
@@ -140,6 +160,7 @@ fn exit_error(err: &SoulError, logger: &Arc<Logger>) {
     for line in err.to_err_message() {
         logger.error(line, DEFAULT_LOG_OPTIONS);
     } 
+    logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
     exit(1);
 }
 

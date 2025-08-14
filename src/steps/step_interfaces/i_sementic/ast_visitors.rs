@@ -83,10 +83,19 @@ macro_rules! impl_default_methods {
                     self.faults.push(fault); 
                 }
 
+                pub fn extent_faults<I: IntoIterator<Item = SoulFault>>(&mut self, faults: I, has_error: bool) {
+                    if has_error {
+                        self.has_error = has_error;
+                    }
+
+                    self.faults.extend(faults);
+                }
+
                 pub fn has_error(&self) -> bool {self.has_error}
                 pub fn get_scope(&self) -> &ScopeVisitor { &self.scope }
                 pub fn get_scope_mut(&mut self) -> &mut ScopeVisitor { &mut self.scope }
                 pub fn get_faults(&self) -> &Vec<SoulFault> { &self.faults }
+                pub fn get_faults_mut(&mut self) -> &mut Vec<SoulFault> { &mut self.faults }
                 pub fn consume(self) -> (ScopeVisitor, Vec<SoulFault>) { (self.scope, self.faults) }
             }
         )+

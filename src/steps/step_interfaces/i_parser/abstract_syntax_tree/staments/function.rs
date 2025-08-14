@@ -17,7 +17,9 @@ pub struct ExtFnDecl {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum FnDeclKind {
     InternalFn(FunctionSignatureRef),
+    InternalCtor(FunctionSignatureRef),
     Fn(FnDecl),
+    Ctor(FnDecl),
     ExtFn(ExtFnDecl),
 }
 
@@ -27,7 +29,9 @@ impl FnDeclKind {
         match self {
             FnDeclKind::Fn(fn_decl) => Statment::new(StmtKind::FnDecl(fn_decl), span),
             FnDeclKind::ExtFn(ext_fn_decl) => Statment::new(StmtKind::ExtFnDecl(ext_fn_decl), span),
+            FnDeclKind::Ctor(fn_decl) => Statment::new(StmtKind::FnDecl(fn_decl), span),
             FnDeclKind::InternalFn(..) => panic!("trying to consume_to_statment but is internalfn"),
+            FnDeclKind::InternalCtor(..) => panic!("trying to consume_to_statment but is internalCtor"),
         }
     }
 
@@ -35,7 +39,9 @@ impl FnDeclKind {
         match self {
             FnDeclKind::Fn(this) => this.signature,
             FnDeclKind::ExtFn(this) => this.signature,
+            FnDeclKind::Ctor(this) => this.signature,
             FnDeclKind::InternalFn(..) => panic!("trying to consume_signature but is internalfn"),
+            FnDeclKind::InternalCtor(..) => panic!("trying to consume_signature but is internalCtor"),
         }
     }
 
@@ -43,7 +49,9 @@ impl FnDeclKind {
         match self {
             FnDeclKind::Fn(this) => this.body,
             FnDeclKind::ExtFn(this) => this.body,
+            FnDeclKind::Ctor(this) => this.body,
             FnDeclKind::InternalFn(..) => panic!("trying to consume_signature but is internalfn"),
+            FnDeclKind::InternalCtor(..) => panic!("trying to consume_signature but is internalCtor"),
         }
     }
 
@@ -51,7 +59,9 @@ impl FnDeclKind {
         match self {
             FnDeclKind::Fn(this) => &this.signature,
             FnDeclKind::ExtFn(this) => &this.signature,
+            FnDeclKind::Ctor(this) => &this.signature,
             FnDeclKind::InternalFn(fn_ref) => &fn_ref,
+            FnDeclKind::InternalCtor(fn_ref) => &fn_ref,
         }
     }
 
@@ -59,7 +69,9 @@ impl FnDeclKind {
         match self {
             FnDeclKind::Fn(this) => &this.body,
             FnDeclKind::ExtFn(this) => &this.body,
+            FnDeclKind::Ctor(this) => &this.body,
             FnDeclKind::InternalFn(..) => panic!("trying to get_body but is internalfn"),
+            FnDeclKind::InternalCtor(..) => panic!("trying to get_body but is internalCtor"),
         }
     }
 
