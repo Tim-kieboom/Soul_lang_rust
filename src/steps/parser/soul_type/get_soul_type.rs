@@ -366,6 +366,14 @@ fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: 
 }
 
 fn get_type_kind(stream: &mut TokenStream, scopes: &mut ScopeBuilder, with_path: bool) -> Result<TypeKind> {
+    
+    if stream.current_text() == "This" {
+        let this_ty = scopes.try_get_this_type()
+            .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "used 'This' without being in a scope that contains a This (a scope like a class or in a methode)"))?;
+        
+        return Ok(this_ty.clone());
+    }
+
     let possible_kind = scopes.lookup_type(stream.current_text())
         .cloned();
     

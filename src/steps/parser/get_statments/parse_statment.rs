@@ -556,7 +556,7 @@ fn get_switch_case(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resul
             let span = if_condition.span;
 
             let if_decl = Box::new(IfDecl{condition: if_condition, body: Block{statments: vec![]}, else_branchs: vec![]});
-            Expression::new(ExprKind::If(if_decl), span)
+            Expression::new(ExprKind::If(if_decl, SoulType::none()), span)
         }
         else if stream.peek().is_some_and(|token| token.text == "::") {
             let union_i = stream.current_index();

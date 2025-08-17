@@ -16,15 +16,14 @@ fn get_fmt_header() -> Header {
 
     let span = SoulSpan::new(0,0,0);
 
-    let format_args = ScopeKind::Functions(OverloadedFunctions::from_internal_fn(FunctionSignatureRef::new(InnerFunctionSignature{
+    let format_args = ScopeKind::Functions(OverloadedFunctions::from_internal_fn(FunctionSignatureRef::new(Spanned::new(InnerFunctionSignature{
         name: Ident("FormatArgs".into()), 
-        span: span,
         calle: None, 
         params: vec![Spanned::new(Parameter{name: Ident("args".into()), ty: SoulType::from_type_kind(TypeKind::Str).with_wrappers(vec![TypeWrapper::Array, TypeWrapper::ConstRef(None)]), default_value: None}, span)], 
         generics: vec![], 
         modifier: Modifier::Default, 
         return_type: Some(SoulType::from_type_kind(TypeKind::Str)), 
-    })));
+    }, span))));
 
     let arg_struct = ScopeKind::Struct(StructDeclRef::new(InnerStructDecl{
         name: Ident("Arg".into()), 
@@ -45,7 +44,7 @@ fn get_fmt_header() -> Header {
         ]
     }));
 
-    let arg_ctor = ScopeKind::Functions(OverloadedFunctions::new(vec![FnDeclKind::InternalCtor(FunctionSignatureRef::new(InnerFunctionSignature { 
+    let arg_ctor = ScopeKind::Functions(OverloadedFunctions::new(vec![FnDeclKind::InternalCtor(FunctionSignatureRef::new(Spanned::new(InnerFunctionSignature { 
         name: Ident("Arg".into()), 
         calle: None, 
         generics: vec![GENERIC_T.clone()], 
@@ -63,8 +62,7 @@ fn get_fmt_header() -> Header {
         ],
         return_type: None, 
         modifier: Modifier::Const, 
-        span 
-    }))]));
+    },span )))]));
 
     Header{
         scope: HashMap::from([

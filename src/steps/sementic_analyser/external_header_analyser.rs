@@ -142,7 +142,7 @@ impl ExternalHeaderAnalyser {
             ExprKind::Default => (),
             ExprKind::Literal(_) => (),
             ExprKind::Variable(_) => (),
-            ExprKind::If(if_decl) => self.check_if(if_decl, span),
+            ExprKind::If(if_decl, _) => self.check_if(if_decl, span),
             ExprKind::Index(index) => self.check_index(index, span),
             ExprKind::Ctor(fn_call) => self.check_fn_call(fn_call, span),
             ExprKind::Call(fn_call) => self.check_fn_call(fn_call, span),
@@ -407,11 +407,11 @@ impl ExternalHeaderAnalyser {
     fn check_fn_signature(&mut self, fn_sig: &mut FunctionSignatureRef) {
         let mut signature = fn_sig.borrow_mut();
         
-        if let Some(calle) = &signature.calle {
+        if let Some(calle) = &signature.node.calle {
             self.check_type(&calle.node.ty, calle.span);
         }
 
-        for param in signature.params.iter_mut() {
+        for param in signature.node.params.iter_mut() {
 
             self.check_type(&param.node.ty, param.span);
             if let Some(expr) = &mut param.node.default_value {
@@ -419,7 +419,7 @@ impl ExternalHeaderAnalyser {
             }
         } 
 
-        if let Some(ty) = &signature.return_type {
+        if let Some(ty) = &signature.node.return_type {
             self.check_type(ty, signature.span);
         }
     }

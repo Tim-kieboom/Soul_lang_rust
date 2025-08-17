@@ -1,5 +1,6 @@
 use crate::soul_names::check_name;
 use crate::steps::parser::parse_generic_decl::get_generics_decl;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::SoulThis;
 use crate::steps::step_interfaces::i_parser::scope::ScopeVisibility;
 use crate::steps::parser::get_statments::parse_methode::try_get_methode_decl;
@@ -26,6 +27,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     scopes.push(ScopeVisibility::All);
+    scopes.add_this_type(TypeKind::Trait(Ident(stream[name_i].text.clone())));
 
     const ADD_TO_SCOPE: bool = true;
     let generics_decl = get_generics_decl(stream, scopes, ADD_TO_SCOPE)

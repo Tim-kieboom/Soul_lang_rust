@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}}, utils::node_ref::MultiRef};
+use crate::{errors::soul_error::SoulSpan, steps::{step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}}, utils::node_ref::MultiRef};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnDecl {
@@ -75,12 +75,22 @@ impl FnDeclKind {
         }
     }
 
+    pub fn get_body_mut(&mut self) -> &mut Block {
+        match self {
+            FnDeclKind::Fn(this) => &mut this.body,
+            FnDeclKind::ExtFn(this) => &mut this.body,
+            FnDeclKind::Ctor(this) => &mut this.body,
+            FnDeclKind::InternalFn(..) => panic!("trying to get_body but is internalfn"),
+            FnDeclKind::InternalCtor(..) => panic!("trying to get_body but is internalCtor"),
+        }
+    }
+
     pub fn get_modifier(&self) -> Modifier {
-        self.get_signature().borrow().modifier.clone()
+        self.get_signature().borrow().node.modifier.clone()
     }
 }
 
-pub type FunctionSignatureRef = MultiRef<InnerFunctionSignature>; 
+pub type FunctionSignatureRef = MultiRef<Spanned<InnerFunctionSignature>>; 
 
 pub type LambdaSignatureRef = MultiRef<InnerLambdaSignature>;
 
@@ -130,13 +140,11 @@ pub struct InnerFunctionSignature {
     pub return_type: Option<SoulType>,
     ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
     pub modifier: Modifier,
-    pub span: SoulSpan,
 }
-
 
 impl FunctionSignatureRef {
     pub fn to_string(&self) -> String {
-        let this = self.borrow();
+        let this = &self.borrow().node;
         if this.generics.is_empty() {
             format!(
                 "{}{}({}){}", 

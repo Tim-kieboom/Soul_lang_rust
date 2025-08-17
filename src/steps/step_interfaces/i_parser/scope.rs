@@ -1,7 +1,7 @@
 use hsoul::subfile_tree::{SubFileTree, TreeNode, TreeNodeKind};
 use serde::{Deserialize, Serialize};
 use std::{collections::{BTreeMap, HashMap}, path::{Component, Path, PathBuf}, process::exit, sync::Arc};
-use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}}, utils::{node_ref::MultiRef, push::Push}};
+use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, utils::{node_ref::MultiRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -305,7 +305,7 @@ impl ScopeBuilder {
     pub fn flat_lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         self.scopes.flat_lookup(name)
     }
-    
+
     ///looks in current scope and parent scopes of ScopeVisibilty is All
     pub fn lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         self.scopes.lookup(name)
@@ -313,7 +313,7 @@ impl ScopeBuilder {
 
     pub fn add_function(&mut self, fn_decl: &FnDeclKind) {
         
-        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().borrow().name.0) {
+        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().borrow().node.name.0) {
             
             let possible_funcs = kinds.iter_mut().find(|kind| matches!(kind, ScopeKind::Functions(..)));
             if let Some(ScopeKind::Functions(funcs)) = possible_funcs {
@@ -321,14 +321,14 @@ impl ScopeBuilder {
             }
             else {
                 self.scopes.insert(
-                    fn_decl.get_signature().borrow().name.0.clone(), 
+                    fn_decl.get_signature().borrow().node.name.0.clone(), 
                     vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()]))]
                 );
             }
         }
         else {
             self.scopes.insert(
-                fn_decl.get_signature().borrow().name.0.clone(), 
+                fn_decl.get_signature().borrow().node.name.0.clone(), 
                 vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()]))]
             );
         }
@@ -378,6 +378,17 @@ impl ScopeBuilder {
 
     pub fn insert_global(&mut self, name: String, kind: ScopeKind) {
         self.scopes.insert_global_to_vec(name, kind)
+    }
+
+    pub fn add_this_type(&mut self, ty: TypeKind) {
+        self.scopes.insert("This".into(), vec![ScopeKind::This(ty)]);
+    }
+
+    pub fn try_get_this_type(&self) -> Option<&TypeKind> {
+        match self.scopes.lookup("This")?.last()? {
+            ScopeKind::This(ty) => Some(ty),
+            _ => unreachable!()
+        }
     }
 
     pub fn lookup_type(&self, name: &str) -> Option<&TypeKind> {
@@ -632,12 +643,29 @@ pub enum ScopeKind {
     Class(ClassDeclRef),
 
     Trait(TraitDeclRef),
+    NamedTupleCtor(NamedTupleCtor),
 
     Functions(OverloadedFunctions),
 
+    This(TypeKind),
     Enum(EnumDeclRef),
     Union(UnionDeclRef),
     TypeEnum(TypeEnumDeclRef),
+    TypeDefed(TypeDefedRef),
+}
+
+pub type TypeDefedRef = MultiRef<TypeDefed>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NamedTupleCtor {
+    pub object_type: SoulType,
+    pub values: HashMap<Ident, (SoulType, Option<Expression>)>
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TypeDefed {
+    pub name: Ident,
+    pub from_type: SoulType, 
 }
 
 pub type OverloadedFunctions = MultiRef<Vec<FnDeclKind>>;

@@ -76,7 +76,7 @@ fn get_type_stack_should_work() {
                 ("Strable".into(), TypeKind::Trait(Ident("Strable".into()))),
                 ("StringData".into(), TypeKind::Struct(Ident("StringData".into()))),
                 ("String".into(), TypeKind::Class(Ident("String".into()))),
-                ("stringGlobal".into(), TypeKind::Custom(Ident("stringGlobal".into()))),
+                ("stringGlobal".into(), TypeKind::TypeDefed(Ident("stringGlobal".into()))),
             ]),
             visibility_mode: ScopeVisibility::GlobalOnly,
         },
@@ -111,7 +111,7 @@ fn get_type_stack_should_work() {
             ),
             children: vec![5,7],
             self_index: 4,
-            symbols: HashMap::from([("string1".into(), TypeKind::Custom(Ident("string1".into())))]),
+            symbols: HashMap::from([("string1".into(), TypeKind::TypeDefed(Ident("string1".into())))]),
             visibility_mode: ScopeVisibility::All,
         },
         InnerScope {
@@ -129,7 +129,7 @@ fn get_type_stack_should_work() {
             ),
             children: vec![],
             self_index: 6,
-            symbols: HashMap::from([("string3".into(), TypeKind::Custom(Ident("string3".into())))]),
+            symbols: HashMap::from([("string3".into(), TypeKind::TypeDefed(Ident("string3".into())))]),
             visibility_mode: ScopeVisibility::All,
         },
         InnerScope {
@@ -138,7 +138,7 @@ fn get_type_stack_should_work() {
             ),
             children: vec![8,9],
             self_index: 7,
-            symbols: HashMap::from([("string4".into(), TypeKind::Custom(Ident("string4".into())))]),
+            symbols: HashMap::from([("string4".into(), TypeKind::TypeDefed(Ident("string4".into())))]),
             visibility_mode: ScopeVisibility::All,
         },
         InnerScope {
@@ -147,7 +147,7 @@ fn get_type_stack_should_work() {
             ),
             children: vec![],
             self_index: 8,
-            symbols: HashMap::from([("string5".into(), TypeKind::Custom(Ident("string5".into())))]),
+            symbols: HashMap::from([("string5".into(), TypeKind::TypeDefed(Ident("string5".into())))]),
             visibility_mode: ScopeVisibility::All,
         },
         InnerScope {
@@ -156,7 +156,7 @@ fn get_type_stack_should_work() {
             ),
             children: vec![],
             self_index: 9,
-            symbols: HashMap::from([("string6".into(), TypeKind::Custom(Ident("string6".into())))]),
+            symbols: HashMap::from([("string6".into(), TypeKind::TypeDefed(Ident("string6".into())))]),
             visibility_mode: ScopeVisibility::All,
         },
     ];

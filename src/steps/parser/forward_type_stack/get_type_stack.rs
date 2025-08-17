@@ -118,7 +118,7 @@ fn parse_type(types: &mut TypeScopeStack, scopes: &mut ScopeBuilder, stream: &mu
                 return Err(err_out_of_bounds(stream));
             }
 
-            let ty = TypeKind::Custom(Ident(stream.current_text().clone()));
+            let ty = TypeKind::TypeDefed(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {

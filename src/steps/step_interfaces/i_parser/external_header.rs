@@ -8,6 +8,10 @@ pub struct Header {
     pub types: HashMap<String, TypeKind>,
 }
 
+pub struct HeaderSerde {
+    pub scope: HashMap<String, Vec<ScopeKind>>
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalHeader {
     pub store: HashMap<SoulPagePath, Header>, 

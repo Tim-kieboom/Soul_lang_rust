@@ -306,7 +306,7 @@ fn add_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut Expr
         match stream.current_text().as_str() {
             val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
                 let if_decl = get_if(stream, scopes)?;
-                stacks.node_stack.push(Expression::new(ExprKind::If(Box::new(if_decl.node)), if_decl.span));
+                stacks.node_stack.push(Expression::new(ExprKind::If(Box::new(if_decl.node), SoulType::none()), if_decl.span));
             },
             val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
 
@@ -319,7 +319,7 @@ fn add_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut Expr
                     ElseKind::Else(_) => false,
                 };
 
-                if let ExprKind::If(if_decl) = &mut expr.node {
+                if let ExprKind::If(if_decl, _) = &mut expr.node {
                     if_decl.else_branchs.push(else_branch);
                 }
                 else {

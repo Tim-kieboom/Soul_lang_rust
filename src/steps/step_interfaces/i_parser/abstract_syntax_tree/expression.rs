@@ -28,7 +28,7 @@ pub enum ExprKind {
     ExternalExpression(ExternalExpression),
 
     Lambda(LambdaDecl),
-    If(Box<IfDecl>),
+    If(Box<IfDecl>, SoulType),
 
     Ternary(Ternary),
 
@@ -186,7 +186,7 @@ impl ExprKind {
                 if_branch.node.to_string(tab),
                 else_branch.node.to_string(tab),
             ),
-            ExprKind::If(if_box) => {
+            ExprKind::If(if_box, _) => {
                 let IfDecl{condition, body, else_branchs} = &**if_box;
                 let cond = condition.node.to_string(tab);
                 let mut output = vec![format!("if ({})", cond)];
@@ -264,7 +264,7 @@ impl ExprKind {
             ExprKind::Empty => "<empty>",
             ExprKind::Default => "<default>",
 
-            ExprKind::If(_) => "If",
+            ExprKind::If(..) => "If",
             ExprKind::Ctor{..} => "Ctor",
             ExprKind::Index(_) => "index",
             ExprKind::Unary(_) => "unary",

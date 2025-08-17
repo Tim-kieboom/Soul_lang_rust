@@ -19,8 +19,8 @@ impl PrettyFormat for ScopeVisitor {
                 .iter()
                 .map(|scope| format!(
                     "scope{}: [\n\t\t{}\n\t]", 
-                    scope.self_index, 
-                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
+                    scope.scope.self_index, 
+                    scope.scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
                 )).join(",\n\t"),
             self.get_types()
                 .iter()
@@ -66,10 +66,22 @@ impl PrettyPrint for Vec<ScopeKind> {
                 ScopeKind::Struct(struct_decl) => format!("struct({})", struct_decl.borrow().name.0),
                 ScopeKind::Class(class_decl) => format!("class({})", class_decl.borrow().name.0),
                 ScopeKind::Trait(trait_decl) => format!("trait({})", trait_decl.borrow().name.0),
-                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.get_signature().borrow().name.0.clone()).unwrap_or("".into()) ),
+                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.get_signature().borrow().node.name.0.clone()).unwrap_or("".into()) ),
                 ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.borrow().name.0),
                 ScopeKind::Union(union_decl) => format!("union({})", union_decl.borrow().name.0),
                 ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.borrow().name.0),
+                ScopeKind::NamedTupleCtor(named_tuple_ctor) => format!(
+                    "{}({})", 
+                    named_tuple_ctor.object_type.to_string(), 
+                    if named_tuple_ctor.values.is_empty() {
+                        ":".into()
+                    } 
+                    else {
+                        named_tuple_ctor.values.iter().map(|(name, (ty, val))| format!("{}: {}{}", name.0, ty.to_string(), val.as_ref().map(|el| format!(" = {}", el.node.to_string(0))).unwrap_or("".into()))).join(",")
+                    }
+                ),
+                ScopeKind::This(type_kind) => format!("(This={})", type_kind.to_string()),
+                ScopeKind::TypeDefed(multi_ref) => format!("typedefed({} typeof {})", multi_ref.borrow().name.0, multi_ref.borrow().from_type.to_string()),
             }
         }).join(",");
 

@@ -23,7 +23,7 @@
             },
             "args": [
                 "build", 
-                "test.soul",
+                "soul_src\\main.soul",
                 "--showOutput=SHOW_ALL",
                 "--showTime=SHOW_ALL",
                 "--tabCharLen=4",
@@ -80,7 +80,7 @@
             },
             "args": [
                 "build", 
-                "test.soul",
+                "soul_src\\main.soul",
                 "--showOutput=SHOW_ALL",
                 "--showTime=SHOW_ALL",
                 "-prettyCppCode"
@@ -138,7 +138,7 @@
             },
             "args": [
                 "build", 
-                "test.soul",
+                "soul_src\\main.soul",
                 "--showOutput=SHOW_ALL",
                 "--showTime=SHOW_ALL",
                 "-prettyCppCode"
@@ -189,7 +189,7 @@
             },
             "args": [
                 "build", 
-                "test.soul",
+                "soul_src\\main.soul",
                 "--showOutput=SHOW_NONE",
                 "--showTime=SHOW_ALL"
             ],

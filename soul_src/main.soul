@@ -1,13 +1,94 @@
 main() {
-    Println("hello wrold")
+    // list := MyList[int: for 10 => 1]
+    // list2 := [for i in [1,2,3,4,5,6,7] => char(i)]
+    untypedList := DefaultList[]
+    untypedList.Push("string type")
+
+    foo := 1
+
+    let bar 
+    bar = 2
+
+    const cnst
+    cnst = "hello world"
+
+    // Println(cnst)
 }
 
- 
+trait Default {
+    //'This' will cast to type of impl
+    Default() This
 
+    //optional methode that will be accesable for 'const Default' and not 'Default'
+    // #[if(this.const)]
+    // const Default() This
+}
 
+class DefaultList<T: Default>{
+    T[] array = []
+    uint i = 0
 
+    Ctor::[](T[] arr) {
+        return This(array: arr)
+    }
 
+    Ctor() {
+        return This(:)
+    }
 
+    Ctor(uint cap) {
+        return This(array: [for cap => T.Default()])
+    }
 
+    Push(this&, T el) bool {
+        if this.i+1 > this.array.Len() {
+            arr := [for this.array.Len()*2 => T.Default()]
+            i := 0
+            for el in @this.array {
+                arr[i++] = el
+            }
+            this.array = arr
+        } 
 
+        // this.array[++this.i] = el
+        return true
+    }
 
+    // impl Default {
+    //     Default() This {
+    //         return This[]
+    //     }
+    // }
+
+    // Pop(this&) Op<T> {
+    //     if this.index == 0 {
+    //         return None()
+    //     }
+    //     return Some(take(this.array[--this.index]))
+    // }
+}
+
+// const None<T>() Op<T> {
+//     return Op::None()
+// }
+
+// const Some<T>(T el) Op<T> {
+//     return Op::Some(el)
+// } 
+
+// enum Op<T> {
+//     None(),
+//     Some(T),
+// }
+
+// take<T: Default>(dest: &mut T) -> T {
+//     use std::c::memcpy
+
+//     const empty = T()
+//     const old_value = T() 
+//     unsafe {
+//         memcpy(T*(dest), T const*(@old_value))
+//         memcpy(T*(dest), T const*(@empty))
+//     }
+//     return old_value
+// }
