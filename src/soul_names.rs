@@ -197,7 +197,8 @@ impl SoulNames {
             (NamesOtherKeyWords::Impl, "impl"),
             (NamesOtherKeyWords::Where, "where"),
             (NamesOtherKeyWords::Let, "let"),
-            
+
+            (NamesOtherKeyWords::This, "This"),
             
             (NamesOtherKeyWords::CopyData, "copy"),
             (NamesOtherKeyWords::Async, "async"),
@@ -293,6 +294,8 @@ pub enum NamesOtherKeyWords {
     Trait,
     Impl,
     Where,
+
+    This,
 
     SwitchCase,
     Typeof,

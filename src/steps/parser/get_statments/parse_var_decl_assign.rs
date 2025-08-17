@@ -262,10 +262,14 @@ pub fn get_variable_kind(var_kind: VarKind, ty: SoulType, scopes: &mut ScopeBuil
         VarKind::Variable(ident) |
         VarKind::UnionBinding(ident) => {
             let var_ref = VariableRef::new(
-                VariableDecl{name: ident.clone(), ty, initializer, lit_retention}
+                VariableDecl{name: ident.clone(), ty, initializer, lit_retention}, 
+                &mut scopes.ref_pool
             );
-            scopes.insert(ident.0, ScopeKind::Variable(var_ref.clone()));
-            VariableKind::Variable(var_ref)
+            let scope_kind = var_ref.clone();
+            let var_kind = var_ref;
+
+            scopes.insert(ident.0, ScopeKind::Variable(scope_kind));
+            VariableKind::Variable(var_kind)            
         },
         VarKind::Unwrap(idents) => {
             let init = if initializer.is_some() {
@@ -279,7 +283,8 @@ pub fn get_variable_kind(var_kind: VarKind, ty: SoulType, scopes: &mut ScopeBuil
                 let var_name = rename.unwrap_or(name.clone());
 
                 let var_ref = VariableRef::new(
-                    VariableDecl{name: var_name.clone() , ty: SoulType::none(), initializer: init.clone(), lit_retention: None}
+                    VariableDecl{name: var_name.clone() , ty: SoulType::none(), initializer: init.clone(), lit_retention: None},
+                    &mut scopes.ref_pool
                 );
                 scopes.insert(var_name.0, ScopeKind::Variable(var_ref.clone()));
                 (name, var_ref)
@@ -344,10 +349,14 @@ pub fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Re
 
     let lit_retention = if let ExprKind::Variable(var) = &variable.node {
         
-        let scope = scopes.lookup(&var.name.0);
-        let possible_var = try_get_variable(&scope);
+        let possible_var = {
+            let scope = scopes.lookup(&var.name.0);
+            try_get_variable(&scope).cloned()
+        };
+
         if let Some(var_ref) = possible_var {
-            std::mem::take(&mut var_ref.borrow_mut().lit_retention)
+            let lit_ret = &mut var_ref.borrow_mut(&mut scopes.ref_pool).lit_retention;
+            std::mem::take(lit_ret)
         }
         else {
             None

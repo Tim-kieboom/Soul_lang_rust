@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::MultiRef};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{abstract_syntax_tree::GlobalKind, expression::{Expression, Ident}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::{ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}}}, utils::node_ref::{FromPoolValue, MultiRef, MultiRefPool}};
 
 pub type Statment = Spanned<StmtKind>;
 pub type DeleteList = String;
@@ -162,6 +162,32 @@ pub struct Assignment {
 }
 
 pub type VariableRef = MultiRef<VariableDecl>;
+impl FromPoolValue for VariableDecl {
+    fn is_from_pool_value(from: &crate::utils::node_ref::PoolValue) -> bool {
+        match from {
+            crate::utils::node_ref::PoolValue::Var(_) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut crate::utils::node_ref::PoolValue) -> &mut Self {
+        match from {
+            crate::utils::node_ref::PoolValue::Var(variable_decl) => variable_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &crate::utils::node_ref::PoolValue) -> &Self {
+        match from {
+            crate::utils::node_ref::PoolValue::Var(variable_decl) => variable_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> crate::utils::node_ref::PoolValue {
+        crate::utils::node_ref::PoolValue::Var(self)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VariableDecl {
@@ -185,10 +211,10 @@ pub struct SoulThis {
 }
 
 impl SoulThis {
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
         match &self.this {
-            Some(this) => format!("{} this{}", self.ty.to_string(), this.wrappers.iter().map(|wrap| wrap.to_str()).join("")),
-            None => format!("{}", self.ty.to_string()),
+            Some(this) => format!("{} this{}", self.ty.to_string(ref_pool), this.wrappers.iter().map(|wrap| wrap.to_str()).join("")),
+            None => format!("{}", self.ty.to_string(ref_pool)),
         }
     }
 }

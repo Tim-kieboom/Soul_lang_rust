@@ -25,11 +25,11 @@ pub fn get_ctor(mut ty: Spanned<SoulType>, stream: &mut TokenStream, scopes: &mu
         TypeKind::Trait(..) |
         TypeKind::Generic(..) |
         TypeKind::LifeTime(..) |
-        TypeKind::TypeEnum(..)  => return Err(new_soul_error(SoulErrorKind::WrongType, ty.span, format!("type: '{}' does not have an constructor", ty.node.base.get_variant()))),
+        TypeKind::TypeEnum(..)  => return Err(new_soul_error(SoulErrorKind::WrongType, ty.span, format!("type: '{}' does not have an constructor", ty.node.base.get_variant(&scopes.ref_pool)))),
         _ => (),
     }
 
-    let name = Ident(ty.node.base.to_name_string());
+    let name = Ident(ty.node.base.to_name_string(&scopes.ref_pool));
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));

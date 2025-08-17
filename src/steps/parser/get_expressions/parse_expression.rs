@@ -42,7 +42,7 @@ fn inner_get_expression(
     while let Some(operator) = stacks.symbool_stack.pop() {
 
         let expression = match operator.node {
-            SymboolKind::BinOp(bin_op_kind) => get_binary_expression(&mut stacks.node_stack, BinOp::new(bin_op_kind, operator.span), operator.span)?,
+            SymboolKind::BinOp(bin_op_kind) => get_binary_expression(&mut stacks.node_stack, &scopes, BinOp::new(bin_op_kind, operator.span), operator.span)?,
             SymboolKind::UnaryOp(unary_op_kind) => get_unary_expression(&mut stacks.node_stack, UnaryOp::new(unary_op_kind, operator.span), operator.span)?,
             SymboolKind::Parenthesis(..) => stacks.node_stack.pop().unwrap(),
         };
@@ -67,7 +67,7 @@ fn inner_get_expression(
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             stream[begin_i].span, 
-            format!("expression: '{}' with '{}' is invalid (missing operator)", left.to_string(0), right.to_string(0))
+            format!("expression: '{}' with '{}' is invalid (missing operator)", left.to_string(&scopes.ref_pool, 0), right.to_string(&scopes.ref_pool, 0))
         ))
     }
 
@@ -98,7 +98,7 @@ fn convert_expression(
         if stream.current_starts_with(&["[", "for"]) {
             let filler_i = stream.current_index();
 
-            if add_array_filler(stream, scopes, stacks)? {
+            if add_array_filler(None, stream, scopes, stacks)? {
                 end_expr_loop(stream, scopes, stacks, is_page_path)?;
                 continue;
             }
@@ -139,15 +139,37 @@ fn convert_expression(
             stacks.ref_stack.push(stream.current_text().clone());
         }
         else if let Some(operator) = get_operator(stream, &stacks) {
-            try_add_operator(stacks, operator, stream.current_span())?;
+            try_add_operator(stacks, &scopes, operator, stream.current_span())?;
         }
         else if let Some(var_ref) = try_get_variable(&possible_scopes) {
-            add_variable(stream, stacks, var_ref, use_literal_retention, is_assign_var)?;
+            add_variable(stream, stacks, &scopes, var_ref, use_literal_retention, is_assign_var)?;
         }
         else if scopes.lookup_type(&stream.current_text()).is_some() {
             let ty_i = stream.current_index();
             let ty = SoulType::from_stream(stream, scopes)?;
             let span = stream.current_span().combine(&stream[ty_i].span);
+            
+            if stream.peek_is("[") {
+                let start_i = stream.current_index();
+                stream.next_multiple(2);
+                if SoulType::try_from_stream(stream, scopes).is_some() {
+                    
+                    if stream.next_multiple(2).is_none() {
+                        return Err(err_out_of_bounds(stream))
+                    }
+                }
+
+                if stream.current_text() == "for" {
+                    stream.go_to_index(start_i + 1);
+
+                    if add_array_filler(Some(ty.clone()), stream, scopes, stacks)? {
+                        end_expr_loop(stream, scopes, stacks, is_page_path)?;
+                        continue;
+                    }
+                }
+
+                stream.go_to_index(start_i);
+            }
             
             if stream.peek().is_some_and(|token| token.text == "(") {
                 let function = get_ctor(Spanned::new(ty, span), stream, scopes)?;
@@ -175,7 +197,7 @@ fn convert_expression(
             }
 
             if let Some(sym) = stacks.symbool_stack.last() {
-                merge_expressions(stacks, sym.node.get_precedence())?;
+                merge_expressions(stacks, &scopes, sym.node.get_precedence())?;
             }
 
             let left = stacks.node_stack.pop().unwrap();
@@ -237,9 +259,25 @@ fn convert_expression(
     Err(err_out_of_bounds(stream))
 }
 
-fn add_array_filler(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<bool> {
+fn add_array_filler(collection_type: Option<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<bool> {
     let array_filler_i = stream.current_index(); 
-    stream.next_multiple(2);
+    stream.next();
+    let element_type = match SoulType::try_from_stream(stream, scopes) {
+        Some(val) => Some(val?),
+        None => None,
+    };
+    stream.next();
+
+    if element_type.is_some() {
+        if stream.current_text() != ":" {
+            return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' should be ':'", stream.current_text())))
+        }
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+    }
+
     let is_indexed = stream.peek().is_some_and(|token| token.text == "in");
 
     scopes.push(ScopeVisibility::All);
@@ -275,7 +313,7 @@ fn add_array_filler(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks:
     let filler = get_expression(stream, scopes, &["]"])?;
     
     let span = stream[array_filler_i].span.combine(&stream.current_span());
-    let array_filler = ArrayFiller{amount: Box::new(amount), fill_expr: Box::new(filler), index};
+    let array_filler = ArrayFiller{collection_type, element_type, amount: Box::new(amount), fill_expr: Box::new(filler), index};
     stacks.node_stack.push(Expression::new(ExprKind::ArrayFiller(array_filler), span));
     Ok(true)
 }
@@ -306,7 +344,7 @@ fn add_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut Expr
         match stream.current_text().as_str() {
             val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
                 let if_decl = get_if(stream, scopes)?;
-                stacks.node_stack.push(Expression::new(ExprKind::If(Box::new(if_decl.node)), if_decl.span));
+                stacks.node_stack.push(Expression::new(ExprKind::If(Box::new(if_decl.node), SoulType::none()), if_decl.span));
             },
             val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
 
@@ -319,7 +357,7 @@ fn add_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut Expr
                     ElseKind::Else(_) => false,
                 };
 
-                if let ExprKind::If(if_decl) = &mut expr.node {
+                if let ExprKind::If(if_decl, _) = &mut expr.node {
                     if_decl.else_branchs.push(else_branch);
                 }
                 else {
@@ -415,7 +453,7 @@ fn add_ternary(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut
             .last()
             .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "missing operator"))?; 
         
-        merge_expressions(stacks, last_symbool.node.get_precedence())?;
+        merge_expressions(stacks, &scopes, last_symbool.node.get_precedence())?;
         Box::new(stacks.node_stack.pop().unwrap())
     };
 
@@ -593,11 +631,12 @@ fn try_get_special_error(stream: &mut TokenStream, scopes: &mut ScopeBuilder, li
 
 fn try_add_operator(
     stacks: &mut ExpressionStacks,
+    scopes: &ScopeBuilder,
     mut operator: OperatorKind,
     span: SoulSpan
 ) -> Result<()> {
 
-    merge_expressions(stacks, operator.get_precedence())?;
+    merge_expressions(stacks, scopes, operator.get_precedence())?;
 
     if operator == OperatorKind::BinOp(BinOpKind::Sub) && 
        is_minus_negative_unary(stacks) 
@@ -609,7 +648,7 @@ fn try_add_operator(
     Ok(())
 }
 
-fn merge_expressions(stacks: &mut ExpressionStacks, current_precedence: u8) -> Result<()> {
+fn merge_expressions(stacks: &mut ExpressionStacks, scopes: &ScopeBuilder, current_precedence: u8) -> Result<()> {
         fn last_precedence(stacks: &mut ExpressionStacks) -> u8 {
         stacks.symbool_stack.last().unwrap().node.get_precedence()
     }
@@ -619,7 +658,7 @@ fn merge_expressions(stacks: &mut ExpressionStacks, current_precedence: u8) -> R
     {
         let operator = stacks.symbool_stack.pop().unwrap();
         let expression = match operator.node {
-            SymboolKind::BinOp(bin_op_kind) => get_binary_expression(&mut stacks.node_stack, BinOp::new(bin_op_kind, operator.span), operator.span)?,
+            SymboolKind::BinOp(bin_op_kind) => get_binary_expression(&mut stacks.node_stack, scopes, BinOp::new(bin_op_kind, operator.span), operator.span)?,
             SymboolKind::UnaryOp(unary_op_kind) => get_unary_expression(&mut stacks.node_stack, UnaryOp::new(unary_op_kind, operator.span), operator.span)?,
             SymboolKind::Parenthesis(..) => panic!("Internal error this should not be possible, precedence should be 0 and all valid ops > 0"),
         };
@@ -642,7 +681,7 @@ fn try_get_literal(
         Some(Err(e)) => return Err(e),
         None => {
             if traverse_brackets(stream, stacks, open_bracket_stack) == CLOSED_A_BRACKET {
-                convert_bracket_expression(stream, stacks)?;
+                convert_bracket_expression(stream, &scopes, stacks)?;
             }
 
             match Literal::try_from_stream(stream, scopes) {
@@ -745,9 +784,9 @@ fn add_index(
     Ok(())
 }
 
-fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, var_ref: &VariableRef, use_literal_retention: bool, is_assign_var: bool) -> Result<()> {
+fn add_variable(stream: &mut TokenStream, stacks: &mut ExpressionStacks, scopes: &ScopeBuilder, var_ref: &VariableRef, use_literal_retention: bool, is_assign_var: bool) -> Result<()> {
     
-    let var = var_ref.borrow();
+    let var = var_ref.borrow(&scopes.ref_pool);
     let variable = Variable{name: var.name.clone()};
 
     if var.initializer.is_none() && !is_assign_var {

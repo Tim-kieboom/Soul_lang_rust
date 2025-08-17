@@ -3,14 +3,27 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, spanned::Spanned, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}, scope::SoulPagePath}};
+use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Ident, StaticMethode}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}, scope::SoulPagePath}, i_sementic::sementic_scope::Byte}, utils::node_ref::MultiRefPool};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[repr(u8)]
 pub enum TypeSize {
-    Bit8,
-    Bit16,
-    Bit32,
-    Bit64,
+    Bit8 = 8,
+    Bit16 = 16,
+    Bit32 = 32,
+    Bit64 = 64,
+}
+
+impl TypeSize {
+    pub fn to_byte(&self) -> Byte {
+        (*self).into()
+    }
+}
+
+impl Into<Byte> for TypeSize {
+    fn into(self) -> Byte {
+        Byte(self as u8 as u32 / 8)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -30,7 +43,7 @@ pub enum TypeKind {
     Str,
 
 // complex
-    Custom(Ident),
+    TypeDefed(Ident),
     Tuple(Vec<SoulType>),
     NamedTuple(HashMap<Ident, SoulType>),
     Function(Box<FunctionSignatureRef>),
@@ -53,6 +66,27 @@ pub enum TypeKind {
 
     Generic(Ident),
     LifeTime(Ident),
+
+    // for forward delaring for traits
+    TraitType(TraitKind),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TraitKind {
+    Indexed(Indexed),
+    Meth(Meth),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+///name funny
+pub struct Meth {
+    pub methode: Box<StaticMethode>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Indexed {
+    pub collection: Box<SoulType>,
+    pub index: Box<SoulType>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -118,52 +152,52 @@ impl TypeKind {
         }
     }
     
-    pub fn to_name_string(&self) -> String {
+    pub fn to_name_string(&self, ref_pool: &MultiRefPool) -> String {
         match self {
             TypeKind::None => SOUL_NAMES.get_name(NamesInternalType::None).to_string(),
             TypeKind::UntypedInt => SOUL_NAMES.get_name(NamesInternalType::UntypedInt).to_string(),
             TypeKind::SystemInt => SOUL_NAMES.get_name(NamesInternalType::Int).to_string(),
             TypeKind::Int(type_size) => {
-                        match type_size {
-                            TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Int8).to_string(),
-                            TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Int16).to_string(),
-                            TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Int32).to_string(),
-                            TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Int64).to_string(),
-                        }
-                    },
+                    match type_size {
+                        TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Int8).to_string(),
+                        TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Int16).to_string(),
+                        TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Int32).to_string(),
+                        TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Int64).to_string(),
+                    }
+                },
             TypeKind::SystemUint => SOUL_NAMES.get_name(NamesInternalType::Uint).to_string(),
             TypeKind::UntypedUint => SOUL_NAMES.get_name(NamesInternalType::UntypedUint).to_string(),
             TypeKind::Uint(type_size) => {
-                        match type_size {
-                            TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Uint8).to_string(),
-                            TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Uint16).to_string(),
-                            TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Uint32).to_string(),
-                            TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Uint64).to_string(),
-                        }
-                    },
+                    match type_size {
+                        TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Uint8).to_string(),
+                        TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Uint16).to_string(),
+                        TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Uint32).to_string(),
+                        TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Uint64).to_string(),
+                    }
+                },
             TypeKind::UntypedFloat => SOUL_NAMES.get_name(NamesInternalType::UntypedFloat).to_string(),
             TypeKind::Float(type_size) => {
-                        match type_size {
-                            TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Float8).to_string(),
-                            TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Float16).to_string(),
-                            TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Float32).to_string(),
-                            TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Float64).to_string(),
-                        }
-                    },
+                    match type_size {
+                        TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Float8).to_string(),
+                        TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Float16).to_string(),
+                        TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Float32).to_string(),
+                        TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Float64).to_string(),
+                    }
+                },
             TypeKind::Char(type_size) => {
-                        match type_size {
-                            TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Uint8).to_string(),
-                            TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Uint16).to_string(),
-                            TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Uint32).to_string(),
-                            TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Uint64).to_string(),
-                        }
-                    },
+                    match type_size {
+                        TypeSize::Bit8 => SOUL_NAMES.get_name(NamesInternalType::Uint8).to_string(),
+                        TypeSize::Bit16 => SOUL_NAMES.get_name(NamesInternalType::Uint16).to_string(),
+                        TypeSize::Bit32 => SOUL_NAMES.get_name(NamesInternalType::Uint32).to_string(),
+                        TypeSize::Bit64 => SOUL_NAMES.get_name(NamesInternalType::Uint64).to_string(),
+                    }
+                },
             TypeKind::Bool => SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string(),
             TypeKind::Str => SOUL_NAMES.get_name(NamesInternalType::String).to_string(),
-            TypeKind::Custom(ident) => ident.0.clone(),
-            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string()).join(",")),
-            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string())).join(",")),
-            TypeKind::Function(function_signature) => function_signature.borrow().name.0.clone(),
+            TypeKind::TypeDefed(ident) => ident.0.clone(),
+            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string(ref_pool)).join(",")),
+            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string(ref_pool))).join(",")),
+            TypeKind::Function(function_signature) => function_signature.borrow(ref_pool).node.name.0.clone(),
             TypeKind::Struct(ident) => ident.0.clone(),
             TypeKind::Class(ident) => ident.0.clone(),
             TypeKind::Trait(ident) => ident.0.clone(),
@@ -173,13 +207,17 @@ impl TypeKind {
             TypeKind::TypeEnum(ident, ..) => ident.0.clone(),
             TypeKind::Generic(ident) => ident.0.clone(),
             TypeKind::LifeTime(ident) => ident.0.clone(),
-            TypeKind::Lambda(signature) => signature.to_type_string(),
+            TypeKind::Lambda(signature) => signature.to_type_string(ref_pool),
             TypeKind::ExternalType(Spanned{node: ExternalType{path:_, name}, span:_}) => name.0.clone(),
             TypeKind::ExternalPath(Spanned{node: ExternalPath{path:_, name}, span:_}) => name.0.clone(),
+            TypeKind::TraitType(kind) => match kind {
+                TraitKind::Indexed(indexed) => format!("TraitType<{}[{}]>", indexed.collection.to_string(ref_pool), indexed.index.to_string(ref_pool)),
+                TraitKind::Meth(Meth{methode}) => format!("TraitType<{}.{}()>", methode.callee.node.to_string(ref_pool), methode.name.0)
+            },
         }
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
         match self {
             TypeKind::None => SOUL_NAMES.get_name(NamesInternalType::None).to_string(),
             TypeKind::UntypedInt => SOUL_NAMES.get_name(NamesInternalType::UntypedInt).to_string(),
@@ -221,10 +259,10 @@ impl TypeKind {
                     },
             TypeKind::Bool => SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string(),
             TypeKind::Str => SOUL_NAMES.get_name(NamesInternalType::String).to_string(),
-            TypeKind::Custom(ident) => ident.0.clone(),
-            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string()).join(",")),
-            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string())).join(",")),
-            TypeKind::Function(function_signature) => function_signature.borrow().name.0.clone(),
+            TypeKind::TypeDefed(ident) => ident.0.clone(),
+            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string(ref_pool)).join(",")),
+            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string(ref_pool))).join(",")),
+            TypeKind::Function(function_signature) => function_signature.borrow(ref_pool).node.name.0.clone(),
             TypeKind::Struct(ident) => ident.0.clone(),
             TypeKind::Class(ident) => ident.0.clone(),
             TypeKind::Trait(ident) => ident.0.clone(),
@@ -234,13 +272,29 @@ impl TypeKind {
             TypeKind::TypeEnum(ident, ..) => ident.0.clone(),
             TypeKind::Generic(ident) => ident.0.clone(),
             TypeKind::LifeTime(ident) => ident.0.clone(),
-            TypeKind::Lambda(signature) => signature.to_type_string(),
+            TypeKind::Lambda(signature) => signature.to_type_string(ref_pool),
             TypeKind::ExternalType(ty) => ty.node.to_string(),
             TypeKind::ExternalPath(path) => format!("<path>{}", path.node.name.0),
+            TypeKind::TraitType(kind) => match kind {
+                TraitKind::Indexed(indexed) => format!("TraitType<{}[{}]>", indexed.collection.to_string(ref_pool), indexed.index.to_string(ref_pool)),
+                TraitKind::Meth(Meth{methode}) => format!("TraitType<{}>", 
+                    {
+                        let StaticMethode{callee, name, generics, arguments} = methode.as_ref();
+                        let generics = if generics.is_empty() {
+                            String::new()
+                        }
+                        else {
+                            format!("<{}>", generics.iter().map(|ty| ty.to_string(ref_pool)).join(","))
+                        };
+
+                        format!("{}.{}{}({})", callee.node.to_string(ref_pool), name.0, generics, arguments.iter().map(|arg| arg.to_string(ref_pool)).join(","))   
+                    }
+                ),
+            },
         }
     }
 
-    pub fn get_variant(&self) -> &'static str {
+    pub fn get_variant(&self, ref_pool: &MultiRefPool) -> &'static str {
         match self {
             TypeKind::None => "none",
             TypeKind::UntypedInt => "untypedInt",
@@ -274,7 +328,7 @@ impl TypeKind {
             },
             TypeKind::Bool => "bool",
             TypeKind::Str => "str",
-            TypeKind::Custom(..) => "Custom",
+            TypeKind::TypeDefed(..) => "Custom",
             TypeKind::Tuple(..) => "Tuple",
             TypeKind::NamedTuple(..) => "NamedTuple",
             TypeKind::Function(..) => "Function",
@@ -287,13 +341,17 @@ impl TypeKind {
             TypeKind::TypeEnum(..) => "typeEnum",
             TypeKind::Generic(..) => "generic",
             TypeKind::LifeTime(..) => "lifetime",
-            TypeKind::Lambda(signature) => match signature.borrow().mode {
+            TypeKind::Lambda(signature) => match signature.borrow(ref_pool).mode {
                 LambdaMode::Mut => "MutFn",
                 LambdaMode::Const => "ConstFn",
                 LambdaMode::Consume => "OnceFn",
             },
             TypeKind::ExternalType(..) => "ExternalType",
             TypeKind::ExternalPath{..} => "ExternalPath",
+            TypeKind::TraitType(kind) => match kind  {
+                TraitKind::Meth(_) => "meth",
+                TraitKind::Indexed(_) => "Indexed",
+            },
         }
     }
 }

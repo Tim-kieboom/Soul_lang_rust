@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::errors::soul_error::Result;
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::abstract_syntax_tree::AbstractSyntacTree, scope::ScopeBuilder}, i_tokenizer::TokenStream};
+use crate::utils::node_ref::MultiRefPool;
  
 pub trait FromTokenStream<T> {
     fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Option<Result<T>>;

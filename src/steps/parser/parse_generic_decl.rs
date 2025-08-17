@@ -211,7 +211,7 @@ fn add_where(generics_decl: &mut GenericDecl, stream: &mut TokenStream, scopes: 
 
         let generic_name = match kind {
             TypeKind::Generic(ident) => ident,
-            _ => return Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), format!("type: '{}' is not allowed in where should be generic (e.g. 'where T: trait,')", kind.get_variant()))),
+            _ => return Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), format!("type: '{}' is not allowed in where should be generic (e.g. 'where T: trait,')", kind.get_variant(&scopes.ref_pool)))),
         };
 
         let generic = generics_decl.generics.iter_mut().find(|gene| &gene.name == generic_name)
@@ -260,7 +260,7 @@ fn add_generic_type_contraints(contraints: &mut Vec<TypeConstraint>, stream: &mu
             match kind {
                 TypeKind::Trait(id) => if add_result {Some(TypeConstraint::Trait(id.clone()))} else {None}, 
                 TypeKind::TypeEnum(id, _) => if add_result {Some(TypeConstraint::TypeEnum(id.clone()))} else {None},
-                _ => return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("type: '{}' is '{}' only 'trait' and 'typeEnum' is allowed for generic contraint", stream.current_text(), kind.get_variant())))
+                _ => return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("type: '{}' is '{}' only 'trait' and 'typeEnum' is allowed for generic contraint", stream.current_text(), kind.get_variant(&scopes.ref_pool))))
             }
         }
         else if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {

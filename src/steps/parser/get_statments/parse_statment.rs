@@ -14,7 +14,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Span
 use crate::steps::parser::get_statments::parse_block::{get_block, get_block_no_scope_push};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::parser::get_statments::parse_enum_like::{get_enum, get_type_enum, get_union};
-use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility};
+use crate::steps::step_interfaces::i_parser::scope::{ScopeBuilder, ScopeKind, ScopeVisibility, TypeDefed, TypeDefedRef};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::function::Parameter;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier};
@@ -109,37 +109,37 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
             let trait_decl = get_trait(stream, scopes)?;
-            let name = trait_decl.node.borrow().name.0.clone();
+            let name = trait_decl.node.borrow(&scopes.ref_pool).name.0.clone();
             scopes.insert(name, ScopeKind::Trait(trait_decl.node.clone()));
             return Ok(Some(Statment::new(StmtKind::TraitDecl(trait_decl.node), trait_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
             let type_enum = get_type_enum(stream, scopes)?;
-            let name = type_enum.node.borrow().name.0.clone();
+            let name = type_enum.node.borrow(&scopes.ref_pool).name.0.clone();
             scopes.insert(name, ScopeKind::TypeEnum(type_enum.node.clone()));
             return Ok(Some(Statment::new(StmtKind::TypeEnumDecl(type_enum.node), type_enum.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
             let union_decl = get_union(stream, scopes)?;
-            let name = union_decl.node.borrow().name.0.clone();
+            let name = union_decl.node.borrow(&scopes.ref_pool).name.0.clone();
             scopes.insert(name, ScopeKind::Union(union_decl.node.clone()));
             return Ok(Some(Statment::new(StmtKind::UnionDecl(union_decl.node), union_decl.span)))
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
             let enum_decl = get_enum(stream, scopes)?;
-            let name = enum_decl.node.borrow().name.0.clone();
+            let name = enum_decl.node.borrow(&scopes.ref_pool).name.0.clone();
             scopes.insert(name, ScopeKind::Enum(enum_decl.node.clone()));
             return Ok(Some(Statment::new(StmtKind::EnumDecl(enum_decl.node), enum_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
             let struct_decl = get_struct(stream, scopes)?;
-            let name = struct_decl.node.borrow().name.0.clone();
+            let name = struct_decl.node.borrow(&scopes.ref_pool).name.0.clone();
             scopes.insert(name, ScopeKind::Struct(struct_decl.node.clone()));
             return Ok(Some(Statment::new(StmtKind::StructDecl(struct_decl.node), struct_decl.span)));
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
             let class_decl = get_class(stream, scopes)?;
-            let name = class_decl.node.borrow().name.0.clone();
+            let name = class_decl.node.borrow(&scopes.ref_pool).name.0.clone();
             scopes.insert(name, ScopeKind::Class(class_decl.node.clone()));
             return Ok(Some(Statment::new(StmtKind::ClassDecl(class_decl.node), class_decl.span)));
         },
@@ -275,8 +275,9 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
 
     let mut next_index = (stream.current_index() as i64 + peek_i) as usize;
     
-    //check if next_index is valid index
-    stream.peek_multiple(peek_i).ok_or(err_out_of_bounds(stream))?;
+    if !stream.is_valid_index(next_index) {
+        return Err(err_out_of_bounds(stream));
+    }
     
     let generics = if stream[next_index].text == "<" {
         if stream.next().is_none() {
@@ -327,7 +328,7 @@ pub fn get_statment(node_scope: &mut StatmentBuilder, stream: &mut TokenStream, 
                     stream.go_to_index(begin_i);
                     let expr = get_expression(stream, scopes, STATMENT_ENDS)?;
                     if !matches!(expr.node, ExprKind::Call(..)) && !matches!(expr.node, ExprKind::ExternalExpression(_)) {
-                        return Err(new_soul_error(SoulErrorKind::InternalError, expr.span, format!("internal error get_expression in function call did not return function call, expr: '{}'", expr.node.to_string(0))))
+                        return Err(new_soul_error(SoulErrorKind::InternalError, expr.span, format!("internal error get_expression in function call did not return function call, expr: '{}'", expr.node.to_string(&scopes.ref_pool, 0))))
                     }
 
                     let span = expr.span;
@@ -549,14 +550,14 @@ fn get_switch_case(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resul
                     ty: SoulType::none(), 
                     initializer: Some(Box::new(condition.clone())), 
                     lit_retention: None,
-                })
+                }, &mut scopes.ref_pool)
             );
             scopes.insert(var_name, var);
             let if_condition = get_expression(stream, scopes, &["=>"])?;
             let span = if_condition.span;
 
             let if_decl = Box::new(IfDecl{condition: if_condition, body: Block{statments: vec![]}, else_branchs: vec![]});
-            Expression::new(ExprKind::If(if_decl), span)
+            Expression::new(ExprKind::If(if_decl, SoulType::none()), span)
         }
         else if stream.peek().is_some_and(|token| token.text == "::") {
             let union_i = stream.current_index();
@@ -664,12 +665,13 @@ enum FunctionKind {
 }
 
 fn try_add_else_to_if_branch<'a>(
-    scope: &mut StatmentBuilder,
+    stmt_scope: &mut StatmentBuilder,
+    scopes: &mut ScopeBuilder,
     else_branch: Spanned<ElseKind>, 
     span: SoulSpan
 ) -> Result<()> {
     
-    let block = match scope {
+    let block = match stmt_scope {
         StatmentBuilder::Block(node_ref) => node_ref,
         _ => {
             return Err(new_soul_error(
@@ -681,7 +683,7 @@ fn try_add_else_to_if_branch<'a>(
     };
 
 
-    if let Some(last) = block.borrow_mut().node.statments.last_mut() {
+    if let Some(last) = block.borrow_mut(&mut scopes.ref_pool).node.statments.last_mut() {
         
         if let StmtKind::If(node) = &mut last.node {
             if node.else_branchs.last().is_some_and(|branch| matches!(branch.node, ElseKind::Else(_))) {
@@ -736,12 +738,14 @@ fn add_for_loop(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<O
 fn add_else(stream: &mut TokenStream, scopes: &mut ScopeBuilder, node_scope: &mut StatmentBuilder) -> Result<()> {
     let else_i = stream.current_index();
     let else_branch = get_else(stream, scopes)?;
-    try_add_else_to_if_branch(node_scope, else_branch, stream[else_i].span)?;
+    try_add_else_to_if_branch(node_scope, scopes, else_branch, stream[else_i].span)?;
 
     Ok(())
 }
 
 fn add_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+    let name_i = stream.current_index() + 1;
+    
     loop {
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream));
@@ -767,7 +771,10 @@ fn add_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
         }
     }
 
-    SoulType::from_stream(stream, scopes)?;
+    let from_type = SoulType::from_stream(stream, scopes)?;
+    let type_def = ScopeKind::TypeDefed(TypeDefedRef::new(TypeDefed{name: Ident(stream[name_i].text.clone()), from_type: from_type}, &mut scopes.ref_pool));
+    scopes.insert(stream[name_i].text.clone(), type_def);
+
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }

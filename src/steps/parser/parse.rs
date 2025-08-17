@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::path::PathBuf;
 use hsoul::subfile_tree::SubFileTree;
-use crate::utils::node_ref::MultiRef;
+use crate::utils::node_ref::{MultiRef, MultiRefPool};
 use crate::errors::soul_error::{Result, SoulSpan};
 use crate::steps::step_interfaces::i_tokenizer::TokenizeResonse;
 use crate::meta_data::internal_functions_headers::INTERNAL_LIB_DIR;
@@ -14,19 +14,9 @@ use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ProgramMemmo
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::statment::{VariableKind, VariableDecl, VariableRef};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, StatmentBuilder};
 
-pub fn parse_tokens(tokens: TokenizeResonse, subfile_tree: Option<Arc<SubFileTree>>, project_name: String) -> Result<ParserResponse> {
+pub fn parse_tokens(tokens: TokenizeResonse, ref_pool: MultiRefPool, subfile_tree: Option<Arc<SubFileTree>>, project_name: String) -> Result<ParserResponse> {
     let mut tree = AbstractSyntacTree{root: Vec::new()};
     let mut stream = tokens.stream;
-
-    #[cfg(feature="dev_mode")]
-    println!( // this print is to be able to see what token is at what index because rust debugger sucks
-        "\ntokenizer:\n{:?}\n", 
-        stream
-            .iter()
-            .map(|token| token.text.as_str())
-            .enumerate()
-            .collect::<Vec<(usize, &str)>>()
-    );
 
     let mut external_pages = if let Some(tree) = subfile_tree {
         ExternalPages::from_subfile_tree(tree)
@@ -36,15 +26,15 @@ pub fn parse_tokens(tokens: TokenizeResonse, subfile_tree: Option<Arc<SubFileTre
     };
     load_std_libs(&mut external_pages);
 
-    let mut scopes = get_scope_from_type_stack(&mut stream, external_pages, project_name)?;
+    let mut scopes = get_scope_from_type_stack(&mut stream, ref_pool, external_pages, project_name)?;
     stream.reset();
 
 
-    let mut scope_ref = StatmentBuilder::Global(MultiRef::new(tree.root));    
+    let mut scope_ref = StatmentBuilder::Global(MultiRef::new(tree.root, &mut scopes.ref_pool));    
     loop {
 
         if let Some(statment) = get_statment(&mut scope_ref, &mut stream, &mut scopes)? {
-            scope_ref.try_push(statment)?;
+            scope_ref.try_push(&mut scopes.ref_pool, statment)?;
         } 
 
         if stream.peek().is_none() {
@@ -53,7 +43,9 @@ pub fn parse_tokens(tokens: TokenizeResonse, subfile_tree: Option<Arc<SubFileTre
     }
 
     if let StatmentBuilder::Global(global) = scope_ref {
-        tree.root = global.consume();
+        unsafe {
+            tree.root = global.consume(&mut scopes.ref_pool)
+        }
     }
     else { unreachable!() }
 
@@ -68,6 +60,7 @@ pub fn parse_tokens(tokens: TokenizeResonse, subfile_tree: Option<Arc<SubFileTre
                 initializer: Some(Box::new(Expression::new(ExprKind::Literal(literal), first_span))),
                 lit_retention: None,
             },
+            &mut scopes.ref_pool
         );
         let var = ScopeKind::Variable(var_ref.clone());
 

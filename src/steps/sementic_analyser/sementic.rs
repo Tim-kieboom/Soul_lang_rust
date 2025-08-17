@@ -19,8 +19,8 @@ pub fn sementic_analyse_ast(parser: ParserResponse, run_options: &RunOptions) ->
     header_analyser.visit_ast(&mut tree);
     (scope, faults) = header_analyser.consume();
 
-    let type_analyser = TypeCollector::new(scope, faults, SHOULD_RESET);
-    // type_analyser.visit_ast(&mut tree);
+    let mut type_analyser = TypeCollector::new(scope, faults, SHOULD_RESET);
+    type_analyser.visit_ast(&mut tree);
     (scope, faults) = type_analyser.consume();
 
     Ok(SementicAnalyserResponse{tree, scope, faults})

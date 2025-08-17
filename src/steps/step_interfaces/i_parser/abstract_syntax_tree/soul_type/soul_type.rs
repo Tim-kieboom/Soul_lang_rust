@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}, staments::statment::Lifetime};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}, staments::statment::Lifetime}, utils::node_ref::MultiRefPool};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeGenericKind {
@@ -17,9 +17,9 @@ pub struct  SoulType {
 }
 
 impl TypeGenericKind {
-    pub fn to_string(&self) -> String {
+    pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
         match self {
-            TypeGenericKind::Type(soul_type) => soul_type.to_string(),
+            TypeGenericKind::Type(soul_type) => soul_type.to_string(ref_pool),
             TypeGenericKind::Lifetime(lifetime) => lifetime.name.0.clone(),
         }
     }
@@ -48,12 +48,28 @@ impl SoulType {
         matches!(self.base, TypeKind::None)
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_deref(&self, ref_pool: &MultiRefPool) -> Result<Self, String> {
+        if self.wrappers.is_empty() {
+            return Err(format!("type: '{}' can not be derefed", self.to_string(ref_pool)))
+        }
+
+        let mut this = self.clone();
+        match this.wrappers.pop().unwrap() {
+            TypeWrapper::Invalid |
+            TypeWrapper::Array => Err(format!("type: '{}' can not be derefed", self.to_string(ref_pool))),
+            TypeWrapper::Pointer |
+            TypeWrapper::MutRef(_) |
+            TypeWrapper::ConstRef(_) |
+            TypeWrapper::ConstPointer => Ok(this),
+        }
+    }
+
+    pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
         if self.generics.is_empty() {
             format!(
                 "{} {}{}",
                 self.modifier.to_str(),
-                self.base.to_string(),
+                self.base.to_string(ref_pool),
                 self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
             )
         }
@@ -61,8 +77,8 @@ impl SoulType {
             format!(
                 "{} {}<{}>{}",
                 self.modifier.to_str(),
-                self.base.to_string(),
-                self.generics.iter().map(|gene| gene.to_string()).join(","),
+                self.base.to_string(ref_pool),
+                self.generics.iter().map(|gene| gene.to_string(ref_pool)).join(","),
                 self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
             )
         }

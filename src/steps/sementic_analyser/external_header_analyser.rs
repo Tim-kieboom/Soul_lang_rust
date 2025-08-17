@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, GlobalNode}, expression::{Array, ArrayFiller, BinaryExpr, ExprKind, Expression, ExternalExpression, FnCall, Index, LambdaDecl, StaticField, StaticMethode, Ternary, TypeOfExpr}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{conditionals::{CaseDoKind, ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{UnionDeclRef, UnionVariantKind}, function::{ExtFnDecl, FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Assignment, Block, ReturnLike, Statment, StmtKind, VariableKind, VariableRef}}}, external_header::Header, scope::ScopeKind}, i_sementic::{ast_visitors::{AstVisitable, ExternalHeaderAnalyser}, fault::SoulFault}}};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, GlobalNode}, expression::{Array, ArrayFiller, BinaryExpr, ExprKind, Expression, ExternalExpression, FnCall, Index, LambdaDecl, StaticField, StaticMethode, Ternary, TypeOfExpr}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{conditionals::{CaseDoKind, ElseKind, ForDecl, IfDecl, SwitchDecl, WhileDecl}, enum_likes::{UnionDeclRef, UnionVariantKind}, function::{ExtFnDecl, FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Assignment, Block, ReturnLike, Statment, StmtKind, VariableKind, VariableRef}}}, external_header::Header, scope::ScopeKind}, i_sementic::{ast_visitors::{AstVisitable, ExternalHeaderAnalyser}, fault::SoulFault}}, utils::node_ref::MultiRefPool};
 
 impl AstVisitable for ExternalHeaderAnalyser {
     fn visit_ast(&mut self, node: &mut AbstractSyntacTree) {
@@ -40,7 +40,7 @@ impl AstVisitable for ExternalHeaderAnalyser {
             GlobalKind::UnionDecl(node_ref) => self.check_union_decl(node_ref, node.span),
             GlobalKind::EnumDecl(_) => (),
             GlobalKind::TypeEnumDecl(node_ref) => {
-                for ty in node_ref.borrow().types.iter() {
+                for ty in node_ref.borrow(&self.get_scope().ref_pool).types.iter() {
                     self.check_type(&ty, node.span);
                 }
             },
@@ -72,7 +72,7 @@ impl AstVisitable for ExternalHeaderAnalyser {
             StmtKind::Assignment(assignment) => self.check_assignment(assignment, node.span),
             StmtKind::CloseBlock(_) => (),
             StmtKind::TypeEnumDecl(node_ref) => {
-                for ty in node_ref.borrow().types.iter() {
+                for ty in node_ref.borrow(&self.get_scope().ref_pool).types.iter() {
                     self.check_type(&ty, node.span);
                 }
             },
@@ -142,7 +142,7 @@ impl ExternalHeaderAnalyser {
             ExprKind::Default => (),
             ExprKind::Literal(_) => (),
             ExprKind::Variable(_) => (),
-            ExprKind::If(if_decl) => self.check_if(if_decl, span),
+            ExprKind::If(if_decl, _) => self.check_if(if_decl, span),
             ExprKind::Index(index) => self.check_index(index, span),
             ExprKind::Ctor(fn_call) => self.check_fn_call(fn_call, span),
             ExprKind::Call(fn_call) => self.check_fn_call(fn_call, span),
@@ -229,7 +229,7 @@ impl ExternalHeaderAnalyser {
         };
 
 
-        if let Err(msg) = header_contains(&header, &node.expr.node) {
+        if let Err(msg) = header_contains(&header, &self.get_scope().ref_pool, &node.expr.node) {
             
             self.add_fault(SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidInContext, span, format!("{} with path: '{}'", msg, node.path.0))));
             return;
@@ -244,7 +244,7 @@ impl ExternalHeaderAnalyser {
             self.visit_expression(arg);
         }
 
-        let mut lambda_sig = node.signature.borrow_mut();
+        let mut lambda_sig = node.signature.borrow_mut(&mut self.get_scope_mut().ref_pool);
         for param in &mut lambda_sig.params {
             
             self.check_type(&param.node.ty, param.span);
@@ -294,7 +294,7 @@ impl ExternalHeaderAnalyser {
     }
 
     fn check_union_decl(&mut self, node: &mut UnionDeclRef, span: SoulSpan) {
-        let union = node.borrow();
+        let union = node.borrow(&self.get_scope().ref_pool);
 
         for variant in &union.variants {
             
@@ -331,7 +331,7 @@ impl ExternalHeaderAnalyser {
     } 
 
     fn check_variable(&mut self, node: &mut VariableRef, span: SoulSpan) {
-        let mut variable = node.borrow_mut();
+        let mut variable = node.borrow_mut(&mut self.get_scope_mut().ref_pool);
         self.check_type(&variable.ty, span);
         
         if let Some(init) = &mut variable.initializer {
@@ -351,7 +351,7 @@ impl ExternalHeaderAnalyser {
     }
 
     fn check_trait_ref(&mut self, node: &mut TraitDeclRef, _span: SoulSpan) {
-        let mut trait_decl = node.borrow_mut();
+        let mut trait_decl = node.borrow_mut(&mut self.get_scope_mut().ref_pool);
 
         for meth in trait_decl.methodes.iter_mut() {
 
@@ -360,7 +360,7 @@ impl ExternalHeaderAnalyser {
     }
 
     fn check_struct_ref(&mut self, node: &mut StructDeclRef, _span: SoulSpan) {
-        let mut struct_decl = node.borrow_mut();
+        let mut struct_decl = node.borrow_mut(&mut self.get_scope_mut().ref_pool);
  
         for field in struct_decl.fields.iter_mut() {
 
@@ -372,7 +372,7 @@ impl ExternalHeaderAnalyser {
     }
 
     fn check_class_ref(&mut self, node: &mut ClassDeclRef, _span: SoulSpan) {
-        let mut class_decl = node.borrow_mut();
+        let mut class_decl = node.borrow_mut(&mut self.get_scope_mut().ref_pool);
         
  
         for field in class_decl.fields.iter_mut() {
@@ -405,13 +405,13 @@ impl ExternalHeaderAnalyser {
     }
 
     fn check_fn_signature(&mut self, fn_sig: &mut FunctionSignatureRef) {
-        let mut signature = fn_sig.borrow_mut();
+        let mut signature = fn_sig.borrow_mut(&mut self.get_scope_mut().ref_pool);
         
-        if let Some(calle) = &signature.calle {
+        if let Some(calle) = &signature.node.calle {
             self.check_type(&calle.node.ty, calle.span);
         }
 
-        for param in signature.params.iter_mut() {
+        for param in signature.node.params.iter_mut() {
 
             self.check_type(&param.node.ty, param.span);
             if let Some(expr) = &mut param.node.default_value {
@@ -419,7 +419,7 @@ impl ExternalHeaderAnalyser {
             }
         } 
 
-        if let Some(ty) = &signature.return_type {
+        if let Some(ty) = &signature.node.return_type {
             self.check_type(ty, signature.span);
         }
     }
@@ -452,7 +452,7 @@ impl ExternalHeaderAnalyser {
     }
 }
 
-fn header_contains(header: &Header, expr: &ExprKind) -> Result<(), String> {
+fn header_contains(header: &Header, ref_pool: &MultiRefPool, expr: &ExprKind) -> Result<(), String> {
 
     let expr_name = match &expr {
         ExprKind::Call(fn_call) => &fn_call.name.0,
@@ -470,7 +470,7 @@ fn header_contains(header: &Header, expr: &ExprKind) -> Result<(), String> {
         let union = kinds.into_iter().find(|el| matches!(el, ScopeKind::Union(_)));
 
         let has_variant = match union {
-            Some(ScopeKind::Union(node_ref)) => node_ref.borrow().variants.iter().any(|variant| variant.name.0 == variant_name),
+            Some(ScopeKind::Union(node_ref)) => node_ref.borrow(ref_pool).variants.iter().any(|variant| variant.name.0 == variant_name),
             _ => return Err(format!("found type: '{}' but type is not union", union_name))
         };
 

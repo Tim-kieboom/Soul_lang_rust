@@ -10,16 +10,17 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
     let group_i = stream.current_index();
     let collection_type = match SoulType::try_from_stream(stream, scopes) {
         Some(result) => {
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(group_i, stream));
-            }
             let ty = result?;
+            stream.next();
             Some(ty)
         },
         None => None,
     };
 
-    if stream.current_text() != "[" && stream.current_text() != "(" {
+    if stream.current_text() == "[]" {
+        return Ok(Some(Expression::new(ExprKind::Array(Array{collection_type, element_type: None, values: vec![]}), stream[group_i].span.combine(&stream.current_span()))))
+    }
+    else if stream.current_text() != "[" && stream.current_text() != "(" {
         stream.go_to_index(group_i);
         return Ok(None)
     }
@@ -39,7 +40,10 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
             return Ok(None)
         }
 
-        let (element_type, values) = parse_group(stream, scopes)?;
+        let (element_type, values) = match parse_group(stream, scopes)? {
+            Some(val) => val,
+            None => {stream.go_to_index(group_i); return Ok(None)},
+        };
         let group_span = stream.current_span().combine(&stream[group_i].span);
 
         if is_array {
@@ -57,7 +61,7 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
 
 }
 
-fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(Option<SoulType>, Vec<Expression>)> {
+fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<(Option<SoulType>, Vec<Expression>)>> {
     let group_i = stream.current_index();
     let is_array = stream.current_text() == "[";
     let end_token = if is_array {"]"} else {")"};
@@ -93,6 +97,10 @@ fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(O
         None => None,
     };
 
+    if stream.current_text() == "for" {
+        return Ok(None)
+    }
+
 
     let mut values = Vec::new();
     loop {
@@ -104,7 +112,7 @@ fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(O
         }
 
         if stream.current_text() == end_token {
-            return Ok((element_type, values))
+            return Ok(Some((element_type, values)))
         }
 
         if stream.current_text() == "\n" {
@@ -125,7 +133,7 @@ fn parse_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(O
         }
         
         if stream.current_text() == end_token {
-            return Ok((element_type, values))
+            return Ok(Some((element_type, values)))
         }
 
         if stream.current_text() != "," {

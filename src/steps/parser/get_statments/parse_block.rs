@@ -31,7 +31,7 @@ fn inner_get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStre
     }
 
     if let Some(this) = possible_this {
-        scopes.insert_this(this);
+        scopes.insert_this_variable(this);
     }
 
     for Spanned{node: param, span} in params {
@@ -41,19 +41,19 @@ fn inner_get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStre
             ty: param.ty, 
             initializer: Some(Box::new(Expression::new(ExprKind::Empty, span))),
             lit_retention: None,
-        }));
+        }, &mut scopes.ref_pool));
 
         scopes.insert(name, var);
     }
 
     let mut block = Spanned::new(Block{statments:vec![]}, stream.current_span());
     
-    let mut scope_ref = StatmentBuilder::Block(MultiRef::new(block));
+    let mut scope_ref = StatmentBuilder::Block(MultiRef::new(block, &mut scopes.ref_pool));
     loop {
         
         if let Some(statment) = get_statment(&mut scope_ref, stream, scopes)? {
             let is_end = matches!(statment.node, StmtKind::CloseBlock(..)); 
-            scope_ref.try_push(statment)?;
+            scope_ref.try_push(&mut scopes.ref_pool, statment)?;
 
             if is_end {
                 break;
@@ -62,7 +62,10 @@ fn inner_get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStre
     }
     
     if let StatmentBuilder::Block(blk) = scope_ref {
-        block = blk.consume()
+        
+        unsafe{
+            block = blk.consume(&mut scopes.ref_pool);
+        }
     }
     else { unreachable!() }
 

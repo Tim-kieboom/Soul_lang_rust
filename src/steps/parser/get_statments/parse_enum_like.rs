@@ -9,6 +9,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::ty
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::staments::enum_likes::{EnumVariant, InnerEnumDecl, InnerTypeEnumDecl, InnerUnionDecl, TypeEnumDeclRef, UnionDeclRef, UnionVariant, UnionVariantKind};
+use crate::steps::step_interfaces::i_sementic::sementic_scope::Byte;
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{spanned::Spanned, staments::enum_likes::EnumDeclRef}, scope::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<TypeEnumDeclRef>> {
@@ -43,7 +44,7 @@ pub fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
     return Ok(
         Spanned::new(
-            TypeEnumDeclRef::new(InnerTypeEnumDecl{name: Ident(stream[name_i].text.clone()), types}), 
+            TypeEnumDeclRef::new(InnerTypeEnumDecl{name: Ident(stream[name_i].text.clone()), types}, &mut scopes.ref_pool), 
             stream.current_span().combine(&stream[type_enum_i].span),
         )
     );
@@ -136,7 +137,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
                 TypeKind::NamedTuple(hash_map) => {
                     UnionVariantKind::NamedTuple(hash_map)
                 },
-                _ => return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("unions only accept tuple and namedTuple types type: '{}' invalid", ty.get_variant()))),
+                _ => return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), format!("unions only accept tuple and namedTuple types type: '{}' invalid", ty.get_variant(&scopes.ref_pool)))),
             }
         };
         
@@ -177,7 +178,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     scopes.pop(stream.current_span());
-    Ok(Spanned::new(UnionDeclRef::new(InnerUnionDecl{name, variants, byte_size: 0/*unknown at this time*/}), stream[union_i].span.combine(&stream.current_span())))
+    Ok(Spanned::new(UnionDeclRef::new(InnerUnionDecl{name, variants, size: Byte(0)/*unknown at this time*/}, &mut scopes.ref_pool), stream[union_i].span.combine(&stream.current_span())))
 }
 
 pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<SoulType>> {
@@ -302,7 +303,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
 
     scopes.pop(stream.current_span());
 
-    Ok(Spanned::new(EnumDeclRef::new(InnerEnumDecl{name, variants, max_num, min_num}), stream.current_span().combine(&stream[enum_i].span)))
+    Ok(Spanned::new(EnumDeclRef::new(InnerEnumDecl{name, variants, max_num, min_num}, &mut scopes.ref_pool), stream.current_span().combine(&stream[enum_i].span)))
 }
 
 fn inner_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder, return_result: bool) -> Result<Vec<SoulType>> {

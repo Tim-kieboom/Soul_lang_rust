@@ -7,6 +7,7 @@ use crate::steps::parser::get_statments::parse_field::try_get_field;
 use crate::steps::parser::get_statments::parse_methode::try_get_methode;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
+use crate::steps::step_interfaces::i_sementic::sementic_scope::Byte;
 use crate::steps::step_interfaces::{i_parser::scope::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
@@ -50,6 +51,8 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     let this_ty = SoulType::from_type_kind(scopes.lookup_type(&stream[name_i].text)
         .ok_or(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), format!("Internal error trait: '{}' not found", &stream[name_i].text)))?
         .clone());
+
+    scopes.add_this_type(this_ty.base.clone());
 
     let body_calle = SoulThis{ty: this_ty, this: None};
 
@@ -101,7 +104,8 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
                 generics: generics_decl.generics, 
                 fields, 
                 methodes,
-            }),
+                size: Byte(0)
+            }, &mut scopes.ref_pool),
             stream.current_span().combine(&stream[class_i].span)
         ),
     )

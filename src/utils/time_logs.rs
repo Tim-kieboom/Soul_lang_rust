@@ -29,7 +29,7 @@ impl TimeLogs {
         time_store.insert(string, time);
     }
 
-    pub fn to_table_string(&self, max_len: usize) -> String {
+    pub fn to_files_table_string(&self, max_len: usize) -> String {
         let mut keys: Vec<&String> = self.times.keys().collect();
         keys.sort();
 
