@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}, staments::statment::Lifetime}, utils::node_ref::MultiRefPool};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{soul_type::type_kind::{Modifier, TypeKind, TypeWrapper}, staments::statment::Lifetime}, utils::serde_multi_ref::MultiRefPool};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeGenericKind {

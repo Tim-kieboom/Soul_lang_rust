@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, GlobalNode}, expression::{Arguments, Array, ExprKind, Expression, FnCall, Ident, StaticMethode, UnaryOpKind, Variable}, soul_type::{soul_type::SoulType, type_kind::{Indexed, Meth, TraitKind, TypeKind, TypeWrapper, UnionKind}}, spanned::Spanned, staments::{conditionals::{CaseDoKind, ElseKind}, enum_likes::{UnionDeclRef, UnionVariantKind}, function::FnDeclKind, objects::FieldDecl, statment::{Assignment, Block, Statment, StmtKind, VariableKind, VariableRef}}}, external_header::Header, scope::{self, NamedTupleCtor, ScopeKind, SoulPagePath}}, i_sementic::{ast_visitors::{AstVisitable, TypeCollector}, fault::SoulFault, sementic_scope::ScopeVisitor}}};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind, GlobalNode}, expression::{Arguments, Array, ExprKind, Expression, FnCall, Ident, StaticMethode, UnaryOpKind, Variable}, soul_type::{soul_type::SoulType, type_kind::{Indexed, Meth, TraitKind, TypeKind, TypeWrapper, UnionKind}}, spanned::Spanned, staments::{conditionals::{CaseDoKind, ElseKind}, enum_likes::{UnionDeclRef, UnionVariantKind}, function::FnDeclKind, objects::FieldDecl, statment::{Assignment, Block, Statment, StmtKind, VariableKind, VariableRef}}}, external_header::Header, scope::{NamedTupleCtor, ScopeKind, SoulPagePath}}, i_sementic::{ast_visitors::{AstVisitable, TypeCollector}, fault::SoulFault, sementic_scope::ScopeVisitor}}};
 
 impl AstVisitable for TypeCollector {
     fn visit_ast(&mut self, node: &mut AbstractSyntacTree) {
@@ -189,7 +189,7 @@ impl TypeCollector {
 
             ExprKind::Variable(variable) => {
 
-                let var_ref = match try_get_var_kind(self, variable) {
+                let mut var_ref = match try_get_var_kind(self, variable) {
                     Some(val) => val,
                     None => {
                         self.add_fault(SoulFault::new_error(new_soul_error(SoulErrorKind::InternalError, span, format!("could not find variable: '{}'", variable.name.0))));

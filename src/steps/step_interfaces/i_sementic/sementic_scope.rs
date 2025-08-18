@@ -1,12 +1,12 @@
 use std::io;
 
 use serde::{Deserialize, Serialize};
-use crate::{run_options::run_options::RunOptions, steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize}, external_header::ExternalHeader, scope::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind, ScopeStack, ScopeVisibility, TypeScope}}, utils::node_ref::MultiRefPool};
+use crate::{run_options::run_options::RunOptions, steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize}, external_header::{ExternalHeader}, scope::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind, ScopeStack, ScopeVisibility, TypeScope}}, utils::serde_multi_ref::MultiRefPool};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Serialize, Deserialize)]
 pub struct Byte(pub u32);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct ScopeVisitor {
     scopes: InnerScopeVisitor,
     types: Vec<TypeScope>,
@@ -32,7 +32,8 @@ pub struct Scope<T> {
 
 impl ScopeVisitor {
     pub fn new(builder: ScopeBuilder, run_options: &RunOptions) -> io::Result<Self> {
-        let (scopes, types, global_literal, external_pages, project_name, ref_pool) = builder.__consume_to_tuple();
+        let (scopes, types, global_literal, external_pages, project_name, mut ref_pool) = builder.__consume_to_tuple();
+        let external_header = ExternalHeader::new(external_pages, run_options, &mut ref_pool)?;
         Ok(Self{
             types,
             project_name,
@@ -40,7 +41,7 @@ impl ScopeVisitor {
             ptr_size: TypeSize::Bit64,
             system_int_size: TypeSize::Bit32,
             scopes: InnerScopeVisitor::new(scopes),
-            external_header: ExternalHeader::new(external_pages, run_options)?,
+            external_header,
             ref_pool
         })
     }
@@ -308,6 +309,14 @@ impl InnerScopeVisitor {
         &mut self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
 }
+
+
+
+
+
+
+
+
 
 
 

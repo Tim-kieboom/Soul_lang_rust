@@ -1,7 +1,7 @@
 use hsoul::subfile_tree::SubFileTree;
 use itertools::Itertools;
 use std::{env, fs::{self, write}, io::{BufReader, Read}, path::PathBuf, sync::{Arc, Mutex}, time::Instant};
-use crate::{run_options::run_options::RunOptions, steps::{sementic_analyser::sementic::sementic_analyse_ast, step_interfaces::{i_parser::parser_response::ParserResponse, i_sementic::sementic_respone::SementicAnalyserResponse, i_source_reader::SourceFileResponse}}, utils::{logger::Logger, node_ref::{MultiRefPool}, time_logs::TimeLogs}};
+use crate::{run_options::run_options::RunOptions, steps::{sementic_analyser::sementic::sementic_analyse_ast, step_interfaces::{i_parser::parser_response::ParserResponse, i_sementic::sementic_respone::SementicAnalyserResponse, i_source_reader::SourceFileResponse}}, utils::{logger::Logger, serde_multi_ref::{MultiRefPool}, time_logs::TimeLogs}};
 use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parse::parse_tokens, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::abstract_syntax_tree::pretty_format::PrettyFormat, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 pub struct RunStepsInfo<'a> {
@@ -129,7 +129,7 @@ pub fn parser<'a>(token_response: TokenizeResonse, ref_pool: MultiRefPool, sub_f
     Ok(parse_response)
 }
 
-pub fn sementic_analyse<'a>(parser_response: ParserResponse, ref_pool: &MultiRefPool, info: &RunStepsInfo<'a>, path: &PathBuf, file_name: &String) -> Result<SementicAnalyserResponse> {
+pub fn sementic_analyse<'a>(parser_response: ParserResponse, info: &RunStepsInfo<'a>, path: &PathBuf, file_name: &String) -> Result<SementicAnalyserResponse> {
     let start = Instant::now(); 
 
     let response = sementic_analyse_ast(parser_response, info.run_options)?;
@@ -146,10 +146,10 @@ pub fn sementic_analyse<'a>(parser_response: ParserResponse, ref_pool: &MultiRef
         let file_path = get_out_path("sementicAST.soulc", info, path, file_name)?;
         let scopes_file_path = get_out_path("sementicScopes.soulc", info, path, file_name)?;
 
-        write(file_path, format!("{}", response.tree.to_pretty_string(ref_pool)))
+        write(file_path, format!("{}", response.tree.to_pretty_string(&response.scope.ref_pool)))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
 
-        write(scopes_file_path, format!("{}", response.scope.to_pretty_string(ref_pool)))
+        write(scopes_file_path, format!("{}", response.scope.to_pretty_string(&response.scope.ref_pool)))
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
         
         if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {

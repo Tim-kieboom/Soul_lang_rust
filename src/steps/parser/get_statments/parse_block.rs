@@ -1,4 +1,4 @@
-use crate::utils::node_ref::MultiRef;
+use crate::utils::serde_multi_ref::MultiRef;
 use crate::steps::parser::get_statments::parse_statment::get_statment;
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::scope::{ScopeKind, ScopeVisibility};

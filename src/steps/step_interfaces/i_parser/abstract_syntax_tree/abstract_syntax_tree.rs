@@ -1,7 +1,9 @@
+use crate::prelude::*;
+use my_macros::CloneWithPool;
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableKind}}}, utils::node_ref::{FromPoolValue, MultiRef, MultiRefPool}};
+use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableKind}}}, utils::serde_multi_ref::{MultiRef, MultiRefPool}};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, CloneWithPool, Serialize, Deserialize)]
 pub struct AbstractSyntacTree {
     pub root: Vec<GlobalNode>,
 }
@@ -14,61 +16,7 @@ pub enum StatmentBuilder {
     Block(MultiRef<Spanned<Block>>),
 }
 
-impl FromPoolValue for Vec<GlobalNode> {
-    fn is_from_pool_value(from: &crate::utils::node_ref::PoolValue) -> bool {
-        match from {
-            crate::utils::node_ref::PoolValue::GlobalNodes(spanneds) => true,
-            _ => false,
-        }
-    }
-
-    fn from_pool_value_mut(from: &mut crate::utils::node_ref::PoolValue) -> &mut Self {
-        match from {
-            crate::utils::node_ref::PoolValue::GlobalNodes(spanneds) => spanneds,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn from_pool_value_ref(from: &crate::utils::node_ref::PoolValue) -> &Self {
-        match from {
-            crate::utils::node_ref::PoolValue::GlobalNodes(spanneds) => spanneds,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn to_pool_value(self) -> crate::utils::node_ref::PoolValue {
-        crate::utils::node_ref::PoolValue::GlobalNodes(self)
-    }
-}
-
-impl FromPoolValue for Spanned<Block> {
-    fn is_from_pool_value(from: &crate::utils::node_ref::PoolValue) -> bool {
-        match from {
-            crate::utils::node_ref::PoolValue::Block(spanned) => true,
-            _ => false,
-        }
-    }
-
-    fn from_pool_value_mut(from: &mut crate::utils::node_ref::PoolValue) -> &mut Self {
-        match from {
-            crate::utils::node_ref::PoolValue::Block(spanned) => spanned,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn from_pool_value_ref(from: &crate::utils::node_ref::PoolValue) -> &Self {
-        match from {
-            crate::utils::node_ref::PoolValue::Block(spanned) => spanned,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn to_pool_value(self) -> crate::utils::node_ref::PoolValue {
-        crate::utils::node_ref::PoolValue::Block(self)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, CloneWithPool, Serialize, Deserialize)]
 pub enum GlobalKind {
     ClassDecl(ClassDeclRef),
     StructDecl(StructDeclRef),

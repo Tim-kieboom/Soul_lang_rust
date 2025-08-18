@@ -10,7 +10,7 @@ use crate::errors::soul_error::{Result, SoulError};
 use crate::run_steps::{sementic_analyse, RunStepsInfo};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_header_cache::SoulHeaderCache;
 use crate::utils::logger::LogOptions;
-use crate::utils::node_ref::MultiRefPool;
+use crate::utils::serde_multi_ref::MultiRefPool;
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, run_options::run_options::RunOptions, steps::step_interfaces::i_sementic::fault::SoulFault, utils::{logger::Logger, time_logs::TimeLogs}};
 
 const DEFAULT_LOG_OPTIONS: &'static LogOptions = &LogOptions::const_default();
@@ -97,7 +97,7 @@ fn generate_code(run_options: Arc<RunOptions>, mut file: PathBuf, logger: Arc<Lo
 
     let file_name = file.file_name().expect("path has filename").to_string_lossy().to_string();
     file.pop();
-    let sementic_response = match sementic_analyse(parser_responese, &MultiRefPool::new(), &info, &file, &file_name) {
+    let sementic_response = match sementic_analyse(parser_responese, &info, &file, &file_name) {
         Ok(val) => val,
         Err(err) => {
             exit_error(&err, &logger);

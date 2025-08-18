@@ -9,7 +9,7 @@ use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
 use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Literal, LiteralType};
-use crate::utils::node_ref::MultiRefPool;
+use crate::utils::serde_multi_ref::MultiRefPool;
 
 fn token<T: Into<String>>(text: T) -> Token {
     let str = text.into();

@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, utils::node_ref::MultiRefPool};
+use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, utils::serde_multi_ref::MultiRefPool};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GenericParam {

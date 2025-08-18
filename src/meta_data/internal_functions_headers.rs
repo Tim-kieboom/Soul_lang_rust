@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, io, path::PathBuf};
 
 use once_cell::sync::Lazy;
 
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{ExprKind, Ident}, generics::{GenericKind, GenericParam}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::{Modifier, TypeKind, TypeWrapper}}, spanned::Spanned, staments::{function::{FnDeclKind, FunctionSignatureRef, InnerFunctionSignature, Parameter}, objects::{FieldDecl, InnerStructDecl, StructDeclRef}}, visibility::FieldAccess}, external_header::Header, scope::{OverloadedFunctions, ScopeKind}}, i_sementic::sementic_scope::Byte}, utils::node_ref::MultiRefPool};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{ExprKind, Ident}, generics::{GenericKind, GenericParam}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::{Modifier, TypeKind, TypeWrapper}}, spanned::Spanned, staments::{function::{FnDeclKind, FunctionSignatureRef, InnerFunctionSignature, Parameter}, objects::{FieldDecl, InnerStructDecl, StructDeclRef}}, visibility::FieldAccess}, external_header::Header, scope::{OverloadedFunctions, ScopeKind}}, i_sementic::sementic_scope::Byte}, utils::serde_multi_ref::MultiRefPool};
 
 pub const INTERNAL_LIB_DIR: &str = "F:\\Code\\Github\\Soul_lang_rust\\output\\stdlibs";
 
@@ -89,7 +89,7 @@ pub fn load_std_headers() -> io::Result<()> {
     };
     
     let mut ref_pool = get_fmt_ref_pool();
-    let fmt_bin = bincode::serialize(&get_fmt_header(&mut ref_pool))
+    let fmt_bin = bincode::serialize(&get_fmt_header(&mut ref_pool).to_serde_header(&mut ref_pool))
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.to_string()))?;
     fs::create_dir_all(&fmt_path)?;
     fmt_path.push("fmt.soul.header");
