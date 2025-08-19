@@ -11,13 +11,6 @@ pub struct Token {
 }
 
 pub struct TokenStream {
-    #[cfg(feature="dev_mode")]
-    current: String, //this is to see what the current is while debugging
-    #[cfg(feature="dev_mode")]
-    current_line: String, //this is to see what the current is while debugging
-    #[cfg(feature="dev_mode")]
-    current_line_number: usize, //this is to see what the current is while debugging
-
     tokens: Vec<Token>,
     index: i64,
 }
@@ -30,26 +23,11 @@ impl Token {
 }
 
 impl TokenStream {
-    #[cfg(not(feature="dev_mode"))]
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { 
+        TokenStream { 
             index: 0, 
             tokens, 
         }
-    }
-
-    #[cfg(feature="dev_mode")]
-    pub fn new(tokens: Vec<Token>) -> Self {
-        let mut this = Self { 
-            current: "<tokenstream not yet started>".to_string(),
-            current_line: String::new(),
-            current_line_number: 0,
-            index: 0, 
-            tokens, 
-        };
-
-        this.current_line = this.get_current_line(0);
-        this
     }
 
     pub fn reset(&mut self) {
@@ -78,24 +56,6 @@ impl TokenStream {
         }
 
         let start = self.index as usize;
-        let end = start + strs.len();
-
-        if end > self.tokens.len() {
-            return false
-        }
-
-        self.tokens[start..end]
-            .iter()
-            .map(|token| token.text.as_str())
-            .eq(strs.iter().copied())
-    }
-
-    pub fn peek_starts_with(&self, amount: i64, strs: &[&str]) -> bool {
-        if self.index < 0 || self.peek_multiple(amount).is_none() {
-            return false
-        }
-
-        let start = (self.index + amount) as usize;
         let end = start + strs.len();
 
         if end > self.tokens.len() {
@@ -140,8 +100,6 @@ impl TokenStream {
         if index >= self.tokens.len() {
             None
         } else {
-            #[cfg(feature="dev_mode")]
-            self.change_current(index);
             self.index = index as i64;
             Some(&self.tokens[self.index as usize])
         }
@@ -151,16 +109,12 @@ impl TokenStream {
         let next_index = self.index as i64 + steps;
         if next_index < 0 {
             self.index = next_index;
-            #[cfg(feature="dev_mode")]
-            {self.current = format!("<token stream index negative: {}>", self.index);}
             None
         }
         else if next_index as usize >= self.tokens.len(){
             None
         } 
         else {
-            #[cfg(feature="dev_mode")]
-            self.change_current(next_index as usize);
             self.index = next_index;
             Some(&self.tokens[self.index as usize])
         }
@@ -174,23 +128,6 @@ impl TokenStream {
         else {
             None
         }
-    }
-
-    #[cfg(feature="dev_mode")]
-    fn change_current(&mut self, index: usize) {
-        self.current = self.tokens[index].text.clone();
-        if self.tokens[self.index as usize].span.line_number != self.tokens[index].span.line_number {
-            self.current_line = self.get_current_line(index);
-            self.current_line_number = self.tokens[index].span.line_number;
-        }
-    }
-
-    #[cfg(feature="dev_mode")]
-    fn get_current_line(&self, index: usize) -> String {
-        use itertools::Itertools;
-        
-        let line = self.tokens[index].span.line_number;
-        self.tokens.iter().flat_map(|token| if token.span.line_number == line {Some(&token.text)} else {None}).join(" ")
     }
 }
 
