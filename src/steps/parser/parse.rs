@@ -18,6 +18,16 @@ pub fn parse_tokens(tokens: TokenizeResonse, ref_pool: MultiRefPool, subfile_tre
     let mut tree = AbstractSyntacTree{root: Vec::new()};
     let mut stream = tokens.stream;
 
+    #[cfg(feature="dev_mode")]
+    println!( // this print is to be able to see what token is at what index because rust debugger sucks
+        "\ntokenizer:\n{:?}\n", 
+        stream
+            .iter()
+            .map(|token| token.text.as_str())
+            .enumerate()
+            .collect::<Vec<(usize, &str)>>()
+    );
+
     let mut external_pages = if let Some(tree) = subfile_tree {
         ExternalPages::from_subfile_tree(tree)
     }
