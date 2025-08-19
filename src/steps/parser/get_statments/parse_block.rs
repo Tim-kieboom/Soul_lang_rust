@@ -62,10 +62,7 @@ fn inner_get_block<'a>(scope_visability: ScopeVisibility, stream: &mut TokenStre
     }
     
     if let StatmentBuilder::Block(blk) = scope_ref {
-        
-        unsafe{
-            block = blk.consume(&mut scopes.ref_pool);
-        }
+        block = blk.borrow(&scopes.ref_pool).clone();
     }
     else { unreachable!() }
 
