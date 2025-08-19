@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::mpsc::channel;
-use std::sync::Mutex;
 use std::{path::Path, sync::Arc};
 use hsoul::subfile_tree::SubFileTree;
 use threadpool::ThreadPool;
@@ -10,8 +9,7 @@ use crate::errors::soul_error::{Result, SoulError};
 use crate::run_steps::{sementic_analyse, RunStepsInfo};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_header_cache::SoulHeaderCache;
 use crate::utils::logger::LogOptions;
-use crate::utils::node_ref::MultiRefPool;
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, run_options::run_options::RunOptions, steps::step_interfaces::i_sementic::fault::SoulFault, utils::{logger::Logger, time_logs::TimeLogs}};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, run_options::run_options::RunOptions, steps::step_interfaces::i_sementic::fault::SoulFault, utils::{logger::Logger, node_ref::MultiRef, time_logs::TimeLogs}};
 
 const DEFAULT_LOG_OPTIONS: &'static LogOptions = &LogOptions::const_default();
 
@@ -20,7 +18,7 @@ pub struct FileFaults {
     pub faults: Vec<SoulFault>,
 }
 
-pub fn generate_code_files(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_log: &Arc<Mutex<TimeLogs>>) -> Vec<FileFaults> {
+pub fn generate_code_files(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_log: &MultiRef<TimeLogs>) -> Vec<FileFaults> {
     
     let mut faults = if !run_options.sub_tree_path.as_os_str().is_empty() {
         
@@ -47,7 +45,7 @@ pub fn generate_code_files(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, 
     faults
 }
 
-fn generate_code_all_subfiles(run_options: Arc<RunOptions>, subfiles_tree: Arc<SubFileTree>, logger: &Arc<Logger>, time_log: &Arc<Mutex<TimeLogs>>) -> Vec<FileFaults> {
+fn generate_code_all_subfiles(run_options: Arc<RunOptions>, subfiles_tree: Arc<SubFileTree>, logger: &Arc<Logger>, time_log: &MultiRef<TimeLogs>) -> Vec<FileFaults> {
     
     let num_threads = std::thread::available_parallelism().unwrap().get();
     let pool = ThreadPool::new(num_threads);

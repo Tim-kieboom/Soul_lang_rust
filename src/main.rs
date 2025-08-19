@@ -2,7 +2,7 @@ extern crate soul_lang_rust;
 
 use colored::Colorize;
 use std::{io::stderr, process::exit, result, sync::Arc, time::Instant};
-use soul_lang_rust::{cache_file::{cache_files, get_file_reader}, errors::soul_error::SoulError, generate_code_files::{generate_code_files, FileFaults}, meta_data::internal_functions_headers::load_std_headers, run_options::{run_options::RunOptions, show_times::ShowTimes}, steps::step_interfaces::i_sementic::fault::{SoulFault, SoulFaultKind}, utils::{logger::{LogOptions, Logger}, node_ref::MultiRef, time_logs::{format_duration, TimeLogs}}, MainErrMap};
+use soul_lang_rust::{cache_file::{cache_files, get_file_reader}, errors::soul_error::SoulError, generate_code_files::{generate_code_files, FileFaults}, meta_data::internal_functions_headers::load_std_headers, run_options::{run_options::RunOptions, show_times::ShowTimes}, steps::step_interfaces::i_sementic::fault::{SoulFaultKind}, utils::{logger::{LogOptions, Logger}, node_ref::MultiRef, time_logs::{format_duration, TimeLogs}}, MainErrMap};
 
 const DEFAULT_LOG_OPTIONS: &'static LogOptions = &LogOptions::const_default();
 
@@ -34,46 +34,16 @@ fn main() {
     }
 }
 
-fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {
-    use std::env::args;
-
-    let run_options = match RunOptions::new(args()) {
-        Ok(val) => Arc::new(val),
-        Err(msg) => {
-            eprintln!("{}", format!("!!invalid compiler argument!!\n{msg}").red());
-            exit(1)
-        },
-    };
-
-    let logger = match get_logger(&run_options) {
-        Ok(val) => Arc::new(val),
-        Err(err) => {
-            eprintln!("{}", err.red()); 
-            eprintln!("build interrupted because of 1 error");
-            exit(1)
-        },
-    };
-
-    if let Err(err) = create_output_dir(&run_options) {
-        logger.error(err.to_string(), DEFAULT_LOG_OPTIONS);
-        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
-        exit(1)
-    }
-
-    (run_options, logger, Arc::new(Mutex::new(TimeLogs::new())))
-}
-
-fn log_times(times: Arc<Mutex<TimeLogs>>, run_option: &RunOptions, logger: &Arc<Logger>) {
+fn log_times(times: MultiRef<TimeLogs>, run_option: &RunOptions, logger: &Arc<Logger>) {
     if run_option.show_times == ShowTimes::SHOW_NONE {
         return
     }
 
-    const MAX_LEN: usize = 200;
     let table = if run_option.show_times.contains(ShowTimes::SHOW_ALL) {
-        times.lock().unwrap().to_files_table_string(MAX_LEN)
+        times.borrow().to_table_string(200)
     }
     else {
-        times.lock().unwrap().to_total_table_string()
+        times.borrow().to_total_table_string()
     };
 
     for line in table.lines() {
@@ -107,6 +77,35 @@ fn log_faults(faults: Vec<FileFaults>, logger: &Arc<Logger>) -> usize {
     }
 
     error_count
+}
+
+fn init() -> (Arc<RunOptions>, Arc<Logger>, MultiRef<TimeLogs>) {
+    use std::env::args;
+
+    let run_options = match RunOptions::new(args()) {
+        Ok(val) => Arc::new(val),
+        Err(msg) => {
+            eprintln!("{}", format!("!!invalid compiler argument!!\n{msg}").red());
+            exit(1)
+        },
+    };
+
+    let logger = match get_logger(&run_options) {
+        Ok(val) => Arc::new(val),
+        Err(err) => {
+            eprintln!("{}", err.red()); 
+            eprintln!("build interrupted because of 1 error");
+            exit(1)
+        },
+    };
+
+    if let Err(err) = create_output_dir(&run_options) {
+        logger.error(err.to_string(), DEFAULT_LOG_OPTIONS);
+        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
+        exit(1)
+    }
+
+    (run_options, logger, MultiRef::new(TimeLogs::new()))
 }
 
 fn get_logger(run_option: &RunOptions) -> result::Result<Logger, String> {

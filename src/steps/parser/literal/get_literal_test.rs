@@ -9,7 +9,6 @@ use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
 use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Literal, LiteralType};
-use crate::utils::node_ref::MultiRefPool;
 
 fn token<T: Into<String>>(text: T) -> Token {
     let str = text.into();
@@ -22,7 +21,7 @@ fn stream_from_strs(tokens: &[&str]) -> TokenStream {
 }
 
 fn dummy_scopes() -> ScopeBuilder {
-    ScopeBuilder::new(ExternalPages::new(), "test".into(), MultiRefPool::new())
+    ScopeBuilder::new(ExternalPages::new(), "test".into())
 }
 
 #[test]

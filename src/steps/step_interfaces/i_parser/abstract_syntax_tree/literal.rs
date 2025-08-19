@@ -18,7 +18,6 @@ pub enum Literal {
     Str(String),
 
     // complex
-    EmptyArray(Option<LiteralType>),
     Array{ty: LiteralType, values: Vec<Literal>},
     Tuple{values: Vec<Literal>},
     NamedTuple{values: BTreeMap<Ident, Literal>},
@@ -29,7 +28,6 @@ pub enum Literal {
 
 #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub enum LiteralType {
-    None,
     Int,
     Uint,
     Float,
@@ -45,7 +43,6 @@ pub enum LiteralType {
 impl LiteralType {
     pub fn type_to_string(&self) -> String {
         match self {
-            LiteralType::None => format!("none"),
             LiteralType::Int => format!("untypedInt"),
             LiteralType::Uint => format!("untypedUint"),
             LiteralType::Float => format!("untypedFloat"),
@@ -62,7 +59,6 @@ impl LiteralType {
 
     fn precedence(&self) -> u8 {
         match self {
-            LiteralType::None => 0,
             LiteralType::Int => 2,
             LiteralType::Uint => 1,
             LiteralType::Float => 3,
@@ -87,7 +83,6 @@ impl LiteralType {
 
     pub fn force_array_type(&mut self, other: &LiteralType) {
         match self {
-            LiteralType::None |
             LiteralType::Int |
             LiteralType::Uint |
             LiteralType::Float |
@@ -126,22 +121,19 @@ impl LiteralType {
 
     fn to_type_kind(&self, wrap: &mut Vec<TypeWrapper>) -> TypeKind {
         match self {
-            LiteralType::Str => TypeKind::Str,
-            LiteralType::Bool => TypeKind::Bool,
-            LiteralType::None => TypeKind::None,
             LiteralType::Int => TypeKind::UntypedInt,
             LiteralType::Uint => TypeKind::UntypedUint,
             LiteralType::Float => TypeKind::UntypedFloat,
+            LiteralType::Bool => TypeKind::Bool,
             LiteralType::Char => TypeKind::Char(TypeSize::Bit8),
-            
+            LiteralType::Str => TypeKind::Str,
             LiteralType::Array(ty) => {
                 wrap.push(TypeWrapper::Array);
                 ty.to_type_kind(wrap)
             },
-
             LiteralType::Tuple(types) => TypeKind::Tuple(types.iter().map(|ty| ty.to_soul_type()).collect()),
             LiteralType::NamedTuple(hash_map) => TypeKind::NamedTuple(hash_map.iter().map(|(name, ty)| (name.clone(), ty.to_soul_type())).collect()),
-            LiteralType::ProgramMemmory(inner) => inner.to_type_kind(wrap),
+            LiteralType::ProgramMemmory(inner) => inner.to_type_kind(wrap)
         }
     }
 }
@@ -154,23 +146,23 @@ impl Literal {
     
     pub fn new_array(literals: Vec<Literal>, span: &SoulSpan) -> Result<Literal> {
         let mut common_ty = literals
-            .first()
-            .map(|v| v.get_literal_type())
-            .unwrap_or(LiteralType::Int);
+        .first()
+        .map(|v| v.get_literal_type())
+        .unwrap_or(LiteralType::Int);
     
-        for lit in &literals {
-            let next_ty = lit.get_literal_type();
-            
-            if common_ty.is_compatible(&next_ty) {
-                common_ty = common_ty.max(next_ty);
-            } else {
-                return Err(new_soul_error(
-                    SoulErrorKind::WrongType, 
-                    *span, 
-                    format!("Incompatible array literal types: {:?} vs {:?}", common_ty, next_ty)
-                ));
-            }
+    for lit in &literals {
+        let next_ty = lit.get_literal_type();
+        
+        if common_ty.is_compatible(&next_ty) {
+            common_ty = common_ty.max(next_ty);
+        } else {
+            return Err(new_soul_error(
+                SoulErrorKind::WrongType, 
+                *span, 
+                format!("Incompatible array literal types: {:?} vs {:?}", common_ty, next_ty)
+            ));
         }
+    }
     
         Ok(Literal::Array { ty: common_ty, values: literals })
     }
@@ -220,7 +212,6 @@ impl Literal {
             Literal::Char(_) => LiteralType::Char,
             Literal::Str(_) => LiteralType::Str,
             Literal::Array{ty, .. } => LiteralType::Array(Box::new(ty.clone())),
-            Literal::EmptyArray(ty) => LiteralType::Array(Box::new(ty.as_ref().unwrap_or(&LiteralType::None).clone())),
             Literal::Tuple{values, .. } => LiteralType::Tuple(values.iter().map(|val| val.get_literal_type()).collect::<Vec<_>>()),
             Literal::NamedTuple{values, .. } => LiteralType::NamedTuple(values.iter().map(|val| (val.0.clone(), val.1.get_literal_type())).collect::<BTreeMap<_,_>>()),
 
@@ -231,13 +222,11 @@ impl Literal {
     pub fn is_numeric(&self) -> bool {
         match self {
             Literal::ProgramMemmory(_, ty) => ty.is_numeric(),
-
-            Literal::Str(_) |
             Literal::Bool(_) |
             Literal::Char(_) |
+            Literal::Str(_) |
             Literal::Array{..} |
             Literal::Tuple{..} |
-            Literal::EmptyArray(..) |
             Literal::NamedTuple{..}  => false,
                     
             Literal::Int(_) |
@@ -255,7 +244,6 @@ impl Literal {
             Literal::Char(_) => format!("Literal char"),
             Literal::Str(_) => format!("Literal str"),
             Literal::Array{ty, ..} => format!("Literal {}[]", ty.type_to_string()),
-            Literal::EmptyArray(ty) => format!("Literal {}[]", ty.as_ref().map(|el| el.type_to_string()).unwrap_or("none".into())),
             Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(",")),
             Literal::NamedTuple{values} => format!("Literal ({})", values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(",")),
 
@@ -266,12 +254,11 @@ impl Literal {
     pub fn value_to_string(&self) -> String {
         match self {
             Literal::Int(val) => format!("{}", val),
-            Literal::Str(str) => format!("{}", str),
             Literal::Uint(val) => format!("{}", val),
-            Literal::Bool(val) => format!("{}", val),
-            Literal::EmptyArray(..) => format!("[]"),
             Literal::Float(val) => format!("{}", val),
+            Literal::Bool(val) => format!("{}", val),
             Literal::Char(char) => format!("{}", char),
+            Literal::Str(str) => format!("{}", str),
             Literal::Array{values, ..} => format!("[{}]", values.iter().map(|lit| lit.value_to_string()).join(",")),
             Literal::Tuple{values, ..} => format!("({})", values.iter().map(|value| value.value_to_string()).join(",")),
             Literal::NamedTuple{values, ..} => format!("({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.value_to_string())).join(",")),
@@ -288,8 +275,7 @@ impl Literal {
             Literal::Bool(val) => format!("Literal bool {}", val),
             Literal::Char(char) => format!("Literal char {}", char),
             Literal::Str(str) => format!("Literal str \"{}\"", str),
-            Literal::Array{values, ..} => format!("Literal [{}: {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(",")),
-            Literal::EmptyArray(ty) => format!("Literal [{}: ]", ty.as_ref().map(|lit| lit.type_to_string()).unwrap_or(format!("none"))),
+            Literal::Array{values, ..} => format!("Literal [{}; {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(",")),
             Literal::Tuple{values, ..} => format!("Literal ({})", values.iter().map(|value| value.to_string()).join(",")),
             Literal::NamedTuple{values, ..} => format!("Literal ({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.to_string())).join(",")),
             Literal::ProgramMemmory(name, ty) => format!("Literal {}({})", name.0, ty.type_to_string()),

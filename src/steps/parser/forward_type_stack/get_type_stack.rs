@@ -7,11 +7,10 @@ use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder, ScopeVisibility, SoulPagePath, TypeScopeStack};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalPath, ExternalType, TypeKind, TypeSize};
-use crate::utils::node_ref::MultiRefPool;
 
-pub fn get_scope_from_type_stack(stream: &mut TokenStream, ref_pool: MultiRefPool, external_books: ExternalPages, project_name: String) -> Result<ScopeBuilder> {
+pub fn get_scope_from_type_stack(stream: &mut TokenStream, external_books: ExternalPages, project_name: String) -> Result<ScopeBuilder> {
     let mut types = TypeScopeStack::new();
-    let mut scopes = ScopeBuilder::new(external_books, project_name, ref_pool);
+    let mut scopes = ScopeBuilder::new(external_books, project_name);
     add_default_type_kind(&mut types);
 
     loop {
@@ -119,7 +118,7 @@ fn parse_type(types: &mut TypeScopeStack, scopes: &mut ScopeBuilder, stream: &mu
                 return Err(err_out_of_bounds(stream));
             }
 
-            let ty = TypeKind::TypeDefed(Ident(stream.current_text().clone()));
+            let ty = TypeKind::Custom(Ident(stream.current_text().clone()));
             types.insert(stream.current_text().clone(), ty)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {

@@ -55,7 +55,4 @@
         "xtree": "cpp",
         "string_view": "cpp"
     },
-    "files.watcherExclude": {
-        "**/target": true
-    },
 }

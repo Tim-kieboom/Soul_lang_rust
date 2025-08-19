@@ -1,10 +1,7 @@
 use std::io;
 
 use serde::{Deserialize, Serialize};
-use crate::{run_options::run_options::RunOptions, steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::{TypeKind, TypeSize}, external_header::ExternalHeader, scope::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind, ScopeStack, ScopeVisibility, TypeScope}}, utils::node_ref::MultiRefPool};
-
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Serialize, Deserialize)]
-pub struct Byte(pub u32);
+use crate::{run_options::run_options::RunOptions, steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::TypeKind, external_header::ExternalHeader, scope::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind, ScopeStack, ScopeVisibility, TypeScope}}};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScopeVisitor {
@@ -13,35 +10,24 @@ pub struct ScopeVisitor {
     pub global_literal: ProgramMemmory,
     pub external_header: ExternalHeader,
     pub project_name: String,
-    pub ref_pool: MultiRefPool,
-    pub ptr_size: TypeSize,
-    pub system_int_size: TypeSize,
 }
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InnerScopeVisitor {
-    pub scopes: Vec<Scope<Vec<ScopeKind>>>,
-    pub current: usize,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Scope<T> {
-    pub scope: InnerScope<T>,
+    pub scopes: Vec<InnerScope<Vec<ScopeKind>>>,
     pub current: usize,
 }
 
 impl ScopeVisitor {
     pub fn new(builder: ScopeBuilder, run_options: &RunOptions) -> io::Result<Self> {
-        let (scopes, types, global_literal, external_pages, project_name, ref_pool) = builder.__consume_to_tuple();
+        let (scopes, types, global_literal, external_pages, project_name) = builder.__consume_to_tuple();
         Ok(Self{
-            types,
-            project_name,
-            global_literal,
-            ptr_size: TypeSize::Bit64,
-            system_int_size: TypeSize::Bit32,
             scopes: InnerScopeVisitor::new(scopes),
+            types,
+            global_literal,
             external_header: ExternalHeader::new(external_pages, run_options)?,
-            ref_pool
+            project_name,
         })
     }
 
@@ -49,12 +35,12 @@ impl ScopeVisitor {
         self.scopes.current = InnerScopeVisitor::GLOBAL_SCOPE_INDEX;
     }
 
-    pub fn current_index(&self) -> usize {
-        self.scopes.current
-    }
-
     pub fn next_child(&mut self) -> bool {
         self.scopes.next_child()
+    }
+
+    pub fn next_sibling(&mut self) -> bool {
+        self.scopes.next_sibling()
     }
 
     pub fn to_parent(&mut self) -> bool {
@@ -73,19 +59,6 @@ impl ScopeVisitor {
         &self.types
     }
 
-    pub fn insert(&mut self, name: String, kind: ScopeKind)  {
-        self.scopes.current_mut()
-            .scope
-            .symbols
-            .entry(name)
-            .or_default()
-            .push(kind);
-    }
-
-    pub fn get_types_mut(&mut self) -> &mut Vec<InnerScope<TypeKind>> {
-        &mut self.types
-    }
-
     ///only looks in current scope
     pub fn flat_lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         self.scopes.flat_lookup(name)
@@ -94,24 +67,6 @@ impl ScopeVisitor {
     ///looks in current scope and parent scopes of ScopeVisibilty is All
     pub fn lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         self.scopes.lookup(name)
-    }
-
-    ///looks in current scope and parent scopes of ScopeVisibilty is All
-    pub fn lookup_mut(&mut self, name: &str) -> Option<&mut Vec<ScopeKind>> {
-        self.scopes.lookup_mut(name)
-    }
-
-    ///looks in current scope and parent scopes of ScopeVisibilty is All
-    pub fn lookup_fn<F, T>(&self, name: &str, func: F, other: &T) -> Option<&Vec<ScopeKind>> 
-    where 
-        F: Fn(&Vec<ScopeKind>, &T) -> bool
-    {
-        self.scopes.lookup_fn(name, func, other)
-    }
-
-    ///looks in current scope and parent scopes of ScopeVisibilty is All
-    pub fn lookup_all(&self, name: &str) -> Vec<&Vec<ScopeKind>> {
-        self.scopes.lookup_all(name)
     }
 
     pub fn lookup_type(&self, name: &str) -> Option<&TypeKind> {
@@ -140,7 +95,7 @@ impl ScopeVisitor {
         None
     }
 
-    pub fn get_global_scope(&self) -> &Scope<Vec<ScopeKind>>{
+    pub fn get_global_scope(&self) -> &InnerScope<Vec<ScopeKind>>{
         &self.scopes.scopes[InnerScopeVisitor::GLOBAL_SCOPE_INDEX]
     }
 
@@ -155,15 +110,13 @@ impl InnerScopeVisitor {
     pub fn new(stack: ScopeStack) -> Self {
         let ScopeStack{scopes, current:_} = stack;
         Self{
-            scopes: scopes.into_iter().map(|scope| Scope{scope, current: 0}).collect(),
+            scopes,
             current: Self::GLOBAL_SCOPE_INDEX,
         }
     }
 
     pub fn next_child(&mut self) -> bool {
-        let scope = &mut self.scopes[self.current];
-        if let Some(&first_child) = scope.scope.children.get(scope.current) {
-            scope.current += 1;
+        if let Some(&first_child) = self.scopes[self.current].children.first() {
             self.current = first_child;
             true
         } 
@@ -171,9 +124,31 @@ impl InnerScopeVisitor {
             false
         }
     }
+    
+    pub fn next_sibling(&mut self) -> bool {
+        let this = &self.scopes[self.current];
+
+        let parent = match this.parent_index {
+            Some(val) => val,
+            None => return false,
+        };
+        
+        let children = &self.scopes[parent].children;
+        if children.is_empty() {
+            return false;
+        }
+
+        let this_index = children.iter().position(|&i| i == this.self_index).expect("this_index in parent.children not found");
+        if this_index == children.len()-1 {
+            return false;
+        }
+
+        self.current = children[this_index+1];
+        true
+    }
 
     pub fn to_parent(&mut self) -> bool {
-        if let Some(parent) = self.scopes[self.current].scope.parent_index {
+        if let Some(parent) = self.scopes[self.current].parent_index {
             self.current = parent;
             true
         } 
@@ -189,7 +164,7 @@ impl InnerScopeVisitor {
     pub fn flat_lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         let scope = &self.scopes[self.current];
 
-        if let Some(kinds) = scope.scope.get(name) {
+        if let Some(kinds) = scope.get(name) {
             return Some(kinds);
         }
 
@@ -199,7 +174,7 @@ impl InnerScopeVisitor {
     pub fn flat_lookup_mut(&mut self, name: &str) -> Option<&mut Vec<ScopeKind>> {
         let scope = &mut self.scopes[self.current];
 
-        if let Some(kinds) = scope.scope.get_mut(name) {
+        if let Some(kinds) = scope.get_mut(name) {
             return Some(kinds);
         }
 
@@ -212,12 +187,12 @@ impl InnerScopeVisitor {
         while let Some(index) = current_index {
             let scope = &self.scopes[index];
 
-            if let Some(kinds) = scope.scope.get(name) {
+            if let Some(kinds) = scope.get(name) {
                 return Some(kinds);
             }
 
-            match scope.scope.visibility_mode {
-                ScopeVisibility::All => current_index = scope.scope.parent_index,
+            match scope.visibility_mode {
+                ScopeVisibility::All => current_index = scope.parent_index,
                 ScopeVisibility::GlobalOnly => {
                     current_index = if index == 0 { None } else { Some(0) };
                 }
@@ -227,87 +202,47 @@ impl InnerScopeVisitor {
         None
     }
 
-    pub fn lookup_mut(&mut self, name: &str) -> Option<&mut Vec<ScopeKind>> {
-        let mut current_index = Some(self.current);
-
-        while let Some(index) = current_index {
-
-            if self.scopes[index].scope.get(name).is_some() {
-                return self.scopes[index].scope.get_mut(name);
-            }
-
-            match self.scopes[index].scope.visibility_mode {
-                ScopeVisibility::All => current_index = self.scopes[index].scope.parent_index,
-                ScopeVisibility::GlobalOnly => {
-                    current_index = if index == 0 { None } else { Some(0) };
-                }
-            }
-        }
-
-        None
-    }
-
-    pub fn lookup_fn<F, T>(&self, name: &str, func: F, other: &T) -> Option<&Vec<ScopeKind>> 
-    where 
-        F: Fn(&Vec<ScopeKind>, &T) -> bool
-    {
-        let mut current_index = Some(self.current);
-
-        while let Some(index) = current_index {
-            let scope = &self.scopes[index];
-
-            if let Some(kinds) = scope.scope.get(name) {
-                
-                if func(kinds, other) {
-                    return Some(kinds);
-                }
-            }
-
-            match scope.scope.visibility_mode {
-                ScopeVisibility::All => current_index = scope.scope.parent_index,
-                ScopeVisibility::GlobalOnly => {
-                    current_index = if index == 0 { None } else { Some(0) };
-                }
-            }
-        }
-
-        None
-    }
-
-    pub fn lookup_all(&self, name: &str) -> Vec<&Vec<ScopeKind>> {
-        let mut current_index = Some(self.current);
-        let mut kinds = vec![];
-
-        while let Some(index) = current_index {
-            let scope = &self.scopes[index];
-
-            if let Some(kind) = scope.scope.get(name) {
-                kinds.push(kind);
-            }
-
-            match scope.scope.visibility_mode {
-                ScopeVisibility::All => current_index = scope.scope.parent_index,
-                ScopeVisibility::GlobalOnly => {
-                    current_index = if index == 0 { None } else { Some(0) };
-                }
-            }
-        }
-
-        kinds
-    }
-
-    pub fn current(&self) -> &Scope<Vec<ScopeKind>> {
+    pub fn current(&self) -> &InnerScope<Vec<ScopeKind>> {
         &self.scopes[self.current]
     }
 
-    pub fn current_mut(&mut self) -> &mut Scope<Vec<ScopeKind>> {
+    pub fn current_mut(&mut self) -> &mut InnerScope<Vec<ScopeKind>> {
         &mut self.scopes[self.current]
     }
 
-    pub fn global_mut(&mut self) -> &mut Scope<Vec<ScopeKind>> {
+    pub fn global_mut(&mut self) -> &mut InnerScope<Vec<ScopeKind>> {
         &mut self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

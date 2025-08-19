@@ -1,9 +1,8 @@
 use crate::errors::soul_error::Result;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinOp, UnaryExpr, UnaryOp};
-use crate::steps::step_interfaces::i_parser::scope::ScopeBuilder;
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::{parse_expression::ExpressionStacks, symbool::{SymboolKind, ROUND_BRACKET_CLOSED, ROUND_BRACKET_OPEN}}, step_interfaces::{i_parser::abstract_syntax_tree::expression::{BinaryExpr, Expression}, i_tokenizer::TokenStream}}};
 
-pub fn convert_bracket_expression(stream: &mut TokenStream, scopes: &ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+pub fn convert_bracket_expression(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
     if stacks.node_stack.len() == 1 {
         let first = stacks.symbool_stack.pop().map(|sy| sy.node);
         let mut second = stacks.symbool_stack.pop();
@@ -46,7 +45,7 @@ pub fn convert_bracket_expression(stream: &mut TokenStream, scopes: &ScopeBuilde
         }
 
         if let SymboolKind::BinOp(bin_op) = &symbool.node {
-            let expr = get_binary_expression(&mut stacks.node_stack, scopes, BinOp::new(bin_op.clone(), symbool.span), symbool.span)?;
+            let expr = get_binary_expression(&mut stacks.node_stack, BinOp::new(bin_op.clone(), symbool.span), symbool.span)?;
                 
             stacks.node_stack.push(expr);
         }
@@ -64,7 +63,6 @@ pub fn convert_bracket_expression(stream: &mut TokenStream, scopes: &ScopeBuilde
 
 pub fn get_binary_expression(
     node_stack: &mut Vec<Expression>,
-    scopes: &ScopeBuilder,
     bin_op: BinOp,
     span: SoulSpan,
 ) -> Result<Expression> {
@@ -81,7 +79,7 @@ pub fn get_binary_expression(
         .ok_or(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
             span, 
-            format!("missing right expression in binary expression (so '{} {} <missing>')", right.node.to_string(&scopes.ref_pool, 0), bin_op.node.to_str())
+            format!("missing right expression in binary expression (so '{} {} <missing>')", right.node.to_string(0), bin_op.node.to_str())
         ))?;
 
     let new_span = right.span.combine(&left.span);

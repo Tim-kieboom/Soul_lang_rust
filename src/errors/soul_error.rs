@@ -29,7 +29,6 @@ pub enum SoulErrorKind {
     InvalidPath,
     InvalidName,
     InvalidType,
-    InvalidFunction,
 
     UnexpectedEnd,
 }

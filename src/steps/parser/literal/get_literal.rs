@@ -247,7 +247,7 @@ fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Result<L
     const ARRAY_EMPTY: &str = "[]";
     
     if stream.current_text() == ARRAY_EMPTY || stream.peek().is_some_and(|token| token.text == ARRAY_END) {
-        return Ok(Ok(Literal::EmptyArray(None)));
+        return Ok(Literal::new_array(Vec::new(), &stream.current_span()));
     }
 
     if stream.current_text() != ARRAY_START {

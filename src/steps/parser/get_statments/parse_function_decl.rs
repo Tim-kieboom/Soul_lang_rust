@@ -37,10 +37,10 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
         }
     }
 
-    let body = get_block(ScopeVisibility::All, stream, scopes, signature.borrow(&scopes.ref_pool).node.calle.clone(), signature.borrow(&scopes.ref_pool).node.params.clone())?;
+    let body = get_block(ScopeVisibility::All, stream, scopes, signature.borrow().calle.clone(), signature.borrow().params.clone())?;
     
     let span = body.span.combine(&stream[begin_i].span);
-    if signature.borrow(&scopes.ref_pool).node.calle.is_some() {
+    if signature.borrow().calle.is_some() {
         Ok(Spanned::new(FnDeclKind::ExtFn(ExtFnDecl{signature, body: body.node}), span))
     }
     else {
@@ -177,7 +177,7 @@ fn get_function_signature(modifier: Modifier, calle_body: Option<Spanned<&SoulTh
     }
 
     let span = stream[begin_i].span.combine(&stream.current_span());
-    let signature = Spanned::new(FunctionSignatureRef::new(Spanned::new(InnerFunctionSignature{name, calle, generics: generics.generics, params, return_type, modifier}, span), &mut scopes.ref_pool), span);
+    let signature = Spanned::new(FunctionSignatureRef::new(InnerFunctionSignature{name, calle, generics: generics.generics, params, return_type, modifier, span}), span);
     check_function_with_scope(scopes, &signature)?;
     
     Ok(signature.node)
@@ -352,7 +352,7 @@ fn convert_this(arg_position: usize, calle: &mut Option<Spanned<SoulThis>>, stre
 
 fn check_function_with_scope<'a>(scopes: &ScopeBuilder, signature: &Spanned<FunctionSignatureRef>) -> Result<()> {
     
-    let kinds = scopes.flat_lookup(&signature.node.borrow(&scopes.ref_pool).node.name.0);
+    let kinds = scopes.flat_lookup(&signature.node.borrow().name.0);
     if kinds.is_none() {
         return Ok(());
     }
@@ -360,44 +360,44 @@ fn check_function_with_scope<'a>(scopes: &ScopeBuilder, signature: &Spanned<Func
     for kind in kinds.unwrap() {
 
         if let ScopeKind::Functions(funcs) = kind {
-            return check_function(signature, scopes, funcs);  
+            return check_function(signature, funcs);  
         } 
     }
 
     Ok(())
 }
 
-fn check_function(signature: &Spanned<FunctionSignatureRef>, scopes: &ScopeBuilder, funcs: &OverloadedFunctions) -> Result<()> {
-    if funcs.borrow(&scopes.ref_pool).iter().any(|fnc| fnc.get_signature() == &signature.node) {
+fn check_function(signature: &Spanned<FunctionSignatureRef>, funcs: &OverloadedFunctions) -> Result<()> {
+    if funcs.borrow().iter().any(|fnc| fnc.get_signature() == &signature.node) {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             signature.span, 
             format!(
                 "function: '{}', with: '{}' already exists", 
-                signature.node.borrow(&scopes.ref_pool).node.name.0, 
-                signature.node.to_string(&scopes.ref_pool),
+                signature.node.borrow().name.0, 
+                signature.node.to_string(),
             )
         ))
     }
 
     let ref_guard = funcs
-        .borrow(&scopes.ref_pool);
+        .borrow();
 
     let same_calle_fn = ref_guard
         .iter()
-        .filter(|fnc| fnc.get_signature().borrow(&scopes.ref_pool).node.calle == signature.node.borrow(&scopes.ref_pool).node.calle)
+        .filter(|fnc| fnc.get_signature().borrow().calle == signature.node.borrow().calle)
         .last();
 
     if let Some(fnc) = same_calle_fn {
 
-        if fnc.get_signature().borrow(&scopes.ref_pool).node.return_type != signature.node.borrow(&scopes.ref_pool).node.return_type {
+        if fnc.get_signature().borrow().return_type != signature.node.borrow().return_type {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
                 signature.span, 
                 format!(
                     "prev function of: '{}', being: '{}', used an other return type", 
-                    signature.node.borrow(&scopes.ref_pool).node.name.0,
-                    signature.node.to_string(&scopes.ref_pool),
+                    signature.node.borrow().name.0,
+                    signature.node.to_string(),
                 )
             ))
         }

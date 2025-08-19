@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
+use crate::soul_names::check_name;
 use crate::steps::parser::get_expressions::parse_path::get_page_path;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
@@ -366,14 +366,6 @@ fn get_generic_ctor(soul_type: &mut SoulType, stream: &mut TokenStream, scopes: 
 }
 
 fn get_type_kind(stream: &mut TokenStream, scopes: &mut ScopeBuilder, with_path: bool) -> Result<TypeKind> {
-    
-    if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::This) {
-        let this_ty = scopes.try_get_this_type()
-            .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "used 'This' without being in a scope that contains a This (a scope like a class or in a methode)"))?;
-        
-        return Ok(this_ty.clone());
-    }
-    
     let possible_kind = scopes.lookup_type(stream.current_text())
         .cloned();
     
@@ -402,7 +394,7 @@ fn get_union_or_page(possible_kind: Option<TypeKind>, stream: &mut TokenStream, 
                 get_type_kind(stream, scopes, with_path)?;
                 Ok(TypeKind::ExternalType(Spanned::new(ExternalType{path, name: Ident(stream.current_text().clone())}, span)))
             },
-            _ => Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), format!("'::' only allowed for union types, type: '{}'", kind.get_variant(&scopes.ref_pool)))),
+            _ => Err(new_soul_error(SoulErrorKind::WrongType, stream.current_span(), format!("'::' only allowed for union types, type: '{}'", kind.get_variant()))),
         }
     }
     else {

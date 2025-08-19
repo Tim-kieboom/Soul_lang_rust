@@ -107,13 +107,8 @@ fn get_peek_after_generic(stream: &TokenStream, mut peek_i: i64) -> Result<i64> 
     }
 
     let mut stack = 1;
-    const LIMIT: i64 = 10000;
-    loop {
-        peek_i += 1;
-        if peek_i > LIMIT {
-            return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), format!("internal error!! possible infinate loop detected in get_peek_after_generic (aka loop when over '{}' iterations)", LIMIT)))
-        }
 
+    loop {
         peek = stream.peek_multiple(peek_i)
             .ok_or(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "unexpected end while trying to get generic (generic is not closed add '>')"))?;
 
@@ -125,6 +120,7 @@ fn get_peek_after_generic(stream: &TokenStream, mut peek_i: i64) -> Result<i64> 
         }
 
         if stack == 0 {
+            peek_i += 1;
             break Ok(peek_i);
         }
     }

@@ -1,4 +1,4 @@
-use crate::steps::step_interfaces::{i_parser::abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalNode}, expression::Expression, staments::statment::{Block, Statment}}, i_sementic::{fault::{SoulFault, SoulFaultKind}, sementic_scope::ScopeVisitor}};
+use crate::{steps::step_interfaces::{i_parser::abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalNode}, expression::Expression, staments::statment::{Block, Statment}}, i_sementic::{fault::{SoulFault, SoulFaultKind}, sementic_scope::ScopeVisitor}}};
 
 pub trait AstVisitable {
     fn visit_ast(&mut self, node: &mut AbstractSyntacTree);

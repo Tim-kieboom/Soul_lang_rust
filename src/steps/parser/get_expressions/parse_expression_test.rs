@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use ordered_float::OrderedFloat;
-use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Arguments, Array, BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, FnCall, Ident, NamedTuple, Tuple, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, staments::statment::{VariableDecl, VariableRef}}, scope::{ExternalPages, ProgramMemmory, ProgramMemmoryId, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}, utils::node_ref::MultiRefPool};
+use crate::{assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, steps::{parser::get_expressions::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Arguments, Array, BinOp, BinOpKind, BinaryExpr, ExprKind, Expression, FnCall, Ident, NamedTuple, Tuple, UnaryExpr, UnaryOp, UnaryOpKind, Variable}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, staments::statment::{VariableDecl, VariableRef}}, scope::{ExternalPages, ProgramMemmory, ProgramMemmoryId, ScopeBuilder, ScopeKind}}, i_tokenizer::{Token, TokenStream}}}};
 
 fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
     let mut line_number = 0;
@@ -19,7 +19,7 @@ fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
 }
 
 fn empty_scope() -> ScopeBuilder {
-    ScopeBuilder::new(ExternalPages::new(), "test".into(), MultiRefPool::new())
+    ScopeBuilder::new(ExternalPages::new(), "test".into())
 }
 
 fn soul_mem_name(id: usize) -> Ident {
@@ -478,14 +478,13 @@ fn test_simple_variable() {
     let var_name = "var";
     let mut stream = stream_from_strs(&[var_name, "\n"]);
     let mut scope = empty_scope();
-    let mut pool = MultiRefPool::new();
-
+    
     let var = VariableRef::new(VariableDecl{
         name: Ident(var_name.into()), 
         ty: SoulType::from_type_kind(TypeKind::Bool), 
         initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0,var_name.len())))),
         lit_retention: None,
-    }, &mut pool);
+    });
     scope.insert(var_name.into(), ScopeKind::Variable(var));
 
     
@@ -522,7 +521,7 @@ fn test_simple_variable() {
         ty: SoulType::from_type_kind(TypeKind::Bool), 
         initializer: None,
         lit_retention: None,
-    }, &mut pool);
+    });
     scope.insert(var_name2.into(), ScopeKind::Variable(var2));
 
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
@@ -535,14 +534,13 @@ fn test_variable_literal_retention() {
     let var_name = "var";
     let mut stream = stream_from_strs(&[var_name, "\n"]);
     let mut scope = empty_scope();
-    let mut pool = MultiRefPool::new();
     
     let var = VariableRef::new(VariableDecl{
         name: Ident(var_name.into()), 
         ty: SoulType::from_type_kind(TypeKind::Bool), 
         initializer: Some(Box::new(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0,var_name.len())))),
         lit_retention: Some(Expression::new(ExprKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0,var_name.len()))),
-    }, &mut pool);
+    });
     scope.insert(var_name.into(), ScopeKind::Variable(var));
 
     

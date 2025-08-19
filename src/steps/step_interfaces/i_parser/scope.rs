@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use hsoul::subfile_tree::{SubFileTree, TreeNode, TreeNodeKind};
+use serde::{Deserialize, Serialize};
 use std::{collections::{BTreeMap, HashMap}, path::{Component, Path, PathBuf}, process::exit, sync::Arc};
-use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, InnerEnumDecl, InnerUnionDecl, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FnDeclKindSerde, FunctionSignatureRef, InnerFunctionSignature}, objects::{ClassDeclRef, InnerClassDecl, InnerStructDecl, InnerTraitDecl, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, utils::{node_ref::{FromPoolValue, MultiRef, MultiRefPool, PoolValue}, push::Push}};
+use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::type_kind::TypeKind, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}}, utils::{node_ref::MultiRef, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -16,7 +16,6 @@ pub struct ScopeBuilder {
     pub global_literal: ProgramMemmory,
     pub external_pages: ExternalPages,
     pub project_name: String,
-    pub ref_pool: MultiRefPool,
 }
 
 #[derive(Debug, Hash, Clone, Copy, Serialize, Deserialize)]
@@ -225,17 +224,17 @@ pub struct InnerScope<T> {
 }
 
 impl ScopeBuilder {
-    pub fn new(external_books: ExternalPages, project_name: String, ref_pool: MultiRefPool) -> Self {
-        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), project_name, types: vec![], external_pages: external_books, ref_pool }
+    pub fn new(external_books: ExternalPages, project_name: String) -> Self {
+        Self { scopes: ScopeStack::new(), global_literal: ProgramMemmory::new(), project_name, types: vec![], external_pages: external_books }
     }
 
     pub fn fill_with_type_stack(&mut self, type_stack: TypeScopeStack) {
         self.types = type_stack.scopes;
     }
 
-    pub fn __consume_to_tuple(self) -> (ScopeStack, Vec<TypeScope>, ProgramMemmory, ExternalPages, String, MultiRefPool) {
-        let Self{scopes, types, global_literal, external_pages: external_books, project_name, ref_pool} = self;
-        (scopes, types, global_literal, external_books, project_name, ref_pool)
+    pub fn __consume_to_tuple(self) -> (ScopeStack, Vec<TypeScope>, ProgramMemmory, ExternalPages, String) {
+        let Self{scopes, types, global_literal, external_pages: external_books, project_name} = self;
+        (scopes, types, global_literal, external_books, project_name)
     }
 
     pub fn get_scopes(&self) -> &InnerScopeBuilder<Vec<ScopeKind>> {
@@ -306,42 +305,31 @@ impl ScopeBuilder {
     pub fn flat_lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         self.scopes.flat_lookup(name)
     }
-
+    
     ///looks in current scope and parent scopes of ScopeVisibilty is All
     pub fn lookup(&self, name: &str) -> Option<&Vec<ScopeKind>> {
         self.scopes.lookup(name)
     }
 
-    pub fn add_this_type(&mut self, ty: TypeKind) {
-        self.scopes.insert("This".into(), vec![ScopeKind::This(ty)]);
-    }
-
-    pub fn try_get_this_type(&self) -> Option<&TypeKind> {
-        match self.scopes.lookup("This")?.last()? {
-            ScopeKind::This(ty) => Some(ty),
-            _ => unreachable!()
-        }
-    }
-
     pub fn add_function(&mut self, fn_decl: &FnDeclKind) {
         
-        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().borrow(&self.ref_pool).node.name.0) {
+        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().borrow().name.0) {
             
             let possible_funcs = kinds.iter_mut().find(|kind| matches!(kind, ScopeKind::Functions(..)));
             if let Some(ScopeKind::Functions(funcs)) = possible_funcs {
-                funcs.borrow_mut(&mut self.ref_pool).push(fn_decl.clone());
+                funcs.borrow_mut().push(fn_decl.clone());
             }
             else {
                 self.scopes.insert(
-                    fn_decl.get_signature().borrow(&self.ref_pool).node.name.0.clone(), 
-                    vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()], &mut self.ref_pool))]
+                    fn_decl.get_signature().borrow().name.0.clone(), 
+                    vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()]))]
                 );
             }
         }
         else {
             self.scopes.insert(
-                fn_decl.get_signature().borrow(&self.ref_pool).node.name.0.clone(), 
-                vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()], &mut self.ref_pool))]
+                fn_decl.get_signature().borrow().name.0.clone(), 
+                vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()]))]
             );
         }
     } 
@@ -354,21 +342,19 @@ impl ScopeBuilder {
         
         let single_var = var_decl.name.0.clone();
 
-        let var_ref = VariableRef::new(var_decl, &mut self.ref_pool);
+        let var_ref = VariableRef::new(var_decl);
         self.insert(single_var, ScopeKind::Variable(var_ref.clone()));
         return Ok(var_ref);
     }
 
-    pub fn insert_this_variable(&mut self, this: Spanned<SoulThis>) {
-
+    pub fn insert_this(&mut self, this: Spanned<SoulThis>) {
         let this_var = ScopeKind::Variable(MultiRef::new(
             VariableDecl{
                 name: Ident("this".into()), 
                 ty: this.node.ty, 
                 initializer: Some(Box::new(Expression::new(ExprKind::Empty, this.span))), 
                 lit_retention: None,
-            },
-            &mut self.ref_pool
+            }
         ));
         
         self.scopes.insert_to_vec("this".into(), this_var);
@@ -648,109 +634,21 @@ pub enum ScopeKind {
     Trait(TraitDeclRef),
 
     Functions(OverloadedFunctions),
-    NamedTupleCtor(NamedTupleCtor),
 
-    This(TypeKind),
     Enum(EnumDeclRef),
     Union(UnionDeclRef),
     TypeEnum(TypeEnumDeclRef),
-    TypeDefed(TypeDefedRef),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ScopeKindSerde {
-    Invalid(),
-    Variable(VariableDecl),
-    Struct(InnerStructDecl),
-    Class(InnerClassDecl),
-
-    Trait(InnerTraitDecl),
-
-    Functions(Vec<FnDeclKindSerde>),
-    NamedTupleCtor(NamedTupleCtor),
-
-    This(TypeKind),
-    Enum(InnerEnumDecl),
-    Union(InnerUnionDecl),
-    TypeEnum(TypeEnumDeclRef),
-    TypeDefed(TypeDefedRef),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NamedTupleCtor {
-    pub object_type: SoulType,
-    pub values: HashMap<Ident, (SoulType, Option<Expression>)>
-}
-
-pub type TypeDefedRef = MultiRef<TypeDefed>;
-impl FromPoolValue for TypeDefed {
-    fn is_from_pool_value(from: &PoolValue) -> bool {
-        match from {
-            PoolValue::TypeDefed(type_defed) => true,
-            _ => false,
-        }
-    }
-
-    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
-        match from {
-            PoolValue::TypeDefed(type_defed) => type_defed,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn from_pool_value_ref(from: &PoolValue) -> &Self {
-        match from {
-            PoolValue::TypeDefed(type_defed) => type_defed,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn to_pool_value(self) -> PoolValue {
-        PoolValue::TypeDefed(self)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TypeDefed {
-    pub name: Ident,
-    pub from_type: SoulType, 
 }
 
 pub type OverloadedFunctions = MultiRef<Vec<FnDeclKind>>;
-impl FromPoolValue for Vec<FnDeclKind> {
-    fn is_from_pool_value(from: &PoolValue) -> bool {
-        match from {
-            PoolValue::OverFuncs(fn_decl_kinds) => true,
-            _ => false,
-        }
-    }
-
-    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
-        match from {
-            PoolValue::OverFuncs(fn_decl_kinds) => fn_decl_kinds,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn from_pool_value_ref(from: &PoolValue) -> &Self {
-        match from {
-            PoolValue::OverFuncs(fn_decl_kinds) => fn_decl_kinds,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn to_pool_value(self) -> PoolValue {
-        PoolValue::OverFuncs(self)
-    }
-}
 
 impl OverloadedFunctions {
-    pub fn from_fn(decl: FnDecl, ref_pool: &mut MultiRefPool) -> Self {
-        Self::new(vec![FnDeclKind::Fn(decl)], ref_pool)
+    pub fn from_fn(decl: FnDecl) -> Self {
+        Self::new(vec![FnDeclKind::Fn(decl)])
     }
 
-    pub fn from_internal_fn(sig: FunctionSignatureRef, ref_pool: &mut MultiRefPool) -> Self {
-        Self::new(vec![FnDeclKind::InternalFn(sig)], ref_pool)
+    pub fn from_internal_fn(sig: FunctionSignatureRef) -> Self {
+        Self::new(vec![FnDeclKind::InternalFn(sig)])
     }
 }
 

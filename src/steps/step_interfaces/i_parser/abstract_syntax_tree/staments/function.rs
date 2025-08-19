@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}, utils::node_ref::{FromPoolValue, MultiRef, MultiRefPool, PoolValue}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}}, utils::node_ref::MultiRef};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnDecl {
@@ -75,76 +75,14 @@ impl FnDeclKind {
         }
     }
 
-    pub fn get_body_mut(&mut self) -> &mut Block {
-        match self {
-            FnDeclKind::Fn(this) => &mut this.body,
-            FnDeclKind::ExtFn(this) => &mut this.body,
-            FnDeclKind::Ctor(this) => &mut this.body,
-            FnDeclKind::InternalFn(..) => panic!("trying to get_body but is internalfn"),
-            FnDeclKind::InternalCtor(..) => panic!("trying to get_body but is internalCtor"),
-        }
-    }
-
-    pub fn get_modifier(&self, ref_pool: &MultiRefPool) -> Modifier {
-        self.get_signature().borrow(ref_pool).node.modifier.clone()
+    pub fn get_modifier(&self) -> Modifier {
+        self.get_signature().borrow().modifier.clone()
     }
 }
 
-pub type FunctionSignatureRef = MultiRef<Spanned<InnerFunctionSignature>>; 
-impl FromPoolValue for Spanned<InnerFunctionSignature> {
-    fn is_from_pool_value(from: &PoolValue) -> bool {
-        match from {
-            PoolValue::FuncSig(_) => true,
-            _ => false,
-        }
-    }
-
-    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
-        match from {
-            PoolValue::FuncSig(spanned) => spanned,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn from_pool_value_ref(from: &PoolValue) -> &Self {
-        match from {
-            PoolValue::FuncSig(spanned) => spanned,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn to_pool_value(self) -> PoolValue {
-        PoolValue::FuncSig(self)
-    }
-}
+pub type FunctionSignatureRef = MultiRef<InnerFunctionSignature>; 
 
 pub type LambdaSignatureRef = MultiRef<InnerLambdaSignature>;
-impl FromPoolValue for InnerLambdaSignature {
-    fn is_from_pool_value(from: &PoolValue) -> bool {
-        match from {
-            PoolValue::Lambda(_) => true,
-            _ => false,
-        }
-    }
-
-    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
-        match from {
-            PoolValue::Lambda(inner_lambda_signature) => inner_lambda_signature,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn from_pool_value_ref(from: &PoolValue) -> &Self {
-        match from {
-            PoolValue::Lambda(inner_lambda_signature) => inner_lambda_signature,
-            _ => panic!("PoolValue is wrong type"),
-        }
-    }
-
-    fn to_pool_value(self) -> PoolValue {
-        PoolValue::Lambda(self)
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LambdaMode {
@@ -171,13 +109,13 @@ pub struct InnerLambdaSignature {
 }
 
 impl LambdaSignatureRef {
-    pub fn to_type_string(&self, ref_pool: &MultiRefPool) -> String {
-        let this = self.borrow(ref_pool);
+    pub fn to_type_string(&self) -> String {
+        let this = self.borrow();
         format!(
             "{}<{}>{}",
             this.mode.get_lambda_name(),
-            this.params.iter().map(|el| el.node.ty.to_string(ref_pool)).join(","),
-            this.return_type.as_ref().map(|el| el.to_string(ref_pool)).unwrap_or("".into())
+            this.params.iter().map(|el| el.node.ty.to_string()).join(","),
+            this.return_type.as_ref().map(|el| el.to_string()).unwrap_or("".into())
         )
     }
 }
@@ -192,28 +130,30 @@ pub struct InnerFunctionSignature {
     pub return_type: Option<SoulType>,
     ///default = normal function, const = functional(can be compileTime), Literal = comileTime 
     pub modifier: Modifier,
+    pub span: SoulSpan,
 }
 
+
 impl FunctionSignatureRef {
-    pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
-        let this = &self.borrow(ref_pool).node;
+    pub fn to_string(&self) -> String {
+        let this = self.borrow();
         if this.generics.is_empty() {
             format!(
                 "{}{}({}){}", 
-                this.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string(ref_pool))).unwrap_or("".to_string()),
+                this.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
                 this.name.0, 
-                this.params.iter().map(|par| par.node.to_string(ref_pool)).join(","),
-                this.return_type.as_ref().map(|ty| format!("{} ", ty.to_string(ref_pool))).unwrap_or("".to_string()),
+                this.params.iter().map(|par| par.node.to_string()).join(","),
+                this.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
             )
         }
         else {
             format!(
                 "{}{}<{}>({}){}", 
-                this.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string(ref_pool))).unwrap_or("".to_string()),
+                this.calle.as_ref().map(|ty| format!("{} ", ty.node.to_string())).unwrap_or("".to_string()),
                 this.name.0, 
-                this.generics.iter().map(|gene| gene.to_string(ref_pool)).join(","), 
-                this.params.iter().map(|par| par.node.to_string(ref_pool)).join(","),
-                this.return_type.as_ref().map(|ty| format!("{} ", ty.to_string(ref_pool))).unwrap_or("".to_string()),
+                this.generics.iter().map(|gene| gene.to_string()).join(","), 
+                this.params.iter().map(|par| par.node.to_string()).join(","),
+                this.return_type.as_ref().map(|ty| format!("{} ", ty.to_string())).unwrap_or("".to_string()),
             )
         }
     }
@@ -227,10 +167,10 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
+    pub fn to_string(&self) -> String {
         match &self.default_value {
-            Some(value) => format!("{} {} = {}", self.ty.to_string(ref_pool), self.name.0, value.node.to_string(ref_pool, 0)),
-            None => format!("{} {}", self.ty.to_string(ref_pool), self.name.0),
+            Some(value) => format!("{} {} = {}", self.ty.to_string(), self.name.0, value.node.to_string(0)),
+            None => format!("{} {}", self.ty.to_string(), self.name.0),
         }
     }
 }

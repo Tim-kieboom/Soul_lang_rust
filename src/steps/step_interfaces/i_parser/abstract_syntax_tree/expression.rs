@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableKind, VariableRef}}}, scope::SoulPagePath}, utils::node_ref::MultiRefPool};
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableKind, VariableRef}}}, scope::SoulPagePath}};
 
 pub type BoxExpr = Box<Expression>;
 pub type BinOp = Spanned<BinOpKind>;
@@ -28,7 +28,7 @@ pub enum ExprKind {
     ExternalExpression(ExternalExpression),
 
     Lambda(LambdaDecl),
-    If(Box<IfDecl>, SoulType),
+    If(Box<IfDecl>),
 
     Ternary(Ternary),
 
@@ -69,8 +69,6 @@ pub struct Array {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ArrayFiller {
-    pub collection_type: Option<SoulType>,
-    pub element_type: Option<SoulType>,
     pub amount: BoxExpr,
     pub index: Option<VariableRef>,
     pub fill_expr: BoxExpr,
@@ -93,29 +91,29 @@ pub struct Variable {
 } 
 
 impl ExprKind {
-    pub fn to_string(&self, ref_pool: &MultiRefPool, tab: usize) -> String {
+    pub fn to_string(&self, tab: usize) -> String {
         match self {
             ExprKind::Empty => "<EmptyExpression>".to_string(),
             ExprKind::Default => "<defaultExpression>".to_string(),
             ExprKind::Literal(literal) => literal.to_string(),
             ExprKind::Variable(Variable{name}) => name.0.clone(),
-            ExprKind::TypeOf(TypeOfExpr{left, ty }) => format!("{} {} {}", left.node.to_string(ref_pool, tab), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof), ty.to_string(ref_pool)),
-            ExprKind::Binary(BinaryExpr{left, operator, right}) => format!("({} {} {})", left.node.to_string(ref_pool, tab), operator.node.to_str(), right.node.to_string(ref_pool, tab)),
-            ExprKind::Index(Index{ collection, index }) => format!("{}[{}]", collection.node.to_string(ref_pool, tab), index.node.to_string(ref_pool, tab)),
+            ExprKind::TypeOf(TypeOfExpr{left, ty }) => format!("{} {} {}", left.node.to_string(tab), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof), ty.to_string()),
+            ExprKind::Binary(BinaryExpr{left, operator, right}) => format!("({} {} {})", left.node.to_string(tab), operator.node.to_str(), right.node.to_string(tab)),
+            ExprKind::Index(Index{ collection, index }) => format!("{}[{}]", collection.node.to_string(tab), index.node.to_string(tab)),
             ExprKind::Unary(UnaryExpr{ operator, expression }) => {
                 match operator.node {
                     UnaryOpKind::Incr{before_var} |
                     UnaryOpKind::Decr{before_var} => {
                         if before_var {
-                            format!("{} {}", operator.node.to_str(), expression.node.to_string(ref_pool, tab))
+                            format!("{} {}", operator.node.to_str(), expression.node.to_string(tab))
                         }
                         else {
-                            format!("{} {}", expression.node.to_string(ref_pool, tab), operator.node.to_str())
+                            format!("{} {}", expression.node.to_string(tab), operator.node.to_str())
                         }
                     }
                     UnaryOpKind::Neg |
                     UnaryOpKind::Not |
-                    UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string(ref_pool, tab)),
+                    UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string(tab)),
                 }
             },
             ExprKind::Call(FnCall{callee, name, generics, arguments}) => {
@@ -123,43 +121,43 @@ impl ExprKind {
                     String::new()
                 }
                 else {
-                    format!("<{}>", generics.iter().map(|ty| ty.to_string(ref_pool)).join(","))
+                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
                 };
 
                 if let Some(methode) = callee {
-                    format!("{}.{}{}({})", methode.node.to_string(ref_pool, tab), name.0, generics, arguments.iter().map(|arg| arg.to_string(ref_pool)).join(","))
+                    format!("{}.{}{}({})", methode.node.to_string(tab), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
                 }
                 else {
-                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string(ref_pool)).join(","))
+                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
                 }
             },
-            ExprKind::ConstRef(spanned) => format!("@{}", spanned.node.to_string(ref_pool, tab)),
-            ExprKind::MutRef(spanned) => format!("&{}", spanned.node.to_string(ref_pool, tab)),
-            ExprKind::Deref(spanned) => format!("*{}", spanned.node.to_string(ref_pool, tab)),
+            ExprKind::ConstRef(spanned) => format!("@{}", spanned.node.to_string(tab)),
+            ExprKind::MutRef(spanned) => format!("&{}", spanned.node.to_string(tab)),
+            ExprKind::Deref(spanned) => format!("*{}", spanned.node.to_string(tab)),
             ExprKind::Array(Array{collection_type, element_type, values}) => format!(
                 "{}[{}{}]", 
-                collection_type.as_ref().map(|ty| ty.to_string(ref_pool)).unwrap_or("".into()), 
-                element_type.as_ref().map(|ty| format!("{};", ty.to_string(ref_pool))).unwrap_or("".into()),
-                values.iter().map(|expr| expr.node.to_string(ref_pool, tab)).join(",")
+                collection_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
+                element_type.as_ref().map(|ty| format!("{};", ty.to_string())).unwrap_or("".into()),
+                values.iter().map(|expr| expr.node.to_string(tab)).join(",")
             ),
             ExprKind::Tuple(Tuple{values}) => format!(
                 "({})", 
-                values.iter().map(|expr| expr.node.to_string(ref_pool, tab)).join(","),
+                values.iter().map(|expr| expr.node.to_string(tab)).join(","),
             ),
             ExprKind::NamedTuple(NamedTuple{object_type, values}) => format!(
                 "{}({})", 
-                object_type.as_ref().map(|ty| ty.to_string(ref_pool)).unwrap_or("".into()), 
-                if !values.is_empty() {values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.node.to_string(ref_pool, tab))).join(",")}
+                object_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
+                if !values.is_empty() {values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.node.to_string(tab))).join(",")}
                 else {":".into()},
             ),
             ExprKind::Field(Field{object, field}) => format!(
                 "{}.{}",
-                object.node.to_string(ref_pool, tab),
+                object.node.to_string(tab),
                 field.name.0
             ),
             ExprKind::StaticField(StaticField{object, field}) => format!(
                 "{}.{}",
-                object.node.to_string(ref_pool),
+                object.node.to_string(),
                 field.name.0
             ),
             ExprKind::StaticMethode(StaticMethode{ callee, name, generics, arguments}) => {
@@ -167,39 +165,39 @@ impl ExprKind {
                     String::new()
                 }
                 else {
-                    format!("<{}>", generics.iter().map(|ty| ty.to_string(ref_pool)).join(","))
+                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
                 };
 
-                format!("{}.{}{}({})", callee.node.to_string(ref_pool), name.0, generics, arguments.iter().map(|arg| arg.to_string(ref_pool)).join(","))
+                format!("{}.{}{}({})", callee.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
             },
             ExprKind::Lambda(LambdaDecl{signature, arguments, body, capture:_}) => {
-                let sig = signature.borrow(ref_pool);
+                let sig = signature.borrow();
                 format!(
                     "{}({}): {} => {}",
                     sig.mode.get_lambda_name(),
-                    arguments.iter().map(|el| el.node.to_string(ref_pool, tab)).join(","),
-                    sig.return_type.as_ref().unwrap_or(&SoulType::none()).to_string(ref_pool),
-                    body.statments.iter().map(|el| el.node.to_pretty(0, false, ref_pool)).join(";")
+                    arguments.iter().map(|el| el.node.to_string(tab)).join(","),
+                    sig.return_type.as_ref().unwrap_or(&SoulType::none()).to_string(),
+                    body.statments.iter().map(|el| el.node.to_pretty(0, false)).join(";")
                 )
             },
             ExprKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!(
                 "({}) ? {} : {}",
-                condition.node.to_string(ref_pool, tab),
-                if_branch.node.to_string(ref_pool, tab),
-                else_branch.node.to_string(ref_pool, tab),
+                condition.node.to_string(tab),
+                if_branch.node.to_string(tab),
+                else_branch.node.to_string(tab),
             ),
-            ExprKind::If(if_box, ty) => {
+            ExprKind::If(if_box) => {
                 let IfDecl{condition, body, else_branchs} = &**if_box;
-                let cond = condition.node.to_string(ref_pool, tab);
-                let mut output = vec![format!("if ({}): {}", cond, ty.to_string(ref_pool))];
+                let cond = condition.node.to_string(tab);
+                let mut output = vec![format!("if ({})", cond)];
 
                 if !body.statments.is_empty() {
-                    output.push(body.to_pretty(tab + 1, true, ref_pool));
+                    output.push(body.to_pretty(tab + 1, true));
                 }
 
                 for (i, e) in else_branchs.iter().enumerate() {
                     let last = i == else_branchs.len() - 1;
-                    output.push(e.node.to_pretty(tab + 1, last, ref_pool));
+                    output.push(e.node.to_pretty(tab + 1, last));
                 }
 
                 output.join("\n")
@@ -209,47 +207,45 @@ impl ExprKind {
                     String::new()
                 }
                 else {
-                    format!("<{}>", generics.iter().map(|ty| ty.to_string(ref_pool)).join(","))
+                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
                 };
 
                 if let Some(methode) = callee {
-                    format!("{}.{}{}({})", methode.node.to_string(ref_pool, tab), name.0, generics, arguments.iter().map(|arg| arg.to_string(ref_pool)).join(","))
+                    format!("{}.{}{}({})", methode.node.to_string(tab), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
                 }
                 else {
-                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string(ref_pool)).join(","))
+                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
                 }
             },
             ExprKind::UnwrapVarDecl(var) => {
                 match var.as_ref() {
                     VariableKind::Variable(node_ref) => {
-                        let node = node_ref.borrow(ref_pool);
+                        let node = node_ref.borrow();
                         format!(
                             "<unwrap>{} {} = {}",
-                            node.ty.to_string(ref_pool),
+                            node.ty.to_string(),
                             node.name.0,
-                            node.initializer.as_ref().map(|init| init.node.to_string(ref_pool, tab)).unwrap_or(String::new())
+                            node.initializer.as_ref().map(|init| init.node.to_string(tab)).unwrap_or(String::new())
                         )
                     },
                     VariableKind::MultiVariable{vars, ty, initializer, ..} => format!(
                         "<unwrap>{}({}) = {}", 
-                        ty.to_string(ref_pool), 
-                        vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow(ref_pool).name.0.clone())).join(","),
-                        initializer.as_ref().map(|init| init.node.to_string(ref_pool, tab)).unwrap_or(String::new()),
+                        ty.to_string(), 
+                        vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow().name.0.clone())).join(","),
+                        initializer.as_ref().map(|init| init.node.to_string(tab)).unwrap_or(String::new()),
                     ),
                 }
             },
-            ExprKind::ArrayFiller(ArrayFiller{amount, index, fill_expr, collection_type, element_type}) => format!(
-                "{}[{}for {} {} => {}]",
-                collection_type.as_ref().map(|ty| ty.to_string(ref_pool)).unwrap_or(String::new()),
-                element_type.as_ref().map(|ty| format!("{}: ", ty.to_string(ref_pool))).unwrap_or(String::new()),
-                index.as_ref().map(|el| format!("{} in", el.borrow(ref_pool).name.0)).unwrap_or(String::new()),
-                amount.node.to_string(ref_pool, 0),
-                fill_expr.node.to_string(ref_pool, 0),
+            ExprKind::ArrayFiller(ArrayFiller{amount, index, fill_expr}) => format!(
+                "[for {} {} => {}]",
+                index.as_ref().map(|el| format!("{} in", el.borrow().name.0)).unwrap_or(String::new()),
+                amount.node.to_string(0),
+                fill_expr.node.to_string(0),
             ),
             ExprKind::ExternalExpression(ExternalExpression{path, expr}) => format!(
                 "{}::{}",
                 path.0,
-                expr.node.to_string(ref_pool, 0),
+                expr.node.to_string(0),
             ),
         }
     }
@@ -268,7 +264,7 @@ impl ExprKind {
             ExprKind::Empty => "<empty>",
             ExprKind::Default => "<default>",
 
-            ExprKind::If(..) => "If",
+            ExprKind::If(_) => "If",
             ExprKind::Ctor{..} => "Ctor",
             ExprKind::Index(_) => "index",
             ExprKind::Unary(_) => "unary",
@@ -389,12 +385,12 @@ pub struct Arguments {
 }
 
 impl Arguments {
-    pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
+    pub fn to_string(&self) -> String {
         if let Some(optional) = &self.name {
-            format!("{}= {}", optional.0, self.expression.node.to_string(ref_pool, 0))
+            format!("{}= {}", optional.0, self.expression.node.to_string(0))
         }
         else {
-            self.expression.node.to_string(ref_pool, 0)
+            self.expression.node.to_string(0)
         }
     }
 }
