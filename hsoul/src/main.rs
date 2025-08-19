@@ -31,8 +31,26 @@ fn main() {
         }
     }
 
-    if let Err(msg) = read_save_sub_tree(first, possible_second, verbose) {
-        eprintln("{}", msg);
+    let tree = match read_sub_tree(possible_second) {
+        Ok(val) => val,
+        Err(err) => {
+            eprintln!("while trying to read tree: {}", err.to_string()); 
+            return;
+        },
+    };
+    
+    if verbose {
+        println!("{}", tree.to_tree_string());
+    }
+    
+    let mut out_path = PathBuf::from(first);
+    out_path.push("soul_subfiles.tree.bin");
+    match tree.save_to_bin_file(&out_path) {
+        Ok(()) => (),
+        Err(err) => {
+            eprintln!("while trying to save subfile_tree to disk: {}", err.to_string()); 
+            return;
+        },
     }
 }
 

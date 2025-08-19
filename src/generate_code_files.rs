@@ -77,7 +77,7 @@ fn generate_code_all_subfiles(run_options: Arc<RunOptions>, subfiles_tree: Arc<S
     faults
 }
 
-fn generate_code(run_options: Arc<RunOptions>, mut file: PathBuf, logger: Arc<Logger>, time_log: Arc<Mutex<TimeLogs>>) -> Vec<SoulFault> {
+fn generate_code(run_options: Arc<RunOptions>, file: PathBuf, logger: Arc<Logger>, time_log: MultiRef<TimeLogs>) -> Vec<SoulFault> {
     let path = get_cache_path_ast(&run_options, &file);
     let parser_responese = match SoulHeaderCache::ast_from_bin_file(&path) {
         Ok(val) => val,
@@ -95,9 +95,7 @@ fn generate_code(run_options: Arc<RunOptions>, mut file: PathBuf, logger: Arc<Lo
     let path_string = file.to_string_lossy().to_string();
     let info = RunStepsInfo{current_path: &path_string, logger: &logger, run_options: &run_options, time_log: &time_log};
 
-    let file_name = file.file_name().expect("path has filename").to_string_lossy().to_string();
-    file.pop();
-    let sementic_response = match sementic_analyse(parser_responese, &MultiRefPool::new(), &info, &file, &file_name) {
+    let sementic_response = match sementic_analyse(parser_responese, &info) {
         Ok(val) => val,
         Err(err) => {
             exit_error(&err, &logger);

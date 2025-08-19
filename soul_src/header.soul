@@ -23,7 +23,7 @@ thisMain() {
 
     Println(f"hello {sum} {#sum}")
 } 
- 
+
 using() {
     use this::std
     use std::test
