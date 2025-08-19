@@ -230,7 +230,7 @@ impl PrettyPrint for GlobalKind {
     }
 }
 
-impl<'a> PrettyPrint for MultiRefReadGuard<'a, InnerTraitDecl> {
+impl PrettyPrint for MultiRefReadGuard<InnerTraitDecl> {
     fn to_pretty(&self, tab: usize, is_last: bool, ref_pool: &MultiRefPool) -> String {
         let prefix = tree_prefix(tab, is_last);
         let header = format!("{}Trait {} >>", prefix, self.name.0);

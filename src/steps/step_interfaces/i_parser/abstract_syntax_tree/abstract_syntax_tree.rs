@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use my_macros::{CloneWithPool};
+use my_macros::CloneWithPool;
 use serde::{Deserialize, Serialize};
 use crate::{errors::soul_error::{new_soul_error, Result, SoulErrorKind}, steps::step_interfaces::i_parser::abstract_syntax_tree::{spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef, TraitImpl}, statment::{Block, Statment, StmtKind, VariableKind}}}, utils::serde_multi_ref::{MultiRef, MultiRefPool}};
 

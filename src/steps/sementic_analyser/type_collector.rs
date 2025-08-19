@@ -26,7 +26,7 @@ impl AstVisitable for TypeCollector {
             },
             GlobalKind::TraitDecl(_) => (),
             GlobalKind::StructDecl(struct_ref) => {
-                let struct_decl = struct_ref.owned_borrow(&self.get_scope().ref_pool);
+                let struct_decl = struct_ref.borrow(&self.get_scope().ref_pool);
                 let class_ty = SoulType::from_type_kind(TypeKind::Class(struct_decl.name.clone()));
                 get_named_tuple_ctor(&struct_decl.name, class_ty, &struct_decl.fields, self.get_scope_mut());
             },
@@ -74,7 +74,7 @@ impl AstVisitable for TypeCollector {
                 self.get_scope_mut().to_parent();
             },
             StmtKind::StructDecl(struct_ref) => {
-                let struct_decl = struct_ref.owned_borrow(&self.get_scope().ref_pool);
+                let struct_decl = struct_ref.borrow(&self.get_scope().ref_pool);
                 let class_ty = SoulType::from_type_kind(TypeKind::Class(struct_decl.name.clone()));
                 get_named_tuple_ctor(&struct_decl.name, class_ty, &struct_decl.fields, self.get_scope_mut());
             },
@@ -144,9 +144,9 @@ impl TypeCollector {
     fn check_var_decl(&mut self, variable_kind: &mut VariableKind, span: SoulSpan) {
         match variable_kind {
             VariableKind::Variable(multi_ref) => {
-                if multi_ref.owned_borrow(&self.get_scope().ref_pool).ty.is_none_type() {
+                if multi_ref.borrow(&self.get_scope().ref_pool).ty.is_none_type() {
                     
-                    let ty = if let Some(init) = &multi_ref.owned_borrow(&self.get_scope().ref_pool).initializer {
+                    let ty = if let Some(init) = &multi_ref.borrow(&self.get_scope().ref_pool).initializer {
                         
                         match try_get_exprkind_ty(&init.node, self.get_scope()) {
                             Ok(val) => match val {

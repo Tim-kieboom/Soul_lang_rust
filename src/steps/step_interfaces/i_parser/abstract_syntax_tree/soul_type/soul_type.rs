@@ -44,6 +44,21 @@ impl SoulType {
         self    
     }
 
+    pub fn to_deref(&self) -> Result<Self, String> {
+        if self.wrappers.is_empty() {
+            return Err(format!("type: '{}' can not be derefed", self.to_string()))
+        }
+
+        let mut this = self.clone();
+        match this.wrappers.pop().unwrap() {
+            TypeWrapper::Invalid |
+            TypeWrapper::Array => Err(format!("type: '{}' can not be derefed", self.to_string())),
+            TypeWrapper::Pointer |
+            TypeWrapper::MutRef(_) |
+            TypeWrapper::ConstRef(_) |
+            TypeWrapper::ConstPointer => Ok(this),
+        }
+    }
     pub fn is_none_type(&self) -> bool {
         matches!(self.base, TypeKind::None)
     }

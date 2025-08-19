@@ -25,7 +25,7 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
     }
 
     let span_calle = body_calle.map(|cal| Spanned::new(cal, stream.current_span()));
-    let signature_ref = get_function_signature(modifier, span_calle, stream, scopes)?;
+    let signature = get_function_signature(modifier, span_calle, stream, scopes)?;
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
@@ -37,21 +37,14 @@ pub fn get_function_decl(body_calle: Option<&SoulThis>, stream: &mut TokenStream
         }
     }
 
-    let (calle, params) = {
-        let signature = signature_ref.borrow(&scopes.ref_pool);
-        (signature.node.calle.clone(), signature.node.params.clone())
-    };
-
-    let body = get_block(ScopeVisibility::All, stream, scopes, calle, params)?;
-    
-    let signature = signature_ref.borrow(&scopes.ref_pool);
+    let body = get_block(ScopeVisibility::All, stream, scopes, signature.borrow(&scopes.ref_pool).node.calle.clone(), signature.borrow(&scopes.ref_pool).node.params.clone())?;
     
     let span = body.span.combine(&stream[begin_i].span);
-    if signature.node.calle.is_some() {
-        Ok(Spanned::new(FnDeclKind::ExtFn(ExtFnDecl{signature: signature_ref, body: body.node}), span))
+    if signature.borrow(&scopes.ref_pool).node.calle.is_some() {
+        Ok(Spanned::new(FnDeclKind::ExtFn(ExtFnDecl{signature, body: body.node}), span))
     }
     else {
-        Ok(Spanned::new(FnDeclKind::Fn(FnDecl{signature: signature_ref, body: body.node}), span))
+        Ok(Spanned::new(FnDeclKind::Fn(FnDecl{signature, body: body.node}), span))
     }
 }
 

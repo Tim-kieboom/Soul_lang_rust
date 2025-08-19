@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::{fs::{File, OpenOptions}, io::{BufReader, BufWriter}, mem, path::Path, time::SystemTime};
-use crate::{prelude::CloneWithPool, steps::step_interfaces::i_parser::{external_header::{Header, SerdeHeader}, parser_response::ParserResponse}};
+use std::{fs::{File, OpenOptions}, io::{BufReader, BufWriter}, path::Path, time::SystemTime};
+use crate::{steps::step_interfaces::i_parser::{external_header::{Header, SerdeHeader}, parser_response::ParserResponse}};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SoulHeaderCache {

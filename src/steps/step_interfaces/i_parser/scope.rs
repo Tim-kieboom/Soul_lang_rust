@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use my_macros::{CloneWithPool};
+use my_macros::CloneWithPool;
 use serde::{Deserialize, Serialize};
 use hsoul::subfile_tree::{SubFileTree, TreeNode, TreeNodeKind};
 use std::{collections::{BTreeMap, HashMap}, path::{Component, Path, PathBuf}, process::exit, sync::Arc};
@@ -327,25 +327,22 @@ impl ScopeBuilder {
 
     pub fn add_function(&mut self, fn_decl: &FnDeclKind) {
         
-        let mut signature_ref = fn_decl.get_signature().clone();
-        let signature = signature_ref.owned_borrow(&self.ref_pool);
-
-        if let Some(kinds) = self.scopes.flat_lookup_mut(&signature.node.name.0) {
+        if let Some(kinds) = self.scopes.flat_lookup_mut(&fn_decl.get_signature().borrow(&self.ref_pool).node.name.0) {
             
             let possible_funcs = kinds.iter_mut().find(|kind| matches!(kind, ScopeKind::Functions(..)));
             if let Some(ScopeKind::Functions(funcs)) = possible_funcs {
-                funcs.borrow_mut(&self.ref_pool).push(fn_decl.clone());
+                funcs.borrow_mut(&mut self.ref_pool).push(fn_decl.clone());
             }
             else {
                 self.scopes.insert(
-                    signature.node.name.0.clone(), 
+                    fn_decl.get_signature().borrow(&self.ref_pool).node.name.0.clone(), 
                     vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()], &mut self.ref_pool))]
                 );
             }
         }
         else {
             self.scopes.insert(
-                signature.node.name.0.clone(), 
+                fn_decl.get_signature().borrow(&self.ref_pool).node.name.0.clone(), 
                 vec![ScopeKind::Functions(OverloadedFunctions::new(vec![fn_decl.clone()], &mut self.ref_pool))]
             );
         }

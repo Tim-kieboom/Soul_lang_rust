@@ -9,9 +9,9 @@ pub mod utils;
 pub mod steps;
 
 pub mod prelude {
-    pub use crate::utils::serde_multi_ref::MultiRefPool;
     pub use crate::utils::serde_multi_ref::CloneWithPool;
     pub use crate::utils::serde_multi_ref::MultiRefPoolClone;
+    pub use crate::utils::serde_multi_ref::MultiRefPool;
 }
 
 use crate::errors::soul_error::{pass_soul_error, Result, SoulErrorKind, SoulSpan};

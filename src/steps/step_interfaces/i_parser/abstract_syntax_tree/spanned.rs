@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+
 use crate::errors::soul_error::SoulSpan;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

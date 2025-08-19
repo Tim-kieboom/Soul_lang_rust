@@ -40,8 +40,7 @@ impl AstVisitable for ExternalHeaderAnalyser {
             GlobalKind::UnionDecl(node_ref) => self.check_union_decl(node_ref, node.span),
             GlobalKind::EnumDecl(_) => (),
             GlobalKind::TypeEnumDecl(node_ref) => {
-                let type_enum = node_ref.owned_borrow(&self.get_scope().ref_pool);
-                for ty in type_enum.types.iter() {
+                for ty in node_ref.borrow(&self.get_scope().ref_pool).types.iter() {
                     self.check_type(&ty, node.span);
                 }
             },
@@ -73,8 +72,7 @@ impl AstVisitable for ExternalHeaderAnalyser {
             StmtKind::Assignment(assignment) => self.check_assignment(assignment, node.span),
             StmtKind::CloseBlock(_) => (),
             StmtKind::TypeEnumDecl(node_ref) => {
-                let type_enum = node_ref.owned_borrow(&self.get_scope().ref_pool);
-                for ty in type_enum.types.iter() {
+                for ty in node_ref.borrow(&self.get_scope().ref_pool).types.iter() {
                     self.check_type(&ty, node.span);
                 }
             },
@@ -296,7 +294,7 @@ impl ExternalHeaderAnalyser {
     }
 
     fn check_union_decl(&mut self, node: &mut UnionDeclRef, span: SoulSpan) {
-        let union = node.owned_borrow(&self.get_scope().ref_pool);
+        let union = node.borrow(&self.get_scope().ref_pool);
 
         for variant in &union.variants {
             

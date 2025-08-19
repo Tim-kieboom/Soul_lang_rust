@@ -38,12 +38,12 @@ impl Header {
         let mut this = SerdeHeader{pool: MultiRefPool::new(), scope: HashMap::new(), types: HashMap::new()};
         let dst_pool = &mut this.pool;
 
-        // this.scope = self.scope.iter().map(|(name, el)| {
-        //     (
-        //         name.clone(),
-        //         el.iter().map(|el| el.clone_change_ref_pool(src_pool, dst_pool)).collect()
-        //     )
-        // }).collect();
+        this.scope = self.scope.iter().map(|(name, el)| {
+            (
+                name.clone(),
+                el.iter().map(|el| el.clone_change_ref_pool(src_pool, dst_pool)).collect()
+            )
+        }).collect();
 
         this
     }
@@ -51,12 +51,12 @@ impl Header {
     pub fn from_serde_header(serde: SerdeHeader, dst_pool: &mut MultiRefPool) -> Header {
         let mut this = Header{scope: HashMap::new(), types: HashMap::new()};
 
-        // this.scope = serde.scope.iter().map(|(name, el)| {
-        //     (
-        //         name.clone(),
-        //         el.iter().map(|el| el.clone_change_ref_pool(&serde.pool, dst_pool)).collect()
-        //     )
-        // }).collect();
+        this.scope = serde.scope.iter().map(|(name, el)| {
+            (
+                name.clone(),
+                el.iter().map(|el| el.clone_change_ref_pool(&serde.pool, dst_pool)).collect()
+            )
+        }).collect();
 
         this
     }

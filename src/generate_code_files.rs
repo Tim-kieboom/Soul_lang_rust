@@ -1,15 +1,16 @@
-use std::sync::Mutex;
 use std::path::PathBuf;
 use std::process::exit;
-use threadpool::ThreadPool;
 use std::sync::mpsc::channel;
+use std::sync::Mutex;
 use std::{path::Path, sync::Arc};
 use hsoul::subfile_tree::SubFileTree;
-use crate::utils::logger::LogOptions;
+use threadpool::ThreadPool;
 use crate::cache_file::get_cache_path_ast;
 use crate::errors::soul_error::{Result, SoulError};
 use crate::run_steps::{sementic_analyse, RunStepsInfo};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_header_cache::SoulHeaderCache;
+use crate::utils::logger::LogOptions;
+use crate::utils::serde_multi_ref::MultiRefPool;
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, run_options::run_options::RunOptions, steps::step_interfaces::i_sementic::fault::SoulFault, utils::{logger::Logger, time_logs::TimeLogs}};
 
 const DEFAULT_LOG_OPTIONS: &'static LogOptions = &LogOptions::const_default();
@@ -90,8 +91,6 @@ fn generate_code(run_options: Arc<RunOptions>, mut file: PathBuf, logger: Arc<Lo
             unreachable!()
         },
     };
-
-    
 
     let path_string = file.to_string_lossy().to_string();
     let info = RunStepsInfo{current_path: &path_string, logger: &logger, run_options: &run_options, time_log: &time_log};

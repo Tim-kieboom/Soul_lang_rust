@@ -43,7 +43,9 @@ pub fn parse_tokens(tokens: TokenizeResonse, ref_pool: MultiRefPool, subfile_tre
     }
 
     if let StatmentBuilder::Global(global) = scope_ref {
-        tree.root = global.borrow(&scopes.ref_pool).clone();
+        unsafe {
+            tree.root = global.consume(&mut scopes.ref_pool)
+        }
     }
     else { unreachable!() }
 
