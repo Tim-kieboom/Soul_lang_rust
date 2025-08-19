@@ -1,9 +1,11 @@
-use std::{fmt::Display, fs::OpenOptions, io::{self, BufReader, Read, Seek, Write}, path::PathBuf, sync::{Arc, Mutex}};
+use std::{fmt::Display, fs::OpenOptions, io::{self, BufReader, Read, Seek, Write}, path::PathBuf, process::exit, sync::{Arc, Mutex}};
 use bitflags::bitflags;
 use chrono::Local;
 use colored::Colorize;
 
 use crate::errors::soul_error::SoulError;
+
+pub const DEFAULT_LOG_OPTIONS: &'static LogOptions = &LogOptions::const_default();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
@@ -161,6 +163,14 @@ impl Logger {
     pub fn soul_warn<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Warning, soul_error, reader, options); }
     pub fn soul_info<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Info, soul_error, reader, options); }
     pub fn soul_debug<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Debug, soul_error, reader, options); }
+
+    pub fn exit_error(&self, err: &SoulError, options: &LogOptions) {
+        for line in err.to_err_message() {
+            self.error(line, options);
+        } 
+        self.error("build interrupted because of 1 error", options);
+        exit(1);
+    }
 }
 
 

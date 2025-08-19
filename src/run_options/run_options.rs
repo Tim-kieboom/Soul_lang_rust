@@ -1,21 +1,29 @@
 use std::io::Write;
 use std::num::ParseIntError;
+use std::path::PathBuf;
 use std::result;
 use std::env::Args;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+
+use crate::utils::logger::{LogLevel, LogMode};
+
 use super::show_times::ShowTimes;
 use super::show_output::ShowOutputs;
 
 pub struct RunOptions {
-    pub file_path: String, 
+    pub file_path: PathBuf, 
     pub is_file_path_raw_file_str: bool, 
     pub show_times: ShowTimes,
     pub show_outputs: ShowOutputs,
-    pub output_dir: String,
+    pub output_dir: PathBuf,
     pub pretty_cpp_code: bool,
     pub tab_char_len: u32,
     pub command: String,
+    pub sub_tree_path: PathBuf,
+    pub log_path: Option<PathBuf>,
+    pub log_level: LogLevel,
+    pub log_mode: LogMode
 } 
 
 type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send + Sync + 'static>;
@@ -23,7 +31,7 @@ type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send
 static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
     HashMap::from([
         (
-            "-showOutput",
+            "--showOutput",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.show_outputs = ShowOutputs::from_str(input)?;
@@ -31,15 +39,15 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             }) as ArgFunc
         ),
         (
-            "-outputDir",
+            "--outputDir",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
-                options.output_dir = input.to_string();
+                options.output_dir = PathBuf::from(input);
                 Ok(())
             }) as ArgFunc
         ),
         (
-            "-tabCharLen",
+            "--tabCharLen",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.tab_char_len = input.parse()
@@ -53,7 +61,7 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             }) as ArgFunc
         ),
         (
-            "-showTime",
+            "--showTime",
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.show_times = ShowTimes::from_str(input)?;
@@ -68,22 +76,58 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
                 Ok(())
             }) as ArgFunc
         ),
+        (
+            "--subtreePath",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.sub_tree_path = input.into();
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--logPath",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_path = Some(input.into());
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--logLevel",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_level = LogLevel::from_str(input);
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--logMode",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_mode = LogMode::from_str(input)?;
+                Ok(())
+            }) as ArgFunc
+        ),
     ])
 });
 
-const ALLOWED_COMMANDS: &[&str] = &["run", "build", "help"];
+const ALLOWED_COMMANDS: &[&str] = &["build", "help"];
 
 impl RunOptions {
     pub fn new(_args: Args) -> result::Result<Self, String> {
         let mut options = Self {
-            file_path: String::new(),
+            file_path: PathBuf::new(),
             is_file_path_raw_file_str: false,
             show_outputs: ShowOutputs::SHOW_NONE,
             show_times: ShowTimes::SHOW_TOTAL,
             pretty_cpp_code: false,
-            output_dir: "output".to_string(),
+            output_dir: PathBuf::from("output"),
             tab_char_len: 4,
-            command: String::new(),
+            command: "".into(),
+            sub_tree_path: "".into(),
+            log_level: LogLevel::Any,
+            log_mode: LogMode::ShowAll,
+            log_path: None,
         };
 
         let mut args = _args.collect::<Vec<_>>();
@@ -117,7 +161,7 @@ impl RunOptions {
         if !errors.is_empty() {
             Err(errors.join("\n"))
         } 
-        else if options.file_path.is_empty() {
+        else if options.file_path.as_os_str().is_empty() {
             Err("Missing file path argument (type 'soul help' for more info).".to_string())
         } 
         else {
@@ -145,7 +189,7 @@ fn pocess_arg(arg: &String, options: &mut RunOptions, file_path_set: &mut bool, 
         }
     } 
     else if !*file_path_set {
-        options.file_path = arg.clone();
+        options.file_path = PathBuf::from(arg);
         *file_path_set = true;
     } 
     else {
@@ -165,24 +209,38 @@ have fun :).
 
     Commands:
         build           info: Compile the selected file
-        Run             info: Compile and Run selected file
         help            info: prints this list you are reading
-
+    
     Options:
-        -showOutput     info: select which steps in the compiler gets show to use in output folder (e.g. tokenizer, AST, ect..)
-                        args: (Default)SHOW_NONE, SHOW_SOURCE, SHOW_TOKENIZER, SHOW_ABSTRACT_SYNTAX_TREE, SHOW_CPP_CONVERTION, SHOW_ALL 
+        to call flag you do '-flag'
+        to call arg you do '--option=arg1'
+        to chain args together you do '--option=arg1+arg2'
 
-        -prettyCppCode  info: make c++ output human readable
-                        args: <none>
+        --showOutput    info: select which steps in the compiler gets show to use in output folder (e.g. tokenizer, AST, ect..)
+                        args(chainable): (Default)SHOW_NONE, SHOW_SOURCE, SHOW_TOKENIZER, SHOW_ABSTRACT_SYNTAX_TREE, SHOW_CPP_CONVERTION, SHOW_ALL 
 
-        -showTime       info: select which steps in the compiler gets timed and this time printed on screan
-                        args: SHOW_NONE, (Default)SHOW_TOTAL, SHOW_SOURCE_READER, SHOW_TOKENIZER, SHOW_PARSER, SHOW_CODE_GENERATOR, SHOW_ALL 
+        -prettyCppCode  info: make c++ output human readable (no arguments its just a flag)
+
+        --showTime      info: select which steps in the compiler gets timed and this time printed on screan
+                        args(chainable): SHOW_NONE, (Default)SHOW_TOTAL, SHOW_SOURCE_READER, SHOW_TOKENIZER, SHOW_PARSER, SHOW_CODE_GENERATOR, SHOW_ALL 
         
-        -tabCharLen     info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will display the wrong char
-                        args: <any positive interger> 
+        --tabCharLen    info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will display the wrong char
+                        args: (Deafult)4, <any positive interger> 
 
-        -outputDir      info: the path of the output folder
-                        args: <any path>
+        --outputDir     info: the path of the output folder
+                        args: (Default)<empty>, <any path>
+        
+        --subtreePath   info: .bin file describing the subfile structure of the project if empty no subfiles
+                        args: (Default)<empty>, <any path>
+
+        --logPath       info: if not empty logs to file of given filePath instead of terminal
+                        args: (Default)<empty>, <any path>
+        
+        --logLevel      info: the lowest level that will be show
+                        args: (Default)ANY, ERROR, WARNING, INFO, DEBUG  
+
+        --logMode       info: what info will be show when a massage in printed 
+                        args(chainable): (Default)SHOW_ALL, SHOW_DATE, SHOW_LEVEL  
 ";
 
     println!("{}", HELP_ARGS_LIST);
