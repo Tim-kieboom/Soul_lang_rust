@@ -1,9 +1,35 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use crate::{steps::step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, i_sementic::sementic_scope::Byte}, utils::serde_multi_ref::{MultiRef, MultiRefPool}};
+use crate::{steps::step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType}, i_sementic::sementic_scope::Byte}, utils::node_ref::{FromPoolValue, MultiRef, MultiRefPool}};
 
 pub type EnumDeclRef = MultiRef<InnerEnumDecl>;
+impl FromPoolValue for InnerEnumDecl {
+    fn is_from_pool_value(from: &crate::utils::node_ref::PoolValue) -> bool {
+        match from {
+            crate::utils::node_ref::PoolValue::Enum(inner_enum_decl) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut crate::utils::node_ref::PoolValue) -> &mut Self {
+        match from {
+            crate::utils::node_ref::PoolValue::Enum(inner_enum_decl) => inner_enum_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &crate::utils::node_ref::PoolValue) -> &Self {
+        match from {
+            crate::utils::node_ref::PoolValue::Enum(inner_enum_decl) => inner_enum_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> crate::utils::node_ref::PoolValue {
+        crate::utils::node_ref::PoolValue::Enum(self)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerEnumDecl {
@@ -17,6 +43,32 @@ pub struct InnerEnumDecl {
 }
 
 pub type UnionDeclRef = MultiRef<InnerUnionDecl>;
+impl FromPoolValue for InnerUnionDecl {
+    fn is_from_pool_value(from: &crate::utils::node_ref::PoolValue) -> bool {
+        match from {
+            crate::utils::node_ref::PoolValue::Union(inner_union_decl) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut crate::utils::node_ref::PoolValue) -> &mut Self {
+        match from {
+            crate::utils::node_ref::PoolValue::Union(inner_union_decl) => inner_union_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &crate::utils::node_ref::PoolValue) -> &Self {
+        match from {
+            crate::utils::node_ref::PoolValue::Union(inner_union_decl) => inner_union_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> crate::utils::node_ref::PoolValue {
+        crate::utils::node_ref::PoolValue::Union(self)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerUnionDecl {
@@ -26,6 +78,32 @@ pub struct InnerUnionDecl {
 }
 
 pub type TypeEnumDeclRef = MultiRef<InnerTypeEnumDecl>;
+impl FromPoolValue for InnerTypeEnumDecl {
+    fn is_from_pool_value(from: &crate::utils::node_ref::PoolValue) -> bool {
+        match from {
+            crate::utils::node_ref::PoolValue::TypeEnum(_) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut crate::utils::node_ref::PoolValue) -> &mut Self {
+        match from {
+            crate::utils::node_ref::PoolValue::TypeEnum(inner_type_enum_decl) => inner_type_enum_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &crate::utils::node_ref::PoolValue) -> &Self {
+        match from {
+            crate::utils::node_ref::PoolValue::TypeEnum(inner_type_enum_decl) => inner_type_enum_decl,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> crate::utils::node_ref::PoolValue {
+        crate::utils::node_ref::PoolValue::TypeEnum(self)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InnerTypeEnumDecl {

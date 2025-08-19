@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}, utils::serde_multi_ref::{MultiRef, MultiRefPool}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generics::GenericParam, soul_type::{soul_type::SoulType, type_kind::Modifier}, spanned::Spanned, staments::statment::{Block, SoulThis, Statment, StmtKind}}, utils::node_ref::{FromPoolValue, MultiRef, MultiRefPool, PoolValue}};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FnDecl {
@@ -91,7 +91,60 @@ impl FnDeclKind {
 }
 
 pub type FunctionSignatureRef = MultiRef<Spanned<InnerFunctionSignature>>; 
+impl FromPoolValue for Spanned<InnerFunctionSignature> {
+    fn is_from_pool_value(from: &PoolValue) -> bool {
+        match from {
+            PoolValue::FuncSig(_) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
+        match from {
+            PoolValue::FuncSig(spanned) => spanned,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &PoolValue) -> &Self {
+        match from {
+            PoolValue::FuncSig(spanned) => spanned,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> PoolValue {
+        PoolValue::FuncSig(self)
+    }
+}
+
 pub type LambdaSignatureRef = MultiRef<InnerLambdaSignature>;
+impl FromPoolValue for InnerLambdaSignature {
+    fn is_from_pool_value(from: &PoolValue) -> bool {
+        match from {
+            PoolValue::Lambda(_) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
+        match from {
+            PoolValue::Lambda(inner_lambda_signature) => inner_lambda_signature,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &PoolValue) -> &Self {
+        match from {
+            PoolValue::Lambda(inner_lambda_signature) => inner_lambda_signature,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> PoolValue {
+        PoolValue::Lambda(self)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LambdaMode {
@@ -143,10 +196,7 @@ pub struct InnerFunctionSignature {
 
 impl FunctionSignatureRef {
     pub fn to_string(&self, ref_pool: &MultiRefPool) -> String {
-        let this = &match self.try_borrow(ref_pool) {
-            Ok(val) => val,
-            Err(_) => return String::new(),
-        }.node;
+        let this = &self.borrow(ref_pool).node;
         if this.generics.is_empty() {
             format!(
                 "{}{}({}){}", 

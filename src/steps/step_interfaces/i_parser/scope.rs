@@ -1,9 +1,7 @@
-use crate::prelude::*;
-use my_macros::CloneWithPool;
 use serde::{Deserialize, Serialize};
 use hsoul::subfile_tree::{SubFileTree, TreeNode, TreeNodeKind};
 use std::{collections::{BTreeMap, HashMap}, path::{Component, Path, PathBuf}, process::exit, sync::Arc};
-use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FunctionSignatureRef}, objects::{ClassDeclRef, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, utils::{serde_multi_ref::{MultiRef, MultiRefPool}, push::Push}};
+use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{ExprKind, Expression, Ident}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, staments::{enum_likes::{EnumDeclRef, InnerEnumDecl, InnerUnionDecl, TypeEnumDeclRef, UnionDeclRef}, function::{FnDecl, FnDeclKind, FnDeclKindSerde, FunctionSignatureRef, InnerFunctionSignature}, objects::{ClassDeclRef, InnerClassDecl, InnerStructDecl, InnerTraitDecl, StructDeclRef, TraitDeclRef}, statment::{SoulThis, VariableDecl, VariableRef}}}, utils::{node_ref::{FromPoolValue, MultiRef, MultiRefPool, PoolValue}, push::Push}};
 
 pub type ScopeStack = InnerScopeBuilder<Vec<ScopeKind>>;
 pub type TypeScopeStack = InnerScopeBuilder<TypeKind>;
@@ -640,7 +638,7 @@ pub enum ScopeVisibility {
     GlobalOnly,  // Can only access global scope
 }
 
-#[derive(Debug, Clone, CloneWithPool, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScopeKind {
     Invalid(),
     Variable(VariableRef),
@@ -660,12 +658,57 @@ pub enum ScopeKind {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ScopeKindSerde {
+    Invalid(),
+    Variable(VariableDecl),
+    Struct(InnerStructDecl),
+    Class(InnerClassDecl),
+
+    Trait(InnerTraitDecl),
+
+    Functions(Vec<FnDeclKindSerde>),
+    NamedTupleCtor(NamedTupleCtor),
+
+    This(TypeKind),
+    Enum(InnerEnumDecl),
+    Union(InnerUnionDecl),
+    TypeEnum(TypeEnumDeclRef),
+    TypeDefed(TypeDefedRef),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NamedTupleCtor {
     pub object_type: SoulType,
     pub values: HashMap<Ident, (SoulType, Option<Expression>)>
 }
 
 pub type TypeDefedRef = MultiRef<TypeDefed>;
+impl FromPoolValue for TypeDefed {
+    fn is_from_pool_value(from: &PoolValue) -> bool {
+        match from {
+            PoolValue::TypeDefed(type_defed) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
+        match from {
+            PoolValue::TypeDefed(type_defed) => type_defed,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &PoolValue) -> &Self {
+        match from {
+            PoolValue::TypeDefed(type_defed) => type_defed,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> PoolValue {
+        PoolValue::TypeDefed(self)
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TypeDefed {
@@ -674,6 +717,32 @@ pub struct TypeDefed {
 }
 
 pub type OverloadedFunctions = MultiRef<Vec<FnDeclKind>>;
+impl FromPoolValue for Vec<FnDeclKind> {
+    fn is_from_pool_value(from: &PoolValue) -> bool {
+        match from {
+            PoolValue::OverFuncs(fn_decl_kinds) => true,
+            _ => false,
+        }
+    }
+
+    fn from_pool_value_mut(from: &mut PoolValue) -> &mut Self {
+        match from {
+            PoolValue::OverFuncs(fn_decl_kinds) => fn_decl_kinds,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn from_pool_value_ref(from: &PoolValue) -> &Self {
+        match from {
+            PoolValue::OverFuncs(fn_decl_kinds) => fn_decl_kinds,
+            _ => panic!("PoolValue is wrong type"),
+        }
+    }
+
+    fn to_pool_value(self) -> PoolValue {
+        PoolValue::OverFuncs(self)
+    }
+}
 
 impl OverloadedFunctions {
     pub fn from_fn(decl: FnDecl, ref_pool: &mut MultiRefPool) -> Self {

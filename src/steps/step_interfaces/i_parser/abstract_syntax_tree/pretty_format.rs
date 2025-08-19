@@ -1,5 +1,6 @@
 use itertools::Itertools;
-use crate::{steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{CaseDoKind, ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}}, i_sementic::sementic_scope::ScopeVisitor}, utils::serde_multi_ref::{MultiRefPool, MultiRefReadGuard}};
+use std::sync::RwLockReadGuard;
+use crate::{steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{CaseDoKind, ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}}, i_sementic::sementic_scope::ScopeVisitor}, utils::node_ref::{MultiRefId, MultiRefPool, MultiRefReadGuard}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self, ref_pool: &MultiRefPool) -> String;
@@ -98,7 +99,7 @@ impl PrettyFormat for AbstractSyntacTree {
 impl PrettyPrint for StmtKind {
     fn to_pretty(&self, tab: usize, is_last: bool, ref_pool: &MultiRefPool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let content = match self {
+        match self {
             StmtKind::ExprStmt(expr) => format!("{}ExprStmt<{}> >> {};", prefix, expr.node.get_variant_name(), expr.node.to_string(ref_pool, tab)),
             StmtKind::VarDecl(var_ref) => var_ref.to_pretty(tab, is_last, ref_pool),
             StmtKind::FnDecl(fn_decl) => fn_decl.to_pretty(tab, is_last, ref_pool),
@@ -161,9 +162,7 @@ impl PrettyPrint for StmtKind {
                     format!("\t{} => {}", stmt.if_expr.node.to_string(ref_pool, tab), stmt.do_fn.to_pretty(tab, is_last, ref_pool))
                 }).collect::<Vec<_>>().join("\n")
             ),
-        };
-
-        content
+        }
     }
 }
 
@@ -392,7 +391,7 @@ impl PrettyPrint for StructDeclRef {
 }
 
 impl PrettyPrint for FieldAccess {
-    fn to_pretty(&self, _tab: usize, _is_last: bool, _ref_pool: &MultiRefPool) -> String {
+    fn to_pretty(&self, _tab: usize, _is_last: bool, ref_pool: &MultiRefPool) -> String {
         if self.get.is_none() && self.set.is_none() {
             return String::new()
         }

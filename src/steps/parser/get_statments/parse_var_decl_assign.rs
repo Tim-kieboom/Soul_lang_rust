@@ -354,7 +354,7 @@ pub fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Re
             try_get_variable(&scope).cloned()
         };
 
-        if let Some(mut var_ref) = possible_var {
+        if let Some(var_ref) = possible_var {
             let lit_ret = &mut var_ref.borrow_mut(&mut scopes.ref_pool).lit_retention;
             std::mem::take(lit_ret)
         }

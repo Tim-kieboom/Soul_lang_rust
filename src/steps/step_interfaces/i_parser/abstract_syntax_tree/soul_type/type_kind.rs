@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Ident, StaticMethode}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}, scope::SoulPagePath}, i_sementic::sementic_scope::Byte}, utils::serde_multi_ref::MultiRefPool};
+use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Ident, StaticMethode}, soul_type::soul_type::SoulType, spanned::Spanned, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}, scope::SoulPagePath}, i_sementic::sementic_scope::Byte}, utils::node_ref::MultiRefPool};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[repr(u8)]

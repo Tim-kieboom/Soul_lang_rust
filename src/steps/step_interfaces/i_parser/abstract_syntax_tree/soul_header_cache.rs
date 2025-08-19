@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::{fs::{File, OpenOptions}, io::{BufReader, BufWriter}, path::Path, time::SystemTime};
-use crate::{steps::step_interfaces::i_parser::{external_header::{Header, SerdeHeader}, parser_response::ParserResponse}};
+use crate::steps::step_interfaces::i_parser::{external_header::Header, parser_response::ParserResponse};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SoulHeaderCache {
     pub mod_date: ModifiedDate,
-    pub header: SerdeHeader,
+    pub header: Header,
     pub parser: ParserResponse,
 }
 
@@ -17,10 +17,10 @@ pub struct ModifiedDate {
 type ResErr<T> = std::result::Result<T, Box<dyn std::error::Error>>; 
 impl SoulHeaderCache {
 
-    pub fn new(soul_file: &Path, header: Header, mut parser: ParserResponse) -> ResErr<Self> {
+    pub fn new(soul_file: &Path, header: Header, parser: ParserResponse) -> ResErr<Self> {
         Ok(Self{
             mod_date: ModifiedDate::new(soul_file)?, 
-            header: header.to_serde_header(&mut parser.scopes.ref_pool), 
+            header, 
             parser
         })
     }

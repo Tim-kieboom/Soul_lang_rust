@@ -7,7 +7,7 @@ use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::scope::{ExternalPages, ScopeBuilder, ScopeVisibility, SoulPagePath, TypeScopeStack};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalPath, ExternalType, TypeKind, TypeSize};
-use crate::utils::serde_multi_ref::MultiRefPool;
+use crate::utils::node_ref::MultiRefPool;
 
 pub fn get_scope_from_type_stack(stream: &mut TokenStream, ref_pool: MultiRefPool, external_books: ExternalPages, project_name: String) -> Result<ScopeBuilder> {
     let mut types = TypeScopeStack::new();
