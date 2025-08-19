@@ -21,8 +21,8 @@ main() i32
     
     str hello = "hello"
     str world = "world"
-    println(__soul_format_string__("", hello, " ", world, ""))
-    str format = __soul_format_string__("", 1, ", string")
+    println(std.fmt.FormatArgs("",std.fmt.Arg(hello)," ",std.fmt.Arg(world),""))
+    str format = std.fmt.FormatArgs("",std.fmt.Arg(1),", string")
     i32 result = sum(1, 2)
 }"#;
 
@@ -46,7 +46,7 @@ fn does_format_str_line_work() {
     
     for line in &source_file {
         let result = format_string(line.clone());
-        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message());
+        assert!(result.is_ok(), "err: {}", result.unwrap_err().to_err_message().join("\n"));
         results.push(result.unwrap());
     }
 

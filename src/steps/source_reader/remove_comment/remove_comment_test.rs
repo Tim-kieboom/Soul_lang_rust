@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use itertools::Itertools;
 
-use crate::{steps::{source_reader::remove_comment::remove_comment::remove_comment, step_interfaces::i_source_reader::{FileLine, LineNumber, LineOffset, SourceFileResult}}, utils::show_diff::show_str_diff};
+use crate::{steps::{source_reader::remove_comment::remove_comment::remove_comment, step_interfaces::i_source_reader::{FileLine, LineNumber, LineOffset, SourceFileResponse}}, utils::show_diff::show_str_diff};
 
 const TEST_FILE: &str = r#"
 // test
@@ -48,7 +48,7 @@ fn to_string(file_lines: Vec<FileLine>) -> String {
 fn does_remove_comment_work() {
     let source_file = str_to_file_lines(TEST_FILE);
 
-    let mut source_file_result = SourceFileResult::new();
+    let mut source_file_result = SourceFileResponse::new();
 
     let mut in_multi_line = false;
     let mut result = Vec::new();
@@ -75,7 +75,7 @@ fn does_remove_comment_work() {
 #[test]
 fn does_remove_comment_give_correct_gaps() {
     let source_file = str_to_file_lines(TEST_FILE);
-    let mut source_file_result = SourceFileResult::new();
+    let mut source_file_result = SourceFileResponse::new();
 
     let mut in_multi_line = false;
     let mut result = Vec::new();
@@ -91,9 +91,9 @@ fn does_remove_comment_give_correct_gaps() {
         result.push(new_line);
     }
 
-    let should_be_gaps: HashMap<LineNumber, HashMap<LineOffset, i64>> = HashMap::from([
-        (5, HashMap::from([(18, 11)])),
-        (11, HashMap::from([(0, 2)])), 
+    let should_be_gaps: HashMap<LineNumber, BTreeMap<LineOffset, i64>> = HashMap::from([
+        (5, BTreeMap::from([(18, 11)])),
+        (11, BTreeMap::from([(0, 2)])), 
     ]);
 
     assert!(

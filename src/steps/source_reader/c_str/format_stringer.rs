@@ -40,7 +40,7 @@ pub fn format_string(file_line: FileLine) -> Result<FileLine> {
 }
 
 fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Result<String> {
-    const SOUL_FORMATTER_FUNCTION_NAME: &str = "std.Format(@[";
+    const SOUL_FORMATTER_FUNCTION_NAME: &str = "std::fmt::FormatArgs(";
 
     let mut buffer = String::with_capacity(file_line.line.len() + SOUL_FORMATTER_FUNCTION_NAME.len());
 
@@ -57,13 +57,16 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
         match ch {
             '{' => {
                 buffer.push_str("\",");
-                buffer.push_str("std.Display(");
+                buffer.push_str("std::fmt::Arg(");
                 start_bracket = i;
                 current_open_bracket = true;
             },
             '}' => {
-                buffer.push(',');
-                buffer.push_str(&pretty_format.to_string());
+                if pretty_format {
+                    buffer.push(',');
+                    buffer.push_str("pretty=true");
+                }
+
                 buffer.push(')');
                 pretty_format = false;
 
@@ -74,7 +77,7 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
             '#' => {
                 if current_open_bracket {
                     if i-1 != start_bracket {
-                        return Err(new_soul_error(SoulErrorKind::InvalidStringFormat, SoulSpan::new(file_line.line_number, i), "'#' is only allowed in stringformat at as the first char in arg (so 'f\"foo {#1}\"' is oke but 'f\"foo {1#} or { #1} or {##1}\"' not)"))
+                        return Err(new_soul_error(SoulErrorKind::InvalidStringFormat, SoulSpan::new(file_line.line_number, i, 1), "'#' is only allowed in stringformat at as the first char in arg (so 'f\"foo {#1}\"' is oke but 'f\"foo {1#} or { #1} or {##1}\"' not)"))
                     }
                     pretty_format = true;
                 }
@@ -89,13 +92,13 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
 
         i += 1;
     }
-    buffer.push_str("])");
+    buffer.push_str(")");
     buffer.push_str(&file_line.line[span.end+1..]);
 
     if current_open_bracket {
         return Err(new_soul_error(
             SoulErrorKind::InvalidStringFormat,
-            SoulSpan{line_number: file_line.line_number.max(0), line_offset: i}, 
+            SoulSpan::new(file_line.line_number.max(0), i, buffer.len()), 
             "string formatter opens a bracket with out closing it (add '}' somewhere in f\"...\")"
         ))
     } 
@@ -114,7 +117,7 @@ fn validate_format_argument(file_line: &FileLine, start_bracket: usize, i: usize
 }
 
 fn err_emty_format_arg(line: &FileLine, offset: usize) -> SoulError {
-    let span = SoulSpan{line_number: line.line_number, line_offset: offset};
+    let span = SoulSpan::new(line.line_number, offset, line.line.len());
     new_soul_error(
         SoulErrorKind::InvalidStringFormat,
         span, 
@@ -124,7 +127,7 @@ fn err_emty_format_arg(line: &FileLine, offset: usize) -> SoulError {
 
 
 fn err_string_in_format_arg(line: &FileLine, offset: usize) -> SoulError {
-    let span = SoulSpan{line_number: line.line_number, line_offset: offset};
+    let span = SoulSpan::new(line.line_number, offset, line.line.len());
     new_soul_error(
         SoulErrorKind::InvalidStringFormat,
         span, 
@@ -139,7 +142,7 @@ fn get_end_of_string(line: &FileLine, index: usize, qoute_iter: &mut Iter<usize>
     else {
         Err(new_soul_error( 
             SoulErrorKind::UnterminatedStringLiteral,
-            SoulSpan{line_number: line.line_number, line_offset: index}, 
+            SoulSpan::new(line.line_number, index, line.line.len()), 
             format!("string has no end (probably missing a '{}')", QUOTE)
         ))
     }

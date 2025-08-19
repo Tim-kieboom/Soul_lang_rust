@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::{steps::{source_reader::source_reader_tests, tokenizer::tokenizer::tokenize}, utils::show_diff::show_str_diff};
+use crate::{errors::soul_error::SoulError, steps::{source_reader::source_reader_tests, step_interfaces::i_tokenizer::TokenizeResonse, tokenizer::tokenizer::tokenize}, utils::show_diff::show_str_diff};
 
 const SHOULD_BE: &str = r#"sum ( i32 one , i32 two ) i32 
  { 
@@ -8,8 +8,10 @@ const SHOULD_BE: &str = r#"sum ( i32 one , i32 two ) i32
  } 
  main ( ) 
  { 
- print ( __cstr_0__ ) 
- string := [ __cstr_6__ , __cstr_5__ , __cstr_4__ , __cstr_3__ , __cstr_2__ , __cstr_1__ ] 
+ "str" . Hash ( ) 
+ func ( ) . Hash ( ) 
+ print ( "hello world\n" ) 
+ string := [ "1" , "2" , "3" , "4" , "5" , "6" ] 
  i32 result := sum ( 1 , 2 ) 
  result += 1 ; result -= - 1 
  result = 2 
@@ -20,7 +22,16 @@ const SHOULD_BE: &str = r#"sum ( i32 one , i32 two ) i32
  else { 
  return 1 
  } 
- } "#;
+ } 
+"#;
+
+pub fn get_test_tokenizer(file: &str) -> Result<TokenizeResonse, SoulError> {
+	tokenize(source_reader_tests::get_test_source_reader(file)?)
+}
+
+pub fn get_test_result() -> Result<TokenizeResonse, SoulError> {
+	tokenize(source_reader_tests::get_test_result()?)
+}
 
 #[test]
 fn tokenizer_should_work() {

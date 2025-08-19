@@ -7,7 +7,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'soul_lang_rust' Compiler",
+            "name": "Debug executable SINGLE FILE 'soul_lang_rust'",
             "cargo": {
                 "args": [
                     "build",
@@ -22,38 +22,12 @@
                 }
             },
             "args": [
-                "run", 
+                "build", 
                 "test.soul",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
-                "-prettyCppCode",
-                "-tabCharLen=4"
-            ],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'soul_lang_rust' Interpreter",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=soul_lang_rust",
-                    "--package=soul_lang_rust",
-                    "--features",
-                    "dev_mode"
-                ],
-                "filter": {
-                    "name": "soul_lang_rust",
-                    "kind": "bin"
-                }
-            },
-            "args": [
-                "run", 
-                "test.soul",
-                "-isInterpreted",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
+                "--tabCharLen=4",
+                "--logMode=SHOW_LEVEL",
                 "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
@@ -61,7 +35,36 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Throw_result executable 'soul_lang_rust' Compiler",
+            "name": "Debug executable SOURCE_FILE 'soul_lang_rust'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust",
+                    "--features",
+                    "dev_mode"
+                ],
+                "filter": {
+                    "name": "soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "build", 
+                "soul_src\\main.soul",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
+                "--tabCharLen=4",
+                "--logMode=SHOW_LEVEL",
+                "--subtreePath=soul_src\\soul_subfiles.tree.bin",
+                "-prettyCppCode"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Throw_result executable 'soul_lang_rust'",
             "cargo": {
                 "args": [
                     "build",
@@ -76,10 +79,10 @@
                 }
             },
             "args": [
-                "run", 
+                "build", 
                 "test.soul",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
                 "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}",
@@ -90,15 +93,14 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Release executable 'soul_lang_rust' compiler SHOW_ALL",
+            "name": "Throw_result executable SOURCE_FILE 'soul_lang_rust'",
             "cargo": {
                 "args": [
                     "build",
-                    "--release",
                     "--bin=soul_lang_rust",
                     "--package=soul_lang_rust",
                     "--features",
-                    "dev_mode"
+                    "throw_result,dev_mode"
                 ],
                 "filter": {
                     "name": "soul_lang_rust",
@@ -106,10 +108,39 @@
                 }
             },
             "args": [
-                "run", 
+                "build", 
+                "soul_src\\main.soul",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
+                "--subtreePath=soul_src\\soul_subfiles.tree.bin",
+                "-prettyCppCode"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_BACKTRACE": "1"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release executable 'soul_lang_rust' SHOW_ALL",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust"
+                ],
+                "filter": {
+                    "name": "soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "build", 
                 "test.soul",
-                "-showOutput=SHOW_ALL",
-                "-showTime=SHOW_ALL",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
                 "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
@@ -117,7 +148,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Release executable 'soul_lang_rust' compiler SHOW_NONE",
+            "name": "Release executable SOURCE_FILE 'soul_lang_rust' SHOW_ALL",
             "cargo": {
                 "args": [
                     "build",
@@ -131,21 +162,23 @@
                 }
             },
             "args": [
-                "run", 
-                "test.soul",
-                "-showOutput=SHOW_NONE",
-                "-showTime=SHOW_ALL"
+                "build", 
+                "soul_src\\main.soul",
+                "--showOutput=SHOW_ALL",
+                "--showTime=SHOW_ALL",
+                "--subtreePath=soul_src\\soul_subfiles.tree.bin",
+                "-prettyCppCode"
             ],
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'soul_lang_rust'",
+            "name": "Release executable 'soul_lang_rust' SHOW_NONE",
             "cargo": {
                 "args": [
-                    "test",
-                    "--no-run",
+                    "build",
+                    "--release",
                     "--bin=soul_lang_rust",
                     "--package=soul_lang_rust"
                 ],
@@ -154,7 +187,37 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": [
+                "build", 
+                "test.soul",
+                "--showOutput=SHOW_NONE",
+                "--showTime=SHOW_ALL"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release executable SOURCE_FILE 'soul_lang_rust' SHOW_NONE",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust"
+                ],
+                "filter": {
+                    "name": "soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "build", 
+                "soul_src\\main.soul",
+                "--showOutput=SHOW_NONE",
+                "--showTime=SHOW_ALL",
+                "--subtreePath=soul_src\\soul_subfiles.tree.bin",
+            ],
             "cwd": "${workspaceFolder}"
         }
     ]

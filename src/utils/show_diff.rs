@@ -1,76 +1,185 @@
-pub fn show_str_diff(expected: &str, got: &str) -> String {
+#[macro_export]
+macro_rules! assert_eq_show_diff {
+	($left:expr, $right:expr) => {
+		assert!($left == $right, "{}", $crate::utils::show_diff::show_str_diff(format!("{:#?}", $left).as_str(), format!("{:#?}", $right).as_str()))
+	};
     
-	fn char_to_byte_idx(s: &str, char_idx: usize) -> usize {
-    	s.char_indices().nth(char_idx).map(|(i, _)| i).unwrap_or(s.len())
-	}
-	
-	fn longest_line_char_count(s: &str) -> usize {
-    	s.lines()
-        	.map(|line| line.chars().count())
-        	.max()
-    	    .unwrap_or(0)
-	}
+    ($left:expr, $right:expr, $msg:expr) => {
+		assert!($left == $right, "{}\n{}", $crate::utils::show_diff::show_str_diff(format!("{:#?}", $left).as_str(), format!("{:#?}", $right).as_str()), $msg)
+	};
+}
 
-	let exp_shift_size = longest_line_char_count(expected) + 6;
-	let got_shift_size = longest_line_char_count(got) + 6;
+pub fn show_str_diff(expected: &str, got: &str) -> String {
+    let exp_lines: Vec<&str> = expected.lines().collect();
+    let got_lines: Vec<&str> = got.lines().collect();
+    let max_lines = exp_lines.len().max(got_lines.len());
 
-	let expected_lines: Vec<_> = expected.lines().collect();
-    let got_lines: Vec<_> = got.lines().collect();
-    let max_lines = expected_lines.len().max(got_lines.len());
+	let width_left = exp_lines.iter().map(|s| s.len()).max().unwrap_or(0);
+	let width_right = got_lines.iter().map(|s| s.len()).max().unwrap_or(0);
+	let column_width = width_left.max(width_right);
 
-    println!("Line  | {:<exp_shift_size$} | {:<got_shift_size$}", "Expected", "Got");
-    let exp_amount_minus = "-".repeat(exp_shift_size+2);
-    let got_amount_minus = "-".repeat(got_shift_size+2);
-	println!("------+{}+{}", exp_amount_minus, got_amount_minus);
+    let mut result = String::new();
 
-	let mut lines = Vec::new();
+    result.push_str(&format!("{:<width$} | {:<width$}\n",
+        "Left:",
+        "Right:",
+        width = column_width)
+    );
+    result.push_str(&format!("{:-<width$}-+{:-<width$}\n",
+        "",
+        "",
+        width = column_width)
+    );
 
     for i in 0..max_lines {
-        let exp = expected_lines.get(i).unwrap_or(&"");
+        let exp = exp_lines.get(i).unwrap_or(&"");
         let got = got_lines.get(i).unwrap_or(&"");
-        let marker = if exp == got { " " } else { "!" };
 
-        let diff_index = exp.chars()
-            .zip(got.chars())
-            .position(|(a, b)| a != b)
-            .unwrap_or_else(|| exp.len().min(got.len()));
+        result.push_str(&format!("{:<width$} | {:<width$}\n",
+            exp,
+            got,
+            width = column_width)
+        );
 
-		let exp_diff_byte = char_to_byte_idx(exp, diff_index);
-		let exp_next_byte = char_to_byte_idx(exp, diff_index + 1);
+        if exp != got {
+            let exp_highlight = generate_diff_marker(exp, got);
+            let got_highlight = generate_diff_marker(got, exp);
 
-		let got_diff_byte = char_to_byte_idx(got, diff_index);
-		let got_next_byte = char_to_byte_idx(got, diff_index + 1);
+			let has_exp = exp_highlight.trim().len() > 0;
+			let has_got = got_highlight.trim().len() > 0;
 
-		let (exp_highlight, got_highlight) = if exp != got {
-			(
-				format!(
-					"{}>>>{}<<<{}",
-					&exp[..exp_diff_byte],
-					&exp[exp_diff_byte..exp_next_byte],
-					&exp[exp_next_byte..]
-				),
-				format!(
-					"{}>>>{}<<<{}",
-					&got[..got_diff_byte],
-					&got[got_diff_byte..got_next_byte],
-					&got[got_next_byte..]
-				),
-			)
-		} else {
-			(exp.to_string(), got.to_string())
-		};
-
-        lines.push(format!(
-            "{:>4}{} | {:<exp_shift_size$} | {:<got_shift_size$}",
-            i + 1,
-            marker,
-            exp_highlight,
-            got_highlight
-        ));
+			if has_exp || has_got {
+				result.push_str(&format!(
+					"{:<width$} | {:<width$}\n",
+					exp_highlight,
+					got_highlight,
+					width = column_width
+				));
+			}
+        }
     }
 
-	lines.join("\n")
+    result
 }
+
+fn generate_diff_marker(a: &str, b: &str) -> String {
+    let max_len = a.chars().count().max(b.chars().count());
+    let mut marker = String::new();
+
+    let a_chars: Vec<char> = a.chars().collect();
+    let b_chars: Vec<char> = b.chars().collect();
+
+    for i in 0..max_len {
+        let a_ch = a_chars.get(i);
+        let b_ch = b_chars.get(i);
+
+        if a_ch != b_ch {
+            marker.push('^');
+        } else if a_ch.is_some() {
+            marker.push(' ');
+        } else {
+            marker.push('^');
+        }
+    }
+
+    marker
+}
+
+pub fn generate_highlighted_string(
+    start_line: usize,
+    lines: &[String],
+    spans: &[(usize, usize, usize)],
+) -> String {
+    let mut result = String::new();
+
+    let max_line_number = lines.len();
+    let number_width = (max_line_number + start_line).to_string().len();
+
+    for (line_idx, line) in lines.iter().enumerate() {
+        let line_number = start_line + line_idx;
+
+        let mut line_spans = vec![];
+
+        for &(span_line, start, end) in spans {
+            if span_line == line_number {
+                let local_start = start.min(line.len());
+                let local_end = end.min(line.len());
+                if local_start < local_end {
+                    line_spans.push((local_start, local_end));
+                }
+            }
+        }
+
+        if line_spans.is_empty() {
+            result.push_str(&format!("{:width$} | {}", line_number, line, width = number_width));
+            result.push('\n');
+            continue;
+        }
+
+        line_spans.sort();
+        let mut merged: Vec<(usize, usize)> = vec![];
+
+        for (start, end) in line_spans {
+            if let Some(last) = merged.last_mut() {
+                if start <= last.1 {
+                    last.1 = last.1.max(end);
+                    continue;
+                }
+            }
+            merged.push((start, end));
+        }
+
+        let mut caret_line = vec![' '; line.len()];
+        for (start, end) in merged {
+            for i in start..end {
+                if i < caret_line.len() {
+                    caret_line[i] = '^';
+                }
+            }
+        }
+
+        let gutter = format!("{:width$} |", "", width = number_width);
+        result.push_str(&gutter);
+        result.push('\n');
+        result.push_str(&format!("{:width$} | {}", line_number, line, width = number_width));
+        result.push('\n');
+        result.push_str(&format!(
+            "{:width$} | {}",
+            "",
+            caret_line.iter().collect::<String>(),
+            width = number_width
+        ));
+        result.push('\n');
+    }
+
+    result
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

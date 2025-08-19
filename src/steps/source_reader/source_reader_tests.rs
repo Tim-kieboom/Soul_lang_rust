@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use std::io::{BufReader, Cursor};
-use crate::{errors::soul_error::SoulError, steps::{source_reader::source_reader::read_source_file, step_interfaces::i_source_reader::SourceFileResult}, utils::show_diff::show_str_diff};
+use crate::{errors::soul_error::SoulError, steps::{source_reader::source_reader::read_source_file, step_interfaces::i_source_reader::SourceFileResponse}, utils::show_diff::show_str_diff};
 
 pub const TEST_FILE: &str = r#"
 sum(i32 one, i32 two) i32
@@ -20,7 +20,8 @@ uytrduy
 poujyitd
 adsrfg
 */
-
+	"str".Hash()
+	func().Hash()
 	print("hello world\n")
 	string := ["1", "2", "3", "4", "5", "6"]
 	i32 result := sum(1, /*comment*/2)
@@ -44,8 +45,10 @@ const SHOULD_BE: &str = r#"sum(i32 one, i32 two) i32
 }
 main() 
 {
-    print(__cstr_0__)
-    string := [__cstr_6__, __cstr_5__, __cstr_4__, __cstr_3__, __cstr_2__, __cstr_1__]
+    "str".Hash()
+    func().Hash()
+    print("hello world\n")
+    string := ["1", "2", "3", "4", "5", "6"]
     i32 result := sum(1, 2)
     result += 1; result -= -1
     result = \
@@ -59,11 +62,15 @@ main()
     }
 }"#;
 
-pub fn get_test_result() -> Result<SourceFileResult, SoulError> {
+pub fn get_test_source_reader(file: &str) -> Result<SourceFileResponse, SoulError> {
 	let amount_of_spaces_in_tab = 4;
-	let reader = BufReader::new(Cursor::new(TEST_FILE.as_bytes()));
+	let reader = BufReader::new(Cursor::new(file.as_bytes()));
 	
 	read_source_file(reader, &" ".repeat(amount_of_spaces_in_tab))
+}
+
+pub fn get_test_result() -> Result<SourceFileResponse, SoulError> {
+	get_test_source_reader(TEST_FILE)
 }
 
 #[test]
@@ -72,7 +79,7 @@ fn should_source_reader_work() {
 	let amount_of_spaces_in_tab = 4;
 	let reader = BufReader::new(Cursor::new(TEST_FILE.as_bytes()));
 	let source_file = read_source_file(reader, &" ".repeat(amount_of_spaces_in_tab))
-		.inspect_err(|err| panic!("{}", err.to_err_message()))
+		.inspect_err(|err| panic!("{}", err.to_err_message().join("\n")))
 		.unwrap();
 
 	let file = source_file.source_file.iter().map(|file_line| &file_line.line).join("\n");
