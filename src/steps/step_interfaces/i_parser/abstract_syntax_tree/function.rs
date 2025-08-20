@@ -13,8 +13,14 @@ pub struct Function {
 pub struct Lambda {
     pub signature: LambdaSignature,
     pub arguments: Tuple,
-    pub body: Block,
+    pub body: LambdaBody,
     pub capture: Capture,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum LambdaBody {
+    Block(Block),
+    Expression(BoxExpression),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -44,17 +50,6 @@ pub struct StaticMethod {
 pub struct Argument {
     pub name: Option<Ident>,
     pub expression: BoxExpression,
-}
-
-impl Argument {
-    pub fn to_string(&self) -> String {
-        if let Some(optional) = &self.name {
-            format!("{}= {}", optional.0, self.expression.node.to_string())
-        }
-        else {
-            self.expression.node.to_string()
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

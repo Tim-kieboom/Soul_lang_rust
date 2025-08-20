@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::{abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, ExpressionKind}, function::Function, object::{Class, Struct, Trait, TraitSignature}, soul_type::soul_type::{Modifier, SoulType}, spanned::Spanned}, scope_builder::Variable}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, ExpressionKind, VariableName}, function::Function, object::{Class, Struct, Trait, TraitSignature}, soul_type::soul_type::{Modifier, SoulType}, spanned::Spanned}};
 
 
 pub type Statement = Spanned<StatementKind>;
@@ -8,19 +8,19 @@ pub type Statement = Spanned<StatementKind>;
 pub enum StatementKind {
     Expression(Expression),
 
-    Variable(Variable),
-    Assignment(Assignment),
-
+    Variable(VariableName),
+    
     Function(Function),
-
+    
     Class(Class),
     Struct(Struct),
     Trait(Trait),
-
+    
     Enum(Enum),
     Union(Union),
     TypeEnum(TypeEnum),
-
+    
+    Assignment(Assignment),
     Implement(Implement),
 
     CloseBlock,

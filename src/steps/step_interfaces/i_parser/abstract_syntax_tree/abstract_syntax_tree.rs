@@ -51,8 +51,8 @@ impl BlockBuilder {
 }
 
 impl AbstractSyntacTree {
-    pub fn new() -> Self {
-        Self { root: Block::new() }
+    pub fn new(root: Block) -> Self {
+        Self{root}
     }
 }
 

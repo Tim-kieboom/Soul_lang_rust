@@ -9,7 +9,7 @@ use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulS
 pub struct ScopeBuilder {
     scopes: Vec<InnerScope<ScopeKind>>,
     current: usize,
-    global_literal: ProgramMemmory,
+    pub global_literals: ProgramMemmory,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -26,9 +26,9 @@ pub enum ScopeKind {
     Class(Class),
     Trait(Trait),
     Struct(Struct),
+
     Variable(Variable),
-    
-    Functions(Function),
+    Functions(Vec<Function>),
 
     Enum(Enum),
     Union(Union),
@@ -79,7 +79,7 @@ impl ScopeBuilder {
         Self { 
             scopes: Vec::new(), 
             current: Self::GLOBAL_SCOPE_INDEX, 
-            global_literal: ProgramMemmory::new(),
+            global_literals: ProgramMemmory::new(),
         }
     }
 
@@ -186,8 +186,6 @@ impl<T> InnerScope<T> {
     }
 
 }
-
-
 
 
 

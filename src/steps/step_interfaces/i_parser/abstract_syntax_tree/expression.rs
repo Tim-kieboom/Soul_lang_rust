@@ -1,6 +1,6 @@
-use std::{collections::HashMap};
+use std::{collections::HashMap, fmt::Display};
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{Constructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::Spanned, statement::Block};
+use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{Constructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::Spanned, statement::Block}};
 
 pub type BoxExpression = Box<Expression>;
 pub type Expression = Spanned<ExpressionKind>;
@@ -59,6 +59,8 @@ pub struct Array {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ArrayFiller {
+    pub collection_type: Option<SoulType>,
+    pub element_type: Option<SoulType>,
     pub amount: BoxExpression,
     pub index: Option<VariableName>,
     pub fill_expr: BoxExpression,
@@ -78,15 +80,6 @@ pub struct Tuple {
 pub enum TupleElement {
     Element{value: Expression},
     Optional{name: Ident, value: Expression}
-}
-
-impl TupleElement {
-    pub fn to_string(&self) -> String {
-        match self {
-            TupleElement::Element{value} => value.node.to_string(),
-            TupleElement::Optional{name, value} => format!("{} = {}", name.0, value.node.to_string()),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -198,8 +191,8 @@ pub enum UnaryOperatorKind {
     Invalid,
     Neg, // -
     Not, // !
-    Incr{before_var: bool}, // ++
-    Decr{before_var: bool}, // --
+    Increment{before_var: bool}, // ++
+    Decrement{before_var: bool}, // --
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -240,14 +233,13 @@ impl Ident {
     }
 }
 
-impl ExpressionKind {
-    pub fn to_string(&self) -> String {
-        match self {
-            ExpressionKind::Empty => "<empty>".into(),
-            ExpressionKind::Default => "<default>".into(),
-            _ => todo!(),
-        }
+impl Display for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
+}
+
+impl ExpressionKind {
 
     pub fn get_variant_name(&self) -> &'static str {
         match self {
@@ -279,7 +271,85 @@ impl ExpressionKind {
     }
 }
 
+impl BinaryOperatorKind {
+    pub fn from_str(name: &str) -> Self {
+        match name {
+            val if val == SOUL_NAMES.get_name(NamesOperator::Equals) => Self::Eq,
+            val if val == SOUL_NAMES.get_name(NamesOperator::NotEquals) => Self::NotEq,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmaller) => Self::Le,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals) => Self::Lt,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsBigger) => Self::Ge,
+            val if val == SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals) => Self::Gt,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Addition) => Self::Add,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Subtract) => Self::Sub,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Multiple) => Self::Mul,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Divide) => Self::Div,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Modulo) => Self::Mod,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Power) => Self::Pow,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Root) => Self::Root,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Logarithm) => Self::Log,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseOr) => Self::BitOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseAnd) => Self::BitOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::BitWiseXor) => Self::BitXor,
+            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalOr) => Self::LogOr,
+            val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => Self::LogAnd,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Range) => Self::Range,
+            val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) => Self::TypeOf,
+            _ => Self::Invalid, 
+        }
+    }
 
+    pub fn to_str(&self) -> &str {
+        match self {
+            Self::Eq      => SOUL_NAMES.get_name(NamesOperator::Equals),
+            Self::NotEq   => SOUL_NAMES.get_name(NamesOperator::NotEquals),
+            Self::Le      => SOUL_NAMES.get_name(NamesOperator::IsSmaller),
+            Self::Lt      => SOUL_NAMES.get_name(NamesOperator::IsSmallerEquals),
+            Self::Ge      => SOUL_NAMES.get_name(NamesOperator::IsBigger),
+            Self::Gt      => SOUL_NAMES.get_name(NamesOperator::IsBiggerEquals),
+            Self::Add     => SOUL_NAMES.get_name(NamesOperator::Addition),
+            Self::Sub     => SOUL_NAMES.get_name(NamesOperator::Subtract),
+            Self::Mul     => SOUL_NAMES.get_name(NamesOperator::Multiple),
+            Self::Div     => SOUL_NAMES.get_name(NamesOperator::Divide),
+            Self::Mod     => SOUL_NAMES.get_name(NamesOperator::Modulo),
+            Self::Pow     => SOUL_NAMES.get_name(NamesOperator::Power),
+            Self::Root    => SOUL_NAMES.get_name(NamesOperator::Root),
+            Self::Log     => SOUL_NAMES.get_name(NamesOperator::Logarithm),
+            Self::BitOr   => SOUL_NAMES.get_name(NamesOperator::BitWiseOr),
+            Self::BitAnd  => SOUL_NAMES.get_name(NamesOperator::BitWiseAnd),
+            Self::BitXor  => SOUL_NAMES.get_name(NamesOperator::BitWiseXor),
+            Self::LogOr   => SOUL_NAMES.get_name(NamesOperator::LogicalOr),
+            Self::LogAnd  => SOUL_NAMES.get_name(NamesOperator::LogicalAnd),
+            Self::Range   => SOUL_NAMES.get_name(NamesOperator::Range),
+            Self::TypeOf  => SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof),
+            Self::Invalid => "<invalid>",
+        }
+    }
+
+
+}
+
+impl UnaryOperatorKind {
+    pub fn from_str(name: &str) -> Self {
+        match name {
+            "-" => Self::Neg,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Not) => Self::Not,
+            val if val == SOUL_NAMES.get_name(NamesOperator::Increment) => Self::Increment{before_var: true},
+            val if val == SOUL_NAMES.get_name(NamesOperator::Decrement) => Self::Decrement{before_var: true},
+            _ => Self::Invalid,
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            Self::Invalid => "<invalid>",
+            Self::Neg => "-",
+            Self::Not => "!",
+            Self::Increment{..} => "++",
+            Self::Decrement{..} => "--",
+        }
+    }
+}
 
 
 

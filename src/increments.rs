@@ -1,8 +1,8 @@
 use hsoul::subfile_tree::SubFileTree;
 use itertools::Itertools;
 use threadpool::ThreadPool;
-use std::{fs::{write, File}, process::exit, time::SystemTime};
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{source_reader::source_reader::{read_source_file}, step_interfaces::{i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
+use std::{env, fs::{write, File}, process::exit, time::SystemTime};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
 use crate::{run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
 
@@ -25,7 +25,7 @@ pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time
     };
 
     let main_file_path = Path::new(&run_options.file_path);
-    let result = parse_file(run_options.clone(), sub_files, main_file_path, logger.clone(), time_logs.clone());
+    let result = parse_file(run_options.clone(), main_file_path, logger.clone(), time_logs.clone());
     if let Err(err) = result {
 
         let (mut reader, _) = get_file_reader(Path::new(&run_options.file_path))
@@ -50,17 +50,15 @@ fn parse_sub_files(
     let (sender, reciever) = channel();
 
     let subfiles = subfiles_tree.get_all_file_paths();
-    let possible_tree = Some(subfiles_tree.clone());
     for file in subfiles.iter() {
         let file = format!("{}.soul", file.to_string_lossy());
         let sender = sender.clone();
         let run_option = run_options.clone();
         
-        let tree = possible_tree.clone();
         let log = logger.clone();
         let t_log = time_logs.clone();
         pool.execute(move || {
-            let result = parse_file(run_option, tree, Path::new(&file), log, t_log);
+            let result = parse_file(run_option, Path::new(&file), log, t_log);
             sender.send((result, file)).expect("channel receiver should be alive");
         });
     }
@@ -97,7 +95,6 @@ fn parse_sub_files(
 
 fn parse_file(
     run_options: Arc<RunOptions>, 
-    subfiles_tree: Option<Arc<SubFileTree>>, 
     file_path: &Path, 
     logger: Arc<Logger>, 
     time_logs: Arc<Mutex<TimeLogs>>
@@ -116,6 +113,9 @@ fn parse_file(
     
     let tokenize_response = tokenizer(source_response, &info)
         .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while tokenizing file", err))?;
+
+    let parser_reponse = parser(tokenize_response, &info)
+        .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while parsersing file", err))?;
 
     todo!()
 }
@@ -207,7 +207,40 @@ pub fn tokenizer<'a>(source_file: SourceFileResponse, info: &RunStepsInfo<'a>) -
     Ok(token_stream)
 }
 
+pub fn parser<'a>(token_response: TokenizeResonse, info: &RunStepsInfo<'a>) -> Result<ParserResponse> {
+    
+    let start = Instant::now(); 
 
+    let absulute_path = env::current_dir().unwrap().join(info.run_options.file_path.clone());
+
+    let parse_response = parse(token_response)?;
+    if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
+        info.time_logs
+            .lock().unwrap()
+            .push(&info.current_path, "parser time", start.elapsed());
+    }
+
+    if info.run_options.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
+        let start = Instant::now(); 
+        let file_path = format!("{}/steps/parserAST.soulc", info.run_options.output_dir.to_string_lossy());
+        let scopes_file_path = format!("{}/steps/parserScopes.soulc", info.run_options.output_dir.to_string_lossy());
+
+        write(file_path, parse_response.tree.to_pretty_string())
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+
+        write(scopes_file_path, parse_response.scopes.to_pretty_string())
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+        
+        if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
+            info.time_logs
+                .lock().unwrap()
+                .push(&info.current_path, "parser showOutput time", start.elapsed());
+        }
+    }
+    
+
+    Ok(parse_response)
+}
 
 
 
