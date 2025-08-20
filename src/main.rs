@@ -2,13 +2,15 @@ extern crate soul_lang_rust;
 
 use colored::Colorize;
 use std::{io::stderr, process::exit, result, sync::{Arc, Mutex}, time::Instant};
-use soul_lang_rust::{run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::{logger::{Logger, DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
+use soul_lang_rust::{increments::parse_increment, run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::{logger::{Logger, DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
 
 fn main() {
     let (run_options, logger, time_logs) = init();
  
     let timer = Instant::now();
     let error_count = 0; // temp dummy
+
+    parse_increment(&run_options, &logger, &time_logs);
 
     log_times(time_logs, &run_options, &logger);
 

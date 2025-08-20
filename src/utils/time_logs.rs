@@ -12,7 +12,7 @@ impl TimeLogs {
         Self { times: HashMap::new(), max_key_len: 0}
     }
 
-    pub fn push_time<S: Into<String>>(&mut self, key: &String, description: S, time: Duration) {
+    pub fn push<S: Into<String>>(&mut self, key: &String, description: S, time: Duration) {
         let time_store = match self.times.get_mut(key) {
             Some(val) => val,
             None => {
