@@ -260,6 +260,10 @@ fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
     const ARRAY_END: &str = "]";
     const ARRAY_EMPTY: &str = "[]";
     
+    fn err_out_of_bounds(stream: &TokenStream) -> FromStreamError {
+        new_from_stream_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing array", FromStreamErrorKind::IsNotOfType)
+    }
+
     if stream.current_text() == ARRAY_EMPTY || stream.peek().is_some_and(|token| token.text == ARRAY_END) {
         return Literal::new_array(Vec::new(), &stream.current_span())
             .map_err(|err| FromStreamError{ err, kind: FromStreamErrorKind::IsOfType});
@@ -269,22 +273,16 @@ fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
         return Err(new_from_stream_error(SoulErrorKind::UnexpectedToken, stream.current_span(), "array should start with '['", FromStreamErrorKind::IsNotOfType));
     }
 
+    if stream.peek_is("for") {
+
+        return Literal::new_array(get_array_filler(stream, scopes)?, &stream.current_span())
+            .map_err(|err| FromStreamError{err, kind: FromStreamErrorKind::IsOfType});
+    }
 
     let mut literals = Vec::new();
     while stream.next().is_some() {
 
-        let begin_i = stream.current_index();
-        let literal = match inner_from_stream(stream, scopes) {
-            Ok(val) => val,
-            Err(err) => {
-                if err.kind == FromStreamErrorKind::IsNotOfType {
-                    stream.go_to_index(begin_i);
-                }
-                
-                return Err(err);
-            }
-        };
-
+        let literal = inner_from_stream(stream, scopes)?;
 
         if literals.last().is_some_and(|lit| !literal.are_compatible(lit)) {
             return Err(new_from_stream_error(
@@ -303,7 +301,7 @@ fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
 
         if stream.current_text() == ARRAY_END {
             return Literal::new_array(literals, &stream.current_span())
-                .map_err(|err| FromStreamError { err, kind: FromStreamErrorKind::IsOfType });
+                .map_err(|err| FromStreamError{err, kind: FromStreamErrorKind::IsOfType});
         }
         else if stream.current_text() != "," {
             return Err(new_from_stream_error(
@@ -315,7 +313,80 @@ fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
         }
     }
 
-    return Err(new_from_stream_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing array", FromStreamErrorKind::IsNotOfType));
+    return Err(err_out_of_bounds(stream));
+}
+
+fn get_array_filler(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Vec<Literal>, FromStreamError> {
+    fn err_out_of_bounds(stream: &TokenStream) -> FromStreamError {
+        new_from_stream_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing array", FromStreamErrorKind::IsNotOfType)
+    }
+    
+    if stream.next_multiple(2).is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.peek_is("in") {
+        return Err(new_from_stream_error(
+            SoulErrorKind::InvalidInContext, 
+            stream.current_span(), 
+            "Literal arrayFiller can not have 'in'", 
+            FromStreamErrorKind::IsNotOfType,
+        ))
+    }
+
+    let literal = inner_from_stream(stream, scopes)?;
+    let amount = match literal {
+        Literal::Int(num) => {
+            if num < 0 {
+                return Err(new_from_stream_error(
+                    SoulErrorKind::WrongType, 
+                    stream.current_span(), 
+                    "Literal ArrayFillers element length can not be negative", 
+                    FromStreamErrorKind::IsOfType,
+                ));
+            }
+            num as u64
+        },
+        Literal::Uint(num) => num as u64,
+        _ => return Err(new_from_stream_error(
+            SoulErrorKind::WrongType, 
+            stream.current_span(), 
+            format!("Literal ArrayFillers element length has to be interger or unsigned interger is '{}'", literal.get_literal_type().type_to_string()), 
+            FromStreamErrorKind::IsOfType,
+        ))
+    };
+    
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    if stream.current_text() != "=>" {
+        return Err(new_from_stream_error(
+            SoulErrorKind::WrongType, 
+            stream.current_span(), 
+            format!("token: '{}' should be '=>'", stream.current_text(), ), 
+            FromStreamErrorKind::IsOfType,
+        ))
+    }
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let literal = inner_from_stream(stream, scopes)?;
+    Ok(vec![literal; amount as usize])
 }
 
 fn get_char(token: &Token) -> Result<Literal, FromStreamError> {

@@ -11,18 +11,14 @@ pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time
 
     let has_sub_tree = !run_options.sub_tree_path.as_os_str().is_empty();
 
-    let sub_files = if has_sub_tree {
+    if has_sub_tree {
         
         let files = get_sub_files(run_options)
             .map_err(|err| logger.exit_error(&err, DEFAULT_LOG_OPTIONS))
             .unwrap();
 
         parse_sub_files(run_options.clone(), files.clone(), logger, time_logs);
-        Some(files)
     }
-    else {
-        None
-    };
 
     let main_file_path = Path::new(&run_options.file_path);
     let result = parse_file(run_options.clone(), main_file_path, logger.clone(), time_logs.clone());

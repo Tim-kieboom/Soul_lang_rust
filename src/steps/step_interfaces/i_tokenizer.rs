@@ -105,6 +105,15 @@ impl TokenStream {
         self.next_multiple(1)
     }
 
+    pub fn next_if(&mut self, text: &str) -> Option<&Token> {
+        if self.current_text() == text {
+            self.next_multiple(1)
+        }
+        else {
+            Some(self.current())
+        }
+    }
+
     pub fn peek(&self) -> Option<&Token> {
         self.peek_multiple(1)
     }

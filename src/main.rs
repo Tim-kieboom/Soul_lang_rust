@@ -8,11 +8,11 @@ fn main() {
     let (run_options, logger, time_logs) = init();
  
     let timer = Instant::now();
-    let error_count = 0; // temp dummy
-
+    
     parse_increment(&run_options, &logger, &time_logs);
-
+    
     log_times(time_logs, &run_options, &logger);
+    let error_count = 0; // temp dummy
 
     if run_options.show_times.contains(ShowTimes::SHOW_TOTAL) {
         logger.info(format!("Total time: {}", format_duration(timer.elapsed())), DEFAULT_LOG_OPTIONS);    

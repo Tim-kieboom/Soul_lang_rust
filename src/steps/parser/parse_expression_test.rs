@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use ordered_float::OrderedFloat;
 
-use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Array, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{FunctionCall}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder, ScopeKind, Variable}}, i_tokenizer::{Token, TokenStream}}}};
+use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Array, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{FunctionCall}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder, ScopeKind, Variable}}, i_tokenizer::{Token, TokenStream}}}};
 
 fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
     let mut line_number = 0;
@@ -136,6 +136,16 @@ fn test_complex_literal() {
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
         ExpressionKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_0".into()), LiteralType::Array(Box::new(LiteralType::Int))))
+    );
+
+    // should get turn by literal into '[12, 12, 12]'
+    stream = stream_from_strs(&["[", "for", "3", "=>", "12", "]", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExpressionKind::Literal(Literal::ProgramMemmory(Ident("__soul_mem_1".into()), LiteralType::Array(Box::new(LiteralType::Int))))
     );
 
     stream = stream_from_strs(&[

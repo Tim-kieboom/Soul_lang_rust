@@ -1,5 +1,5 @@
 use crate::errors::soul_error::{Result, SoulSpan};
-use crate::steps::parser::parse_statment::get_statment;
+use crate::steps::parser::statment::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeBuilder;
 use crate::steps::step_interfaces::{i_parser::parser_response::ParserResponse, i_tokenizer::TokenizeResonse};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, BlockBuilder};

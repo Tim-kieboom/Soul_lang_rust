@@ -93,7 +93,11 @@ impl Logger {
     }
 
     pub fn with_file_path(path: &PathBuf, mode: LogMode, level: LogLevel) -> io::Result<Self> {
-        let file = OpenOptions::new().append(true).create(true).open(path)?;
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(path)?;
+        
         Ok(Self {
             level,
             mode,

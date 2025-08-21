@@ -354,6 +354,45 @@ fn test_mixed_named_unnamed_tuple_fails() {
     assert_eq_show_diff!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType);
 }
 
+#[test]
+fn test_literal_array_filler() {
+    let mut stream = stream_from_strs(&["[", "for", "12", "=>", "1", "]"]);
+    let mut scopes = dummy_scopes();
+    let result = Literal::from_stream(&mut stream, &mut scopes)
+        .inspect_err(|err| panic!("{}", err.to_err_message().join("\n"))).unwrap();
+
+    assert_eq_show_diff!(result, Literal::Array { ty: LiteralType::Int, values: vec![Literal::Int(1); 12] });
+
+    stream = stream_from_strs(&["[", "for", "12", "=>", "\"foo\"", "]"]);
+    let result = Literal::from_stream(&mut stream, &mut scopes)
+        .inspect_err(|err| panic!("{}", err.to_err_message().join("\n"))).unwrap();
+
+    assert_eq_show_diff!(result, Literal::Array { ty: LiteralType::Str, values: vec![Literal::Str("foo".into()); 12] });
+
+    let mut stream = stream_from_strs(&["[", "for", "i", "in", "12", "=>", "1", "]"]);
+    let mut scopes = dummy_scopes();
+    let result = Literal::from_stream(&mut stream, &mut scopes);
+    assert!(result.is_err());
+    assert_eq!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType, "{}", result.unwrap_err().to_err_message().join("\n"));
+
+    let mut stream = stream_from_strs(&["[", "for", "-12", "=>", "1", "]"]);
+    let mut scopes = dummy_scopes();
+    let result = Literal::from_stream(&mut stream, &mut scopes);
+    assert!(result.is_err());
+    assert_eq!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType, "{}", result.unwrap_err().to_err_message().join("\n"));
+
+    let mut stream = stream_from_strs(&["[", "for", "1.2", "=>", "1", "]"]);
+    let mut scopes = dummy_scopes();
+    let result = Literal::from_stream(&mut stream, &mut scopes);
+    assert!(result.is_err());
+    assert_eq!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType, "{}", result.unwrap_err().to_err_message().join("\n"));
+
+    let mut stream = stream_from_strs(&["[", "for", "12", "=>", "funcNotLiteral", "(", ")", "]"]);
+    let mut scopes = dummy_scopes();
+    let result = Literal::from_stream(&mut stream, &mut scopes);
+    assert!(result.is_err());
+    assert_eq!(result.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::WrongType, "{}", result.unwrap_err().to_err_message().join("\n"));
+}
 
 
 

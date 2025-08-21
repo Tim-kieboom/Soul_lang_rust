@@ -1,5 +1,5 @@
-pub mod parse_expression;
-pub mod parse_statment;
+pub mod expression;
+pub mod statment;
 pub mod literal;
 pub mod parser;
 

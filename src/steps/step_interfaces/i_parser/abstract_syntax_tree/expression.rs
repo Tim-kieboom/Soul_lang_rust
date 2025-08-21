@@ -384,7 +384,39 @@ impl BinaryOperatorKind {
         }
     }
 
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            BinaryOperatorKind::Invalid => 0,
+            
+            BinaryOperatorKind::Range |
+            BinaryOperatorKind::LogAnd |
+            BinaryOperatorKind::LogOr => 1,
 
+            BinaryOperatorKind::BitAnd |
+            BinaryOperatorKind::BitOr |
+            BinaryOperatorKind::BitXor => 2,
+
+            BinaryOperatorKind::Eq |
+            BinaryOperatorKind::NotEq => 3,
+
+            BinaryOperatorKind::Lt |
+            BinaryOperatorKind::Gt |
+            BinaryOperatorKind::Le |
+            BinaryOperatorKind::Ge => 4,
+
+            BinaryOperatorKind::Sub |
+            BinaryOperatorKind::Add => 5,
+            
+            BinaryOperatorKind::Mul |
+            BinaryOperatorKind::Div |
+            BinaryOperatorKind::Mod => 6,
+
+            BinaryOperatorKind::Log |
+            BinaryOperatorKind::Pow |
+            BinaryOperatorKind::Root |
+            BinaryOperatorKind::TypeOf => 7,
+        }
+    }
 }
 
 impl UnaryOperatorKind {
@@ -405,6 +437,16 @@ impl UnaryOperatorKind {
             Self::Not => "!",
             Self::Increment{..} => "++",
             Self::Decrement{..} => "--",
+        }
+    }
+
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            UnaryOperatorKind::Invalid => 0,
+            UnaryOperatorKind::Neg |
+            UnaryOperatorKind::Not => 8,
+            UnaryOperatorKind::Increment{..} |
+            UnaryOperatorKind::Decrement{..} => 9,
         }
     }
 }
