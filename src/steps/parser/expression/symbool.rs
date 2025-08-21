@@ -2,10 +2,47 @@ use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abst
 
 pub type Symbool = Spanned<SymboolKind>;
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum SymboolKind {
     BinaryOperator(BinaryOperatorKind),
     UnaryOperator(UnaryOperatorKind),
     Bracket(Bracket),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Operator {
+    Binary(BinaryOperatorKind),
+    Unary(UnaryOperatorKind),
+}
+
+impl Operator {
+    pub fn from_str(text: &str) -> Option<Self> {
+        let bin = BinaryOperatorKind::from_str(text);
+        if bin != BinaryOperatorKind::Invalid {
+            return Some(Operator::Binary(bin));
+        }
+
+        let unary = UnaryOperatorKind::from_str(text);
+        if unary != UnaryOperatorKind::Invalid {
+            return Some(Operator::Unary(unary));
+        }
+
+        None
+    }
+
+    pub fn to_symbool(&self, span: SoulSpan) -> Symbool {
+        match self.clone() {
+            Operator::Binary(binary_operator_kind) => Symbool::new(SymboolKind::BinaryOperator(binary_operator_kind), span),
+            Operator::Unary(unary_operator_kind) => Symbool::new(SymboolKind::UnaryOperator(unary_operator_kind), span),
+        }
+    }
+
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            Operator::Binary(binary_operator_kind) => binary_operator_kind.get_precedence(),
+            Operator::Unary(unary_operator_kind) => unary_operator_kind.get_precedence(),
+        }
+    }
 }
 
 impl Symbool {
@@ -54,6 +91,7 @@ impl SymboolKind {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Bracket {
     RoundOpen,
     RoundClose,

@@ -386,6 +386,14 @@ fn get_array_filler(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<V
     }
 
     let literal = inner_from_stream(stream, scopes)?;
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+    
+    if stream.current_text() != "]" {
+        return Err(new_from_stream_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token '{}' should be ']'", stream.current_text()), FromStreamErrorKind::IsOfType))
+    }
+
     Ok(vec![literal; amount as usize])
 }
 
