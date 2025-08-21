@@ -5,7 +5,7 @@ use crate::steps::step_interfaces::{i_parser::parser_response::ParserResponse, i
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, BlockBuilder};
 
 
-pub fn parse(tokens: TokenizeResonse) -> Result<ParserResponse> {
+pub fn parse_ast(tokens: TokenizeResonse) -> Result<ParserResponse> {
     let mut stream = tokens.stream;
     let mut scopes = ScopeBuilder::new();
 

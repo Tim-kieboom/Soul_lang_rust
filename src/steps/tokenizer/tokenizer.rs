@@ -114,12 +114,14 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             
             let possible_lifetime = if text.len() > 2 {&text[text.len()-2..]} else {&text};
             if text.chars().nth_back(1) == Some('\'') && text.len() > 2 {
-                let first = &text[..text.len()-2];
+                let mut first = &text[..text.len()-2];
+                first = if first == ";" {"\n"} else {first};
                 tokens.push(Token::new(first.to_string(), SoulSpan::new(file_line.line_number, line_offset, first.len())));
                 text = &possible_lifetime;
             }
             
             if *text != "\\" {
+                text = if *text == ";" {&"\n"} else {text};
                 tokens.push(Token::new(text.to_string(), SoulSpan::new(file_line.line_number, line_offset, text.len())));
                 
                 line_offset = add_offset_range(line_offset + text.len(), &mut gaps, line_offset);
@@ -153,11 +155,13 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
 
             let possible_lifetime = if split.len() > 2 {&split[split.len()-2..]} else {&split};
             if split.chars().nth_back(1) == Some('\'') && split.len() > 2 {
-                let first = &split[..split.len()-2];
+                let mut first = &split[..split.len()-2];
+                first = if first == ";" {"\n"} else {first};
                 tokens.push(Token::new(first.to_string(), SoulSpan::new(file_line.line_number, line_offset, first.len())));
                 split = &possible_lifetime;
             }
 
+            split = if split == ";" {"\n"} else {split};
             tokens.push(Token::new(
                 split.to_string(),
                 SoulSpan::new(file_line.line_number, line_offset, split.len())

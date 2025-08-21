@@ -87,7 +87,7 @@ impl SoulSpan {
 
 pub type Result<T> = result::Result<T, SoulError>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SoulError {
     kinds: Vec<SoulErrorKind>,
     spans: Vec<SoulSpan>,

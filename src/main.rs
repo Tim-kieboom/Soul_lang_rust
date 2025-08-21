@@ -39,7 +39,7 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {
         Ok(val) => Arc::new(val),
         Err(err) => {
             eprintln!("{}", err.red()); 
-            eprintln!("build interrupted because of 1 error");
+            eprintln!("{}", "build interrupted because of 1 error".red());
             exit(1)
         },
     };

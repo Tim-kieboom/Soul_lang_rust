@@ -1,13 +1,14 @@
-use crate::soul_names::{NamesOtherKeyWords, SOUL_NAMES};
+use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExpressionKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statement>> {
     
-    if stream.current_text() == "\n" || stream.current_text() == ";" {
+    if stream.current_text() == "\n" {
 
         if stream.next().is_none() {
             return Ok(None)
@@ -35,68 +36,266 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
         stream.next();
         return Ok(None);
     }
+
+
+    let statment = match get_statment_type(stream)? {
+        StatmentType::Expression => {
+            let expression = todo!("get function");
+            Statement::from_expression(expression)
+        }
+
+        StatmentType::Variable => {
+            todo!("get function")
+        },
+        StatmentType::Assignment => {
+            todo!("get function")
+        },
+
+        StatmentType::UsePath => {
+            todo!("get function");
+            return Ok(None);
+        },
+        StatmentType::UseType => {
+            todo!("get function");
+            return Ok(None);
+        },
+        StatmentType::UseImplement => {
+            todo!("get function")
+        },
+        StatmentType::Function => {
+            todo!("get function")
+        },
+        StatmentType::FunctionCall => {
+            let expression = todo!("get function");
+            Statement::from_expression(expression)
+        }
+
+        StatmentType::Class => {
+            todo!("get function")
+        },
+        StatmentType::Trait => {
+            todo!("get function")
+        },
+        StatmentType::Struct => {
+            todo!("get function")
+        },
+
+        StatmentType::Enum => {
+            todo!("get function")
+        },
+        StatmentType::Union => {
+            todo!("get function")
+        },
+        StatmentType::TypeEnum => {
+            todo!("get function");
+            return Ok(None);
+        },
+
+        StatmentType::If => {
+            let expression = todo!("get function");
+            Statement::from_expression(expression)
+        },
+        StatmentType::Else => {
+            todo!("get function");
+            return Ok(None);
+        },
+        StatmentType::For => {
+            let expression = todo!("get function");
+            Statement::from_expression(expression)
+        },
+        StatmentType::While => {
+            let expression = todo!("get function");
+            Statement::from_expression(expression)
+        },
+        StatmentType::Match => {
+            let expression = todo!("get function");
+            Statement::from_expression(expression)
+        },
+
+        StatmentType::Type => {
+            todo!("get function");
+            return Ok(None);
+        },
+        StatmentType::ReturnLike => {
+            let expression = todo!("get function");
+            Statement::from_expression(expression)
+        },
+        StatmentType::CloseBlock => Statement::new(StatementKind::CloseBlock, stream.current_span()),
+    };
+
+    Ok(Some(statment))
+}
+
+fn get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
+    let begin_i = stream.current_index();
+    let result = inner_get_statment_type(stream);
+    stream.go_to_index(begin_i);
+    result
+}
+
+fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
     
+
+    let mut modifier = Modifier::Default;
     match stream.current_text() {
+        val if Modifier::from_str(val) != Modifier::Default => {
+            modifier = Modifier::from_str(stream.current_text());
+        }
+
+
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
-            todo!()
+            return Ok(StatmentType::ReturnLike)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::BreakLoop) => {
-            todo!()
+            return Ok(StatmentType::ReturnLike)
         }
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Fall) => {
-            todo!()
+            return Ok(StatmentType::ReturnLike)
         },
-        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => {
-            todo!()
-        },
-        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => {
-            todo!()
-        },
+
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
-            todo!()
+            return Ok(StatmentType::If)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
-            todo!()
+            return Ok(StatmentType::Else)
+        },
+
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::MatchCase) => {
+            return Ok(StatmentType::Match)
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => {
+            return Ok(StatmentType::While)
+        },
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => {
+            return Ok(StatmentType::For)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Type) => {
-            todo!()
+            return Ok(StatmentType::Type)
         },
+
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
-            todo!()
+            return Ok(StatmentType::Trait)
         },
+
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
-            todo!()
+            return Ok(StatmentType::TypeEnum)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
-            todo!()
+            return Ok(StatmentType::Union)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
-            todo!()
+            return Ok(StatmentType::Enum)
         },
+
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
-            todo!()
+            return Ok(StatmentType::Struct)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
-            todo!()
+            return Ok(StatmentType::Class)
         },
-        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::SwitchCase) => {
-            todo!()
-        },
+
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Use) => {
-            todo!()
+            return todo!("get_use_type")
         },
         _ => (),
     }
+    
 
-    if stream.current_text() == "(" {
-        todo!("variable")
+    let mut has_round_bracket = false;
+    let mut consecutive_parts = 0;
+    loop {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream));
+        }
+
+        if let Ok(_) = check_name(stream.current_text()) {
+            consecutive_parts += 1;
+        }
+
+        match stream.current_text().as_str() {
+            "(" => {
+                has_round_bracket = true;
+                traverse_bracket_stack(stream, "(", ")")?;
+            },
+            "<" => {
+                traverse_bracket_stack(stream, "<", ">")?;
+            },
+            "[" => {
+                traverse_bracket_stack(stream, "[", "]")?;
+            },
+            "\n" => {
+                if stream.peek_is(".") {
+                    () //field or methode on next line
+                }
+                else if has_round_bracket {
+                    if stream.peek_is("{") || stream.peek_is("where") {
+                        return Ok(StatmentType::Function)
+                    }
+                    else {
+                        return Ok(StatmentType::FunctionCall)
+                    }
+                }
+                else {
+                    return Ok(StatmentType::Expression)
+                }
+            },
+            "=" => {
+                if !stream.next_till("\n") {
+                    return Err(err_out_of_bounds(stream))
+                }
+                
+                if modifier != Modifier::Default {
+                    return Ok(StatmentType::Variable)
+                }
+
+                if consecutive_parts > 1 {
+                    return Ok(StatmentType::Variable)
+                }
+                else {
+                    return Ok(StatmentType::Assignment)
+                }
+            }
+            ":=" => {
+                if !stream.next_till("\n") {
+                    return Err(err_out_of_bounds(stream))
+                }
+                return Ok(StatmentType::Variable)
+            },
+            "{" => {
+                return Ok(StatmentType::Function)
+            },
+            _ => (),
+        }
     }
-
-
-
-    todo!()
 }
 
+fn traverse_bracket_stack(stream: &mut TokenStream, open: &str, close: &str) -> Result<()> {
+    let mut stack = 0;
+    loop {
+
+        if stream.current_text() == open {
+            stack += 1
+        } 
+        else if stream.current_text() == close {
+            
+            if stack == 0 {
+                return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "')' with out '('"))
+            }
+
+            stack -= 1
+        }
+
+        if stack == 0 {
+            break Ok(())
+        }
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+    }
+}
+    
 fn get_scope<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Block>> {
     let mut block_builder = BlockBuilder::new(stream.current_span());
 
@@ -118,17 +317,6 @@ fn get_scope<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -21,8 +21,8 @@ main() i32
     
     str hello = "hello"
     str world = "world"
-    println(std.fmt.FormatArgs("",std.fmt.Arg(hello)," ",std.fmt.Arg(world),""))
-    str format = std.fmt.FormatArgs("",std.fmt.Arg(1),", string")
+    println(std::fmt::FormatArgs("",std::fmt::Arg(hello)," ",std::fmt::Arg(world),""))
+    str format = std::fmt::FormatArgs("",std::fmt::Arg(1),", string")
     i32 result = sum(1, 2)
 }"#;
 

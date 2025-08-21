@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, TupleElement, Unary, UnwrapVariable, While}, function::{Constructor, Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod}, generic::GenericParameter, literal::Literal, object::{Class, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, Implement, StatementKind}}, scope_builder::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Constructor, Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod}, generic::GenericParameter, literal::Literal, object::{Class, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, Implement, StatementKind}}, scope_builder::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -307,15 +307,6 @@ impl ToString for NamedTuple {
     }
 }
 
-impl ToString for TupleElement {
-    fn to_string(&self) -> String {
-        match self {
-            TupleElement::Element{value} => value.to_string(),
-            TupleElement::Optional{name, value} => format!("{} = {}", name, value.to_string()),
-        }
-    }
-}
-
 impl PrettyString for LambdaBody {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         match self {
@@ -367,7 +358,9 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::ConstRef(spanned) => format!("@{}", spanned.to_pretty(tab, is_last)),
 
             ExpressionKind::Block(block) => block.to_pretty(tab, is_last),
+            ExpressionKind::ReturnLike(return_like) => format!("{} {} >> free[{}]", return_like.kind.to_str(), return_like.value.as_ref().map(|el| el.to_string()).unwrap_or(String::new()), return_like.delete_list.iter().join(",")),
             ExpressionKind::ExpressionGroup(expression_group) => expression_group.to_string(),
+            ExpressionKind::Variable(var_name) => var_name.name.0.clone(),
         }
     }
 }
@@ -398,25 +391,25 @@ impl ToString for ExpressionKind {
             ExpressionKind::Empty => "<empty>".into(),
             ExpressionKind::Default => "<default>".into(),
             ExpressionKind::Literal(literal) => literal.to_string(),
-
+            
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_string(), index.to_string()),
             ExpressionKind::Lambda(Lambda{signature, arguments, body:_, capture:_}) => format!("{}({})", signature.mode.get_lambda_name(), arguments.to_string()),
             ExpressionKind::Constructor(Constructor{calle, generics, arguments}) => format!("{}{}({})", calle.to_string(), generics.iter().map(|el| el.to_string()).join(","), arguments.to_string()),
             ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generics.iter().map(|el| el.to_string()).join(","), arguments.to_string()),
-
+            
             ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_string(), field.name),
             ExpressionKind::StaticField(StaticField{object, field}) => format!("{}.{}", object.to_string(), field.name),
             ExpressionKind::StaticMethod(StaticMethod{callee, name, generics, arguments}) => format!("{}.{}{}({})", callee.node.to_string(), name, generics.iter().map(|el| el.to_string()).join(","), arguments.to_string()),
-
+            
             ExpressionKind::UnwrapVariable(unwrap_variable) => match unwrap_variable {
                 UnwrapVariable::Variable(variable_name) => variable_name.name.0.clone(),
                 UnwrapVariable::MultiVariable{vars, ty, initializer} => format!("{}({}){}", ty.to_string(), vars.iter().map(|el| &el.name.0).join(","), initializer.as_ref().map(|el| format!(" = {}", el.to_string())).unwrap_or(String::new()) ),
             },
             ExpressionKind::ExternalExpression(ExternalExpression{path, expr}) => format!("{}::{}", path.0, expr.to_string()),
-
+            
             ExpressionKind::Unary(Unary{operator, expression}) => format!("{}{}", operator.node.to_str(), expression.to_string()),
             ExpressionKind::Binary(Binary{left, operator, right}) => format!("{}{}{}", left.to_string(), operator.node.to_str(), right.to_string()),
-
+            
             ExpressionKind::If(If{condition, body:_, else_branchs}) => format!(
                 "if {}, {}", 
                 condition.to_string(),
@@ -429,13 +422,15 @@ impl ToString for ExpressionKind {
             ExpressionKind::While(While{condition, body:_}) => format!("while {}", condition.as_ref().map(|el| el.node.to_string()).unwrap_or("true".into())),
             ExpressionKind::Match(Match{condition, cases:_}) => format!("match {}", condition.to_string()),
             ExpressionKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!("{} ? {} : {}", condition.to_string(), if_branch.to_string(), else_branch.to_string()),
-
+            
             ExpressionKind::Deref(spanned) => format!("*{}", spanned.to_string()),
             ExpressionKind::MutRef(spanned) => format!("&{}", spanned.to_string()),
             ExpressionKind::ConstRef(spanned) => format!("@{}", spanned.to_string()),
-
+            
             ExpressionKind::Block(_) => "BlockExpression".into(),
+            ExpressionKind::ReturnLike(return_like) => format!("{} {} >> free[{}]", return_like.kind.to_str(), return_like.value.as_ref().map(|el| el.to_string()).unwrap_or(String::new()), return_like.delete_list.iter().join(",")),
             ExpressionKind::ExpressionGroup(expression_group) => expression_group.to_string(),
+            ExpressionKind::Variable(var_name) => var_name.name.0.clone(),
         }
     }
 }
@@ -484,9 +479,9 @@ impl ToString for Literal {
     }
 }
 
-fn indent(level: usize) -> String {
-    "    ".repeat(level)
-}
+// fn indent(level: usize) -> String {
+//     "    ".repeat(level)
+// }
 
 fn tree_prefix(tab: usize, is_last: bool) -> String {
     if tab == 0 {
@@ -504,19 +499,19 @@ fn tree_prefix(tab: usize, is_last: bool) -> String {
     prefix
 }
 
-fn tree_next_line_prefix(indent: usize) -> String {
-    if indent == 0 {
-        return String::new();
-    }
+// fn tree_next_line_prefix(indent: usize) -> String {
+//     if indent == 0 {
+//         return String::new();
+//     }
 
-    let mut prefix = String::new();
+//     let mut prefix = String::new();
 
-    for _ in 0..indent {
-        prefix.push_str("│   ");
-    }
+//     for _ in 0..indent {
+//         prefix.push_str("│   ");
+//     }
 
-    prefix
-}
+//     prefix
+// }
 
 
 

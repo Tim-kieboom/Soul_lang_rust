@@ -47,12 +47,6 @@ pub struct StaticMethod {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Argument {
-    pub name: Option<Ident>,
-    pub expression: BoxExpression,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FunctionSignature {
     pub name: Ident,
     pub callee: Option<Spanned<FunctionCallee>>,

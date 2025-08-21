@@ -1,5 +1,5 @@
-use std::slice::Iter;
-use crate::errors::soul_error::SoulSpan;
+use std::{ops::Index, slice::Iter};
+use crate::{errors::soul_error::SoulSpan};
 
 #[derive(Debug, Clone)]
 pub struct TokenizeResonse {
@@ -113,6 +113,19 @@ impl TokenStream {
         self.peek().is_some_and(|token| token.text == text)
     }
 
+    ///keeps calling '.next()' till 'token.text == text' or reached end
+    pub fn next_till(&mut self, text: &str) -> bool {
+        loop {
+            if self.current_text() == text {
+                return true
+            }
+
+            if self.next().is_none() {
+                return false
+            }
+        }
+    }
+
     pub fn is_valid_index(&self, index: usize) -> bool {
         index < self.tokens.len()
     }
@@ -179,7 +192,13 @@ impl TokenStream {
     }
 }
 
+impl Index<usize> for TokenStream {
+    type Output = Token;
 
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.tokens[index]
+    }
+}
 
 
 

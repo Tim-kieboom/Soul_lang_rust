@@ -13,7 +13,8 @@ const SHOULD_BE: &str = r#"sum ( i32 one , i32 two ) i32
  print ( "hello world\n" ) 
  string := [ "1" , "2" , "3" , "4" , "5" , "6" ] 
  i32 result := sum ( 1 , 2 ) 
- result += 1 ; result -= - 1 
+ result += 1 
+ result -= - 1 
  result = 2 
  println ( result ) 
  if true { 

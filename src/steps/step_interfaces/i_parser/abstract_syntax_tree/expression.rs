@@ -22,6 +22,7 @@ pub enum ExpressionKind {
     StaticField(StaticField),
     StaticMethod(StaticMethod),
 
+    Variable(VariableName),
     UnwrapVariable(UnwrapVariable),
     ExternalExpression(ExternalExpression),
 
@@ -39,7 +40,24 @@ pub enum ExpressionKind {
     ConstRef(BoxExpression),
 
     Block(Block),
+    ReturnLike(ReturnLike),
     ExpressionGroup(ExpressionGroup),
+}
+
+pub type DeleteList = Vec<String>;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReturnLike {
+    pub value: Option<BoxExpression>,
+    pub delete_list: DeleteList,
+    pub kind: ReturnKind
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ReturnKind {
+    Return,
+    Fall,
+    Break,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -73,13 +91,7 @@ pub struct NamedTuple {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tuple {
-    pub values: Vec<TupleElement>
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TupleElement {
-    Element{value: Expression},
-    Optional{name: Ident, value: Expression}
+    pub values: Vec<Expression>
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -227,9 +239,35 @@ pub enum BinaryOperatorKind {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Ident(pub String);
 
+impl Tuple {
+    pub fn from<const N: usize>(arr: [Expression; N]) -> Self {
+        Self { values: arr.to_vec() }
+    } 
+}
+
+impl Binary {
+    pub fn new(left: Expression, operator: BinaryOperator, right: Expression) -> Self {
+        Self { left: Box::new(left), operator, right: Box::new(right) }
+    }
+}
+
+impl ReturnKind {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            ReturnKind::Return => "return",
+            ReturnKind::Fall => "fall",
+            ReturnKind::Break => "break",
+        }
+    }
+}
+
 impl Ident {
     pub fn new<T: Into<String>>(ident: T) -> Self {
         Self(ident.into())
+    }
+
+    pub fn empty() -> Self {
+        Self(String::new())
     }
 }
 
@@ -239,10 +277,29 @@ impl Display for Ident {
     }
 }
 
+impl Into<Ident> for String {
+    fn into(self) -> Ident {
+        Ident::new(self)
+    }
+}
+
+impl Into<Ident> for &String {
+    fn into(self) -> Ident {
+        Ident::new(self)
+    }
+} 
+
+impl Into<Ident> for &str {
+    fn into(self) -> Ident {
+        Ident::new(self)
+    }
+} 
+
 impl ExpressionKind {
 
     pub fn get_variant_name(&self) -> &'static str {
         match self {
+            ExpressionKind::ReturnLike(return_kind) => return_kind.kind.to_str(),
             ExpressionKind::If(_) => "If",
             ExpressionKind::For(_) => "For",
             ExpressionKind::While(_) => "While",
@@ -259,6 +316,7 @@ impl ExpressionKind {
             ExpressionKind::Ternary(_) => "Ternary",
             ExpressionKind::Literal(_) => "Literal",
             ExpressionKind::ConstRef(_) => "ConstRef",
+            ExpressionKind::Variable(_) => "Variable",
             ExpressionKind::Constructor(_) => "Constructor",
             ExpressionKind::AccessField(_) => "AccessField",
             ExpressionKind::StaticField(_) => "StaticField",
@@ -351,6 +409,15 @@ impl UnaryOperatorKind {
     }
 }
 
+#[macro_export]
+macro_rules! soul_tuple {
+    () => (
+        Tuple{values: vec![]}
+    );
+    ($($x:expr),+ $(,)?) => (
+        Tuple{values: vec![$($x),+]}
+    );
+}
 
 
 

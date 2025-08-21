@@ -9,9 +9,11 @@ pub enum StatementKind {
     Expression(Expression),
 
     Variable(VariableName),
+    Assignment(Assignment),
     
     Function(Function),
-    
+    Implement(Implement),
+
     Class(Class),
     Struct(Struct),
     Trait(Trait),
@@ -19,10 +21,40 @@ pub enum StatementKind {
     Enum(Enum),
     Union(Union),
     TypeEnum(TypeEnum),
-    
-    Assignment(Assignment),
-    Implement(Implement),
 
+    CloseBlock,
+}
+
+pub enum StatmentType {
+    Expression,
+
+    Variable,
+    Assignment,
+
+    UsePath,
+    UseType,
+    UseImplement,
+
+    Function,
+    FunctionCall,
+
+    Class,
+    Trait,
+    Struct,
+
+    Enum,
+    Union,
+    TypeEnum,
+
+    If,
+    For,
+    Else,
+    While,
+    Match,
+
+    Type,
+
+    ReturnLike,
     CloseBlock,
 }
 
@@ -46,8 +78,12 @@ pub struct Block {
 }
 
 impl Statement {
-    pub fn new_expression(kind: ExpressionKind, span: SoulSpan) -> Self {
-        Statement::new(StatementKind::Expression(Expression::new(kind, span)), span)
+    pub fn new_expression(expr: ExpressionKind, span: SoulSpan) -> Self {
+        Statement::new(StatementKind::Expression(Expression::new(expr, span)), span)
+    }
+
+    pub fn from_expression(expr: Expression) -> Self {
+        Statement::new(StatementKind::Expression(Expression::new(expr.node, expr.span)), expr.span)
     }
 }
 

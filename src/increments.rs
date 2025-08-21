@@ -1,10 +1,10 @@
-use hsoul::subfile_tree::SubFileTree;
 use itertools::Itertools;
 use threadpool::ThreadPool;
-use std::{env, fs::{write, File}, process::exit, time::SystemTime};
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
+use hsoul::subfile_tree::SubFileTree;
+use std::{fs::{write, File}, process::exit, time::SystemTime};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
 use crate::{run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
 
 
 pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_logs: &Arc<Mutex<TimeLogs>>) {
@@ -211,9 +211,7 @@ pub fn parser<'a>(token_response: TokenizeResonse, info: &RunStepsInfo<'a>) -> R
     
     let start = Instant::now(); 
 
-    let absulute_path = env::current_dir().unwrap().join(info.run_options.file_path.clone());
-
-    let parse_response = parse(token_response)?;
+    let parse_response = parse_ast(token_response)?;
     if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
         info.time_logs
             .lock().unwrap()
@@ -238,7 +236,6 @@ pub fn parser<'a>(token_response: TokenizeResonse, info: &RunStepsInfo<'a>) -> R
         }
     }
     
-
     Ok(parse_response)
 }
 
