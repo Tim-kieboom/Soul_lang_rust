@@ -97,8 +97,6 @@ pub struct NamedTuple {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Tuple {
-    pub collection_type: Option<SoulType>,
-    pub element_type: Option<SoulType>,
     pub values: Vec<Expression>
 }
 
@@ -462,10 +460,10 @@ impl UnaryOperatorKind {
 #[macro_export]
 macro_rules! soul_tuple {
     () => (
-        Tuple{collection_type: None, element_type: None, values: vec![]}
+        Tuple{values: vec![]}
     );
     ($($x:expr),+ $(,)?) => (
-        Tuple{collection_type: None, element_type: None, values: vec![$($x),+]}
+        Tuple{values: vec![$($x),+]}
     );
 }
 

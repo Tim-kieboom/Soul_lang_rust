@@ -34,7 +34,6 @@ pub struct FunctionCall {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Constructor {
     pub calle: SoulType,
-    pub generics: Vec<SoulType>,
     pub arguments: NamedTuple,
 }
 

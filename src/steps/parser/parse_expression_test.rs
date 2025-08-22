@@ -580,11 +580,9 @@ fn test_group_expressions() {
     let mut scope = empty_scope();
 
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    
-    let unknown_func = SoulType::from_type_kind(TypeKind::Unknown("func".into()));
 
     let values = vec![
-        Expression::new(ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{collection_type: Some(unknown_func), element_type: None, values: vec![]})), SoulSpan::new(0,1,6)),
+        Expression::new(ExpressionKind::FunctionCall(FunctionCall{name: "func".into(), callee: None, generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,1,6)),
         Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
         Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
     ];
@@ -656,7 +654,7 @@ fn test_group_expressions() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone(), collection_type: None, element_type: None}))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone()}))
     );
 
     stream = stream_from_strs(&[
@@ -682,7 +680,7 @@ fn test_group_expressions() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone(), collection_type: None, element_type: None}))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone()}))
     );
 //
 
@@ -706,7 +704,7 @@ fn test_group_expressions() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone() }))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone()}))
     );
 
     stream = stream_from_strs(&[
@@ -729,7 +727,7 @@ fn test_group_expressions() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone() }))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone()}))
     );
 
     stream = stream_from_strs(&[

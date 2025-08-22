@@ -156,12 +156,10 @@ fn convert_expression(
         if let Some(mut group) = try_get_expression_group(stream, scopes)? {
             
             fn is_single_tuple(tuple: &Tuple) -> bool {
-                tuple.collection_type.is_none() && 
-                tuple.element_type.is_none() &&
                 tuple.values.len() == 1
             }
 
-            if let ExpressionGroup::Tuple(tuple) = &mut group.node {
+            if let ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(tuple)) = &mut group.node {
                 
                 if is_single_tuple(tuple) {
                     stacks.expressions.push(mem::take(&mut tuple.values[0]));
@@ -171,7 +169,7 @@ fn convert_expression(
             };
 
             
-            stacks.expressions.push(Expression::new(ExpressionKind::ExpressionGroup(group.node), group.span));
+            stacks.expressions.push(group);
             end_loop(stream, scopes, stacks)?;
             return CONTINUE_LOOP
         }

@@ -331,7 +331,7 @@ impl PrettyString for ExpressionKind {
 
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_pretty(tab + 1, is_last), index.to_pretty(tab + 1, is_last)),
             ExpressionKind::Lambda(Lambda{signature, arguments, body, capture:_}) => format!("{}({}) => {}", signature.mode.get_lambda_name(), arguments.to_string(), body.to_pretty(tab + 1, is_last)),
-            ExpressionKind::Constructor(Constructor{calle, generics, arguments}) => format!("{}{}({})", calle.to_string(), generics.iter().map(|el| el.to_string()).join(","), arguments.to_string()),
+            ExpressionKind::Constructor(Constructor{calle, arguments}) => format!("{}({})", calle.to_string(), arguments.to_string()),
             ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generics.iter().map(|el| el.to_string()).join(","), arguments.to_string()),
 
             ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_pretty(tab + 1, is_last), field.name),
@@ -394,7 +394,7 @@ impl ToString for ExpressionKind {
             
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_string(), index.to_string()),
             ExpressionKind::Lambda(Lambda{signature, arguments, body:_, capture:_}) => format!("{}({})", signature.mode.get_lambda_name(), arguments.to_string()),
-            ExpressionKind::Constructor(Constructor{calle, generics, arguments}) => format!("{}{}({})", calle.to_string(), generics.iter().map(|el| el.to_string()).join(","), arguments.to_string()),
+            ExpressionKind::Constructor(Constructor{calle, arguments}) => format!("{}({})", calle.to_string(), arguments.to_string()),
             ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generics.iter().map(|el| el.to_string()).join(","), arguments.to_string()),
             
             ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_string(), field.name),

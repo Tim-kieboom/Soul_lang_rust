@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use crate::steps::parser::expression::parse_expression::get_expression;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{Constructor, FunctionCall};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Array, Expression, ExpressionGroup, Ident, NamedTuple, Tuple};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Array, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple};
 
-pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Spanned<ExpressionGroup>>> {
+pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Expression>> {
     let group_i = stream.current_index();
     
     let collection_type = SoulType::try_from_stream(stream, scopes)?;
@@ -24,24 +24,47 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
         let values = parse_named_group(stream, scopes)?;
         let span = stream[group_i].span.combine(&stream.current_span());
 
-        Ok(Some(Spanned::new(
-            ExpressionGroup::NamedTuple(NamedTuple{values}), 
-            span,
-        )))
+        if let Some(ctor_ty) = collection_type {
+
+            Ok(Some(Expression::new(
+                ExpressionKind::Constructor(Constructor{calle: ctor_ty, arguments: NamedTuple{values}}),
+                span
+            )))
+        }
+        else {
+            Ok(Some(Expression::new(
+                ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values})), 
+                span,
+            )))
+        }
     }
     else {
         let (element_type, values) = parse_tuple_or_array(stream, scopes)?;
         let span = stream[group_i].span.combine(&stream.current_span());
 
         if is_array {
-            Ok(Some(Spanned::new(
-                ExpressionGroup::Array(Array{collection_type, element_type, values}),
+            Ok(Some(Expression::new(
+                ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{collection_type, element_type, values})),
                 span,
             )))
         }
+        else if let Some(func_ty) = collection_type {
+            let mut generics = Vec::with_capacity(func_ty.generics.len()); 
+            for kind in func_ty.generics  {
+                match kind {
+                    TypeGenericKind::Type(soul_type) => generics.push(soul_type),
+                    TypeGenericKind::Lifetime(_) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, span, "function call can not have lifetimes in generic")),
+                }
+            }
+
+            Ok(Some(Expression::new(
+                ExpressionKind::FunctionCall(FunctionCall{name: func_ty.base.to_name_string().into(), callee: None, generics, arguments: Tuple{values}}),
+                span
+            )))
+        }
         else {
-            Ok(Some(Spanned::new(
-                ExpressionGroup::Tuple(Tuple{collection_type, element_type, values}),
+            Ok(Some(Expression::new(
+                ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values})),
                 span,
             )))
         }
