@@ -61,7 +61,7 @@ pub fn convert_bracket_expression(
             stacks.expressions.push(expr);
         }
 
-        stacks.expressions.pop();
+        stacks.symbools.pop();
     }
 
     Ok(())

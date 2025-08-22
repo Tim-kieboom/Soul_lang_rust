@@ -257,32 +257,32 @@ fn test_simple_binary() {
 
 #[test]
 fn test_multiple_binary() {
-    // let mut stream = stream_from_strs(&["1", "+", "2", "*", "3", "\n"]);
-    // let mut scope = empty_scope();
-    // let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    // assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message());
+    let mut stream = stream_from_strs(&["1", "+", "2", "*", "3", "\n"]);
+    let mut scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
-    // // 1 + (2 * 3)
-    // let should_be = Expression::new(ExprKind::Binary(BinaryExpr::new(
-    //         Expression::new(ExprKind::Literal(Literal::Int(1)), SoulSpan::new(0,0,1)),
-    //         BinOp::new(BinOpKind::Add, SoulSpan::new(0,1,1)),
-    //         Expression::new(
-    //             ExprKind::Binary(BinaryExpr::new(
-    //                 Expression::new(ExprKind::Literal(Literal::Int(2)), SoulSpan::new(0,2,1)),
-    //                 BinOp::new(BinOpKind::Mul, SoulSpan::new(0,3,1)),
-    //                 Expression::new(ExprKind::Literal(Literal::Int(3)), SoulSpan::new(0,4,1)),
-    //             )),
-    //             SoulSpan::new(0,2,3)
-    //         )
-    //     )),
-    //     SoulSpan::new(0,0,5)
-    // );
+    // 1 + (2 * 3)
+    let should_be = Expression::new(ExpressionKind::Binary(Binary::new(
+            Expression::new(ExpressionKind::Literal(Literal::Int(1)), SoulSpan::new(0,0,1)),
+            BinaryOperator::new(BinaryOperatorKind::Add, SoulSpan::new(0,1,1)),
+            Expression::new(
+                ExpressionKind::Binary(Binary::new(
+                    Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,2,1)),
+                    BinaryOperator::new(BinaryOperatorKind::Mul, SoulSpan::new(0,3,1)),
+                    Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,4,1)),
+                )),
+                SoulSpan::new(0,2,3)
+            )
+        )),
+        SoulSpan::new(0,0,5)
+    );
 
-    // let expr = result.unwrap();
-    // assert_eq_show_diff!(
-    //     expr,
-    //     should_be
-    // );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(
+        expr,
+        should_be
+    );
 
     let mut scope = empty_scope();
     let mut stream = stream_from_strs(&["(","1", "+", "2", ")", "*", "3", "\n"]);

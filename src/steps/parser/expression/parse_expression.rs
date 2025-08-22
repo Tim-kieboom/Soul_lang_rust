@@ -1,10 +1,12 @@
 use crate::steps::step_interfaces::i_tokenizer::Token;
-use crate::steps::parser::expression::literal::{add_literal, try_get_literal};
+use crate::steps::step_interfaces::i_parser::scope_builder::ProgramMemmory;
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::parser::expression::symbool::{Bracket, Operator, Symbool, SymboolKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
-use crate::steps::parser::expression::merge_expression::{get_binary_expression, get_unary_expression, merge_expressions};
+use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinaryOperatorKind, Expression, ExpressionKind, Ternary, UnaryOperatorKind};
 
 
@@ -98,6 +100,7 @@ fn convert_expression(
     end_tokens: &[&str],
     options: &mut ExprOptions,
 ) -> Result<()> {
+    const CLOSED_A_BRACKET: bool = true;
     
     stream.next_multiple(-1);
 
@@ -111,8 +114,18 @@ fn convert_expression(
             break
         }
 
-        let literal_begin = stream.current_index();
-        let possible_literal = try_get_literal(stream, scopes, stacks, options)?;
+        let mut literal_begin = stream.current_index();
+        let possible_literal = match Literal::try_from_stream(stream, scopes)? {
+            Some(literal) => Some(literal),
+            None => {
+                if traverse_brackets(stream, stacks, options) == CLOSED_A_BRACKET {
+                    convert_bracket_expression(stream, stacks)?;
+                } 
+                
+                literal_begin = stream.current_index();
+                Literal::try_from_stream(stream, scopes)?
+            },
+        };
 
         if let Some(literal) = possible_literal {
             let literal_span = stream[literal_begin].span.combine(&stream.current_span());
@@ -121,10 +134,11 @@ fn convert_expression(
             end_loop(stream, scopes, stacks)?;
             continue;
         }
-        else {
 
+
+        if is_end_token(stream.current(), end_tokens, options) {
+            break
         }
-        
         if let Some(operator) = get_operator(stream, stacks) {
             try_add_operator(stacks, operator, stream.current_span())?;
         }
@@ -141,8 +155,26 @@ fn convert_expression(
     Ok(())
 }
 
+pub fn add_literal(
+    literal: Literal, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks,
+    span: SoulSpan,
+) {
+    let expression = match &literal {
+        Literal::Tuple{..} |
+        Literal::Array{..} |
+        Literal::NamedTuple{..} => {
+            let literal_type = literal.get_literal_type();
+            let id = scopes.global_literals.insert(literal);
+            let name = ProgramMemmory::to_program_memory_name(&id);
+            ExpressionKind::Literal(Literal::ProgramMemmory(name, literal_type))
+        },
+        _ => ExpressionKind::Literal(literal),
+    };
 
-
+    stacks.expressions.push(Expression::new(expression, span));
+}
 
 fn try_add_operator(
     stacks: &mut ExpressionStacks,
