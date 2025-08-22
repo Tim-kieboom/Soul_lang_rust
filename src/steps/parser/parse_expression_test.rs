@@ -340,6 +340,7 @@ fn test_multiple_binary() {
 }
 
 // # Unary
+
 #[test]
 fn test_simple_unary() {
     let mut stream = stream_from_strs(&["!", "true", "\n"]);

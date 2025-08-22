@@ -4,6 +4,9 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::{parser::expression::{parse_expression::ExpressionStacks, symbool::SymboolKind}, step_interfaces::i_parser::abstract_syntax_tree::expression::{Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionKind, Unary, UnaryOperator, UnaryOperatorKind}}};
 
+const BRACKET_OPEN: SymboolKind = SymboolKind::Bracket(Bracket::RoundOpen);
+const BRACKET_CLOSE: SymboolKind = SymboolKind::Bracket(Bracket::RoundClose);
+
 pub fn merge_expressions(stacks: &mut ExpressionStacks, current_precedence: u8) -> Result<()> {
     
     fn last_precedence(stacks: &mut ExpressionStacks) -> u8 {
@@ -37,7 +40,7 @@ pub fn convert_bracket_expression(
         return convert_single(stream, stacks);
     }    
 
-    if !stacks.symbools.pop().is_some_and(|symbool| symbool.node == SymboolKind::Bracket(Bracket::RoundClose)) {
+    if !stacks.symbools.pop().is_some_and(|symbool| symbool.node == BRACKET_CLOSE) {
         return Err(new_soul_error(
             SoulErrorKind::UnmatchedParenthesis, 
             stream.peek_multiple(-1).unwrap_or(stream.current()).span, 
@@ -46,7 +49,7 @@ pub fn convert_bracket_expression(
     }
 
     while let Some(symbool) = stacks.symbools.last() {
-        if symbool.node == SymboolKind::Bracket(Bracket::RoundOpen) {
+        if symbool.node == BRACKET_OPEN {
             break;
         }
 
@@ -76,7 +79,7 @@ fn convert_single(
 
     let mut second = stacks.symbools.pop();
 
-    if let Some(SymboolKind::Bracket(Bracket::RoundClose)) = first {
+    if first != Some(BRACKET_CLOSE) {
         return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression first symbool is not ')'"));
     }
     
@@ -94,7 +97,7 @@ fn convert_single(
         SymboolKind::Bracket(_) => (),
     }
 
-    if !second.is_some_and(|symbool| symbool.node == SymboolKind::Bracket(Bracket::RoundOpen)) {
+    if !second.is_some_and(|symbool| symbool.node == BRACKET_OPEN) {
         return Err(new_soul_error(
             SoulErrorKind::InternalError, 
             stream.current_span(), 
