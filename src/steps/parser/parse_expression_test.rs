@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use ordered_float::OrderedFloat;
 
-use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Array, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::FunctionCall, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::{TypeKind}}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
+use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Array, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{Constructor, FunctionCall}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
 
 fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
     let mut line_number = 0;
@@ -787,6 +787,21 @@ fn test_function_call() {
     let expr = result.unwrap();
     assert_eq_show_diff!(expr, should_be);
 
+    stream = stream_from_strs(&["Type", "(", "field", ":", "1", ",", "field2", ":", "2", ")", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
+    let should_be = Expression::new(
+        ExpressionKind::Constructor(Constructor{
+            calle: SoulType::from_type_kind(TypeKind::Unknown("Type".into())),
+            arguments: NamedTuple{values: HashMap::from([
+                ("field".into(), Expression::new(ExpressionKind::Literal(Literal::Int(1)), SoulSpan::new(0,11,1))),
+                ("field2".into(), Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,20,1))),
+            ])},
+        }),
+        SoulSpan::new(0,0,22)
+    );
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
 
     stream = stream_from_strs(&["sum", "()", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
@@ -798,26 +813,7 @@ fn test_function_call() {
             generics: vec![], 
             arguments: soul_tuple![],
         }),
-        SoulSpan::new(0,0,5)
-    );
-    let expr = result.unwrap();
-    assert_eq_show_diff!(expr, should_be);
-
-
-    stream = stream_from_strs(&["sum", "(", "one", "=", "1", ",", "two", "=", "2", ")", "\n"]);
-    let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
-    let should_be = Expression::new(
-        ExpressionKind::FunctionCall(FunctionCall{
-            callee: None, 
-            name: Ident("sum".into()), 
-            generics: vec![], 
-            arguments: soul_tuple![
-                Expression::new(ExpressionKind::Literal(Literal::Int(1)), SoulSpan::new(0,8,1)),
-                Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,14,1)),
-            ],
-        }),
-        SoulSpan::new(0,0,16)
+        SoulSpan::new(0,3,2)
     );
     let expr = result.unwrap();
     assert_eq_show_diff!(expr, should_be);
@@ -834,7 +830,7 @@ fn test_function_call() {
     stream = stream_from_strs(&["sum", "(", "1", ",", "name", ":", ")", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
-    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::ArgError, "{}", not_closing_fn.unwrap_err().to_err_message().join("\n"));
+    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::InvalidInContext, "{}", not_closing_fn.unwrap_err().to_err_message().join("\n"));
 }
 
 
