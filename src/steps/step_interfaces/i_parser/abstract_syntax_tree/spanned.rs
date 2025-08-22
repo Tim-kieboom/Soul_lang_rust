@@ -13,8 +13,14 @@ impl<T> Spanned<T> {
     } 
 }
 
-
-
+impl<T> Default for Spanned<T>
+where 
+    T: Default
+{
+    fn default() -> Self {
+        Self { node: Default::default(), span: SoulSpan::new(0,0,0) }
+    }
+}
 
 
 

@@ -1,25 +1,32 @@
+use std::mem;
+
+use crate::soul_names::{check_name, could_be_name};
 use crate::steps::step_interfaces::i_tokenizer::Token;
 use crate::steps::step_interfaces::i_parser::scope_builder::ProgramMemmory;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
+use crate::steps::parser::expression::parse_expression_groups::try_get_expression_group;
 use crate::steps::parser::expression::symbool::{Bracket, Operator, Symbool, SymboolKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinaryOperatorKind, Expression, ExpressionKind, Ternary, UnaryOperatorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
 
 pub struct ExprOptions {
-    pub is_assign_var: bool,
-    pub open_bracket_stack: i64,
+    /// `make 0 unless you are in a bracket`
+    /// ```
+    /// if '(' {round_bracket_stack += 1}
+    /// else if ')' {round_bracket_stack -= 1}
+    /// ```
+    pub round_bracket_stack: i64,
 }
 
 impl Default for ExprOptions {
     fn default() -> Self {
         Self { 
-            is_assign_var: false,
-            open_bracket_stack: 0,
+            round_bracket_stack: 0,
         }
     }
 }
@@ -29,31 +36,39 @@ pub fn get_expression(
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str],
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, end_tokens, ExprOptions::default())
+    inner_get_expression(stream, scopes, &mut ExprOptions::default(), end_tokens)
 }
 
 pub fn get_expression_options(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
+    mut options: ExprOptions,
     end_tokens: &[&str],
-    options: ExprOptions,
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, end_tokens, options)
+    inner_get_expression(stream, scopes, &mut options, end_tokens)
 }
 
 fn inner_get_expression(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
+    options: &mut ExprOptions,
     end_tokens: &[&str],
-    mut options: ExprOptions,
 ) -> Result<Expression> {
     let begin_i = stream.current_index();
     let mut stacks = ExpressionStacks::new();
 
-    let result = convert_expression(stream, scopes, &mut stacks, end_tokens, &mut options);
-    if result.is_err() {
-        stream.go_to_index(begin_i);
-        return Err(result.unwrap_err());
+    stream.next_multiple(-1);
+
+    loop {   
+        
+        match convert_expression(stream, scopes, &mut stacks, end_tokens, options) {
+            Ok(true) => break,
+            Ok(false) => continue,
+            Err(err) => { 
+                stream.go_to_index(begin_i);
+                return Err(err)
+            },
+        }
     }
 
     while let Some(operator) = stacks.symbools.pop() {
@@ -72,7 +87,7 @@ fn inner_get_expression(
     if stacks.expressions.is_empty() {
         debug_assert!(
             stacks.symbools.is_empty(), 
-            "Internal error: in get_expression() stacks.node_stack.is_empty() but node_stack is not"
+            "stacks.symbools should be made empty before this"
         );
 
         return Ok(Expression::new(ExpressionKind::Empty, stream[begin_i].span));
@@ -99,60 +114,111 @@ fn convert_expression(
     stacks: &mut ExpressionStacks, 
     end_tokens: &[&str],
     options: &mut ExprOptions,
-) -> Result<()> {
+) -> Result<bool> {
     const CLOSED_A_BRACKET: bool = true;
-    
-    stream.next_multiple(-1);
+    const BREAK_LOOP: Result<bool> = Ok(true);
+    const CONTINUE_LOOP: Result<bool> = Ok(false);
 
-    loop {
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
 
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream))
+    if is_end_token(stream.current(), end_tokens, options) {
+        return BREAK_LOOP
+    }
+
+    let literal_begin = stream.current_index();
+    let possible_literal = Literal::try_from_stream(stream, scopes)?;
+
+    if let Some(literal) = possible_literal {
+        let literal_span = stream[literal_begin].span.combine(&stream.current_span());
+        
+        add_literal(literal, scopes, stacks, literal_span);
+        end_loop(stream, scopes, stacks)?;
+        return CONTINUE_LOOP
+    }
+    else {
+        if let CLOSED_A_BRACKET = traverse_brackets(stream, stacks, options) {
+            convert_bracket_expression(stream, stacks)?;
         }
-
-        if is_end_token(stream.current(), end_tokens, options) {
-            break
-        }
-
-        let mut literal_begin = stream.current_index();
-        let possible_literal = match Literal::try_from_stream(stream, scopes)? {
-            Some(literal) => Some(literal),
-            None => {
-                if traverse_brackets(stream, stacks, options) == CLOSED_A_BRACKET {
-                    convert_bracket_expression(stream, stacks)?;
-                } 
-                
-                literal_begin = stream.current_index();
-                Literal::try_from_stream(stream, scopes)?
-            },
-        };
-
-        if let Some(literal) = possible_literal {
-            let literal_span = stream[literal_begin].span.combine(&stream.current_span());
-            
+        
+        let bracket_literal_begin = stream.current_index();
+        if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
+            let literal_span = stream[bracket_literal_begin].span.combine(&stream.current_span());
+        
             add_literal(literal, scopes, stacks, literal_span);
             end_loop(stream, scopes, stacks)?;
-            continue;
+            return CONTINUE_LOOP
         }
 
+        let begin_i = stream.current_index();
+        stream.go_to_index(literal_begin);
+        if let Some(mut group) = try_get_expression_group(stream, scopes)? {
+            
+            fn is_single_tuple(tuple: &Tuple) -> bool {
+                tuple.collection_type.is_none() && 
+                tuple.element_type.is_none() &&
+                tuple.values.len() == 1
+            }
 
-        if is_end_token(stream.current(), end_tokens, options) {
-            break
-        }
-        if let Some(operator) = get_operator(stream, stacks) {
-            try_add_operator(stacks, operator, stream.current_span())?;
+            if let ExpressionGroup::Tuple(tuple) = &mut group.node {
+                
+                if is_single_tuple(tuple) {
+                    stacks.expressions.push(mem::take(&mut tuple.values[0]));
+                    end_loop(stream, scopes, stacks)?;
+                    return CONTINUE_LOOP
+                }
+            };
+
+            
+            stacks.expressions.push(Expression::new(ExpressionKind::ExpressionGroup(group.node), group.span));
+            end_loop(stream, scopes, stacks)?;
+            return CONTINUE_LOOP
         }
         else {
-
-            return Err(new_soul_error(
-                SoulErrorKind::UnexpectedToken,
-                stream.current_span(), 
-                format!("token: '{}' is not valid expression", stream.current_text())
-            ));
+            stream.go_to_index(begin_i);
         }
     }
 
-    Ok(())
+
+    if is_end_token(stream.current(), end_tokens, options) {
+        return BREAK_LOOP
+    }
+    else if let Some(operator) = get_operator(stream, stacks) {
+        try_add_operator(stacks, operator, stream.current_span())?;
+    }
+    else if could_be_variable(stream) {
+        
+        let variable = VariableName::new(stream.current_text());
+        stacks.expressions.push(
+            Expression::new(
+                ExpressionKind::Variable(variable), 
+                stream.current_span()
+            )
+        );
+    }
+    else {
+
+        let current = stream.current_text();
+
+        if could_be_name(current) {
+
+            check_name(current)
+                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        }
+
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken,
+            stream.current_span(), 
+            format!("token: '{}' is not valid expression", stream.current_text())
+        ));
+    }
+
+    return CONTINUE_LOOP
+}
+
+fn could_be_variable(stream: &mut TokenStream) -> bool {
+    check_name(stream.current_text()).is_ok()
 }
 
 pub fn add_literal(
@@ -294,14 +360,14 @@ pub fn traverse_brackets(
         stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundOpen), stream.current_span()));
         stream.next();
         
-        options.open_bracket_stack += 1;
+        options.round_bracket_stack += 1;
     } 
     else if token == ")" {
         stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundClose), stream.current_span()));
         stream.next();
 
-        options.open_bracket_stack -= 1;
-        if options.open_bracket_stack >= 0 {
+        options.round_bracket_stack -= 1;
+        if options.round_bracket_stack >= 0 {
             return true;
         }
     }
@@ -326,7 +392,7 @@ fn is_end_token(token: &Token, end_tokens: &[&str], options: &ExprOptions) -> bo
 
 }
 fn is_valid_end_token(token: &Token, options: &ExprOptions) -> bool {
-    token.text != ")" || (token.text == ")" && options.open_bracket_stack == 0)
+    token.text != ")" || (token.text == ")" && options.round_bracket_stack == 0)
 }
 
 #[derive(Default)]

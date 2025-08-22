@@ -122,6 +122,10 @@ impl TokenStream {
         self.peek().is_some_and(|token| token.text == text)
     }
 
+    pub fn peek_multiple_is(&self, steps: i64, text: &str) -> bool {
+        self.peek_multiple(steps).is_some_and(|token| token.text == text)
+    }
+
     ///keeps calling '.next()' till 'token.text == text' or reached end
     pub fn next_till(&mut self, text: &str) -> bool {
         loop {

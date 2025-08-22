@@ -22,31 +22,34 @@ static ILLIGAL_SYMBOOLS: Lazy<HashSet<char>> = Lazy::new(|| HashSet::from([
     '`', '~',
 ]));
 
+pub fn could_be_name(name: &str) -> bool {
+    if name.len() == 1 && ILLIGAL_SYMBOOLS.get(&name.chars().next().unwrap_or('!')).is_some() {
+        return false
+    }
+
+    const SEPARATE_SYMBOOLS: &[char] = &['(', '{', '[', ']', '}', ')', ',', '.', '\'', '\"'];
+    if name.chars().any(|char| SEPARATE_SYMBOOLS.iter().any(|el| el == &char)) {
+        return false
+    }
+
+    true
+}
+
 pub fn check_name_allow_types(name: &str) -> result::Result<(), String> {
-  
-    if name.starts_with("__") {
-        return Err(format!("name: '{}' can not begin wiht '__' ", name));
-    }
-
-    if let Some(illigal_name) = SOUL_NAMES.type_less_iligal_names.get(name) {
-        return Err(format!("name: '{}' is illigal", illigal_name));
-    }
-
-    if let Some(illigal_symbool) = name.chars().find(|ch| ILLIGAL_SYMBOOLS.contains(ch)) {
-        return Err(format!("name: '{}', has illigal symbool '{}'", name, illigal_symbool));
-    }
-
-    Ok(())
+    inner_check_name(name, &SOUL_NAMES.type_less_iligal_names)
 }
 
 pub fn check_name(name: &str) -> result::Result<(), String> {
-  
+    inner_check_name(name, &SOUL_NAMES.iligal_names)
+}
+
+fn inner_check_name(name: &str, iligal_names: &HashSet<&str>) -> result::Result<(), String> {
     if name.starts_with("__") {
         return Err(format!("name: '{}' can not begin wiht '__' ", name));
     }
 
-    if let Some(illigal_name) = SOUL_NAMES.iligal_names.get(name) {
-        return Err(format!("name: '{}' is illigal", illigal_name));
+    if let Some(illigal_name) = iligal_names.get(name) {
+        return Err(format!("name: '{}' is an illigal name", illigal_name));
     }
 
     if let Some(illigal_symbool) = name.chars().find(|ch| ILLIGAL_SYMBOOLS.contains(ch)) {
@@ -220,6 +223,8 @@ impl SoulNames {
         iligal_names.insert(operator_names.get(&NamesOperator::Logarithm).expect("log not impl"));
         iligal_names.extend(type_modifiers.iter().map(|(_, str)| *str));
         iligal_names.extend(other_keywords_names.iter().map(|(_, str)| *str));
+        iligal_names.extend(["1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+        
         let type_less_iligal_names = iligal_names.clone();
         iligal_names.extend(internal_types.iter().map(|(_, str)| *str));
 

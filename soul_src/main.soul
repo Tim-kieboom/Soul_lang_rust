@@ -1,6 +1,25 @@
 main() {
     Println("")
+
+    arr := List[f32: 1, 2, 3, 4, 5]
+    arr = List[f32: for 10 => 0]
+    map := HashMap[(str, bool):
+        ("hello", true),
+        ("world", false),
+    ]
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

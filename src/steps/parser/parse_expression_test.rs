@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use ordered_float::OrderedFloat;
 
-use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Array, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{FunctionCall}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder, ScopeKind, Variable}}, i_tokenizer::{Token, TokenStream}}}};
+use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{Array, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::FunctionCall, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::{TypeKind}}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
 
 fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
     let mut line_number = 0;
@@ -490,24 +490,15 @@ fn test_simple_variable() {
     let mut stream = stream_from_strs(&[var_name, "\n"]);
     let mut scope = empty_scope();
     
-    let var = Variable{
-        name: Ident(var_name.into()), 
-        ty: SoulType::from_type_kind(TypeKind::Bool), 
-        initialize_value: Some(Expression::new(ExpressionKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0,var_name.len()))),
-    };
-    scope.insert(var_name.into(), ScopeKind::Variable(var));
-
-    
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "{:#?}", result.unwrap_err());
     
-    let should_be = ExpressionKind::Variable(VariableName{name: Ident::new(var_name)});
+    let should_be = ExpressionKind::Variable(VariableName::new(var_name));
 
     assert_eq_show_diff!(
         result.as_ref().unwrap().node, 
         should_be
     );
-
 
     stream = stream_from_strs(&["!", var_name, "\n"]);
 
@@ -515,47 +506,9 @@ fn test_simple_variable() {
     assert!(result.is_ok(), "{:#?}", result.unwrap_err());
     
     let should_be = ExpressionKind::Unary(Unary{
-            operator: UnaryOperator::new(UnaryOperatorKind::Not, SoulSpan::new(0,0,1)),
-            expression: Box::new(Expression::new(ExpressionKind::Variable(VariableName{name: Ident::new(var_name)}), SoulSpan::new(0,1,var_name.len()))),
-        });
-
-    assert_eq_show_diff!(
-        result.as_ref().unwrap().node, 
-        should_be
-    );
-
-    let var_name2 = "var2";
-    stream = stream_from_strs(&[var_name2, "\n"]);
-    let var2 = Variable{
-        name: Ident(var_name2.into()), 
-        ty: SoulType::from_type_kind(TypeKind::Bool), 
-        initialize_value: None,
-    };
-    scope.insert(var_name2.into(), ScopeKind::Variable(var2));
-
-    let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_err());
-    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::InvalidInContext);
-}
-
-#[test]
-fn test_variable_literal_retention() {
-    let var_name = "var";
-    let mut stream = stream_from_strs(&[var_name, "\n"]);
-    let mut scope = empty_scope();
-    
-    let var = Variable{
-        name: Ident(var_name.into()), 
-        ty: SoulType::from_type_kind(TypeKind::Bool), 
-        initialize_value: Some(Expression::new(ExpressionKind::Literal(Literal::Bool(true)), SoulSpan::new(0,0,var_name.len()))),
-    };
-    scope.insert(var_name.into(), ScopeKind::Variable(var));
-
-    
-    let result = get_expression(&mut stream, &mut scope, &["\n"]);
-    assert!(result.is_ok(), "{:#?}", result.unwrap_err());
-    
-    let should_be = ExpressionKind::Literal(Literal::Bool(true));
+        operator: UnaryOperator::new(UnaryOperatorKind::Not, SoulSpan::new(0,0,1)),
+        expression: Box::new(Expression::new(ExpressionKind::Variable(VariableName::new(var_name)), SoulSpan::new(0,1,var_name.len()))),
+    });
 
     assert_eq_show_diff!(
         result.as_ref().unwrap().node, 
@@ -570,7 +523,7 @@ fn test_group_expressions() {
 // 
     let mut stream = stream_from_strs(&[
         "[",
-            "func", "(", ")", ",",
+            "var", ",",
             "2", ",",
             "3",
         "]", "\n"
@@ -580,7 +533,58 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = vec![
-        Expression::new(ExpressionKind::FunctionCall(FunctionCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: Tuple::from([])}), SoulSpan::new(0,1,6)),
+        Expression::new(ExpressionKind::Variable(VariableName::new("var")), SoulSpan::new(0,1,3)),
+        Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,5,1)),
+        Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,7,1)),
+    ];
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{collection_type: None, element_type: None, values: values.clone()}))
+    );
+
+    let mut stream = stream_from_strs(&[
+        "[",
+            "f32", ":",
+            "var", ",",
+            "2", ",",
+            "3",
+        "]", "\n"
+    ]);
+    let mut scope = empty_scope();
+
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let values = vec![
+        Expression::new(ExpressionKind::Variable(VariableName::new("var")), SoulSpan::new(0,5,3)),
+        Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,9,1)),
+        Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,11,1)),
+    ];
+
+    let ty_unkown_f32 = SoulType::from_type_kind(TypeKind::Unknown("f32".into())); 
+
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
+    assert_eq_show_diff!(
+        result.as_ref().unwrap().node,
+        ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{collection_type: None, element_type: Some(ty_unkown_f32.clone()), values: values.clone()}))
+    );
+
+    let mut stream = stream_from_strs(&[
+        "[",
+            "func", "(", ")",  ",",
+            "2", ",",
+            "3",
+        "]", "\n"
+    ]);
+    let mut scope = empty_scope();
+
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    
+    let unknown_func = SoulType::from_type_kind(TypeKind::Unknown("func".into()));
+
+    let values = vec![
+        Expression::new(ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{collection_type: Some(unknown_func), element_type: None, values: vec![]})), SoulSpan::new(0,1,6)),
         Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
         Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
     ];
@@ -593,7 +597,7 @@ fn test_group_expressions() {
 
     let mut stream = stream_from_strs(&[
         "[",
-            "[", "func", "(", ")", ",", "1", "]", ",",
+            "[", "var", ",", "1", "]", ",",
             "[", "2", "]", ",",
             "[", "3", "]",
         "]", "\n"
@@ -606,21 +610,21 @@ fn test_group_expressions() {
         Expression::new(
             ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{
                 values: vec![
-                    Expression::new(ExpressionKind::FunctionCall(FunctionCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,2,6)),
-                    Expression::new(ExpressionKind::Literal(Literal::Int(1)), SoulSpan::new(0,9,1)),
+                    Expression::new(ExpressionKind::Variable(VariableName::new("var")), SoulSpan::new(0,2,3)),
+                    Expression::new(ExpressionKind::Literal(Literal::Int(1)), SoulSpan::new(0,6,1)),
                 ], 
                 collection_type: None, 
                 element_type: None,
             })), 
-            SoulSpan::new(0,1,10),
+            SoulSpan::new(0,1,7),
         ),
         Expression::new(
             ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::Array(Box::new(LiteralType::Int)))),
-            SoulSpan::new(0,14,1),
+            SoulSpan::new(0,9,3),
         ),
         Expression::new(
             ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(1), LiteralType::Array(Box::new(LiteralType::Int)))),
-            SoulSpan::new(0,18,1),
+            SoulSpan::new(0,13,3),
         ),
     ];
 
@@ -634,7 +638,7 @@ fn test_group_expressions() {
 
     stream = stream_from_strs(&[
         "(",
-            "func", "(", ")", ",",
+            "var", ",",
             "2", ",",
             "3",
         ")", "\n"
@@ -644,20 +648,20 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = vec![
-        Expression::new(ExpressionKind::FunctionCall(FunctionCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,1,6)),
-        Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
-        Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,10,1)),
+        Expression::new(ExpressionKind::Variable(VariableName::new("var")), SoulSpan::new(0,1,3)),
+        Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,5,1)),
+        Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,7,1)),
     ];
 
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone()}))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone(), collection_type: None, element_type: None}))
     );
 
     stream = stream_from_strs(&[
         "(",
-            "func", "(", ")", ",",
+            "var",",",
             "2", ",",
             "(", "3", ",", "true", ")",
         ")", "\n"
@@ -667,24 +671,24 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = vec![
-        Expression::new(ExpressionKind::FunctionCall(FunctionCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,1,6)),
-        Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,8,1)),
+        Expression::new(ExpressionKind::Variable(VariableName::new("var")), SoulSpan::new(0,1,3)),
+        Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,5,1)),
         Expression::new(
             ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::Tuple(vec![LiteralType::Int, LiteralType::Bool]))),
-            SoulSpan::new(0,17,1),
+            SoulSpan::new(0,7,8),
         ),
     ];
 
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone()}))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values: values.clone(), collection_type: None, element_type: None}))
     );
 //
 
     stream = stream_from_strs(&[
         "(",
-            "field", ":", "func", "(", ")", ",",
+            "field", ":", "var", ",",
             "field2", ":", "2", ",",
             "field3", ":", "3",
         ")", "\n"
@@ -694,9 +698,9 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = HashMap::from([
-        (Ident("field".into()), Expression::new(ExpressionKind::FunctionCall(FunctionCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,7,6))),
-        (Ident("field2".into()), Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,21,1))),
-        (Ident("field3".into()), Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,30,1))),
+        (Ident("field".into()), Expression::new(ExpressionKind::Variable(VariableName::new("var")), SoulSpan::new(0,7,3))),
+        (Ident("field2".into()), Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,18,1))),
+        (Ident("field3".into()), Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,27,1))),
     ]);
 
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
@@ -707,7 +711,7 @@ fn test_group_expressions() {
 
     stream = stream_from_strs(&[
         "(",
-            "field", ":", "func", "(", ")", ",",
+            "field", ":", "var", ",",
             "field2", ":", "2", ",",
             "field3", ":", "(", "field", ":", "1", ")",
         ")", "\n"
@@ -717,9 +721,9 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = HashMap::from([
-        (Ident("field".into()), Expression::new(ExpressionKind::FunctionCall(FunctionCall{ callee: None, name: Ident("func".into()), generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,7,6))),
-        (Ident("field2".into()), Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,21,1))),
-        (Ident("field3".into()), Expression::new(ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::NamedTuple(BTreeMap::from([(Ident("field".into()), LiteralType::Int)])))), SoulSpan::new(0,38,1))),
+        (Ident("field".into()), Expression::new(ExpressionKind::Variable(VariableName::new("var")), SoulSpan::new(0,7,3))),
+        (Ident("field2".into()), Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,18,1))),
+        (Ident("field3".into()), Expression::new(ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::NamedTuple(BTreeMap::from([(Ident("field".into()), LiteralType::Int)])))), SoulSpan::new(0,27,9))),
     ]);
 
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
@@ -730,7 +734,7 @@ fn test_group_expressions() {
 
     stream = stream_from_strs(&[
         "(",
-            "field", ":", "func", "(", ")", ",",
+            "field", ":", "var", ",",
             "field", ":", "2", ",",
         ")", "\n"
     ]);

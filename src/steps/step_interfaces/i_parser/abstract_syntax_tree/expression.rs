@@ -44,6 +44,12 @@ pub enum ExpressionKind {
     ExpressionGroup(ExpressionGroup),
 }
 
+impl Default for ExpressionKind {
+    fn default() -> Self {
+        Self::Empty
+    }
+} 
+
 pub type DeleteList = Vec<String>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -89,8 +95,10 @@ pub struct NamedTuple {
     pub values: HashMap<Ident, Expression>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Tuple {
+    pub collection_type: Option<SoulType>,
+    pub element_type: Option<SoulType>,
     pub values: Vec<Expression>
 }
 
@@ -239,10 +247,20 @@ pub enum BinaryOperatorKind {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Ident(pub String);
 
-impl Tuple {
-    pub fn from<const N: usize>(arr: [Expression; N]) -> Self {
-        Self { values: arr.to_vec() }
-    } 
+impl VariableName {
+    pub fn new<T: Into<String>>(ident: T) -> Self {
+        Self{name: Ident(ident.into())}
+    }
+}
+
+impl Ident {
+    pub fn new<T: Into<String>>(ident: T) -> Self {
+        Self(ident.into())
+    }
+
+    pub fn empty() -> Self {
+        Self(String::new())
+    }
 }
 
 impl Binary {
@@ -258,16 +276,6 @@ impl ReturnKind {
             ReturnKind::Fall => "fall",
             ReturnKind::Break => "break",
         }
-    }
-}
-
-impl Ident {
-    pub fn new<T: Into<String>>(ident: T) -> Self {
-        Self(ident.into())
-    }
-
-    pub fn empty() -> Self {
-        Self(String::new())
     }
 }
 
@@ -454,10 +462,10 @@ impl UnaryOperatorKind {
 #[macro_export]
 macro_rules! soul_tuple {
     () => (
-        Tuple{values: vec![]}
+        Tuple{collection_type: None, element_type: None, values: vec![]}
     );
     ($($x:expr),+ $(,)?) => (
-        Tuple{values: vec![$($x),+]}
+        Tuple{collection_type: None, element_type: None, values: vec![$($x),+]}
     );
 }
 
