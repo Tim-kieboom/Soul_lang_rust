@@ -77,7 +77,7 @@ impl ScopeBuilder {
 
     pub fn new() -> Self {
         Self { 
-            scopes: Vec::new(), 
+            scopes: vec![InnerScope::<ScopeKind>::new_global()], 
             current: Self::GLOBAL_SCOPE_INDEX, 
             global_literals: ProgramMemmory::new(),
         }

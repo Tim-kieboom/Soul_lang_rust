@@ -3,6 +3,7 @@ use std::num::ParseIntError;
 use std::path::PathBuf;
 use std::result;
 use std::env::Args;
+use std::str::ParseBoolError;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
@@ -23,7 +24,8 @@ pub struct RunOptions {
     pub sub_tree_path: PathBuf,
     pub log_path: Option<PathBuf>,
     pub log_level: LogLevel,
-    pub log_mode: LogMode
+    pub log_mode: LogMode,
+    pub log_colored: bool,
 } 
 
 type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send + Sync + 'static>;
@@ -108,6 +110,15 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
                 Ok(())
             }) as ArgFunc
         ),
+        (
+            "--logColored",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_colored = input.parse()
+                        .map_err(|err: ParseBoolError| err.to_string())?;
+                Ok(())
+            }) as ArgFunc
+        ),
     ])
 });
 
@@ -128,6 +139,7 @@ impl RunOptions {
             log_level: LogLevel::Any,
             log_mode: LogMode::ShowAll,
             log_path: None,
+            log_colored: true,
         };
 
         let mut args = _args.collect::<Vec<_>>();

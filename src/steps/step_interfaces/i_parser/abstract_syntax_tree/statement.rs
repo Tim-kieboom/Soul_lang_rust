@@ -4,6 +4,8 @@ use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abst
 
 pub type Statement = Spanned<StatementKind>;
 
+pub const STATMENT_END_TOKENS: &[&str] = &["\n", "}"];
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum StatementKind {
     Expression(Expression),

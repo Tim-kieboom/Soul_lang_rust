@@ -34,16 +34,14 @@ impl GenericParameter {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeConstraint {
-    Trait(Ident),
-    TypeEnum(Ident),
+    Type(SoulType),
     LiteralTypeEnum(Vec<SoulType>),
 }
 
 impl TypeConstraint {
     pub fn to_string(&self) -> String {
         match self {
-            TypeConstraint::Trait(ident) => ident.0.clone(),
-            TypeConstraint::TypeEnum(ident) => ident.0.clone(),
+            TypeConstraint::Type(ty) => ty.to_string(),
             TypeConstraint::LiteralTypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
         }
     }

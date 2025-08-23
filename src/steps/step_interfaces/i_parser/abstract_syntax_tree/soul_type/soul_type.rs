@@ -20,6 +20,10 @@ impl SoulType {
         Self{ modifier: Modifier::Default, base, wrappers: vec![], generics: vec![] }
     }
 
+    pub fn new_unkown<I: Into<Ident>>(name: I) -> Self {
+        Self{ modifier: Modifier::Default, base: TypeKind::Unknown(name.into()), wrappers: vec![], generics: vec![] }
+    }
+
     pub fn with_wrappers(mut self, wrapper: Vec<TypeWrapper>) -> Self {
         self.wrappers = wrapper;
         self    

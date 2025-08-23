@@ -2,7 +2,7 @@ extern crate soul_lang_rust;
 
 use colored::Colorize;
 use std::{io::stderr, process::exit, result, sync::{Arc, Mutex}, time::Instant};
-use soul_lang_rust::{increments::parse_increment, run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::{logger::{Logger, DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
+use soul_lang_rust::{increments::parse_increment, run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::{logger::{LogOptions, Logger, DEFAULT_LOG_OPTIONS, MUT_DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
 
 fn main() {
     let (run_options, logger, time_logs) = init();
@@ -35,11 +35,26 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {
         },
     };
 
+    unsafe{
+        //changes 'DEFAULT_LOG_OPTIONS' (plz dont use in non single threaded contexts)
+        MUT_DEFAULT_LOG_OPTIONS = LogOptions{colored: run_options.log_colored, ..Default::default()};
+    }
+
     let logger = match get_logger(&run_options) {
         Ok(val) => Arc::new(val),
         Err(err) => {
-            eprintln!("{}", err.red()); 
-            eprintln!("{}", "build interrupted because of 1 error".red());
+            let (mut first, mut second) = (
+                err.white(), 
+                "build interrupted because of 1 error".white()
+            );
+            
+            if DEFAULT_LOG_OPTIONS.colored {
+                first = first.red();
+                second = second.red()
+            }
+            
+            eprintln!("{}", first); 
+            eprintln!("{}", second);
             exit(1)
         },
     };

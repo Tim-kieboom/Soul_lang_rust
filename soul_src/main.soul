@@ -1,16 +1,25 @@
 main() {
-    Println("")
+    Println("hello world")
 
-    arr := List[f32: 1, 2, 3, 4, 5]
-    arr = List[f32: for 10 => 0]
-    map := HashMap[(str, bool):
-        ("hello", true),
-        ("world", false),
-    ]
+    // arr := [f32: 1, 2, 3, 4, 5]
+    // arr = [f32: for 10 => 0]
+    // map := [(str, bool):
+    //     ("hello", true),
+    //     ("world", false),
+    // ]
+
+    // num := sum(1, 2)
+    // num = num.sum(1)
+    Println(f"num == {num}")
 }
 
+sum(int a, int b) int {
+    // return a + b
+}
 
-
+int sum(this, int b) int {
+    // return this + b
+}
 
 
 

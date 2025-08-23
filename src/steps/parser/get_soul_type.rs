@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::check_name_allow_types, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
+use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
 
 impl FromTokenStream<SoulType> for SoulType {
     fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<SoulType>, SoulError> {
@@ -40,7 +40,44 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         ))
     }
 
-    let mut collection_type = SoulType::from_type_kind(TypeKind::Unknown(Ident::new(stream.current_text())));
+    let mut collection_type = if stream.current_text() == SOUL_NAMES.get_name(NamesInternalType::None) {
+        SoulType::from_type_kind(TypeKind::None)
+    }
+    else if stream.peek_is("::") {
+        check_name_allow_types(stream.current_text())
+            .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
+        
+        let mut base = stream.current_text().clone();
+        stream.next();
+        base.push_str("::");
+
+        loop {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream))
+            }
+
+            check_name_allow_types(stream.current_text())
+                .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
+
+            base.push_str(stream.current_text());
+            
+            if !stream.peek_is("::") {
+                break
+            }
+            base.push_str("::");
+            stream.next();
+        }
+
+        SoulType::from_type_kind(TypeKind::Unknown(base.into()))
+    }
+    else {
+        check_name_allow_types(stream.current_text())
+            .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
+
+        SoulType::from_type_kind(TypeKind::Unknown(stream.current_text().into()))
+    };
+
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream))
     }
@@ -80,15 +117,9 @@ fn get_type_generic(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         if stream.current_text().starts_with("'") {
             let name = &stream.current_text()[1..];
 
-            if let Err(msg) = check_name_allow_types(name) {
+            check_name_allow_types(name)
+                .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
 
-                return Err(new_from_stream_error(
-                    SoulErrorKind::InvalidName, 
-                    stream.current_span(), 
-                    msg, 
-                    FromStreamErrorKind::IsNotOfType,
-                ))
-            }
 
             generics.push(TypeGenericKind::Lifetime(Lifetime{name: Ident::new(stream.current_text())}));
             continue

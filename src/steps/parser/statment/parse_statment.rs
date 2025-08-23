@@ -1,18 +1,17 @@
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
+use crate::steps::parser::expression::parse_expression::get_expression;
+use crate::steps::parser::statment::parse_function::get_function;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExpressionKind};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType, STATMENT_END_TOKENS};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statement>> {
     
-    if stream.current_text() == "\n" {
-
-        if stream.next().is_none() {
-            return Ok(None)
-        }
+    if stream.next_if("\n").is_none() {
+        return Ok(None)
     }
 
     if stream.current_text() == "{" {
@@ -34,90 +33,90 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
         }
 
         stream.next();
-        return Ok(None);
+        return Ok(Some(Statement::new(StatementKind::CloseBlock, stream.current_span())));
     }
 
 
     let statment = match get_statment_type(stream)? {
         StatmentType::Expression => {
-            let expression = todo!("get function");
+            let expression = todo!("get Expression");
             Statement::from_expression(expression)
         }
 
         StatmentType::Variable => {
-            todo!("get function")
+            todo!("get Variable")
         },
         StatmentType::Assignment => {
-            todo!("get function")
+            todo!("get Assignment")
         },
 
         StatmentType::UsePath => {
-            todo!("get function");
+            todo!("get UsePath");
             return Ok(None);
         },
         StatmentType::UseType => {
-            todo!("get function");
+            todo!("get UseType");
             return Ok(None);
         },
         StatmentType::UseImplement => {
-            todo!("get function")
+            todo!("get UseImplement")
         },
         StatmentType::Function => {
-            todo!("get function")
+            let function = get_function(stream, scopes)?;
+            Statement::new(StatementKind::Function(function.node), function.span)
         },
         StatmentType::FunctionCall => {
-            let expression = todo!("get function");
-            Statement::from_expression(expression)
+            Statement::from_expression(get_expression(stream, scopes, STATMENT_END_TOKENS)?)
         }
 
         StatmentType::Class => {
-            todo!("get function")
+            todo!("get Class")
         },
         StatmentType::Trait => {
-            todo!("get function")
+            todo!("get Trait")
         },
         StatmentType::Struct => {
-            todo!("get function")
+            todo!("get Struct")
         },
 
         StatmentType::Enum => {
-            todo!("get function")
+            todo!("get Enum")
         },
         StatmentType::Union => {
-            todo!("get function")
+            todo!("get Union")
         },
         StatmentType::TypeEnum => {
-            todo!("get function");
+            todo!("get TypeEnum");
             return Ok(None);
         },
 
         StatmentType::If => {
-            let expression = todo!("get function");
+            let expression = todo!("get If");
             Statement::from_expression(expression)
         },
         StatmentType::Else => {
-            todo!("get function");
+            todo!("get Else");
             return Ok(None);
         },
         StatmentType::For => {
-            let expression = todo!("get function");
+            let expression = todo!("get For");
             Statement::from_expression(expression)
         },
         StatmentType::While => {
-            let expression = todo!("get function");
+            let expression = todo!("get While");
             Statement::from_expression(expression)
         },
         StatmentType::Match => {
-            let expression = todo!("get function");
+            let expression = todo!("get Match");
             Statement::from_expression(expression)
         },
 
         StatmentType::Type => {
-            todo!("get function");
+            todo!("get Type");
             return Ok(None);
         },
         StatmentType::ReturnLike => {
-            let expression = todo!("get function");
+            let expression = todo!("get ReturnLike");
             Statement::from_expression(expression)
         },
         StatmentType::CloseBlock => Statement::new(StatementKind::CloseBlock, stream.current_span()),
@@ -135,13 +134,11 @@ fn get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
 
 fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
     
-
     let mut modifier = Modifier::Default;
     match stream.current_text() {
         val if Modifier::from_str(val) != Modifier::Default => {
             modifier = Modifier::from_str(stream.current_text());
         }
-
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
             return Ok(StatmentType::ReturnLike)

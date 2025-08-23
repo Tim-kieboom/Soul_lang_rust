@@ -113,7 +113,7 @@ fn parse_file(
     let parser_reponse = parser(tokenize_response, &info)
         .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while parsersing file", err))?;
 
-    todo!()
+    Ok(())
 }
 
 fn get_sub_files(run_options: &Arc<RunOptions>) -> Result<Arc<SubFileTree>> {

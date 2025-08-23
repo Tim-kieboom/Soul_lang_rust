@@ -5,7 +5,8 @@ use colored::Colorize;
 
 use crate::errors::soul_error::SoulError;
 
-pub const DEFAULT_LOG_OPTIONS: &'static LogOptions = &LogOptions::const_default();
+pub static mut MUT_DEFAULT_LOG_OPTIONS: LogOptions = LogOptions::const_default();
+pub static DEFAULT_LOG_OPTIONS: &LogOptions = unsafe{&*&raw const MUT_DEFAULT_LOG_OPTIONS};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {

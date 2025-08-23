@@ -19,12 +19,12 @@ impl PrettyFormat for ScopeBuilder {
             .iter()
             .map(|scope| {
                 let body = scope.symbols.iter()
-                    .map(|(name, kind)| format!("\n\t{} => {},", name, kind.to_string()))
+                    .map(|(name, kind)| format!("\t{} => {},", name, kind.to_string()))
                     .join("\n");
 
-                format!("\n{}", body) 
+                format!("scope({}){{\n{}\n}}\n", scope.self_index, body) 
             })
-            .join("\n")
+            .join("")
     }
 }
 
@@ -227,16 +227,16 @@ impl PrettyString for Function {
 impl ToString for ScopeKind {
     fn to_string(&self) -> String {
         match self {
-            ScopeKind::Class(value) => format!("class {}{}", value.name, value.generics.to_string()),
-            ScopeKind::Trait(value) => format!("trait {}{}", value.signature.name, value.signature.generics.to_string()),
-            ScopeKind::Struct(value) => format!("struct {}{}", value.name, value.generics.to_string()),
+            ScopeKind::Class(value) => format!("class >> {}{}", value.name, value.generics.to_string()),
+            ScopeKind::Trait(value) => format!("trait >> {}{}", value.signature.name, value.signature.generics.to_string()),
+            ScopeKind::Struct(value) => format!("struct >> {}{}", value.name, value.generics.to_string()),
 
-            ScopeKind::Variable(value) => format!("Variable {} {}{}", value.ty.to_string(), value.name, value.initialize_value.as_ref().map(|el| format!(" = {}", el.node.to_string())).unwrap_or(String::new())),
-            ScopeKind::Functions(values) => format!("Functions[{}]", values.iter().map(|func| func.signature.to_string()).join(", ")),
+            ScopeKind::Variable(value) => format!("Variable >> {} {}{}", value.ty.to_string(), value.name, value.initialize_value.as_ref().map(|el| format!(" = {}", el.node.to_string())).unwrap_or(String::new())),
+            ScopeKind::Functions(values) => format!("Functions >> [{}]", values.iter().map(|func| func.signature.to_string()).join(", ")),
 
-            ScopeKind::Enum(value) => format!("enum {}", value.name),
-            ScopeKind::Union(value) => format!("union {}", value.name),
-            ScopeKind::TypeEnum(value) => format!("typeEnum {} [{}]", value.name, value.types.iter().map(|el| el.to_string()).join(",")),
+            ScopeKind::Enum(value) => format!("enum >> {}", value.name),
+            ScopeKind::Union(value) => format!("union >> {}", value.name),
+            ScopeKind::TypeEnum(value) => format!("typeEnum >> {} [{}]", value.name, value.types.iter().map(|el| el.to_string()).join(",")),
         }  
     }
 }
@@ -245,10 +245,10 @@ impl ToString for FunctionSignature {
     fn to_string(&self) -> String {
         format!(
             "{}{}{}({}){}",
-            self.callee.as_ref().map(|el| format!("{}{}", el.node.extention_type.to_string(), el.node.this.as_ref().map(|el| format!(" this{}", el.wrappers.to_string())).unwrap_or(String::new()) )).unwrap_or(String::new()),
+            self.callee.as_ref().map(|el| format!("{}{}", el.node.extention_type.to_string(), el.node.this.as_ref().map(|el| format!(" this{} ", el.wrappers.to_string())).unwrap_or(String::new()) )).unwrap_or(String::new()),
             self.name,
             self.generics.to_string(),
-            self.params.to_string(),
+            self.parameters.to_string(),
             self.return_type.as_ref().unwrap_or(&SoulType::none()).to_string()
         )
     }
@@ -258,10 +258,9 @@ impl ToString for Vec<Spanned<Parameter>> {
     fn to_string(&self) -> String {
         self.iter()
             .map(|param| format!(
-                "{} {}{}", 
+                "{} {}", 
                 param.node.ty.to_string(), 
                 param.node.name, 
-                param.node.default_value.as_ref().map(|el| format!(" {}", el.node.to_string())).unwrap_or(String::new())
             ))
             .join("")
     }

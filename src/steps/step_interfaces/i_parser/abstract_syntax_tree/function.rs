@@ -50,7 +50,7 @@ pub struct FunctionSignature {
     pub name: Ident,
     pub callee: Option<Spanned<FunctionCallee>>,
     pub generics: Vec<GenericParameter>,
-    pub params: Vec<Spanned<Parameter>>,
+    pub parameters: Vec<Spanned<Parameter>>,
     pub ruleset: Modifier,
     pub return_type: Option<SoulType>,
 }
@@ -65,7 +65,6 @@ pub struct FunctionCallee {
 pub struct Parameter {
     pub name: Ident,
     pub ty: SoulType,
-    pub default_value: Option<Expression>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -104,6 +103,16 @@ pub enum LambdaMode {
     Mut,
     Const,
     Consume,
+}
+
+impl FunctionCallee {
+    pub fn new_static(ty: SoulType) -> Self {
+        Self{extention_type: ty, this: None}
+    }
+
+    pub fn new(ty: SoulType, this: Option<SoulType>) -> Self {
+        Self{extention_type: ty, this}
+    }
 }
 
 impl LambdaMode {
