@@ -34,7 +34,7 @@ pub enum StatmentType {
     Assignment,
 
     UsePath,
-    UseType,
+    UseTypeDef,
     UseImplement,
 
     Function,

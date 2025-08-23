@@ -33,6 +33,8 @@ pub enum ScopeKind {
     Enum(Enum),
     Union(Union),
     TypeEnum(TypeEnum),
+    Type(SoulType),
+    TypeDef{new_type: SoulType, of_type: SoulType},
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

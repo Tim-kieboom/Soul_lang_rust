@@ -73,7 +73,7 @@ impl PrettyString for StatementKind {
 
             StatementKind::Implement(implement) => implement.to_pretty(tab, is_last),
 
-            StatementKind::CloseBlock => "CloseBlock".into(),
+            StatementKind::CloseBlock => format!("{}CloseBlock\n{}", prefix, tree_next_line_prefix(tab)),
         }
     }
 }
@@ -237,6 +237,9 @@ impl ToString for ScopeKind {
             ScopeKind::Enum(value) => format!("enum >> {}", value.name),
             ScopeKind::Union(value) => format!("union >> {}", value.name),
             ScopeKind::TypeEnum(value) => format!("typeEnum >> {} [{}]", value.name, value.types.iter().map(|el| el.to_string()).join(",")),
+
+            ScopeKind::Type(soul_type) => format!("Type >> {} ", soul_type.to_string()),
+            ScopeKind::TypeDef{new_type, of_type} => format!("TypeDef >> {} typeof {}", new_type.to_string(), of_type.to_string()),
         }  
     }
 }
@@ -478,10 +481,6 @@ impl ToString for Literal {
     }
 }
 
-// fn indent(level: usize) -> String {
-//     "    ".repeat(level)
-// }
-
 fn tree_prefix(tab: usize, is_last: bool) -> String {
     if tab == 0 {
         return String::new();
@@ -498,19 +497,19 @@ fn tree_prefix(tab: usize, is_last: bool) -> String {
     prefix
 }
 
-// fn tree_next_line_prefix(indent: usize) -> String {
-//     if indent == 0 {
-//         return String::new();
-//     }
+fn tree_next_line_prefix(indent: usize) -> String {
+    if indent == 0 {
+        return String::new();
+    }
 
-//     let mut prefix = String::new();
+    let mut prefix = String::new();
 
-//     for _ in 0..indent {
-//         prefix.push_str("│   ");
-//     }
+    for _ in 0..indent {
+        prefix.push_str("│   ");
+    }
 
-//     prefix
-// }
+    prefix
+}
 
 
 

@@ -1,13 +1,16 @@
-use crate::soul_names::{check_name, check_name_allow_types, NamesOtherKeyWords, SOUL_NAMES};
-use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
-use crate::steps::parser::expression::parse_expression::get_expression;
 use crate::steps::parser::statment::parse_function::get_function;
+use crate::steps::parser::statment::parse_generics_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::statment::parse_variable::get_variable;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::Modifier;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, ReturnKind, ReturnLike, VariableName};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType, STATMENT_END_TOKENS};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
+use crate::steps::parser::expression::parse_expression::get_expression;
+use crate::soul_names::{check_name_allow_types, NamesOtherKeyWords, SOUL_NAMES};
+use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{Modifier, SoulType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType, STATMENT_END_TOKENS};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, ReturnKind, ReturnLike, VariableName};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statement>> {
@@ -60,7 +63,7 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
             todo!("get UsePath");
             return Ok(None);
         },
-        StatmentType::UseType => {
+        StatmentType::UseTypeDef => {
             todo!("get UseType");
             return Ok(None);
         },
@@ -118,7 +121,7 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
         },
 
         StatmentType::Type => {
-            todo!("get Type");
+            parse_type_def(stream, scopes)?;
             return Ok(None);
         },
         StatmentType::Return => {
@@ -137,6 +140,35 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
     };
 
     Ok(Some(statment))
+}
+
+fn parse_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Type));
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let type_i = stream.current_index();
+    let new_type = SoulType::from_stream(stream, scopes)?;
+    if !matches!(new_type.base, TypeKind::Unknown(_)) {
+        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("type: '{}' is invalid", stream[type_i].text)))
+    }
+
+    let name = new_type.base.to_name_string();
+
+    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("token: '{}', should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
+    }
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let of_type = SoulType::from_stream(stream, scopes)?;
+
+    scopes.insert(name, ScopeKind::TypeDef{new_type, of_type});
+    Ok(())
 }
 
 fn get_return_like(kind: ReturnKind, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {

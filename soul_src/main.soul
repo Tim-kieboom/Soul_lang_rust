@@ -1,4 +1,12 @@
+type string typeof str
+
 main() {
+
+
+    sum(int a, int b) int {
+        return a + b
+    }
+
     Println("hello world")
 
     var := 1
@@ -16,8 +24,8 @@ main() {
     // var = 2
 
     arr := [f32: 1, 2, 3, 4, 5]
-    arr2 := [f32: for 10 => 0]
-    arr3 := [for i in 10 => i%2]
+    // arr = [f32: for 10 => 0]
+    // arr = [for i in 10 => i%2]
     map := [(str, bool):
         ("hello", true),
         ("world", false),
