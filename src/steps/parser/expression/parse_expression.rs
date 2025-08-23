@@ -1,8 +1,8 @@
 use std::mem;
-
 use crate::soul_names::{check_name, could_be_name};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_tokenizer::Token;
-use crate::steps::step_interfaces::i_parser::scope_builder::ProgramMemmory;
+use crate::steps::step_interfaces::i_parser::scope_builder::{ProgramMemmory, ScopeKind, Variable};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::parser::expression::parse_expression_groups::try_get_expression_group;
@@ -11,7 +11,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ternary, Tuple, UnaryOperatorKind, VariableName};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ArrayFiller, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
 
 pub struct ExprOptions {
@@ -393,7 +393,7 @@ fn is_valid_end_token(token: &Token, options: &ExprOptions) -> bool {
     token.text != ")" || (token.text == ")" && options.round_bracket_stack == 0)
 }
 
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ExpressionStacks {
     pub expressions: Vec<Expression>,
     pub symbools: Vec<Symbool>,

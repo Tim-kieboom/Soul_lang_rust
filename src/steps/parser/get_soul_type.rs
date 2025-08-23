@@ -1,4 +1,6 @@
-use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
+use std::collections::HashMap;
+
+use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name, check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
 
 impl FromTokenStream<SoulType> for SoulType {
     fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<SoulType>, SoulError> {
@@ -30,50 +32,19 @@ impl FromTokenStream<SoulType> for SoulType {
 }
 
 fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType, FromStreamError> {
-    
-    if let Err(msg) = check_name_allow_types(stream.current_text()) {
-        return Err(new_from_stream_error(
-            SoulErrorKind::InvalidName,
-            stream.current_span(),
-            msg,
-            FromStreamErrorKind::IsNotOfType,
-        ))
-    }
 
     let mut collection_type = if stream.current_text() == SOUL_NAMES.get_name(NamesInternalType::None) {
         SoulType::from_type_kind(TypeKind::None)
     }
+    else if stream.current_text() == "(" {
+        get_tuple_type(stream, scopes)?
+    }
     else if stream.peek_is("::") {
-        check_name_allow_types(stream.current_text())
-            .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
-        
-        let mut base = stream.current_text().clone();
-        stream.next();
-        base.push_str("::");
-
-        loop {
-
-            if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream))
-            }
-
-            check_name_allow_types(stream.current_text())
-                .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
-
-            base.push_str(stream.current_text());
-            
-            if !stream.peek_is("::") {
-                break
-            }
-            base.push_str("::");
-            stream.next();
-        }
-
-        SoulType::from_type_kind(TypeKind::Unknown(base.into()))
+        get_double_colon_type(stream)?
     }
     else {
         check_name_allow_types(stream.current_text())
-            .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
+            .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsNotOfType))?;
 
         SoulType::from_type_kind(TypeKind::Unknown(stream.current_text().into()))
     };
@@ -98,6 +69,123 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(stream))
         }
     }
+}
+
+fn get_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType, FromStreamError> {
+    debug_assert_eq!(stream.current_text(), "(");
+    if stream.peek_multiple_is(2, ":") {
+        return get_named_tuple_type(stream, scopes)
+    }
+
+    let mut types = vec![];
+    loop {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() == ")" {
+            return Ok(SoulType::from_type_kind(TypeKind::Tuple(types)))
+        }
+
+        let ty = inner_from_stream(stream, scopes)?;
+        types.push(ty);
+
+
+        if stream.current_text() != "," {
+            break
+        }
+    }
+
+    if stream.current_text() == ")" {
+        Ok(SoulType::from_type_kind(TypeKind::Tuple(types)))
+    }
+    else {
+        Err(new_from_stream_error(
+            SoulErrorKind::ArgError, 
+            stream.current_span(), 
+            format!("token: '{}' should be ','", stream.current_text()), FromStreamErrorKind::IsNotOfType,
+        ))
+    }
+}
+
+fn get_named_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType, FromStreamError> {
+    debug_assert_eq!(stream.current_text(), "(");
+
+    let mut types = HashMap::new();
+    loop {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() == ")" {
+            return Ok(SoulType::from_type_kind(TypeKind::NamedTuple(types)))
+        }
+
+        check_name(stream.current_text())
+            .map_err(|msg| new_from_stream_error(SoulErrorKind::InvalidName, stream.current_span(), msg, FromStreamErrorKind::IsNotOfType))?;
+
+        let name = Ident::new(stream.current_text());
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() != ":" {
+            
+            return Err(new_from_stream_error(
+                SoulErrorKind::InvalidType, 
+                stream.current_span(), 
+                format!("token: '{}', should be ':'", stream.current_text()), 
+                FromStreamErrorKind::IsNotOfType,
+            ))
+        }
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        let ty = inner_from_stream(stream, scopes)?;
+        types.insert(name, ty);
+
+        if stream.current_text() != "," {
+            return Err(new_from_stream_error(
+                SoulErrorKind::ArgError, 
+                stream.current_span(), 
+                format!("token: '{}' should be ','", stream.current_text()), FromStreamErrorKind::IsNotOfType,
+            ))
+        }
+    }
+}
+
+fn get_double_colon_type(stream: &mut TokenStream) -> Result<SoulType, FromStreamError> {
+    check_name_allow_types(stream.current_text())
+        .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
+    
+    let mut base = stream.current_text().clone();
+    stream.next();
+    base.push_str("::");
+
+    loop {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        check_name_allow_types(stream.current_text())
+            .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
+
+        base.push_str(stream.current_text());
+        
+        if !stream.peek_is("::") {
+            break
+        }
+        base.push_str("::");
+        stream.next();
+    }
+
+    Ok(SoulType::from_type_kind(TypeKind::Unknown(base.into())))
 }
 
 fn get_type_generic(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<TypeGenericKind>, FromStreamError> {

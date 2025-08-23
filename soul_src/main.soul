@@ -1,3 +1,8 @@
+map := [(str, bool):
+    ("hello", true),
+    ("world", false),
+]
+
 main() {
     Println("hello world")
 
@@ -5,17 +10,18 @@ main() {
     let lt = 1
     const cnst = 1
     Literal ltrl = 1
+    tuple := (1,2,3,4)
 
     // var = 2
 
-    // arr := [f32: 1, 2, 3, 4, 5]
-    // arr = [f32: for 10 => 0]
-    // map := [(str, bool):
-    //     ("hello", true),
-    //     ("world", false),
-    // ]
+    arr := [f32: 1, 2, 3, 4, 5]
+    arr2 := [f32: for 10 => 0]
+    map := [(str, bool):
+        ("hello", true),
+        ("world", false),
+    ]
 
-    // num := sum(1, 2)
+    num := sum(1, 2)
     // num = num.sum(1)
     Println(f"num == {num}")
     sum(1, 2)
