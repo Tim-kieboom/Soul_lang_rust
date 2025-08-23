@@ -2,10 +2,12 @@ use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::parser::expression::parse_expression::get_expression;
 use crate::steps::parser::statment::parse_function::get_function;
+use crate::steps::parser::statment::parse_variable::get_variable;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, ReturnKind, ReturnLike};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, ReturnKind, ReturnLike, VariableName};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType, STATMENT_END_TOKENS};
+use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statement>> {
@@ -39,12 +41,16 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
 
     let statment = match get_statment_type(stream)? {
         StatmentType::Expression => {
-            let expression = todo!("get Expression");
+            let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)?;
             Statement::from_expression(expression)
         }
 
         StatmentType::Variable => {
-            todo!("get Variable")
+            let variable = get_variable(stream, scopes)?;
+            let variable_name = VariableName::new(&variable.node.name);
+            scopes.insert(variable_name.name.0.clone(), ScopeKind::Variable(variable.node));
+
+            Statement::new(StatementKind::Variable(variable_name), variable.span)
         },
         StatmentType::Assignment => {
             todo!("get Assignment")
@@ -220,6 +226,10 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Use) => {
             return todo!("get_use_type")
         },
+
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Let) => {
+            return Ok(StatmentType::Variable)
+        }
         _ => (),
     }
     

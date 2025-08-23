@@ -246,8 +246,8 @@ pub enum BinaryOperatorKind {
 pub struct Ident(pub String);
 
 impl VariableName {
-    pub fn new<T: Into<String>>(ident: T) -> Self {
-        Self{name: Ident(ident.into())}
+    pub fn new<T: Into<Ident>>(ident: T) -> Self {
+        Self{name: ident.into()}
     }
 }
 
@@ -286,6 +286,12 @@ impl Display for Ident {
 impl Into<Ident> for String {
     fn into(self) -> Ident {
         Ident::new(self)
+    }
+}
+
+impl Into<Ident> for &Ident {
+    fn into(self) -> Ident {
+        self.clone()
     }
 }
 

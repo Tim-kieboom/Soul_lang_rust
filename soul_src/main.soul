@@ -1,6 +1,13 @@
 main() {
     Println("hello world")
 
+    var := 1
+    let lt = 1
+    const cnst = 1
+    Literal ltrl = 1
+
+    // var = 2
+
     // arr := [f32: 1, 2, 3, 4, 5]
     // arr = [f32: for 10 => 0]
     // map := [(str, bool):
