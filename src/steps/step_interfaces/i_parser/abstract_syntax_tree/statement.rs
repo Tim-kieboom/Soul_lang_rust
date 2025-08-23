@@ -56,7 +56,9 @@ pub enum StatmentType {
 
     Type,
 
-    ReturnLike,
+    Return,
+    Break,
+    Fall,
     CloseBlock,
 }
 

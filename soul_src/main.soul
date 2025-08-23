@@ -11,14 +11,18 @@ main() {
     // num := sum(1, 2)
     // num = num.sum(1)
     Println(f"num == {num}")
+    sum(1, 2)
+    SumResult(sum: sum(1,2), other: 1)
+
+    return
 }
 
 sum(int a, int b) int {
-    // return a + b
+    return a + b
 }
 
 int sum(this, int b) int {
-    // return this + b
+    return this + b
 }
 
 

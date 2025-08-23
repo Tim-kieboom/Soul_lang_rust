@@ -4,7 +4,7 @@ use crate::steps::parser::expression::parse_expression::get_expression;
 use crate::steps::parser::statment::parse_function::get_function;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::Modifier;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExpressionKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, ReturnKind, ReturnLike};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType, STATMENT_END_TOKENS};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
@@ -115,14 +115,40 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
             todo!("get Type");
             return Ok(None);
         },
-        StatmentType::ReturnLike => {
-            let expression = todo!("get ReturnLike");
+        StatmentType::Return => {
+            let expression = get_return_like(ReturnKind::Return, stream, scopes)?;
+            Statement::from_expression(expression)
+        },
+        StatmentType::Break => {
+            let expression = get_return_like(ReturnKind::Break, stream, scopes)?;
+            Statement::from_expression(expression)
+        },
+        StatmentType::Fall => {
+            let expression = get_return_like(ReturnKind::Fall, stream, scopes)?;
             Statement::from_expression(expression)
         },
         StatmentType::CloseBlock => Statement::new(StatementKind::CloseBlock, stream.current_span()),
     };
 
     Ok(Some(statment))
+}
+
+fn get_return_like(kind: ReturnKind, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {
+    let return_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }  
+
+    let expr = get_expression(stream, scopes, STATMENT_END_TOKENS)?;
+    let value = if let ExpressionKind::Empty = expr.node {
+        None
+    }
+    else {
+        Some(Box::new(expr))
+    };
+
+    let span = stream[return_i].span.combine(&stream.current_span());
+    Ok(Expression::new(ExpressionKind::ReturnLike(ReturnLike{value, kind, delete_list: vec![]}), span))
 }
 
 fn get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
@@ -141,13 +167,13 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
         }
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
-            return Ok(StatmentType::ReturnLike)
+            return Ok(StatmentType::Return)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::BreakLoop) => {
-            return Ok(StatmentType::ReturnLike)
+            return Ok(StatmentType::Break)
         }
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Fall) => {
-            return Ok(StatmentType::ReturnLike)
+            return Ok(StatmentType::Fall)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
