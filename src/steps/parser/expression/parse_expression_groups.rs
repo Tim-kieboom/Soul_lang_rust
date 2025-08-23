@@ -257,11 +257,10 @@ fn parse_tuple_or_array(mut collection_type: Option<SoulType>, stream: &mut Toke
 
 fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<SoulType>, group_i: usize, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<result::Result<ArrayFiller, (Option<SoulType>, Option<SoulType>)>> {
 
-    stream.next_multiple(2);
-    let is_indexed = stream.peek().is_some_and(|token| token.text == "in");
+    stream.next();
 
     scopes.push();
-    let index = if is_indexed {
+    let index = if stream.peek_is("in") {
         let name = Ident(stream.current_text().clone());
         let variable = Variable{
             name: name.clone(), 
@@ -283,7 +282,7 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
 
     let amount = Box::new(get_expression(stream, scopes, &["=>", "{"])?);
     if stream.current_text() == "{" {
-        scopes.remove_current(stream.current_span());
+        scopes.remove_current(stream.current_span())?;
         return Ok(Err((collection_type, element_type)));
     }
 

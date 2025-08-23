@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name, check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
+use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name, check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, Modifier, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
 
 impl FromTokenStream<SoulType> for SoulType {
     fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<SoulType>, SoulError> {
@@ -32,6 +32,14 @@ impl FromTokenStream<SoulType> for SoulType {
 }
 
 fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType, FromStreamError> {
+
+    let modifier = Modifier::from_str(stream.current_text());
+    if modifier != Modifier::Default {
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+    }
 
     let mut collection_type = if stream.current_text() == SOUL_NAMES.get_name(NamesInternalType::None) {
         SoulType::from_type_kind(TypeKind::None)

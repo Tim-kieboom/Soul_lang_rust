@@ -446,7 +446,7 @@ impl ToString for ExpressionGroup {
                 array.values.iter().map(|el| el.to_string()).join(","),
             ),
             ExpressionGroup::ArrayFiller(array_filler) => format!(
-                "{}[{}for{}{} => {}]",
+                "{}[{}for {}{} => {}]",
                 array_filler.collection_type.as_ref().map(|el| el.to_string()).unwrap_or(String::new()),
                 array_filler.element_type.as_ref().map(|el| format!("{}: ", el.to_string())).unwrap_or(String::new()),
                 array_filler.index.as_ref().map(|el| format!("{} in ", el.name)).unwrap_or(String::new()),

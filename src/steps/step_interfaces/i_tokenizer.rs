@@ -184,7 +184,7 @@ impl TokenStream {
     #[cfg(feature="dev_mode")]
     fn change_token(&mut self, index: usize) {
         self.current = self.tokens[index].text.clone();
-        let old_line = self.tokens[self.index as usize].span.line_number; 
+        let old_line = self.tokens[self.index.max(0) as usize].span.line_number; 
         let new_line = self.tokens[index].span.line_number;
 
         if new_line != old_line {

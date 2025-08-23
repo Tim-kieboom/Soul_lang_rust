@@ -1,4 +1,4 @@
-use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
+use crate::soul_names::{check_name, check_name_allow_types, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::parser::expression::parse_expression::get_expression;
 use crate::steps::parser::statment::parse_function::get_function;
@@ -39,7 +39,7 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
     }
 
 
-    let statment = match get_statment_type(stream)? {
+    let statment = match get_statement_type(stream)? {
         StatmentType::Expression => {
             let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)?;
             Statement::from_expression(expression)
@@ -157,7 +157,7 @@ fn get_return_like(kind: ReturnKind, stream: &mut TokenStream, scopes: &mut Scop
     Ok(Expression::new(ExpressionKind::ReturnLike(ReturnLike{value, kind, delete_list: vec![]}), span))
 }
 
-fn get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
+fn get_statement_type(stream: &mut TokenStream) -> Result<StatmentType> {
     let begin_i = stream.current_index();
     let result = inner_get_statment_type(stream);
     stream.go_to_index(begin_i);
@@ -233,6 +233,9 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
         _ => (),
     }
     
+    if modifier == Modifier::Default {
+        stream.next_multiple(-1);
+    }
 
     let mut has_round_bracket = false;
     let mut consecutive_parts = 0;
@@ -242,7 +245,7 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
             return Err(err_out_of_bounds(stream));
         }
 
-        if let Ok(_) = check_name(stream.current_text()) {
+        if let Ok(_) = check_name_allow_types(stream.current_text()) {
             consecutive_parts += 1;
         }
 
