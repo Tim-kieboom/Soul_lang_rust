@@ -4,13 +4,13 @@ use crate::steps::step_interfaces::i_tokenizer::Token;
 use crate::steps::step_interfaces::i_parser::scope_builder::{ProgramMemmory};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
-use crate::steps::parser::expression::parse_expression_groups::try_get_expression_group;
+use crate::steps::parser::expression::parse_expression_groups::{get_function_call, try_get_expression_group};
 use crate::steps::parser::expression::symbool::{Bracket, Operator, Symbool, SymboolKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ternary, Tuple, UnaryOperatorKind, VariableName};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
 
 pub struct ExprOptions {
@@ -135,18 +135,6 @@ fn convert_expression(
         return CONTINUE_LOOP
     }
 
-    if let CLOSED_A_BRACKET = traverse_brackets(stream, stacks, options) {
-        convert_bracket_expression(stream, stacks)?;
-    }
-    
-    let second_literal_begin = stream.current_index();
-    if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
-
-        add_literal(literal, stream, scopes, stacks, second_literal_begin);
-        end_loop(stream, scopes, stacks)?;
-        return CONTINUE_LOOP
-    }
-
     let begin_i = stream.current_index();
     stream.go_to_index(first_literal_begin);
     if let Some(group) = try_get_expression_group(stream, scopes)? {
@@ -159,6 +147,17 @@ fn convert_expression(
         stream.go_to_index(begin_i);
     }
 
+    if let CLOSED_A_BRACKET = traverse_brackets(stream, stacks, options, "(", ")") {
+        convert_bracket_expression(stream, stacks)?;
+    }
+    
+    let second_literal_begin = stream.current_index();
+    if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
+
+        add_literal(literal, stream, scopes, stacks, second_literal_begin);
+        end_loop(stream, scopes, stacks)?;
+        return CONTINUE_LOOP
+    }
 
     if is_end_token(stream.current(), end_tokens, options) {
         return BREAK_LOOP
@@ -194,6 +193,7 @@ fn convert_expression(
         ));
     }
 
+    end_loop(stream, scopes, stacks)?;
     return CONTINUE_LOOP
 }
 
@@ -201,15 +201,18 @@ pub fn traverse_brackets(
     stream: &mut TokenStream, 
     stacks: &mut ExpressionStacks, 
     options: &mut ExprOptions,
+    start: &str,
+    end: &str,
 ) -> bool {
+
     let token = stream.current_text();
-    if token == "(" {
+    if token == start {
         stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundOpen), stream.current_span()));
         stream.next();
         
         options.round_bracket_stack += 1;
     } 
-    else if token == ")" {
+    else if token == end {
         stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundClose), stream.current_span()));
         stream.next();
 
@@ -343,6 +346,73 @@ fn add_ternary(
     Ok(())
 }
 
+fn add_field_or_methode(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks, 
+) -> Result<()> {
+    if stream.next_multiple(2).is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.peek_is("<") || stream.peek_is("(") {
+        let start_i = stream.current_index();
+        let result = add_methode(stream, scopes, stacks);
+
+        // if for example 'val.0 < val.1' this is seen as a methode 
+        // because of the '.' in 'val.0' before '<' (the '<' makes it seem like a genric in methode)
+        // so is methode failas it might be a field instead
+        if let Err(err) = result {
+
+            stream.go_to_index(start_i);
+            match add_field(stream, stacks) {
+                Ok(val) => Ok(val),
+                Err(_) => Err(err),
+            }
+        }
+        else {
+            result
+        }
+    }
+    else {
+        add_field(stream, stacks)
+    }
+}
+
+fn add_field(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
+    let object = stacks.expressions.pop()
+        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
+
+    let span = object.span;
+    let field = VariableName::new(stream.current_text());
+    let field_expr = Expression::new(ExpressionKind::AccessField(
+        AccessField{ object: Box::new(object), field }),
+        span.combine(&stream.current_span(),
+    ));
+
+    stacks.expressions.push(field_expr);
+    Ok(())
+}
+
+fn add_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+    let object = stacks.expressions.pop()
+        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
+
+    let mut function = match get_function_call(stream, scopes) {
+        Ok(val) => val,
+        Err(err) => {stacks.expressions.push(object); return Err(err)},
+    };
+
+    function.node.callee = Some(Box::new(object));
+    let expression = Expression::new(
+        ExpressionKind::FunctionCall(function.node), 
+        function.span,
+    );
+
+    stacks.expressions.push(expression);
+    Ok(())
+}
+
 fn end_loop(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
@@ -355,8 +425,8 @@ fn end_loop(
         match symbool {
             AfterExpressionSymbools::Ref => todo!("get ref"),
             AfterExpressionSymbools::Index => todo!("get index"),
-            AfterExpressionSymbools::Field => todo!("get field"),
             AfterExpressionSymbools::Ternary => add_ternary(stream, scopes, stacks)?,
+            AfterExpressionSymbools::FieldOrMethode => add_field_or_methode(stream, scopes, stacks)?,
 
             AfterExpressionSymbools::None => break,
         }
@@ -368,7 +438,7 @@ fn end_loop(
 enum AfterExpressionSymbools {
     None,
     Index,
-    Field,
+    FieldOrMethode,
     Ref,
     Ternary
 }
@@ -390,7 +460,7 @@ impl AfterExpressionSymbools {
 
         match token {
             "[" => Self::Index,
-            "." => Self::Field,
+            "." => Self::FieldOrMethode,
             "?" => Self::Ternary,
             _ => if should_convert_to_ref(stacks) {
                 Self::Ref

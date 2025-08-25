@@ -99,7 +99,7 @@ impl TimeLogs {
         table
     }
 
-    pub fn to_total_table_string(&self) -> String {
+    pub fn to_total_only_table_string(&self) -> String {
         let descriptions: BTreeSet<String> = self.times
             .values()
             .flat_map(|map| map.keys().cloned())

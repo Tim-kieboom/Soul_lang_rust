@@ -1,10 +1,8 @@
-use std::any::type_name;
-
 use crate::soul_names::{NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::expression::parse_expression::get_expression;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ExpressionKind, Ident};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::STATMENT_END_TOKENS;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Ident};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::STATMENT_END_TOKENS;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{Modifier, SoulType};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::spanned::Spanned, scope_builder::{ScopeBuilder, Variable}}, i_tokenizer::TokenStream};

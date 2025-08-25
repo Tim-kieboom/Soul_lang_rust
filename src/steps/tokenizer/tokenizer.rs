@@ -146,8 +146,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
         }
 
         let dot_splits = split_dot(text);
-        let last_index = dot_splits.len() - 1;
-        for (j, mut split) in dot_splits.into_iter().enumerate() {
+        for mut split in dot_splits {
             if split.is_empty() || split == " " {
                 continue;
             }
@@ -202,10 +201,9 @@ fn split_tokens(this: &str) -> Vec<&str> {
 }
 
 static DOT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^.]+|\.").unwrap());
-fn split_dot(token: &str) -> Vec<&str> {
+fn split_dot(token: &str) -> impl Iterator<Item = &str> {
     DOT_REGEX.find_iter(token)
         .map(|m| m.as_str())
-        .collect()
 }
 
 fn needs_to_dot_tokenize(text: &str) -> bool {

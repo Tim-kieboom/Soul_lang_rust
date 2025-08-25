@@ -347,11 +347,11 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_pretty(tab + 1, is_last), index.to_pretty(tab + 1, is_last)),
             ExpressionKind::Lambda(Lambda{signature, arguments, body, capture:_}) => format!("{}({}) => {}", signature.mode.get_lambda_name(), arguments.to_string(), body.to_pretty(tab + 1, is_last)),
             ExpressionKind::Constructor(Constructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
-            ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generics.iter().map(|el| el.to_string()).join(", "), arguments.to_string()),
+            ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
 
             ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_pretty(tab + 1, is_last), field.name),
             ExpressionKind::StaticField(StaticField{object, field}) => format!("{}.{}", object.to_string(), field.name),
-            ExpressionKind::StaticMethod(StaticMethod{callee, name, generics, arguments}) => format!("{}.{}{}({})", callee.node.to_string(), name, generics.iter().map(|el| el.to_string()).join(", "), arguments.to_string()),
+            ExpressionKind::StaticMethod(StaticMethod{callee, name, generics, arguments}) => format!("{}.{}{}({})", callee.node.to_string(), name, generic_to_string(generics), arguments.to_string()),
 
             ExpressionKind::UnwrapVariable(unwrap_variable) => match unwrap_variable {
                 UnwrapVariable::Variable(variable_name) => variable_name.name.0.clone(),
@@ -377,6 +377,15 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::ExpressionGroup(expression_group) => expression_group.to_string(),
             ExpressionKind::Variable(var_name) => var_name.name.0.clone(),
         }
+    }
+}
+
+fn generic_to_string(types: &Vec<SoulType>) -> String {
+    if types.is_empty() {
+        "".into()
+    }
+    else {
+        format!("<{}>", types.iter().map(|el| el.to_string()).join(", "))
     }
 }
 
@@ -410,11 +419,11 @@ impl ToString for ExpressionKind {
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_string(), index.to_string()),
             ExpressionKind::Lambda(Lambda{signature, arguments, body:_, capture:_}) => format!("{}({})", signature.mode.get_lambda_name(), arguments.to_string()),
             ExpressionKind::Constructor(Constructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
-            ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generics.iter().map(|el| el.to_string()).join(", "), arguments.to_string()),
+            ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
             
             ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_string(), field.name),
             ExpressionKind::StaticField(StaticField{object, field}) => format!("{}.{}", object.to_string(), field.name),
-            ExpressionKind::StaticMethod(StaticMethod{callee, name, generics, arguments}) => format!("{}.{}{}({})", callee.node.to_string(), name, generics.iter().map(|el| el.to_string()).join(", "), arguments.to_string()),
+            ExpressionKind::StaticMethod(StaticMethod{callee, name, generics, arguments}) => format!("{}.{}{}({})", callee.node.to_string(), name, generic_to_string(generics), arguments.to_string()),
             
             ExpressionKind::UnwrapVariable(unwrap_variable) => match unwrap_variable {
                 UnwrapVariable::Variable(variable_name) => variable_name.name.0.clone(),

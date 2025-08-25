@@ -1,13 +1,12 @@
 use crate::steps::parser::statment::parse_function::get_function;
-use crate::steps::parser::statment::parse_generics_decl::{get_generics_decl, GenericDecl};
 use crate::steps::parser::statment::parse_variable::get_variable;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
-use crate::steps::parser::expression::parse_expression::{get_expression, get_expression_options, ExprOptions};
+use crate::steps::parser::expression::parse_expression::{get_expression};
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::soul_names::{check_name_allow_types, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{Modifier, SoulType};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Assignment, Block, StatementKind, StatementType, STATMENT_END_TOKENS};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, ReturnKind, ReturnLike, VariableName};

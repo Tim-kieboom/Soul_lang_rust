@@ -63,6 +63,10 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
     if stream.current_text() == "<" {
         collection_type.generics = get_type_generic(stream, scopes)?;
+        
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
     }
 
     loop {
@@ -198,13 +202,12 @@ fn get_double_colon_type(stream: &mut TokenStream) -> Result<SoulType, FromStrea
 
 fn get_type_generic(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Vec<TypeGenericKind>, FromStreamError> {
     debug_assert_eq!(stream.current_text(), "<");
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
 
     let mut generics = vec![];
     loop {
-
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream))
-        }
 
         if stream.current_text() == ">" {
             break

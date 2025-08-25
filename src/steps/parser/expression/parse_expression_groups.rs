@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::result;
 use crate::steps::parser::expression::parse_expression::get_expression;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{Constructor, FunctionCall};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
@@ -16,16 +17,20 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
 
     if stream.current_text() == "()" {
 
+        let span = stream[group_i].span.combine(&stream.current_span());
+
         if let Some(func_ty) = collection_type {
-            return tuple_to_function(func_ty, vec![], stream.current_span())
+            return Ok(Some(tuple_to_function(func_ty, vec![], span)?))
         }
         else {
-            return Ok(Some(Expression::new(ExpressionKind::Default, stream.current_span())))
+            return Ok(Some(Expression::new(ExpressionKind::Default, span)))
         }
     }
     else if stream.current_text() == "[]" {
+        let span = stream[group_i].span.combine(&stream.current_span());
+
         let array = ExpressionGroup::Array(Array{collection_type, element_type: None, values: vec![]});
-        return Ok(Some(Expression::new(ExpressionKind::ExpressionGroup(array), stream.current_span())));   
+        return Ok(Some(Expression::new(ExpressionKind::ExpressionGroup(array), span)));   
     }
     else if stream.current_text() != "(" && stream.current_text() != "[" {
         stream.go_to_index(group_i);
@@ -54,11 +59,26 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
         }
     }
     else {
-        parse_tuple_or_array(collection_type, stream, scopes)
+        Ok(Some(parse_tuple_or_array(collection_type, group_i, stream, scopes)?))
     }
 }
 
-fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan) -> Result<Option<Expression>> {
+pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<FunctionCall>> {
+    let group_i = stream.current_index();
+    let collection_type = SoulType::from_stream(stream, scopes)?;
+
+    let should_be_func = parse_tuple_or_array(Some(collection_type), group_i, stream, scopes)?;
+    match should_be_func.node {
+        ExpressionKind::FunctionCall(function_call) => Ok(Spanned::new(function_call, should_be_func.span)),
+        _ => return Err(new_soul_error(
+            SoulErrorKind::WrongType, 
+            stream.current_span(), 
+            format!("expression should be functionCall nut is {} ", should_be_func.node.get_variant_name()),
+        )),
+    }
+} 
+
+fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan) -> Result<Expression> {
     let mut generics = Vec::with_capacity(func_ty.generics.len()); 
     for kind in func_ty.generics  {
         match kind {
@@ -67,10 +87,10 @@ fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan)
         }
     }
 
-    Ok(Some(Expression::new(
+    Ok(Expression::new(
         ExpressionKind::FunctionCall(FunctionCall{name: func_ty.base.to_name_string().into(), callee: None, generics, arguments: Tuple{values}}),
         span
-    )))
+    ))
 }
 
 fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<HashMap<Ident, Expression>> {
@@ -170,8 +190,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
     }
 }
 
-fn parse_tuple_or_array(mut collection_type: Option<SoulType>, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Expression>> {
-    let group_i = stream.current_index();
+fn parse_tuple_or_array(mut collection_type: Option<SoulType>, group_i: usize, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {
     let is_array = stream.current_text() == "[";
     let group_end_token = if is_array {"]"} else {")"};
 
@@ -222,7 +241,7 @@ fn parse_tuple_or_array(mut collection_type: Option<SoulType>, stream: &mut Toke
             match try_add_array_filler(collection_type, element_type, group_i, stream, scopes)? {
                 Ok(array_filler) => {
                     let span = stream[group_i].span.combine(&stream.current_span());
-                    return Ok(Some(Expression::new(ExpressionKind::ExpressionGroup(ExpressionGroup::ArrayFiller(array_filler)), span)))
+                    return Ok(Expression::new(ExpressionKind::ExpressionGroup(ExpressionGroup::ArrayFiller(array_filler)), span))
                 },
                 //not array_filler, return ownership of types and continue
                 Err((col_ty, el_ty)) => {collection_type = col_ty; element_type = el_ty;},
@@ -303,23 +322,23 @@ fn tuple_or_array_to_expression(
     collection_type: Option<SoulType>, 
     element_type: Option<SoulType>, 
     values: Vec<Expression>,
-) -> Result<Option<Expression>> {
+) -> Result<Expression> {
     let span = stream[group_i].span.combine(&stream.current_span());
     
     if is_array {
-        Ok(Some(Expression::new(
+        Ok(Expression::new(
             ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{collection_type, element_type, values})),
             span,
-        )))
+        ))
     }
     else if let Some(func_ty) = collection_type {
         tuple_to_function(func_ty, values, span)
     }
     else {
-        Ok(Some(Expression::new(
+        Ok(Expression::new(
             ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values})),
             span,
-        )))
+        ))
     }
 }
 

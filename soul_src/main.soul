@@ -1,3 +1,4 @@
+const num = sum<int>(1, 2)
 type string typeof str
 
 main() {
@@ -15,20 +16,25 @@ variable() {
     var := 1 //int(1)
     let letVar = 1.0 //f32(1.0)
     const constVar = 0b1 //uint(1)
-    Literal literalVar = -1//int(-1)
+    Literal literalVar = -1 //int(-1)
 
     int intVar = 1
     const int intConst = 1
     Literal int intLiteral = 1
 
     num := sum(1, 2)
+    num = sum<int>(1, 2)
     num = 2
-    // num = num.sum(1)
+    num = num.sum(1)
+    num = num.sum<int>(1)
 
+    Object defaultCtor = (:) 
     obj := Object(field: 1)
     obj = Object(:)
     obj = Object()
-    // num = obj.field
+    num = obj.field
+    num = obj.field.methode()
+    num = obj.field.methode<int>()
 }
 
 expressionGroups() {
@@ -41,9 +47,8 @@ expressionGroups() {
     literalTuple := (true, 1, 2.0, 0b11, "4")
     literalNamedTuple := (value: 1, text: "hello world")
 
-
     array := [1, 2, 3, 4, one()]
-    // tuple := (true, one(), 2.0, 0b11, "4")
+    tuple := (true, one(), 2.0, 0b11, "4")
     namedTuple := (value: one(), text: "hello world")
 
     list := List[f32: 1, 2, 3, 4, 5]
@@ -66,24 +71,6 @@ sum(int a, int b) int {
 int sum(this, int b) int {
     return this + b
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

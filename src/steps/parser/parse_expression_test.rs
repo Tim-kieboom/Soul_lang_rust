@@ -744,9 +744,7 @@ fn test_group_expressions() {
 fn test_array_filler_expressions() {
     let mut scope = empty_scope();
 
-
     let mut stream = stream_from_strs(&["[", "for", "2", "=>", "var", "]", "\n"]);
-    scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
@@ -849,7 +847,7 @@ fn test_function_call() {
             generics: vec![], 
             arguments: soul_tuple![],
         }),
-        SoulSpan::new(0,3,2)
+        SoulSpan::new(0,0,5)
     );
     let expr = result.unwrap();
     assert_eq_show_diff!(expr, should_be);
@@ -883,32 +881,32 @@ fn test_field_access_and_methods() {
     assert_eq_show_diff!(
         result.clone().unwrap().node,
         ExpressionKind::AccessField(AccessField{ 
-            object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,0))),
+            object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3))),
             field: VariableName::new("field"),
         })
     );
 
 
 
-    let mut stream = stream_from_strs(&["obj", ".", "method", "(", "1", ",", "2", ")", "\n"]);
+    let mut stream = stream_from_strs(&["obj", ".", "methode", "(", "1", ",", "2", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.clone().unwrap().node,
         ExpressionKind::FunctionCall(FunctionCall{ 
             name: "methode".into(), 
-            callee: Some(Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,0)))), 
+            callee: Some(Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3)))), 
             generics: vec![], 
             arguments: soul_tuple![
-                Expression::new(int_lit(1), SoulSpan::new(0,0,0)),
-                Expression::new(int_lit(2), SoulSpan::new(0,0,0)),
+                Expression::new(int_lit(1), SoulSpan::new(0,12,1)),
+                Expression::new(int_lit(2), SoulSpan::new(0,14,1)),
             ],
         })
     );
 
 
 
-    let mut stream = stream_from_strs(&["obj", ".", "field", ".", "method", "(", "true", ")", "\n"]);
+    let mut stream = stream_from_strs(&["obj", ".", "field", ".", "methode", "(", "true", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
@@ -917,15 +915,14 @@ fn test_field_access_and_methods() {
             name: "methode".into(), 
             callee: Some(Box::new(Expression::new(
                 ExpressionKind::AccessField(AccessField{
-                    object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,0))), 
+                    object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3))), 
                     field: VariableName::new("field"),
                 }),
-                SoulSpan::new(0,0,0)
+                SoulSpan::new(0,0,9)
             ))), 
             generics: vec![], 
             arguments: soul_tuple![
-                Expression::new(int_lit(1), SoulSpan::new(0,0,0)),
-                Expression::new(int_lit(2), SoulSpan::new(0,0,0)),
+                Expression::new(bool_lit(true), SoulSpan::new(0,18,4)),
             ],
         })
     );

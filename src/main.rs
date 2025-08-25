@@ -8,7 +8,7 @@ fn main() {
     let (run_options, logger, time_logs) = init();
  
     let timer = Instant::now();
-    
+
     parse_increment(&run_options, &logger, &time_logs);
     
     log_times(time_logs, &run_options, &logger);
@@ -93,10 +93,14 @@ fn log_times(times: Arc<Mutex<TimeLogs>>, run_option: &RunOptions, logger: &Logg
     }
 
     let table = if run_option.show_times.contains(ShowTimes::SHOW_ALL) {
-        times.lock().unwrap().to_table_string(200)
+        times.lock()
+            .unwrap()
+            .to_table_string(200)
     }
     else {
-        times.lock().unwrap().to_total_table_string()
+        times.lock()
+            .unwrap()
+            .to_total_only_table_string()
     };
 
     for line in table.lines() {
