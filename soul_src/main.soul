@@ -2,14 +2,13 @@ type string typeof str
 
 main() {
 
-    sum(int a, int b) int {
+    sumInner(int a, int b) int {
         return a + b
     }
 
     Println("hello world")
-
     Println(f"num == {num}")
-    sum(1, 2)
+    sumInner(1, 2)
 }
 
 variable() {
@@ -26,9 +25,9 @@ variable() {
     num = 2
     // num = num.sum(1)
 
-    // obj := Object(field: 1)
-    // obj = Object(:)
-    // obj = Object()
+    obj := Object(field: 1)
+    obj = Object(:)
+    obj = Object()
     // num = obj.field
 }
 
@@ -44,7 +43,7 @@ expressionGroups() {
 
 
     array := [1, 2, 3, 4, one()]
-    tuple := (true, one(), 2.0, 0b11, "4")
+    // tuple := (true, one(), 2.0, 0b11, "4")
     namedTuple := (value: one(), text: "hello world")
 
     list := List[f32: 1, 2, 3, 4, 5]
@@ -67,10 +66,6 @@ sum(int a, int b) int {
 int sum(this, int b) int {
     return this + b
 }
-
-// struct Object {
-//     int field = 0
-// }
 
 
 

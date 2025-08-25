@@ -224,7 +224,7 @@ pub fn parser<'a>(token_response: TokenizeResonse, info: &RunStepsInfo<'a>) -> R
 
         write(scopes_file_path, parse_response.scopes.to_pretty_string())
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
-        
+
         if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
             info.time_logs
                 .lock().unwrap()

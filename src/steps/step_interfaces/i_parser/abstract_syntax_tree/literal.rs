@@ -51,8 +51,8 @@ impl LiteralType {
             LiteralType::Char => format!("char"),
             LiteralType::Str => format!("str"),
             LiteralType::Array(ty) => format!("{}[]", ty.type_to_string()),
-            LiteralType::Tuple(tys) => format!("({})", tys.iter().map(|value| value.type_to_string()).join(",")),
-            LiteralType::NamedTuple(tys) => format!("({})", tys.iter().map(|(name, value)| format!("{}: {}", name.0, value.type_to_string())).join(",")),
+            LiteralType::Tuple(tys) => format!("({})", tys.iter().map(|value| value.type_to_string()).join(", ")),
+            LiteralType::NamedTuple(tys) => format!("({})", tys.iter().map(|(name, value)| format!("{}: {}", name.0, value.type_to_string())).join(", ")),
 
             LiteralType::ProgramMemmory(inner) => format!("promem({})", inner.type_to_string()),
         }
@@ -245,8 +245,8 @@ impl Literal {
             Literal::Char(_) => format!("Literal char"),
             Literal::Str(_) => format!("Literal str"),
             Literal::Array{ty, ..} => format!("Literal {}[]", ty.type_to_string()),
-            Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(",")),
-            Literal::NamedTuple{values} => format!("Literal ({})", values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(",")),
+            Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(", ")),
+            Literal::NamedTuple{values} => format!("Literal ({})", values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(", ")),
 
             Literal::ProgramMemmory(name, ty) => format!("{}({})", name.0, ty.type_to_string()),
         }
@@ -260,9 +260,9 @@ impl Literal {
             Literal::Bool(val) => format!("{}", val),
             Literal::Char(char) => format!("{}", char),
             Literal::Str(str) => format!("{}", str),
-            Literal::Array{values, ..} => format!("[{}]", values.iter().map(|lit| lit.value_to_string()).join(",")),
-            Literal::Tuple{values, ..} => format!("({})", values.iter().map(|value| value.value_to_string()).join(",")),
-            Literal::NamedTuple{values, ..} => format!("({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.value_to_string())).join(",")),
+            Literal::Array{values, ..} => format!("[{}]", values.iter().map(|lit| lit.value_to_string()).join(", ")),
+            Literal::Tuple{values, ..} => format!("({})", values.iter().map(|value| value.value_to_string()).join(", ")),
+            Literal::NamedTuple{values, ..} => format!("({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.value_to_string())).join(", ")),
             
             Literal::ProgramMemmory(name, ty) => format!("{}({})", name.0, ty.type_to_string()),
         }
@@ -276,9 +276,9 @@ impl Literal {
             Literal::Bool(val) => format!("Literal bool {}", val),
             Literal::Char(char) => format!("Literal char {}", char),
             Literal::Str(str) => format!("Literal str \"{}\"", str),
-            Literal::Array{values, ..} => format!("Literal [{}; {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(",")),
-            Literal::Tuple{values, ..} => format!("Literal ({})", values.iter().map(|value| value.to_string()).join(",")),
-            Literal::NamedTuple{values, ..} => format!("Literal ({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.to_string())).join(",")),
+            Literal::Array{values, ..} => format!("Literal [{}: {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(", ")),
+            Literal::Tuple{values, ..} => format!("Literal ({})", values.iter().map(|value| value.to_string()).join(", ")),
+            Literal::NamedTuple{values, ..} => format!("Literal ({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.to_string())).join(", ")),
             Literal::ProgramMemmory(name, ty) => format!("Literal {}({})", name.0, ty.type_to_string()),
         }
     }

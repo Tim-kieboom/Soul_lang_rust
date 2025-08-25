@@ -39,18 +39,25 @@ impl SoulType {
     }
 
     pub fn to_string(&self) -> String {
+        let modifier = if self.modifier == Modifier::Default {
+            "".into()
+        }
+        else {
+            format!("{} ", self.modifier.to_str())
+        };
+        
         if self.generics.is_empty() {
             format!(
-                "{} {}{}",
-                self.modifier.to_str(),
+                "{}{}{}",
+                modifier,
                 self.base.to_string(),
                 self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
             )
         }
         else {
             format!(
-                "{} {}<{}>{}",
-                self.modifier.to_str(),
+                "{}{}<{}>{}",
+                modifier,
                 self.base.to_string(),
                 self.generics.iter().map(|gene| gene.to_string()).join(","),
                 self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
