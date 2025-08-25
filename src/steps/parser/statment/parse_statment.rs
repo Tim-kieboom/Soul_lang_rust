@@ -4,12 +4,12 @@ use crate::steps::parser::statment::parse_variable::get_variable;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
-use crate::steps::parser::expression::parse_expression::get_expression;
+use crate::steps::parser::expression::parse_expression::{get_expression, get_expression_options, ExprOptions};
 use crate::soul_names::{check_name_allow_types, NamesOtherKeyWords, SOUL_NAMES};
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{Modifier, SoulType};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Block, StatementKind, StatmentType, STATMENT_END_TOKENS};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Assignment, Block, StatementKind, StatementType, STATMENT_END_TOKENS};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, ReturnKind, ReturnLike, VariableName};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
@@ -43,103 +43,109 @@ pub fn get_statment(block_builder: &mut BlockBuilder, stream: &mut TokenStream, 
 
 
     let statment = match get_statement_type(stream)? {
-        StatmentType::Expression => {
+        StatementType::Expression => {
             let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)?;
             Statement::from_expression(expression)
         }
 
-        StatmentType::Variable => {
+        StatementType::Variable => {
             let variable = get_variable(stream, scopes)?;
             let variable_name = VariableName::new(&variable.node.name);
             scopes.insert(variable_name.name.0.clone(), ScopeKind::Variable(variable.node));
 
             Statement::new(StatementKind::Variable(variable_name), variable.span)
         },
-        StatmentType::Assignment => {
-            todo!("get Assignment")
+        StatementType::Assignment => {
+            let assignment = get_assignment(stream, scopes)?;
+            Statement::new(StatementKind::Assignment(assignment.node), assignment.span)
         },
 
-        StatmentType::UsePath => {
-            todo!("get UsePath");
+        StatementType::Use => {
+            todo!("get Use");
             return Ok(None);
         },
-        StatmentType::UseTypeDef => {
-            todo!("get UseType");
-            return Ok(None);
-        },
-        StatmentType::UseImplement => {
-            todo!("get UseImplement")
-        },
-        StatmentType::Function => {
+        StatementType::Function => {
             let function = get_function(stream, scopes)?;
             Statement::new(StatementKind::Function(function.node), function.span)
         },
-        StatmentType::FunctionCall => {
+        StatementType::FunctionCall => {
             Statement::from_expression(get_expression(stream, scopes, STATMENT_END_TOKENS)?)
         }
 
-        StatmentType::Class => {
+        StatementType::Class => {
             todo!("get Class")
         },
-        StatmentType::Trait => {
+        StatementType::Trait => {
             todo!("get Trait")
         },
-        StatmentType::Struct => {
+        StatementType::Struct => {
             todo!("get Struct")
         },
 
-        StatmentType::Enum => {
+        StatementType::Enum => {
             todo!("get Enum")
         },
-        StatmentType::Union => {
+        StatementType::Union => {
             todo!("get Union")
         },
-        StatmentType::TypeEnum => {
+        StatementType::TypeEnum => {
             todo!("get TypeEnum");
             return Ok(None);
         },
 
-        StatmentType::If => {
+        StatementType::If => {
             let expression = todo!("get If");
             Statement::from_expression(expression)
         },
-        StatmentType::Else => {
+        StatementType::Else => {
             todo!("get Else");
             return Ok(None);
         },
-        StatmentType::For => {
+        StatementType::For => {
             let expression = todo!("get For");
             Statement::from_expression(expression)
         },
-        StatmentType::While => {
+        StatementType::While => {
             let expression = todo!("get While");
             Statement::from_expression(expression)
         },
-        StatmentType::Match => {
+        StatementType::Match => {
             let expression = todo!("get Match");
             Statement::from_expression(expression)
         },
 
-        StatmentType::Type => {
+        StatementType::Type => {
             parse_type_def(stream, scopes)?;
             return Ok(None);
         },
-        StatmentType::Return => {
+        StatementType::Return => {
             let expression = get_return_like(ReturnKind::Return, stream, scopes)?;
             Statement::from_expression(expression)
         },
-        StatmentType::Break => {
+        StatementType::Break => {
             let expression = get_return_like(ReturnKind::Break, stream, scopes)?;
             Statement::from_expression(expression)
         },
-        StatmentType::Fall => {
+        StatementType::Fall => {
             let expression = get_return_like(ReturnKind::Fall, stream, scopes)?;
             Statement::from_expression(expression)
         },
-        StatmentType::CloseBlock => Statement::new(StatementKind::CloseBlock, stream.current_span()),
+        StatementType::CloseBlock => Statement::new(StatementKind::CloseBlock, stream.current_span()),
     };
 
     Ok(Some(statment))
+}
+
+fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
+    let assign_i = stream.current_index();
+    let variable = get_expression(stream, scopes, &["="])?;
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let value = get_expression(stream, scopes, STATMENT_END_TOKENS)?;
+    let span = stream[assign_i].span.combine(&stream.current_span());
+    Ok(Spanned::new(Assignment{variable, value}, span))
 }
 
 fn parse_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
@@ -189,14 +195,14 @@ fn get_return_like(kind: ReturnKind, stream: &mut TokenStream, scopes: &mut Scop
     Ok(Expression::new(ExpressionKind::ReturnLike(ReturnLike{value, kind, delete_list: vec![]}), span))
 }
 
-fn get_statement_type(stream: &mut TokenStream) -> Result<StatmentType> {
+fn get_statement_type(stream: &mut TokenStream) -> Result<StatementType> {
     let begin_i = stream.current_index();
     let result = inner_get_statment_type(stream);
     stream.go_to_index(begin_i);
     result
 }
 
-fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
+fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatementType> {
     
     let mut modifier = Modifier::Default;
     match stream.current_text() {
@@ -205,62 +211,62 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
         }
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => {
-            return Ok(StatmentType::Return)
+            return Ok(StatementType::Return)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::BreakLoop) => {
-            return Ok(StatmentType::Break)
+            return Ok(StatementType::Break)
         }
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Fall) => {
-            return Ok(StatmentType::Fall)
+            return Ok(StatementType::Fall)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => {
-            return Ok(StatmentType::If)
+            return Ok(StatementType::If)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Else) => {
-            return Ok(StatmentType::Else)
+            return Ok(StatementType::Else)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::MatchCase) => {
-            return Ok(StatmentType::Match)
+            return Ok(StatementType::Match)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => {
-            return Ok(StatmentType::While)
+            return Ok(StatementType::While)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => {
-            return Ok(StatmentType::For)
+            return Ok(StatementType::For)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Type) => {
-            return Ok(StatmentType::Type)
+            return Ok(StatementType::Type)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
-            return Ok(StatmentType::Trait)
+            return Ok(StatementType::Trait)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
-            return Ok(StatmentType::TypeEnum)
+            return Ok(StatementType::TypeEnum)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
-            return Ok(StatmentType::Union)
+            return Ok(StatementType::Union)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Enum) => {
-            return Ok(StatmentType::Enum)
+            return Ok(StatementType::Enum)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Struct) => {
-            return Ok(StatmentType::Struct)
+            return Ok(StatementType::Struct)
         },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Class) => {
-            return Ok(StatmentType::Class)
+            return Ok(StatementType::Class)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Use) => {
-            return todo!("get_use_type")
+            return Ok(StatementType::Use)
         },
 
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Let) => {
-            return Ok(StatmentType::Variable)
+            return Ok(StatementType::Variable)
         }
         _ => (),
     }
@@ -298,14 +304,14 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
                 }
                 else if has_round_bracket {
                     if stream.peek_is("{") || stream.peek_is("where") {
-                        return Ok(StatmentType::Function)
+                        return Ok(StatementType::Function)
                     }
                     else {
-                        return Ok(StatmentType::FunctionCall)
+                        return Ok(StatementType::FunctionCall)
                     }
                 }
                 else {
-                    return Ok(StatmentType::Expression)
+                    return Ok(StatementType::Expression)
                 }
             },
             "=" => {
@@ -314,24 +320,24 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatmentType> {
                 }
                 
                 if modifier != Modifier::Default {
-                    return Ok(StatmentType::Variable)
+                    return Ok(StatementType::Variable)
                 }
 
                 if consecutive_parts > 1 {
-                    return Ok(StatmentType::Variable)
+                    return Ok(StatementType::Variable)
                 }
                 else {
-                    return Ok(StatmentType::Assignment)
+                    return Ok(StatementType::Assignment)
                 }
             }
             ":=" => {
                 if !stream.next_till("\n") {
                     return Err(err_out_of_bounds(stream))
                 }
-                return Ok(StatmentType::Variable)
+                return Ok(StatementType::Variable)
             },
             "{" => {
-                return Ok(StatmentType::Function)
+                return Ok(StatementType::Function)
             },
             _ => (),
         }

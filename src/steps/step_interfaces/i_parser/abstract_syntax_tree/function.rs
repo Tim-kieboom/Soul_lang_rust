@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{BoxExpression, Expression, Ident, NamedTuple, Tuple, VariableName}, generic::GenericParameter, soul_type::soul_type::{Modifier, SoulType}, spanned::Spanned, statement::Block};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{BoxExpression, Ident, NamedTuple, Tuple, VariableName}, generic::GenericParameter, soul_type::soul_type::{Modifier, SoulType}, spanned::Spanned, statement::Block};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Function {
@@ -72,6 +72,7 @@ pub struct LambdaSignature {
     pub params: Vec<Spanned<Parameter>>,
     pub return_type: Option<Box<SoulType>>,
     pub mode: LambdaMode, 
+    pub has_return: bool,
 }
 
 impl LambdaSignature {

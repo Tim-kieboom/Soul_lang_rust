@@ -27,15 +27,13 @@ pub enum StatementKind {
     CloseBlock,
 }
 
-pub enum StatmentType {
+pub enum StatementType {
     Expression,
 
     Variable,
     Assignment,
 
-    UsePath,
-    UseTypeDef,
-    UseImplement,
+    Use,
 
     Function,
     FunctionCall,

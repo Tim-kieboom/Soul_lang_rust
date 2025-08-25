@@ -2,42 +2,62 @@ type string typeof str
 
 main() {
 
-
     sum(int a, int b) int {
         return a + b
     }
 
     Println("hello world")
 
-    var := 1
-    let lt = 1
-    const cnst = 1
-    Literal ltrl = 1
+    Println(f"num == {num}")
+    sum(1, 2)
+}
 
-    
-    int int_lt = 1
-    const int int_cnst = 1
-    Literal int int_ltrl = 1
+variable() {
+    var := 1 //int(1)
+    let letVar = 1.0 //f32(1.0)
+    const constVar = 0b1 //uint(1)
+    Literal literalVar = -1//int(-1)
 
-    tuple := (1,2,3,4)
+    int intVar = 1
+    const int intConst = 1
+    Literal int intLiteral = 1
 
-    // var = 2
+    num := sum(1, 2)
+    num = 2
+    // num = num.sum(1)
 
+    // obj := Object(field: 1)
+    // obj = Object(:)
+    // obj = Object()
+    // num = obj.field
+}
+
+expressionGroups() {
+
+    one() int {
+        return 1
+    }
+
+    literalArray := [1, 2, 3.0, 4]
+    literalTuple := (true, 1, 2.0, 0b11, "4")
+    literalNamedTuple := (value: 1, text: "hello world")
+
+
+    array := [1, 2, 3, 4, one()]
+    tuple := (true, one(), 2.0, 0b11, "4")
+    namedTuple := (value: one(), text: "hello world")
+
+    list := List[f32: 1, 2, 3, 4, 5]
     arr := [f32: 1, 2, 3, 4, 5]
-    // arr = [f32: for 10 => 0]
-    // arr = [for i in 10 => i%2]
+    arr = [f32: for 10 => 0]
+    arr = [for i in 10 => i%2]
     map := [(str, bool):
         ("hello", true),
         ("world", false),
     ]
 
-    num := sum(1, 2)
-    // num = num.sum(1)
-    Println(f"num == {num}")
-    sum(1, 2)
-    SumResult(sum: sum(1,2), other: 1)
-
-    return
+    Json json = (value: one())
+    json = Json(sum: sum(1,2), other: 1)
 }
 
 sum(int a, int b) int {
@@ -47,6 +67,33 @@ sum(int a, int b) int {
 int sum(this, int b) int {
     return this + b
 }
+
+// struct Object {
+//     int field = 0
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

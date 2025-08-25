@@ -57,8 +57,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
 
         add_offset_with_gap(offset, sum_gap)
     }
-
-
+        
     let splits = split_tokens(&file_line.line);
     let mut line_offset = 0;
     let mut last_is_forward_slash = false;
@@ -146,7 +145,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             continue;
         }
 
-        let dot_splits = text.split('.').collect::<Vec<_>>();
+        let dot_splits = split_dot(text);
         let last_index = dot_splits.len() - 1;
         for (j, mut split) in dot_splits.into_iter().enumerate() {
             if split.is_empty() || split == " " {
@@ -168,14 +167,6 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             ));
 
             line_offset = add_offset_range(line_offset + text.len(), &mut gaps, line_offset);
-
-            if j != last_index {
-                tokens.push(Token::new(
-                    ".".to_string(), 
-                    SoulSpan::new(file_line.line_number, line_offset, split.len())
-                ));
-                line_offset = add_offset_range(line_offset + 1, &mut gaps, line_offset);
-            }
         }
     }
 
@@ -208,6 +199,13 @@ fn split_tokens(this: &str) -> Vec<&str> {
     }
 
     result
+}
+
+static DOT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^.]+|\.").unwrap());
+fn split_dot(token: &str) -> Vec<&str> {
+    DOT_REGEX.find_iter(token)
+        .map(|m| m.as_str())
+        .collect()
 }
 
 fn needs_to_dot_tokenize(text: &str) -> bool {

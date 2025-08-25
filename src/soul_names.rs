@@ -230,7 +230,7 @@ impl SoulNames {
 
         let mut parse_tokens: Vec<&str> = BASE_TOKENS.iter().copied().collect();
         parse_tokens.extend(operator_names.iter().filter(|(key, _)| key != &&NamesOperator::Logarithm).map(|(_, str)| *str));
-        parse_tokens.extend(assign_symbools.iter().map(|(_, str)| *str));
+        parse_tokens.extend(assign_symbools.iter().filter(|(key, _)| key != &&NamesAssignType::GetObjectInner).map(|(_, str)| *str));
         parse_tokens.extend(type_wappers.iter().map(|(_, str)| *str));
 
         //this is so that the tokenizer takes priority over for example '**' over '*'

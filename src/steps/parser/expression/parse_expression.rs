@@ -126,62 +126,45 @@ fn convert_expression(
         return BREAK_LOOP
     }
 
-    let literal_begin = stream.current_index();
-    let possible_literal = Literal::try_from_stream(stream, scopes)?;
+    let first_literal_begin = stream.current_index();
 
-    if let Some(literal) = possible_literal {
-        let literal_span = stream[literal_begin].span.combine(&stream.current_span());
+    if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
+
+        add_literal(literal, stream, scopes, stacks, first_literal_begin);
+        end_loop(stream, scopes, stacks)?;
+        return CONTINUE_LOOP
+    }
+
+    if let CLOSED_A_BRACKET = traverse_brackets(stream, stacks, options) {
+        convert_bracket_expression(stream, stacks)?;
+    }
+    
+    let second_literal_begin = stream.current_index();
+    if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
+
+        add_literal(literal, stream, scopes, stacks, second_literal_begin);
+        end_loop(stream, scopes, stacks)?;
+        return CONTINUE_LOOP
+    }
+
+    let begin_i = stream.current_index();
+    stream.go_to_index(first_literal_begin);
+    if let Some(group) = try_get_expression_group(stream, scopes)? {
         
-        add_literal(literal, scopes, stacks, literal_span);
+        add_group_expressions(group, stacks)?;
         end_loop(stream, scopes, stacks)?;
         return CONTINUE_LOOP
     }
     else {
-        if let CLOSED_A_BRACKET = traverse_brackets(stream, stacks, options) {
-            convert_bracket_expression(stream, stacks)?;
-        }
-        
-        let bracket_literal_begin = stream.current_index();
-        if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
-            let literal_span = stream[bracket_literal_begin].span.combine(&stream.current_span());
-        
-            add_literal(literal, scopes, stacks, literal_span);
-            end_loop(stream, scopes, stacks)?;
-            return CONTINUE_LOOP
-        }
-
-        let begin_i = stream.current_index();
-        stream.go_to_index(literal_begin);
-        if let Some(mut group) = try_get_expression_group(stream, scopes)? {
-            
-            fn is_single_tuple(tuple: &Tuple) -> bool {
-                tuple.values.len() == 1
-            }
-
-            if let ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(tuple)) = &mut group.node {
-                
-                if is_single_tuple(tuple) {
-                    stacks.expressions.push(mem::take(&mut tuple.values[0]));
-                    end_loop(stream, scopes, stacks)?;
-                    return CONTINUE_LOOP
-                }
-            };
-
-            
-            stacks.expressions.push(group);
-            end_loop(stream, scopes, stacks)?;
-            return CONTINUE_LOOP
-        }
-        else {
-            stream.go_to_index(begin_i);
-        }
+        stream.go_to_index(begin_i);
     }
 
 
     if is_end_token(stream.current(), end_tokens, options) {
         return BREAK_LOOP
     }
-    else if let Some(operator) = get_operator(stream, stacks) {
+
+    if let Some(operator) = get_operator(stream, stacks) {
         try_add_operator(stacks, operator, stream.current_span())?;
     }
     else if could_be_variable(stream) {
@@ -214,16 +197,41 @@ fn convert_expression(
     return CONTINUE_LOOP
 }
 
-fn could_be_variable(stream: &mut TokenStream) -> bool {
-    check_name(stream.current_text()).is_ok()
+pub fn traverse_brackets(
+    stream: &mut TokenStream, 
+    stacks: &mut ExpressionStacks, 
+    options: &mut ExprOptions,
+) -> bool {
+    let token = stream.current_text();
+    if token == "(" {
+        stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundOpen), stream.current_span()));
+        stream.next();
+        
+        options.round_bracket_stack += 1;
+    } 
+    else if token == ")" {
+        stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundClose), stream.current_span()));
+        stream.next();
+
+        options.round_bracket_stack -= 1;
+        if options.round_bracket_stack >= 0 {
+            return true;
+        }
+    }
+
+    false
 }
 
 pub fn add_literal(
     literal: Literal, 
+    stream: &TokenStream,
     scopes: &mut ScopeBuilder, 
     stacks: &mut ExpressionStacks,
-    span: SoulSpan,
+    begin_i: usize,
 ) {
+
+    let span = stream[begin_i].span.combine(&stream.current_span());
+
     let expression = match &literal {
         Literal::Tuple{..} |
         Literal::Array{..} |
@@ -237,6 +245,20 @@ pub fn add_literal(
     };
 
     stacks.expressions.push(Expression::new(expression, span));
+}
+
+fn add_group_expressions(mut group: Expression, stacks: &mut ExpressionStacks) -> Result<()> {
+
+    if let ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(tuple)) = &mut group.node {
+        
+        if is_single_tuple(tuple) {
+            stacks.expressions.push(mem::take(&mut tuple.values[0]));
+            return Ok(())
+        }
+    }
+    
+    stacks.expressions.push(group);
+    Ok(())
 }
 
 fn try_add_operator(
@@ -272,32 +294,6 @@ fn get_operator(stream: &TokenStream, stacks: &ExpressionStacks) -> Option<Opera
     }
 
     operator
-}
-
-
-
-
-fn end_loop(
-    stream: &mut TokenStream, 
-    scopes: &mut ScopeBuilder, 
-    stacks: &mut ExpressionStacks, 
-) -> Result<()> { 
-    
-    if stream.peek_is("[") {
-        todo!("add index")
-    }
-
-    while stream.peek_is(".") {
-        todo!("add_field_or_methode")
-    }
-
-    if stream.peek_is("?") {
-        add_ternary(stream, scopes, stacks)?;
-    }
-
-    //should be ref
-
-    Ok(())
 }
 
 fn add_ternary(
@@ -347,29 +343,71 @@ fn add_ternary(
     Ok(())
 }
 
-pub fn traverse_brackets(
+fn end_loop(
     stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
     stacks: &mut ExpressionStacks, 
-    options: &mut ExprOptions,
-) -> bool {
-    let token = stream.current_text();
-    if token == "(" {
-        stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundOpen), stream.current_span()));
-        stream.next();
+) -> Result<()> { 
+    
+    loop {
         
-        options.round_bracket_stack += 1;
-    } 
-    else if token == ")" {
-        stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundClose), stream.current_span()));
-        stream.next();
+        let symbool = AfterExpressionSymbools::from_context(stream, stacks);
+        match symbool {
+            AfterExpressionSymbools::Ref => todo!("get ref"),
+            AfterExpressionSymbools::Index => todo!("get index"),
+            AfterExpressionSymbools::Field => todo!("get field"),
+            AfterExpressionSymbools::Ternary => add_ternary(stream, scopes, stacks)?,
 
-        options.round_bracket_stack -= 1;
-        if options.round_bracket_stack >= 0 {
-            return true;
+            AfterExpressionSymbools::None => break,
         }
     }
 
-    false
+    Ok(())
+}
+
+enum AfterExpressionSymbools {
+    None,
+    Index,
+    Field,
+    Ref,
+    Ternary
+}
+
+impl AfterExpressionSymbools {
+    pub fn from_context(stream: &TokenStream, stacks: &ExpressionStacks) -> Self {
+        
+        fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {
+            !stacks.refs.is_empty() && !stacks.expressions.is_empty()
+        }
+
+        
+        let peek_i = if stream.peek_is("\n") {2} else {1};
+
+        let token = match stream.peek_multiple(peek_i) {
+            Some(val) => val.text.as_str(),
+            None => return Self::None,
+        };
+
+        match token {
+            "[" => Self::Index,
+            "." => Self::Field,
+            "?" => Self::Ternary,
+            _ => if should_convert_to_ref(stacks) {
+                Self::Ref
+            }
+            else {
+                Self::None
+            },
+        }
+    }
+}
+
+fn could_be_variable(stream: &mut TokenStream) -> bool {
+    check_name(stream.current_text()).is_ok()
+}
+
+fn is_single_tuple(tuple: &Tuple) -> bool {
+    tuple.values.len() == 1
 }
 
 fn is_minus_negative_unary(stacks: &ExpressionStacks) -> bool {
@@ -396,6 +434,7 @@ fn is_valid_end_token(token: &Token, options: &ExprOptions) -> bool {
 pub struct ExpressionStacks {
     pub expressions: Vec<Expression>,
     pub symbools: Vec<Symbool>,
+    pub refs: Vec<String>,
 }
 
 impl ExpressionStacks {

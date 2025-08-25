@@ -24,7 +24,7 @@ adsrfg
 	func().Hash()
 	print("hello world\n")
 	string := ["1", "2", "3", "4", "5", "6"]
-	i32 result := sum(1, /*comment*/2)
+	i32 result := sum(1, /*comment*/2.0)
 	result += 1; result -= -1
 	result = \
 		2
@@ -49,7 +49,7 @@ main()
     func().Hash()
     print("hello world\n")
     string := ["1", "2", "3", "4", "5", "6"]
-    i32 result := sum(1, 2)
+    i32 result := sum(1, 2.0)
     result += 1; result -= -1
     result = \
         2
