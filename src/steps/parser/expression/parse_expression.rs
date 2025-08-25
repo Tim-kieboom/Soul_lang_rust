@@ -1,16 +1,16 @@
 use std::mem;
-use crate::soul_names::{check_name, could_be_name};
 use crate::steps::step_interfaces::i_tokenizer::Token;
+use crate::soul_names::{check_name_allow_types, could_be_name};
 use crate::steps::step_interfaces::i_parser::scope_builder::{ProgramMemmory};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::parser::expression::parse_expression_groups::{get_function_call, try_get_expression_group};
 use crate::steps::parser::expression::symbool::{Bracket, Operator, Symbool, SymboolKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
-use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
+use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ternary, Tuple, UnaryOperatorKind, VariableName};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Index, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
 
 pub struct ExprOptions {
@@ -182,7 +182,7 @@ fn convert_expression(
 
         if could_be_name(current) {
 
-            check_name(current)
+            check_name_allow_types(current)
                 .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
         }
 
@@ -413,6 +413,33 @@ fn add_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut
     Ok(())
 }
 
+fn add_index(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+    if stream.next_multiple(2).is_none() {
+        return Err(err_out_of_bounds(stream));
+    } 
+
+    let begin_i = stream.current_index();
+    let index = Box::new(get_expression(stream, scopes, &["]"])
+        .map_err(|err| pass_soul_error(
+            SoulErrorKind::ArgError, 
+            stream[begin_i].span, 
+            "while trying to get index", 
+            err
+        ))?);
+
+    let collection = Box::new(stacks.expressions.pop()
+        .ok_or(new_soul_error(
+            SoulErrorKind::InvalidInContext, 
+            stream.current_span(), 
+            "indexer without collection (e.g. '[1]' instead of 'array[1]')"
+        ))?);
+
+    let indexer = Expression::new(ExpressionKind::Index(Index{collection, index}), stream.current_span());
+    stacks.expressions.push(indexer);
+
+    Ok(())
+}
+
 fn end_loop(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
@@ -424,7 +451,7 @@ fn end_loop(
         let symbool = AfterExpressionSymbools::from_context(stream, stacks);
         match symbool {
             AfterExpressionSymbools::Ref => todo!("get ref"),
-            AfterExpressionSymbools::Index => todo!("get index"),
+            AfterExpressionSymbools::Index => add_index(stream, scopes, stacks)?,
             AfterExpressionSymbools::Ternary => add_ternary(stream, scopes, stacks)?,
             AfterExpressionSymbools::FieldOrMethode => add_field_or_methode(stream, scopes, stacks)?,
 
@@ -473,7 +500,7 @@ impl AfterExpressionSymbools {
 }
 
 fn could_be_variable(stream: &mut TokenStream) -> bool {
-    check_name(stream.current_text()).is_ok()
+    check_name_allow_types(stream.current_text()).is_ok()
 }
 
 fn is_single_tuple(tuple: &Tuple) -> bool {

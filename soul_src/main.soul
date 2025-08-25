@@ -1,15 +1,28 @@
 const num = sum<int>(1, 2)
 type string typeof str
 
-main() {
+main() {}
 
+functionCall() {
     sumInner(int a, int b) int {
         return a + b
     }
 
+    // sumGeneric<T: Number>(T a, T b) T {
+    //     return a + b
+    // }
+
     Println("hello world")
     Println(f"num == {num}")
     sumInner(1, 2)
+    sumGeneric<int>(1, 2)
+    NamedTupleCtor(value: 1, field: "hello", sum: sum(1,2))
+    int.MAX
+    int.Parse("1")
+
+    var.field
+    var.Methode()  
+    var.field.Methode()
 }
 
 variable() {

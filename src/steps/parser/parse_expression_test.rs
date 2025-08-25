@@ -944,11 +944,11 @@ fn index_expressions() {
                 ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{
                     collection_type: Some(SoulType::from_type_kind(TypeKind::Unknown("arr".into()))), 
                     element_type: None, 
-                    values: vec![Expression::new(int_lit(1), SoulSpan::new(0,0,0))], 
+                    values: vec![Expression::new(int_lit(1), SoulSpan::new(0,4,1))], 
                 })),
-                SoulSpan::new(0,0,0)
+                SoulSpan::new(0,0,6)
             )),
-            index: Box::new(Expression::new(int_lit(2), SoulSpan::new(0,0,0)))
+            index: Box::new(Expression::new(int_lit(2), SoulSpan::new(0,7,1)))
         })
     );
 
@@ -959,12 +959,12 @@ fn index_expressions() {
         result.clone().unwrap().node,
         ExpressionKind::Index(Index {
             collection: Box::new(Expression::new(ExpressionKind::AccessField(AccessField{
-                    object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,0))), 
+                    object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3))), 
                     field: VariableName::new("field"),
                 }),
-                SoulSpan::new(0,0,0),
+                SoulSpan::new(0,0,9),
             )),
-            index: Box::new(Expression::new(int_lit(3), SoulSpan::new(0,0,0))),
+            index: Box::new(Expression::new(int_lit(3), SoulSpan::new(0,10,1))),
         })
     );
 }
