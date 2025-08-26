@@ -1,15 +1,15 @@
 use std::mem;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::Token;
-use crate::soul_names::{check_name_allow_types, could_be_name, NamesTypeWrapper, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope_builder::{ProgramMemmory};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
-use crate::steps::parser::expression::parse_expression_groups::{get_function_call, try_get_expression_group};
 use crate::steps::parser::expression::symbool::{Bracket, Operator, Symbool, SymboolKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
-use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
+use crate::soul_names::{check_name_allow_types, could_be_name, NamesTypeWrapper, SOUL_NAMES};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
+use crate::steps::parser::expression::parse_expression_groups::{get_function_call, try_get_expression_group};
+use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Index, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
@@ -57,13 +57,14 @@ fn inner_get_expression(
     let begin_i = stream.current_index();
     let mut stacks = ExpressionStacks::new();
 
-    stream.next_multiple(-1);
-
     loop {   
         
         match convert_expression(stream, scopes, &mut stacks, end_tokens, options) {
             Ok(true) => break,
-            Ok(false) => continue,
+            Ok(false) => {
+                stream.next();
+                continue
+            },
             Err(err) => { 
                 stream.go_to_index(begin_i);
                 return Err(err)
@@ -119,10 +120,6 @@ fn convert_expression(
     const BREAK_LOOP: Result<bool> = Ok(true);
     const CONTINUE_LOOP: Result<bool> = Ok(false);
 
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream))
-    }
-
     if is_end_token(stream.current(), end_tokens, options) {
         return BREAK_LOOP
     }
@@ -148,7 +145,7 @@ fn convert_expression(
         stream.go_to_index(begin_i);
     }
 
-    if let CLOSED_A_BRACKET = traverse_brackets(stream, stacks, options, "(", ")") {
+    if let CLOSED_A_BRACKET = traverse_brackets(stream, stacks, options) {
         convert_bracket_expression(stream, stacks)?;
     }
     
@@ -205,18 +202,19 @@ pub fn traverse_brackets(
     stream: &mut TokenStream, 
     stacks: &mut ExpressionStacks, 
     options: &mut ExprOptions,
-    start: &str,
-    end: &str,
 ) -> bool {
 
+    const START: &str = "(";
+    const END: &str = ")";
+
     let token = stream.current_text();
-    if token == start {
+    if token == START {
         stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundOpen), stream.current_span()));
         stream.next();
         
         options.round_bracket_stack += 1;
     } 
-    else if token == end {
+    else if token == END {
         stacks.symbools.push(Symbool::new(SymboolKind::Bracket(Bracket::RoundClose), stream.current_span()));
         stream.next();
 
@@ -362,10 +360,11 @@ fn add_field_or_methode(
     if stream.peek_is("<") || stream.peek_is("(") {
         let start_i = stream.current_index();
         let result = add_methode(stream, scopes, stacks);
-
+        
+        // Ambiguity handling:
         // if for example 'val.0 < val.1' this is seen as a methode 
         // because of the '.' in 'val.0' before '<' (the '<' makes it seem like a genric in methode)
-        // so is methode failas it might be a field instead
+        // so is methode fails it might be a field instead
         if let Err(err) = result {
 
             stream.go_to_index(start_i);
@@ -470,18 +469,7 @@ fn add_ref(
             ))?;
 
         if let ExpressionKind::Literal(literal) = expression.node {
-            
-            let (name, literal_type) = match literal {
-                Literal::ProgramMemmory(name, ty) => (name, ty),
-                _ => {
-                    let ty = literal.get_literal_type();
-                    let id = scopes.global_literals.insert(literal);
-                    (ProgramMemmory::to_program_memory_name(&id), ty)
-                }
-            };
-
-            let program_memory = Literal::ProgramMemmory(name, literal_type);
-            expression = Expression::new(ExpressionKind::Literal(program_memory), expression.span);
+            expression = turn_into_program_memory(literal, scopes, expression.span);            
         }
 
         let span = expression.span.combine(&ref_kind.span);
@@ -497,12 +485,30 @@ fn add_ref(
     Ok(())
 }
 
+fn turn_into_program_memory(
+    literal: Literal, 
+    scopes: &mut ScopeBuilder, 
+    span: SoulSpan,
+) -> Expression {
+    let (name, literal_type) = match literal {
+        Literal::ProgramMemmory(name, ty) => (name, ty),
+        _ => {
+            let ty = literal.get_literal_type();
+            let id = scopes.global_literals.insert(literal);
+            (ProgramMemmory::to_program_memory_name(&id), ty)
+        }
+    };
+
+    let program_memory = Literal::ProgramMemmory(name, literal_type);
+    Expression::new(ExpressionKind::Literal(program_memory), span)
+}
+
 fn end_loop(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
     stacks: &mut ExpressionStacks, 
 ) -> Result<()> { 
-    
+
     loop {
         
         let symbool = AfterExpressionSymbools::from_context(stream, stacks);
@@ -519,6 +525,19 @@ fn end_loop(
     Ok(())
 }
 
+
+fn get_ref(stream: &TokenStream, stacks: &ExpressionStacks) -> Option<Spanned<RefKind>> {
+
+    if could_be_ref(stacks) {
+
+        RefKind::from_str(&stream.current_text())
+            .map(|el| Spanned::new(el, stream.current_span()))
+    }
+    else {
+        None
+    }
+}
+
 enum AfterExpressionSymbools {
     None,
     Index,
@@ -529,12 +548,8 @@ enum AfterExpressionSymbools {
 
 impl AfterExpressionSymbools {
     pub fn from_context(stream: &TokenStream, stacks: &ExpressionStacks) -> Self {
-        
-        fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {
-            !stacks.refs.is_empty() && !stacks.expressions.is_empty()
-        }
 
-        if should_convert_to_ref(stacks) {
+        if Self::should_convert_to_ref(stacks) {
             return Self::Ref
         }
         
@@ -552,6 +567,10 @@ impl AfterExpressionSymbools {
             _ => Self::None,
         }
     }
+
+    fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {
+        !stacks.refs.is_empty() && !stacks.expressions.is_empty()
+    }
 }
 
 fn could_be_variable(stream: &mut TokenStream) -> bool {
@@ -563,39 +582,44 @@ fn is_single_tuple(tuple: &Tuple) -> bool {
 }
 
 fn is_minus_negative_unary(stacks: &ExpressionStacks) -> bool {
-    stacks.expressions.is_empty() || !stacks.symbools.is_empty()
+    stacks.expressions.is_empty() || 
+    !stacks.symbools.is_empty()
 }
 
 fn unary_is_before_expression(operator: &Option<Operator>, stacks: &ExpressionStacks) -> bool {
-    operator.is_none() || stacks.expressions.is_empty() || !has_no_operators(stacks) 
+    operator.is_none() || 
+    stacks.expressions.is_empty() || 
+    !has_no_operators(stacks) 
 }
 
 fn has_no_operators(stacks: &ExpressionStacks) -> bool {
-    stacks.symbools.is_empty() || stacks.symbools.iter().all(|sy| matches!(sy.node, SymboolKind::Bracket(..)))
+    stacks.symbools.is_empty() || 
+    stacks.symbools.iter().all(|sy| matches!(sy.node, SymboolKind::Bracket(..)))
 }
 
 fn is_end_token(token: &Token, end_tokens: &[&str], options: &ExprOptions) -> bool {
-    end_tokens.iter().any(|str| str == &token.text) && is_valid_end_token(token, options)
+    end_tokens.iter().any(|str| str == &token.text) && 
+    end_token_special_cases(token, options)
 
 }
-fn is_valid_end_token(token: &Token, options: &ExprOptions) -> bool {
-    token.text != ")" || (token.text == ")" && options.round_bracket_stack == 0)
-}
-
-fn get_ref(stream: &TokenStream, stacks: &ExpressionStacks) -> Option<Spanned<RefKind>> {
-    
-    if could_be_ref(stacks) {
-
-        RefKind::from_str(&stream.current_text())
-            .map(|el| Spanned::new(el, stream.current_span()))
-    }
-    else {
-        None
-    }
+fn end_token_special_cases(token: &Token, options: &ExprOptions) -> bool {
+    token.text != ")" || 
+    // Special case: if one of the end_tokens is ')',
+    // it is only valid if there are no unmatched opening
+    // parentheses left in the stack.
+    // This ensures that all "(" have been properly closed.
+    (token.text == ")" && options.round_bracket_stack == 0)
 }
 
 fn could_be_ref(stacks: &ExpressionStacks) -> bool {
-    stacks.expressions.is_empty() || !stacks.symbools.is_empty()
+    // Case 1: If there are no prior expressions, then `*`/`@`/`&` must be a ref symbool.
+    // Example: `*ref`
+    stacks.expressions.is_empty() || 
+    // Case 2: If the counts of operators (`symbools`) and expressions line up,
+    // then `*`/`@`/`&` is more likely acting as a ref symbool than as operator.
+    // Example: For `1 + 2 * 3`, we have symbols.len() = 1 and expressions.len() = 2,
+    // so it's treated as operator instead of ref symbool.
+    stacks.symbools.len() == stacks.expressions.len() 
 }
 
 #[derive(Debug, Clone, Default)]

@@ -360,7 +360,7 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::ExternalExpression(ExternalExpression{path, expr}) => format!("{}::{}", path.0, expr.to_pretty(tab + 1, is_last)),
 
             ExpressionKind::Unary(Unary{operator, expression}) => format!("{}{}", operator.node.to_str(), expression.to_pretty(tab + 1, is_last)),
-            ExpressionKind::Binary(Binary{left, operator, right}) => format!("{}{}{}", left.to_pretty(tab + 1, is_last), operator.node.to_str(), right.to_pretty(tab + 1, is_last)),
+            ExpressionKind::Binary(Binary{left, operator, right}) => format!("{} {} {}", left.to_pretty(tab + 1, is_last), operator.node.to_str(), right.to_pretty(tab + 1, is_last)),
 
             ExpressionKind::If(if_) => if_.to_pretty(tab, is_last),
             ExpressionKind::For(For{element, collection, body:_}) => format!("for {} in {}", element, collection.to_pretty(tab + 1, is_last)),
@@ -432,7 +432,7 @@ impl ToString for ExpressionKind {
             ExpressionKind::ExternalExpression(ExternalExpression{path, expr}) => format!("{}::{}", path.0, expr.to_string()),
             
             ExpressionKind::Unary(Unary{operator, expression}) => format!("{}{}", operator.node.to_str(), expression.to_string()),
-            ExpressionKind::Binary(Binary{left, operator, right}) => format!("{}{}{}", left.to_string(), operator.node.to_str(), right.to_string()),
+            ExpressionKind::Binary(Binary{left, operator, right}) => format!("{} {} {}", left.to_string(), operator.node.to_str(), right.to_string()),
             
             ExpressionKind::If(If{condition, body:_, else_branchs}) => format!(
                 "if {}, {}", 

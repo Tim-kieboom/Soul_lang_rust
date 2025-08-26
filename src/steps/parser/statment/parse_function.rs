@@ -57,6 +57,11 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     }
 
     let mut function_name = stream.current_text().clone();
+    
+    if stream.peek_is("<") {
+        stream.next();
+    }
+
     let generic_decl = get_generics_decl(stream, scopes)?;
     if !generic_decl.implements.is_empty() {
         
@@ -68,6 +73,12 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     }
 
     let generics = generic_decl.generics;
+    if !generics.is_empty() {
+
+        if stream.next_multiple(-1).is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+    }
 
     let is_ctor = function_name == "Ctor" || function_name == "ctor";
     let mut is_array_ctor = false;

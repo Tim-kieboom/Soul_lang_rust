@@ -8,9 +8,9 @@ functionCall() {
         return a + b
     }
 
-    // sumGeneric<T: Number>(T a, T b) T {
-    //     return a + b
-    // }
+    sumGeneric<T: Number>(T a, T b) T {
+        return a + b
+    }
 
     Println("hello world")
     Println(f"num == {num}")
@@ -57,6 +57,7 @@ expressionGroups() {
     }
 
     literalArray := [1, 2, 3.0, 4]
+    foo := 100 log 10
     literalTuple := (true, 1, 2.0, 0b11, "4")
     literalNamedTuple := (value: 1, text: "hello world")
 

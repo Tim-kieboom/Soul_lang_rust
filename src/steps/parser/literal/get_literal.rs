@@ -391,7 +391,12 @@ fn get_array_filler(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<V
     }
     
     if stream.current_text() != "]" {
-        return Err(new_from_stream_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), format!("token '{}' should be ']'", stream.current_text()), FromStreamErrorKind::IsOfType))
+        return Err(new_from_stream_error(
+            SoulErrorKind::UnexpectedEnd, 
+            stream.current_span(), 
+            format!("token '{}' should be ']'", stream.current_text()), 
+            FromStreamErrorKind::IsNotOfType,
+        ))
     }
 
     Ok(vec![literal; amount as usize])

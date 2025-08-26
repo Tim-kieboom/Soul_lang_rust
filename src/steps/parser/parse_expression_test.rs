@@ -296,7 +296,7 @@ fn test_multiple_binary() {
     );
 
     let mut scope = empty_scope();
-    let mut stream = stream_from_strs(&["(","1", "+", "2", ")", "*", "3", "\n"]);
+    let mut stream = stream_from_strs(&["(","1", "+", "2", ")", "*", "4", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
@@ -310,7 +310,7 @@ fn test_multiple_binary() {
                 SoulSpan::new(0,1,3),
             ),
             BinaryOperator::new(BinaryOperatorKind::Mul, SoulSpan::new(0,5,1)),
-            Expression::new(ExpressionKind::Literal(Literal::Int(3)), SoulSpan::new(0,6,1)),
+            Expression::new(ExpressionKind::Literal(Literal::Int(4)), SoulSpan::new(0,6,1)),
         )),
         SoulSpan::new(0,1,6),
     );
@@ -323,7 +323,7 @@ fn test_multiple_binary() {
     );
 
 
-    stream = stream_from_strs(&["(","1", "+", "2", "*", "3", ")", "\n"]);
+    stream = stream_from_strs(&["(","1", "+", "2", "*", "5", ")", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
 
@@ -335,7 +335,7 @@ fn test_multiple_binary() {
                 ExpressionKind::Binary(Binary::new(
                     Expression::new(int_lit(2), SoulSpan::new(0,3,1)),
                     BinaryOperator::new(BinaryOperatorKind::Mul, SoulSpan::new(0,4,1)),
-                    Expression::new(int_lit(3), SoulSpan::new(0,5,1)),
+                    Expression::new(int_lit(5), SoulSpan::new(0,5,1)),
                 )),
                 SoulSpan::new(0,3,3)
             )
@@ -589,7 +589,7 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
 
     let values = vec![
-        Expression::new(ExpressionKind::FunctionCall(FunctionCall{name: "func".into(), callee: None, generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,5,2)),
+        Expression::new(ExpressionKind::FunctionCall(FunctionCall{name: "func".into(), callee: None, generics: vec![], arguments: soul_tuple![]}), SoulSpan::new(0,1,6)),
         Expression::new(int_lit(2), SoulSpan::new(0,8,1)),
         Expression::new(int_lit(3), SoulSpan::new(0,10,1)),
     ];
@@ -783,9 +783,16 @@ fn test_array_filler_expressions() {
             ArrayFiller {
                 collection_type: None,
                 element_type: None,
-                amount: Box::new(Expression::new(int_lit(3), SoulSpan::new(0,0,0))),
+                amount: Box::new(Expression::new(int_lit(2), SoulSpan::new(0,4,1))),
                 index: None,
-                fill_expr: Box::new(Expression::new(int_lit(12), SoulSpan::new(0,0,0))),
+                fill_expr: Box::new(Expression::new(
+                    ExpressionKind::Binary(Binary{
+                        left: Box::new(Expression::new(int_lit(1), SoulSpan::new(0,7,1))),
+                        operator: BinaryOperator::new(BinaryOperatorKind::Add, SoulSpan::new(0,8,1)),
+                        right: Box::new(Expression::new(int_lit(2), SoulSpan::new(0,9,1))),
+                    }), 
+                    SoulSpan::new(0,7,3),
+                )),
             }
         ))
     );
@@ -985,8 +992,9 @@ fn index_expressions() {
 // # Ref
 
 #[test]
-fn test_ref_expression() {
+fn test_ref_and_deref_expression() {
     let mut scope = empty_scope();
+
 
     let mut stream = stream_from_strs(&["@", "1", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
@@ -1002,6 +1010,7 @@ fn test_ref_expression() {
         )
     );
 
+
     let mut stream = stream_from_strs(&["&", "var", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
@@ -1009,6 +1018,7 @@ fn test_ref_expression() {
         result.clone().unwrap().node,
         mut_ref(var("var"), SoulSpan::new(0,1,3))
     );
+
 
     let mut stream = stream_from_strs(&["@", "@", "&", "var", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);

@@ -260,10 +260,6 @@ fn add_generic_type_contraints(
             contraints.push(TypeConstraint::Type(ty));
         }
 
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream))
-        }
-
         if stream.current_text() != "+" {
             break
         }
