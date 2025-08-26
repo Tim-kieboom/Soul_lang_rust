@@ -486,6 +486,7 @@ fn add_ref(
 
         let span = expression.span.combine(&ref_kind.span);
         let any_ref = match ref_kind.node {
+            RefKind::Deref => Expression::new(ExpressionKind::Deref(Box::new(expression)), span),
             RefKind::MutRef => Expression::new(ExpressionKind::MutRef(Box::new(expression)), span),
             RefKind::ConstRef => Expression::new(ExpressionKind::ConstRef(Box::new(expression)), span),
         };
@@ -608,6 +609,7 @@ pub struct ExpressionStacks {
 pub enum RefKind {
     ConstRef,
     MutRef,
+    Deref,
 }
 
 impl ExpressionStacks {
@@ -620,6 +622,7 @@ impl RefKind {
     pub fn from_str(text: &str) -> Option<Self> {
         match text {
             val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => Some(Self::MutRef),
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Pointer) => Some(Self::Deref),
             val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => Some(Self::ConstRef),
             _ => None,
         }
@@ -627,6 +630,7 @@ impl RefKind {
 
     pub fn to_str(&self) -> &str {
         match self {
+            RefKind::Deref => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer),
             RefKind::MutRef => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
             RefKind::ConstRef => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
         }

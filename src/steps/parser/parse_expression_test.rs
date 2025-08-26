@@ -73,6 +73,10 @@ fn mut_ref(kind: ExpressionKind, span: SoulSpan) -> ExpressionKind {
     ExpressionKind::MutRef(Box::new(Expression::new(kind, span)))
 }
 
+fn deref(kind: ExpressionKind, span: SoulSpan) -> ExpressionKind {
+    ExpressionKind::Deref(Box::new(Expression::new(kind, span)))
+}
+
 // # Literal
 
 #[test]
@@ -1018,6 +1022,15 @@ fn test_ref_expression() {
             ),
             SoulSpan::new(0,1,5)
         )
+    );
+
+    
+    let mut stream = stream_from_strs(&["*", "ref", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
+    assert_eq_show_diff!(
+        result.clone().unwrap().node,
+        deref(var("ref"), SoulSpan::new(0,1,3))
     );
 }
 
