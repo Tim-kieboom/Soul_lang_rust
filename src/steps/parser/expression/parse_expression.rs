@@ -1,6 +1,7 @@
 use std::mem;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_tokenizer::Token;
-use crate::soul_names::{check_name_allow_types, could_be_name};
+use crate::soul_names::{check_name_allow_types, could_be_name, NamesTypeWrapper, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope_builder::{ProgramMemmory};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
@@ -163,7 +164,10 @@ fn convert_expression(
         return BREAK_LOOP
     }
 
-    if let Some(operator) = get_operator(stream, stacks) {
+    if let Some(ref_kind) = get_ref(stream, stacks) {
+        stacks.refs.push(ref_kind);
+    }
+    else if let Some(operator) = get_operator(stream, stacks) {
         try_add_operator(stacks, operator, stream.current_span())?;
     }
     else if could_be_variable(stream) {
@@ -385,8 +389,10 @@ fn add_field(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<
 
     let span = object.span;
     let field = VariableName::new(stream.current_text());
-    let field_expr = Expression::new(ExpressionKind::AccessField(
-        AccessField{ object: Box::new(object), field }),
+    let field_expr = Expression::new(
+        ExpressionKind::AccessField(
+            AccessField{object: Box::new(object), field}
+        ),
         span.combine(&stream.current_span(),
     ));
 
@@ -394,7 +400,11 @@ fn add_field(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<
     Ok(())
 }
 
-fn add_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+fn add_methode(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks,
+) -> Result<()> {
     let object = stacks.expressions.pop()
         .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
 
@@ -413,7 +423,11 @@ fn add_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut
     Ok(())
 }
 
-fn add_index(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut ExpressionStacks) -> Result<()> {
+fn add_index(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks,
+) -> Result<()> {
     if stream.next_multiple(2).is_none() {
         return Err(err_out_of_bounds(stream));
     } 
@@ -440,6 +454,48 @@ fn add_index(stream: &mut TokenStream, scopes: &mut ScopeBuilder, stacks: &mut E
     Ok(())
 }
 
+fn add_ref(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks,
+) -> Result<()> {
+    debug_assert!(!stacks.refs.is_empty());
+
+    while let Some(ref_kind) = stacks.refs.pop() {
+        let mut expression = stacks.expressions.pop()
+            .ok_or(new_soul_error(
+                SoulErrorKind::InvalidInContext, 
+                stream.current_span(), 
+                "trying to ref without expression to ref (e.g. '@'/'&' should be '@obj'/'&obj')"
+            ))?;
+
+        if let ExpressionKind::Literal(literal) = expression.node {
+            
+            let (name, literal_type) = match literal {
+                Literal::ProgramMemmory(name, ty) => (name, ty),
+                _ => {
+                    let ty = literal.get_literal_type();
+                    let id = scopes.global_literals.insert(literal);
+                    (ProgramMemmory::to_program_memory_name(&id), ty)
+                }
+            };
+
+            let program_memory = Literal::ProgramMemmory(name, literal_type);
+            expression = Expression::new(ExpressionKind::Literal(program_memory), expression.span);
+        }
+
+        let span = expression.span.combine(&ref_kind.span);
+        let any_ref = match ref_kind.node {
+            RefKind::MutRef => Expression::new(ExpressionKind::MutRef(Box::new(expression)), span),
+            RefKind::ConstRef => Expression::new(ExpressionKind::ConstRef(Box::new(expression)), span),
+        };
+
+        stacks.expressions.push(any_ref);
+    }
+
+    Ok(())
+}
+
 fn end_loop(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
@@ -450,7 +506,7 @@ fn end_loop(
         
         let symbool = AfterExpressionSymbools::from_context(stream, stacks);
         match symbool {
-            AfterExpressionSymbools::Ref => todo!("get ref"),
+            AfterExpressionSymbools::Ref => add_ref(stream, scopes, stacks)?,
             AfterExpressionSymbools::Index => add_index(stream, scopes, stacks)?,
             AfterExpressionSymbools::Ternary => add_ternary(stream, scopes, stacks)?,
             AfterExpressionSymbools::FieldOrMethode => add_field_or_methode(stream, scopes, stacks)?,
@@ -477,6 +533,9 @@ impl AfterExpressionSymbools {
             !stacks.refs.is_empty() && !stacks.expressions.is_empty()
         }
 
+        if should_convert_to_ref(stacks) {
+            return Self::Ref
+        }
         
         let peek_i = if stream.peek_is("\n") {2} else {1};
 
@@ -489,12 +548,7 @@ impl AfterExpressionSymbools {
             "[" => Self::Index,
             "." => Self::FieldOrMethode,
             "?" => Self::Ternary,
-            _ => if should_convert_to_ref(stacks) {
-                Self::Ref
-            }
-            else {
-                Self::None
-            },
+            _ => Self::None,
         }
     }
 }
@@ -527,16 +581,55 @@ fn is_valid_end_token(token: &Token, options: &ExprOptions) -> bool {
     token.text != ")" || (token.text == ")" && options.round_bracket_stack == 0)
 }
 
+fn get_ref(stream: &TokenStream, stacks: &ExpressionStacks) -> Option<Spanned<RefKind>> {
+    
+    if could_be_ref(stacks) {
+
+        RefKind::from_str(&stream.current_text())
+            .map(|el| Spanned::new(el, stream.current_span()))
+    }
+    else {
+        None
+    }
+}
+
+fn could_be_ref(stacks: &ExpressionStacks) -> bool {
+    stacks.expressions.is_empty() || !stacks.symbools.is_empty()
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ExpressionStacks {
     pub expressions: Vec<Expression>,
     pub symbools: Vec<Symbool>,
-    pub refs: Vec<String>,
+    pub refs: Vec<Spanned<RefKind>>,
+}
+
+#[derive(Debug, Clone)]
+pub enum RefKind {
+    ConstRef,
+    MutRef,
 }
 
 impl ExpressionStacks {
     pub fn new() -> Self {
         Self{..Default::default()}
+    }
+}
+
+impl RefKind {
+    pub fn from_str(text: &str) -> Option<Self> {
+        match text {
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => Some(Self::MutRef),
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => Some(Self::ConstRef),
+            _ => None,
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            RefKind::MutRef => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
+            RefKind::ConstRef => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
+        }
     }
 }
 

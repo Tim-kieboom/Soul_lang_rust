@@ -65,6 +65,14 @@ fn var(name: &str) -> ExpressionKind {
     ExpressionKind::Variable(VariableName::new(name))
 }
 
+fn const_ref(kind: ExpressionKind, span: SoulSpan) -> ExpressionKind {
+    ExpressionKind::ConstRef(Box::new(Expression::new(kind, span)))
+}
+
+fn mut_ref(kind: ExpressionKind, span: SoulSpan) -> ExpressionKind {
+    ExpressionKind::MutRef(Box::new(Expression::new(kind, span)))
+}
+
 // # Literal
 
 #[test]
@@ -968,6 +976,69 @@ fn index_expressions() {
         })
     );
 }
+
+
+// # Ref
+
+#[test]
+fn test_ref_expression() {
+    let mut scope = empty_scope();
+
+    let mut stream = stream_from_strs(&["@", "1", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
+    assert_eq_show_diff!(
+        result.clone().unwrap().node,
+        const_ref(
+            ExpressionKind::Literal(
+                Literal::ProgramMemmory(soul_mem_name(0), 
+                LiteralType::Int),
+            ), 
+            SoulSpan::new(0,1,1),
+        )
+    );
+
+    let mut stream = stream_from_strs(&["&", "var", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
+    assert_eq_show_diff!(
+        result.clone().unwrap().node,
+        mut_ref(var("var"), SoulSpan::new(0,1,3))
+    );
+
+    let mut stream = stream_from_strs(&["@", "@", "&", "var", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
+    assert_eq_show_diff!(
+        result.clone().unwrap().node,
+        const_ref(
+            const_ref(
+                mut_ref(var("var"), SoulSpan::new(0,3,3)),
+                SoulSpan::new(0,2,4)
+            ),
+            SoulSpan::new(0,1,5)
+        )
+    );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
