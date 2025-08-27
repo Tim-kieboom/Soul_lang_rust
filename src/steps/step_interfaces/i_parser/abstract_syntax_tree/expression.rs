@@ -1,9 +1,10 @@
-use std::{collections::HashMap, fmt::Display};
 use serde::{Deserialize, Serialize};
-use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{Constructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::Spanned, statement::Block}};
+use std::{collections::HashMap, fmt::Display};
+use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{Constructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::{Spanned}, statement::Block}};
+
+pub type Expression = Spanned<ExpressionKind>;
 
 pub type BoxExpression = Box<Expression>;
-pub type Expression = Spanned<ExpressionKind>;
 pub type UnaryOperator = Spanned<UnaryOperatorKind>;
 pub type BinaryOperator = Spanned<BinaryOperatorKind>;
 
@@ -110,14 +111,14 @@ pub struct Ternary {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct While {
     pub condition: Option<BoxExpression>,
-    pub body: Block,
+    pub block: Block,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct For {
-    pub element: Ident,
+    pub element: Option<BoxExpression>,
     pub collection: BoxExpression,
-    pub body: Block,
+    pub block: Block,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -141,9 +142,10 @@ pub enum CaseDoKind {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct If {
     pub condition: BoxExpression,
-    pub body: Block,
+    pub block: Block,
     pub else_branchs: Vec<Spanned<ElseKind>>,
 }
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ElseKind {
     ElseIf(Box<Spanned<If>>),

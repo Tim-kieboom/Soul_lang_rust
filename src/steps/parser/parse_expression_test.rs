@@ -122,7 +122,10 @@ fn test_literal_misc() {
     let mut stream = stream_from_strs(&["'cc'", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_err());
-    assert_eq!(result.unwrap_err().get_last_kind(), SoulErrorKind::UnexpectedToken);
+    assert!(
+        result.as_ref().unwrap_err().get_last_kind() == SoulErrorKind::UnexpectedToken,
+        "{}", result.unwrap_err().to_err_message().join("\n")
+    );
 }
 
 #[test]

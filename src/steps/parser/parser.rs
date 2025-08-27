@@ -12,7 +12,7 @@ pub fn parse_ast(tokens: TokenizeResonse) -> Result<ParserResponse> {
     let mut block_builder = BlockBuilder::new(SoulSpan::new(0,0,0));
     loop {
 
-        if let Some(statment) = get_statment(&mut block_builder, &mut stream, &mut scopes)? {
+        if let Some(statment) = get_statment(&mut stream, &mut scopes)? {
             block_builder.push_global(statment)?;
         }
 

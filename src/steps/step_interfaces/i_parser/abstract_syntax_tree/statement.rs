@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, ExpressionKind, VariableName}, function::Function, object::{Class, Struct, Trait, TraitSignature}, soul_type::soul_type::{Modifier, SoulType}, spanned::Spanned}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, ExpressionKind, VariableName}, function::Function, object::{Class, Struct, Trait, TraitSignature}, soul_type::soul_type::{Modifier, SoulType}, spanned::{SpannedAttribute}}};
 
 
-pub type Statement = Spanned<StatementKind>;
+pub type Statement = SpannedAttribute<StatementKind>;
 
 pub const STATMENT_END_TOKENS: &[&str] = &["\n", "}"];
 
@@ -24,39 +24,6 @@ pub enum StatementKind {
     Union(Union),
     TypeEnum(TypeEnum),
 
-    CloseBlock,
-}
-
-pub enum StatementType {
-    Expression,
-
-    Variable,
-    Assignment,
-
-    Use,
-
-    Function,
-    FunctionCall,
-
-    Class,
-    Trait,
-    Struct,
-
-    Enum,
-    Union,
-    TypeEnum,
-
-    If,
-    For,
-    Else,
-    While,
-    Match,
-
-    Type,
-
-    Return,
-    Break,
-    Fall,
     CloseBlock,
 }
 
@@ -98,6 +65,29 @@ impl Block {
         Self{ruleset, statments: vec![]}
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

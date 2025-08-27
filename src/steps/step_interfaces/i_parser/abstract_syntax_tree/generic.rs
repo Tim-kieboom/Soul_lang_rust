@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::TypeEnumBody, expression::Ident, soul_type::soul_type::SoulType};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GenericParameter {
@@ -35,14 +35,17 @@ impl GenericParameter {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TypeConstraint {
     Type(SoulType),
-    LiteralTypeEnum(Vec<SoulType>),
+    LiteralTypeEnum(TypeEnumBody),
 }
 
 impl TypeConstraint {
     pub fn to_string(&self) -> String {
         match self {
             TypeConstraint::Type(ty) => ty.to_string(),
-            TypeConstraint::LiteralTypeEnum(soul_types) => format!("typeof[{}]", soul_types.iter().map(|ty| ty.to_string()).join(",")),
+            TypeConstraint::LiteralTypeEnum(soul_types) => format!(
+                "typeof[{}]", 
+                soul_types.types.iter().map(|ty| ty.to_string()).join(","), 
+            ),
         }
     }
 }

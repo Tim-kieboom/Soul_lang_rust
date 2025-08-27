@@ -1,6 +1,7 @@
 use std::mem;
 use crate::steps::step_interfaces::i_tokenizer::Token;
 use crate::steps::step_interfaces::i_parser::scope_builder::{ProgramMemmory};
+use crate::steps::parser::expression::parse_conditional::try_get_conditional;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
@@ -36,7 +37,7 @@ pub fn get_expression(
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str],
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, &mut ExprOptions::default(), end_tokens)
+    inner_get_expression(stream, scopes, &mut ExprOptions::default(), false, end_tokens)
 }
 
 pub fn get_expression_options(
@@ -45,13 +46,31 @@ pub fn get_expression_options(
     mut options: ExprOptions,
     end_tokens: &[&str],
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, &mut options, end_tokens)
+    inner_get_expression(stream, scopes, &mut options, false, end_tokens)
+}
+
+pub fn get_expression_statment(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    end_tokens: &[&str],
+) -> Result<Expression> {
+    inner_get_expression(stream, scopes, &mut ExprOptions::default(), true, end_tokens)
+}
+
+pub fn get_expression_statment_options(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    mut options: ExprOptions,
+    end_tokens: &[&str],
+) -> Result<Expression> {
+    inner_get_expression(stream, scopes, &mut options, true, end_tokens)
 }
 
 fn inner_get_expression(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
     options: &mut ExprOptions,
+    is_statment: bool,
     end_tokens: &[&str],
 ) -> Result<Expression> {
     let begin_i = stream.current_index();
@@ -59,7 +78,7 @@ fn inner_get_expression(
 
     loop {   
         
-        match convert_expression(stream, scopes, &mut stacks, end_tokens, options) {
+        match convert_expression(stream, scopes, &mut stacks, end_tokens, is_statment, options) {
             Ok(true) => break,
             Ok(false) => {
                 stream.next();
@@ -114,6 +133,7 @@ fn convert_expression(
     scopes: &mut ScopeBuilder, 
     stacks: &mut ExpressionStacks, 
     end_tokens: &[&str],
+    is_statment: bool,
     options: &mut ExprOptions,
 ) -> Result<bool> {
     const CLOSED_A_BRACKET: bool = true;
@@ -153,6 +173,12 @@ fn convert_expression(
     if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
 
         add_literal(literal, stream, scopes, stacks, second_literal_begin);
+        end_loop(stream, scopes, stacks)?;
+        return CONTINUE_LOOP
+    }
+
+    if try_get_conditional(stream, scopes, stacks, is_statment)? {
+        stream.next_multiple(-1);
         end_loop(stream, scopes, stacks)?;
         return CONTINUE_LOOP
     }
@@ -197,6 +223,8 @@ fn convert_expression(
     end_loop(stream, scopes, stacks)?;
     return CONTINUE_LOOP
 }
+
+
 
 pub fn traverse_brackets(
     stream: &mut TokenStream, 
@@ -256,7 +284,7 @@ fn add_group_expressions(mut group: Expression, stacks: &mut ExpressionStacks) -
 
     if let ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(tuple)) = &mut group.node {
         
-        if is_single_tuple(tuple) {
+        if is_single_tuple(&tuple) {
             stacks.expressions.push(mem::take(&mut tuple.values[0]));
             return Ok(())
         }

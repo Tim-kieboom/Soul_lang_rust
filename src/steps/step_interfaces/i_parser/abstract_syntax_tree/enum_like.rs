@@ -18,6 +18,11 @@ pub struct Union {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeEnum {
     pub name: Ident,
+    pub body: TypeEnumBody,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeEnumBody {
     pub types: Vec<SoulType>,
 }
 

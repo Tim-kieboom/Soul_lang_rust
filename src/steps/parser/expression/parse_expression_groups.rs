@@ -1,19 +1,20 @@
-use std::collections::HashMap;
 use std::result;
+use std::collections::HashMap;
 use crate::steps::parser::expression::parse_expression::get_expression;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{Constructor, FunctionCall};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
-use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind};
 use crate::steps::step_interfaces::i_parser::scope_builder::{ScopeKind, Variable};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{Constructor, FunctionCall};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind, TypeWrapper};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Array, ArrayFiller, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, VariableName};
 
 pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Expression>> {
     let group_i = stream.current_index();
     
-    let collection_type = SoulType::try_from_stream(stream, scopes)?;
+    let mut collection_type = SoulType::try_from_stream(stream, scopes)?;
 
     if stream.current_text() == "()" {
 
@@ -33,8 +34,31 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
         return Ok(Some(Expression::new(ExpressionKind::ExpressionGroup(array), span)));   
     }
     else if stream.current_text() != "(" && stream.current_text() != "[" {
-        stream.go_to_index(group_i);
-        return Ok(None)
+        
+        if let Some(ty) = collection_type {
+            
+            if let Some(TypeWrapper::Array) = ty.wrappers.last() {
+                stream.go_to_index(group_i);
+                collection_type = None;
+            }
+            else {
+                match ty.base {
+                    TypeKind::Tuple(_) |
+                    TypeKind::NamedTuple(_) => {
+                        stream.go_to_index(group_i);
+                        collection_type = None;
+                    },
+                    _ => {
+                        stream.go_to_index(group_i);
+                        return Ok(None)
+                    }
+                }
+            }
+        }
+        else {
+            stream.go_to_index(group_i);
+            return Ok(None)
+        }
     }
 
     let is_array = stream.current_text() == "[";
@@ -278,7 +302,7 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
 
     stream.next();
 
-    scopes.push();
+    scopes.push_scope();
     let index = if stream.peek_is("in") {
         let name = Ident(stream.current_text().clone());
         let variable = Variable{
@@ -286,7 +310,7 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
             ty: SoulType::none(), 
             initialize_value: Some(Expression::new(ExpressionKind::Empty, SoulSpan::new(0,0,0))),
         };
-        scopes.insert(name.0.clone(), ScopeKind::Variable(variable));
+        scopes.insert(name.0.clone(), ScopeKind::Variable(variable), stream.current_span());
 
 
         if stream.next_multiple(2).is_none() {

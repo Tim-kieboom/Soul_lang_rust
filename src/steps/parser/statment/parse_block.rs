@@ -13,7 +13,27 @@ pub fn get_block(
     possible_this: Option<Spanned<FunctionCallee>>, 
     parameters: Vec<Spanned<Parameter>>,
 ) -> Result<Spanned<Block>> {
-    if stream.current_text() != "{" {
+    get_inner_block(stream, scopes, possible_this, parameters, true)
+}
+
+pub fn get_block_no_scope_push(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    possible_this: Option<Spanned<FunctionCallee>>, 
+    parameters: Vec<Spanned<Parameter>>,
+) -> Result<Spanned<Block>> {
+    get_inner_block(stream, scopes, possible_this, parameters, false)
+}
+
+
+fn get_inner_block(
+    stream: &mut TokenStream,
+    scopes: &mut ScopeBuilder,
+    possible_this: Option<Spanned<FunctionCallee>>,
+    parameters: Vec<Spanned<Parameter>>,
+    push_scope: bool,
+) -> Result<Spanned<Block>> {
+        if stream.current_text() != "{" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken,
             stream.current_span(),
@@ -29,13 +49,15 @@ pub fn get_block(
         ))
     }
 
-    scopes.push();
+    if push_scope {
+        scopes.push_scope();
+    }
 
     if let Some(this) = possible_this {
         
         if let Some(ty) = this.node.this {
 
-            push_this(ty, scopes);
+            push_this(ty, scopes, stream.current_span());
         }
     }
 
@@ -48,13 +70,13 @@ pub fn get_block(
             initialize_value: Some(Expression::new(ExpressionKind::Empty, span)),
         });
         
-        scopes.insert(name_string, var);
+        scopes.insert(name_string, var, span);
     }
 
     let mut block_builders = BlockBuilder::new(stream.current_span());
     loop {
         
-        if let Some(statment) = get_statment(&mut block_builders, stream, scopes)? {
+        if let Some(statment) = get_statment(stream, scopes)? {
             let is_end = matches!(statment.node, StatementKind::CloseBlock); 
             block_builders.push(statment);
 
@@ -67,11 +89,15 @@ pub fn get_block(
             }
         }
     }
+
+    if push_scope {
+        scopes.pop_scope(stream.current_span());
+    }
     
     Ok(block_builders.into_block())
 }
 
-fn push_this(this: SoulType, scopes: &mut ScopeBuilder) {
+fn push_this(this: SoulType, scopes: &mut ScopeBuilder, span: SoulSpan) {
     
     let kind = ScopeKind::Variable(Variable{
         ty: this, 
@@ -79,7 +105,7 @@ fn push_this(this: SoulType, scopes: &mut ScopeBuilder) {
         initialize_value: Some(Expression::new(ExpressionKind::Empty, SoulSpan::new(0,0,0)))
     });
 
-    scopes.insert("this".into(), kind);
+    scopes.insert("this".into(), kind, span);
 }
 
 

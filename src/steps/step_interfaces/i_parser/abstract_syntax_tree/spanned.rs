@@ -22,5 +22,40 @@ where
     }
 }
 
+pub type Attribute = u8/*dummy*/;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpannedAttribute<T> {
+    pub node: T,
+    pub span: SoulSpan,
+    pub attribute: Option<Attribute>,
+}
+
+impl<T> SpannedAttribute<T> {
+    pub fn new(node: T, span: SoulSpan) -> Self {
+        Self{node, span, attribute: None}
+    }
+}
+
+impl<T> Default for SpannedAttribute<T>
+where 
+    T: Default
+{
+    fn default() -> Self {
+        Self{node: Default::default(), span: SoulSpan::new(0,0,0), attribute: None}
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 

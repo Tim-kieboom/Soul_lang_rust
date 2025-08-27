@@ -2,12 +2,12 @@ use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::soul_type::SoulType}};
+use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::soul_type::SoulType, spanned::Spanned}};
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScopeBuilder {
-    scopes: Vec<InnerScope<ScopeKind>>,
+    scopes: Vec<InnerScope<Spanned<ScopeKind>>>,
     current: usize,
     pub global_literals: ProgramMemmory,
 }
@@ -79,21 +79,21 @@ impl ScopeBuilder {
 
     pub fn new() -> Self {
         Self { 
-            scopes: vec![InnerScope::<ScopeKind>::new_global()], 
+            scopes: vec![InnerScope::<Spanned<ScopeKind>>::new_global()], 
             current: Self::GLOBAL_SCOPE_INDEX, 
             global_literals: ProgramMemmory::new(),
         }
     }
 
-    pub fn get_scopes(&self) -> &Vec<InnerScope<ScopeKind>> {
+    pub fn get_scopes(&self) -> &Vec<InnerScope<Spanned<ScopeKind>>> {
         &self.scopes
     }
 
-    pub fn get_global_scope(&self) -> &InnerScope<ScopeKind>{
+    pub fn get_global_scope(&self) -> &InnerScope<Spanned<ScopeKind>>{
         &self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
 
-    pub fn current_scope(&self) -> &InnerScope<ScopeKind> {
+    pub fn current_scope(&self) -> &InnerScope<Spanned<ScopeKind>> {
         &self.scopes[self.current]
     }
 
@@ -101,7 +101,7 @@ impl ScopeBuilder {
         self.current
     }
 
-    pub fn push(&mut self) {
+    pub fn push_scope(&mut self) {
         let parent_index = self.current;
         self.current = self.scopes.len();
         self.scopes[parent_index].children.push(self.current);
@@ -121,7 +121,7 @@ impl ScopeBuilder {
         }
     }
     
-    pub fn pop(&mut self, span: SoulSpan) -> Result<(), SoulError> {
+    pub fn pop_scope(&mut self, span: SoulSpan) -> Result<(), SoulError> {
         if let Some(parent_index) = self.scopes[self.current].parent_index {
             self.current = parent_index;
             Ok(())
@@ -135,27 +135,27 @@ impl ScopeBuilder {
         self.current == Self::GLOBAL_SCOPE_INDEX
     }
 
-    pub fn insert(&mut self, name: String, kind: ScopeKind) {
+    pub fn insert(&mut self, name: String, kind: ScopeKind, span: SoulSpan) {
         self.current_mut()
             .symbols
-            .insert(name, kind);
+            .insert(name, Spanned::new(kind, span));
     } 
 
-    pub fn insert_global(&mut self, name: String, kind: ScopeKind) {
+    pub fn insert_global(&mut self, name: String, kind: ScopeKind, span: SoulSpan) {
         self.global_mut()
             .symbols
-            .insert(name, kind);
+            .insert(name, Spanned::new(kind, span));
     }
 
-        pub fn current(&self) -> &InnerScope<ScopeKind> {
+        pub fn current(&self) -> &InnerScope<Spanned<ScopeKind>> {
         &self.scopes[self.current]
     }
 
-    pub fn current_mut(&mut self) -> &mut InnerScope<ScopeKind> {
+    pub fn current_mut(&mut self) -> &mut InnerScope<Spanned<ScopeKind>> {
         &mut self.scopes[self.current]
     }
 
-    pub fn global_mut(&mut self) -> &mut InnerScope<ScopeKind> {
+    pub fn global_mut(&mut self) -> &mut InnerScope<Spanned<ScopeKind>> {
         &mut self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
 }
