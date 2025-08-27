@@ -11,7 +11,7 @@ fn main() {
 
     parse_increment(&run_options, &logger, &time_logs);
     
-    log_times(time_logs, &run_options, &logger);
+    log_time_table(time_logs, &run_options, &logger);
     let error_count = 0; // temp dummy
 
     if run_options.show_times.contains(ShowTimes::SHOW_TOTAL) {
@@ -87,15 +87,16 @@ fn create_output_dir(run_option: &RunOptions) -> std::io::Result<()> {
     std::fs::create_dir_all(format!("{}/parsedIncremental", run_option.output_dir.to_string_lossy()))
 }
 
-fn log_times(times: Arc<Mutex<TimeLogs>>, run_option: &RunOptions, logger: &Logger) {
+fn log_time_table(times: Arc<Mutex<TimeLogs>>, run_option: &RunOptions, logger: &Logger) {
     if run_option.show_times == ShowTimes::SHOW_NONE {
         return
     }
 
+    const MAX_LEN: usize = 200;
     let table = if run_option.show_times.contains(ShowTimes::SHOW_ALL) {
         times.lock()
             .unwrap()
-            .to_table_string(200)
+            .to_table_string(MAX_LEN)
     }
     else {
         times.lock()

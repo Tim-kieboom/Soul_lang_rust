@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use threadpool::ThreadPool;
 use hsoul::subfile_tree::SubFileTree;
-use std::{fs::{write, File}, process::exit, time::SystemTime};
+use std::{fs::{self, write, File}, process::exit, time::SystemTime};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
 use crate::{run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
 use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
@@ -153,12 +153,15 @@ fn source_reader<'a, R: Read>(reader: BufReader<R>, info: &RunStepsInfo<'a>) -> 
 
     if info.run_options.show_outputs.contains(ShowOutputs::SHOW_SOURCE) {
         let start = Instant::now(); 
-        let file_path = format!("{}/steps/source.soulc", info.run_options.output_dir.to_string_lossy());
+
+        let print_path = format!("{}/steps/{}", info.run_options.output_dir.to_string_lossy(), info.current_path);
+        let file_path = format!("{}/source.soulc", print_path);
         let contents = source_file.source_file
             .iter()
             .map(|line| &line.line)
             .join("\n");
 
+        fs::create_dir_all(&print_path).unwrap();
         write(file_path, contents)
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
         if info.run_options.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
@@ -183,7 +186,8 @@ pub fn tokenizer<'a>(source_file: SourceFileResponse, info: &RunStepsInfo<'a>) -
 
     if info.run_options.show_outputs.contains(ShowOutputs::SHOW_TOKENIZER) {
         let start = Instant::now(); 
-        let file_path = format!("{}/steps/tokenStream.soulc", info.run_options.output_dir.to_string_lossy());
+        let print_path = format!("{}/steps/{}", info.run_options.output_dir.to_string_lossy(), info.current_path);
+        let file_path = format!("{}/tokenStream.soulc", print_path);
         let contents = token_stream.stream
             .ref_tokens()
             .iter()
@@ -216,8 +220,9 @@ pub fn parser<'a>(token_response: TokenizeResonse, info: &RunStepsInfo<'a>) -> R
 
     if info.run_options.show_outputs.contains(ShowOutputs::SHOW_ABSTRACT_SYNTAX_TREE) {
         let start = Instant::now(); 
-        let file_path = format!("{}/steps/parserAST.soulc", info.run_options.output_dir.to_string_lossy());
-        let scopes_file_path = format!("{}/steps/parserScopes.soulc", info.run_options.output_dir.to_string_lossy());
+        let print_path = format!("{}/steps/{}", info.run_options.output_dir.to_string_lossy(), info.current_path);
+        let file_path = format!("{}/parserAST.soulc", print_path);
+        let scopes_file_path = format!("{}/parserScopes.soulc", print_path);
 
         write(file_path, parse_response.tree.to_pretty_string())
             .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;

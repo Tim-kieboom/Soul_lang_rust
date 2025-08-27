@@ -1,0 +1,126 @@
+// whiles() {
+
+//     i := 0
+//     while true {
+//         if i == 20 {
+//             break
+//         }
+
+//         i++
+//     }
+
+//     stack := List[1,2,3,4,5,6,7,8,9,10]
+//     while !stack.IsEmpty() {
+//         Println(stack.Pop().Unwrap())
+//     }
+
+//     // stack = List[1,2,3,4,5,6,7,8,9,10]
+//     // while typeof Some(element) = stack.Pop() {
+//     //     Println(element)
+//     // }
+
+//     value := 0
+//     stack = List[1,2,3,4,5,6,7,8,9,10]
+//     const sum = while {
+
+//         if !stack.IsEmpty() {
+//             value += stack.Pop().Unwrap()
+//         }
+//         else {
+//             break value
+//         }
+//     }
+// }
+
+fors() {
+    
+    value := 0
+    for i in 0..10 {
+        
+        if i == 5 {
+            break
+        }
+        value += i
+    }
+
+    for 0..10 {
+        Print(".")
+    }
+
+    for i in [1,2,3] {
+        Print(f"{i}")
+        value += i
+    }
+
+    for (key, value) in [("hello", 1), ("world", 2)] {
+        Println(f"{key}: {value}")
+    }
+}
+
+ifs() {
+    
+    if 1 == 2 {
+        Println("math is wrong!!")
+    }
+
+    if 1 == 2 {
+        Println("math is wrong!!")
+    }
+    else if true == true {
+        Println("logic is right")
+    }
+
+    if 1 == 2 {
+        Println("math is wrong!!")
+    }
+    else {
+        Println("how????")
+    }
+
+    if 1 == 2 {
+        Println("math is wrong!!")
+    }
+    else if true == true {
+        Println("logic is right")
+    }
+    else {
+        Println("how????")
+    }
+
+    let value = if true {
+        fall 1
+    }
+    else {
+        fall 2
+    }
+
+    value = if true {
+        fall 1
+    }
+    else if false {
+        fall 2
+    }
+    else {
+        fall 3
+    }
+
+    // const option = Some(1)
+    // if typeof Some(num) = option {
+    //     Println(num)
+    // } 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
