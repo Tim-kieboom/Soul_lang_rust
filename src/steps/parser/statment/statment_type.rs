@@ -1,4 +1,5 @@
 use crate::errors::soul_error::Result;
+use crate::soul_names::OPERATOR_ASSIGN_SYMBOOLS;
 use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind}, soul_names::{check_name_allow_types, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::{i_parser::abstract_syntax_tree::soul_type::soul_type::Modifier, i_tokenizer::TokenStream}};
 
 
@@ -121,6 +122,15 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatementType> {
                     return Ok(StatementType::Expression)
                 }
             },
+            ":=" => {
+                if !stream.next_till("\n") {
+                    return Err(err_out_of_bounds(stream))
+                }
+                return Ok(StatementType::Variable)
+            },
+            "{" => {
+                return Ok(StatementType::Function)
+            },
             "=" => {
                 if !stream.next_till("\n") {
                     return Err(err_out_of_bounds(stream))
@@ -136,15 +146,12 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatementType> {
                 else {
                     return Ok(StatementType::Assignment)
                 }
-            }
-            ":=" => {
+            },
+            val if OPERATOR_ASSIGN_SYMBOOLS.iter().any(|symbool| *symbool == val) => {
                 if !stream.next_till("\n") {
                     return Err(err_out_of_bounds(stream))
                 }
-                return Ok(StatementType::Variable)
-            },
-            "{" => {
-                return Ok(StatementType::Function)
+                return Ok(StatementType::Assignment)
             },
             _ => (),
         }

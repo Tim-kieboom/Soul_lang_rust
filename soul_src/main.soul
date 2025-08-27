@@ -3,18 +3,30 @@ type string typeof str
 main() {}
 
 fors() {
-    let foo = 1
+    
+    value := 0
+    const foo = for i in 0..10 {
+        
+        if i == 5 {
+            break str(value)
+        }
+        value += i
+    }
+
     for 0..10 {
         Print(".")
     }
 
     for i in [1,2,3] {
         Print(f"{i}")
+        value += i
     }
 
     for (key, value) in [("hello", 1), ("world", 2)] {
         Println(f"{key}: {value}")
     }
+
+
 }
 
 ifs() {

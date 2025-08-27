@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::steps::parser::statment::parse_function::get_function;
 use crate::steps::parser::statment::parse_variable::get_variable;
-use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
+use crate::soul_names::{check_name, NamesOtherKeyWords, ASSIGN_SYMBOOLS, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
 use crate::steps::parser::statment::parse_generics_decl::get_type_enum_body;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
@@ -213,7 +213,7 @@ fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 
 fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
     let assign_i = stream.current_index();
-    let variable = get_expression(stream, scopes, &["="])?;
+    let variable = get_expression(stream, scopes, ASSIGN_SYMBOOLS)?;
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream))
     }

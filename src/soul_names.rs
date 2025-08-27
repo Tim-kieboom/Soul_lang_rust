@@ -22,6 +22,9 @@ static ILLIGAL_SYMBOOLS: Lazy<HashSet<char>> = Lazy::new(|| HashSet::from([
     '`', '~',
 ]));
 
+pub const ASSIGN_SYMBOOLS: &[&str] = &["=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="];
+pub const OPERATOR_ASSIGN_SYMBOOLS: &[&str] = &["+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="];
+
 pub fn could_be_name(name: &str) -> bool {
     if name.len() == 1 && ILLIGAL_SYMBOOLS.get(&name.chars().next().unwrap_or('!')).is_some() {
         return false
