@@ -91,7 +91,7 @@ fn get_inner_block(
     }
 
     if push_scope {
-        scopes.pop_scope(stream.current_span());
+        scopes.pop_scope(stream.current_span())?;
     }
     
     Ok(block_builders.into_block())

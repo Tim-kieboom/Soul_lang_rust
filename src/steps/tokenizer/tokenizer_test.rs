@@ -8,6 +8,7 @@ const SHOULD_BE: &str = r#"sum ( i32 one , i32 two ) i32
  } 
  main ( ) 
  { 
+ let path = "C:\\" 
  "str" . Hash ( ) 
  func ( ) . Hash ( ) 
  print ( "hello world\n" ) 

@@ -1,18 +1,21 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Ident, NamedTuple, Tuple}, pretty_format::ToString, soul_type::soul_type::SoulType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident, NamedTuple, Tuple}, generic::GenericParameter, pretty_format::ToString, soul_type::soul_type::SoulType, spanned::Spanned};
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Enum {
     pub name: Ident,
-    pub variants: Vec<EnumVariant>,
+    pub variants: EnumVariantKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Union {
     pub name: Ident,
-    pub variants: Vec<UnionVariant>,
+    pub generics: Vec<GenericParameter>,
+    pub variants: Vec<Spanned<UnionVariant>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -34,23 +37,29 @@ pub struct UnionVariant {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum UnionVariantKind {
-    Tuple(Tuple),
-    NamedTuple(NamedTuple)
+    Tuple(Vec<SoulType>),
+    NamedTuple(HashMap<Ident, SoulType>)
 }
 
 impl UnionVariantKind {
     pub fn to_string(&self) -> String {
         match self {
-            UnionVariantKind::Tuple(soul_types) => format!("({})", soul_types.values.iter().map(|el| el.to_string()).join(",")),
-            UnionVariantKind::NamedTuple(hash_map) => format!("({})", hash_map.values.iter().map(|(name, el)| format!("{}: {}", name.0, el.node.to_string())).join(",")),
+            UnionVariantKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|el| el.to_string()).join(",")),
+            UnionVariantKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, el)| format!("{}: {}", name.0, el.to_string())).join(",")),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EnumVariant {
+pub enum EnumVariantKind {
+    Int(Vec<EnumVariant<i64>>),
+    Expression(Vec<EnumVariant<Expression>>)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EnumVariant<T> {
     pub name: Ident,
-    pub value: i64,
+    pub value: T,
 }
 
 

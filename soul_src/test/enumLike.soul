@@ -1,0 +1,68 @@
+enums() {
+    enum Paths typeof str {
+        MainDisk = "C:\\",
+        OtherDisk = "D:\\",
+        MainFile = "src\\main.rs",
+    }
+
+    enum Nums {
+        One,
+        Two,
+        Ten = 10,
+        Three
+    }
+
+    enum KeyValue typeof (str, int[3]) {
+        Foo = ("foo", [1,2,43]),
+        Bar = ("bar", [2,45,6])
+    }
+}
+
+unions() {
+    
+    union WrapperKind {
+        Array,
+        StackArray(uint),
+        Pointer(isMut: bool),
+        Ref(lifeTime: LifeTime, isMut: bool),
+    }
+    
+    union Option<T> {
+        Some(T),
+        None,
+    }
+
+    union Result<K: Debug, E> 
+    where 
+        E: Debug
+    {
+        Ok(K),
+        Err(E)
+    }
+}
+
+typeEnums() {
+
+    typeEnum Float typeof[f8, f16, f32, f64, untypedFloat]
+    typeEnum Interger typeof[i8, i16, i32, i64, int, untypedInt]
+    typeEnum UInterger typeof[u8, u16, u32, u64, uint, untypedUint]
+
+    typeEnum Number8 typeof[i8, u8, f8]
+    typeEnum Number16 typeof[i16, u16, f16]
+    typeEnum Number32 typeof[i32, u32, f32]
+    typeEnum Number64 typeof[i64, u64, f64]
+    typeEnum NumberMemory typeof[int, uint]
+
+    typeEnum Number typeof[Float, Interger, UInterger]
+}
+
+
+
+
+
+
+
+
+
+
+

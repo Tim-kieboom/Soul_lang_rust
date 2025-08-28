@@ -1,20 +1,22 @@
-use itertools::Itertools;
+use std::fmt::Arguments;
 
+use itertools::Itertools;
 use crate::steps::parser::statment::parse_function::get_function;
 use crate::steps::parser::statment::parse_variable::get_variable;
-use crate::soul_names::{check_name, NamesOtherKeyWords, ASSIGN_SYMBOOLS, SOUL_NAMES};
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
-use crate::steps::parser::statment::parse_generics_decl::get_type_enum_body;
+use crate::steps::parser::statment::parse_generics_decl::{get_generics_decl, get_type_enum_body};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::parser::statment::statment_type::{get_statement_type, StatementType};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::enum_like::TypeEnum;
 use crate::steps::parser::expression::parse_expression::{get_expression, get_expression_statment};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType};
+use crate::soul_names::{check_name, check_name_allow_types, NamesOtherKeyWords, ASSIGN_SYMBOOLS, SOUL_NAMES};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::enum_like::{Enum, EnumVariant, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionGroup, ExpressionKind, Ident, VariableName};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Assignment, Block, StatementKind, STATMENT_END_TOKENS};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, Ident, ReturnKind, ReturnLike, VariableName};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
 pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Statement>> {
@@ -87,10 +89,12 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         },
 
         StatementType::Enum => {
-            todo!("get Enum")
+            let enum_decl = get_enum(stream, scopes)?;
+            Statement::new(StatementKind::Enum(enum_decl.node), enum_decl.span)
         },
         StatementType::Union => {
-            todo!("get Union")
+            let union_decl = get_union(stream, scopes)?;
+            Statement::new(StatementKind::Union(union_decl.node), union_decl.span)
         },
         StatementType::TypeEnum => {
             get_type_enum(stream, scopes)?;
@@ -134,6 +138,265 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     };
 
     Ok(Some(statment))
+}
+
+fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Union>> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Union));
+
+    let union_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    check_name(&stream.current_text())
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+
+    let name = stream.current_text().into();
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    scopes.push_scope();
+
+    let generics = get_generics_decl(stream, scopes)?;
+    if !generics.implements.is_empty() {
+        return Err(new_soul_error(
+            SoulErrorKind::InvalidInContext,
+            stream.current_span(),
+            "union could not have impl",
+        ))
+    }
+
+    if stream.current_text() != "{" {
+        
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span(), 
+            format!("token: '{}' should be '{{'", stream.current_text()),
+        ))
+    }
+
+    let mut variants = vec![];
+    loop {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.next_if("\n").is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() == "}" {
+            break
+        }
+
+        check_name_allow_types(&stream.current_text())
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+
+        let name = stream.current_text().into();
+
+        let variant_i = stream.current_index();
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() == "," {
+            let span = stream[variant_i].span.combine(&stream.current_span());
+            variants.push(Spanned::new(UnionVariant{name, field: UnionVariantKind::Tuple(vec![])}, span));
+
+            continue
+        }
+
+        let soul_type = SoulType::from_stream(stream, scopes)?;
+        let field = match soul_type.base {
+            TypeKind::Tuple(tuple) => UnionVariantKind::Tuple(tuple),
+            TypeKind::NamedTuple(tuple) => UnionVariantKind::NamedTuple(tuple),
+            _ => return Err(new_soul_error(
+                SoulErrorKind::WrongType, 
+                stream.current_span(), 
+                format!("union variant should be tuple or namedTuple not {}", soul_type.to_string()),
+            )),
+        };
+
+        let span = stream[variant_i].span.combine(&stream.current_span());
+        variants.push(Spanned::new(UnionVariant{name, field}, span));
+
+        if stream.current_text() == "," {
+            continue
+        }
+        else {
+            break
+        }
+    }
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    if stream.current_text() != "}" {
+        
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span(),
+            format!("token: '{}' should be '}}' or you have a missing ','", stream.current_text()) 
+        ))
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    scopes.pop_scope(stream.current_span())?;
+
+    let span = stream[union_i].span.combine(&stream.current_span());
+    Ok(Spanned::new(Union{name, generics: generics.generics, variants}, span))
+}
+
+fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Enum>> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Enum));
+
+    let enum_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    check_name(&stream.current_text())
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+
+    let name = stream.current_text().into();
+    
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let enum_type = if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        Some(SoulType::from_stream(stream, scopes)?)
+    }
+    else {
+        None
+    };
+
+    if stream.current_text() != "{" {
+        
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span(), 
+            format!("token: '{}' should be '{{'", stream.current_text()),
+        ))
+    }
+
+    let mut variants = if enum_type.is_none() {
+        EnumVariantKind::Int(vec![])
+    }
+    else {
+        EnumVariantKind::Expression(vec![])
+    };
+
+    scopes.push_scope();
+
+    loop {
+
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.next_if("\n").is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() == "}" {
+            break
+        }
+
+        check_name_allow_types(&stream.current_text())
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+
+        let name = stream.current_text().into();
+
+        if !stream.peek_is("=") {
+            
+            match &mut variants {
+                EnumVariantKind::Int(enum_variants) => enum_variants.push(EnumVariant{name, value: enum_variants.len() as i64}),
+                EnumVariantKind::Expression(enum_variants) => enum_variants.push(EnumVariant{name, value: Expression::new(ExpressionKind::Default, stream.current_span())}),
+            }
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream))
+            }
+
+            if stream.current_text() == "," {
+                continue
+            }
+            else {
+                break
+            }
+        }
+
+        if stream.next_multiple(2).is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        match &mut variants {
+            EnumVariantKind::Int(enum_variants) => {
+
+                let literal_i = stream.current_index();
+                let num = match Literal::from_stream(stream, scopes)? {
+                    Literal::Int(num) => num,
+                    Literal::Uint(num) => num as i64,
+                    _ => return Err(new_soul_error(
+                        SoulErrorKind::WrongType, 
+                        stream.current_span(), 
+                        format!("'{}' is not a literal number", stream[literal_i].text),
+                    )),
+                };
+
+                if stream.next().is_none() {
+                    return Err(err_out_of_bounds(stream))
+                }
+
+                enum_variants.push(EnumVariant{name, value: num});
+            },
+            EnumVariantKind::Expression(enum_variants) => {
+                let expression = get_expression(stream, scopes, &[",", "\n", "}"])?;
+                enum_variants.push(EnumVariant{name, value: expression});
+            },
+        }
+
+        if stream.current_text() == "," {
+            continue
+        }
+        else {
+            break
+        }
+    }
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    if stream.current_text() != "}" {
+        
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span(),
+            format!("token: '{}' should be '}}'", stream.current_text()) 
+        ))
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    scopes.pop_scope(stream.current_span())?;
+
+    let span = stream[enum_i].span.combine(&stream.current_span());
+    Ok(Spanned::new(Enum{name, variants}, span))   
 }
 
 fn get_match(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {

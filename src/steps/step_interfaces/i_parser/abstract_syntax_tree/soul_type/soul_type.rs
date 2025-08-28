@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{soul_names::{NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::{self, get_number}, step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}, i_tokenizer::TokenStream}}};
+use crate::{soul_names::{NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::{get_number}, step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}, i_tokenizer::TokenStream}}};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct  SoulType {
@@ -180,7 +180,7 @@ impl TypeWrapper {
             stream.go_to_index(wrap_i);
             return TypeWrapper::Invalid
         }
-        
+
         if stream.next().is_none() {
             stream.go_to_index(wrap_i);
             return TypeWrapper::Invalid   

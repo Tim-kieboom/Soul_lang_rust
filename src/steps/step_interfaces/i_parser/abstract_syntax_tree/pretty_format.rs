@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Constructor, Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod}, generic::GenericParameter, literal::Literal, object::{Class, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, Implement, StatementKind}}, scope_builder::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Constructor, Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod}, generic::GenericParameter, literal::Literal, object::{Class, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, Implement, StatementKind}}, scope_builder::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -121,10 +121,11 @@ impl PrettyString for Union {
         let prefix = tree_prefix(tab, is_last);
         let prefix2 = tree_prefix(tab+1, is_last);
         format!(
-            "{}Union >> {}\n{}",
+            "{}Union >> {}{}\n{}",
             prefix,
             self.name,
-            self.variants.iter().map(|el| format!("{}{}", prefix2, el.to_string())).join("\n")
+            self.generics.to_string(),
+            self.variants.iter().map(|el| format!("{}{}", prefix2, el.node.to_string())).join("\n")
         )
     }
 }
@@ -132,11 +133,11 @@ impl PrettyString for Union {
 impl ToString for UnionVariant {
     fn to_string(&self) -> String {            
         format!(
-            "{}({})", 
+            "{}{}", 
             self.name, 
             match &self.field {
-                UnionVariantKind::Tuple(tuple) => tuple.to_string(),
-                UnionVariantKind::NamedTuple(named_tuple) => named_tuple.to_string(),
+                UnionVariantKind::Tuple(tuple) => format!("({})", tuple.iter().map(|el| el.to_string()).join(",") ),
+                UnionVariantKind::NamedTuple(named_tuple) => format!("({})", named_tuple.iter().map(|(key, value)| format!("{}: {}", key.0, value.to_string())).join(",") ),
             }
         )
     }
@@ -145,13 +146,22 @@ impl ToString for UnionVariant {
 impl PrettyString for Enum {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let prefix2 = tree_prefix(tab+1, is_last);
         format!(
             "{}Enum >> {}\n{}",
             prefix,
             self.name,
-            self.variants.iter().map(|el| format!("{}{} = {}", prefix2, el.name, el.value)).join("\n")
+            self.variants.to_pretty(tab+1, is_last)
         )
+    }
+}
+
+impl PrettyString for EnumVariantKind {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        match self {
+            EnumVariantKind::Int(enum_variants) => enum_variants.iter().map(|el| format!("{}{} = {}", prefix, el.name, el.value)).join("\n"),
+            EnumVariantKind::Expression(enum_variants) => enum_variants.iter().map(|el| format!("{}{} = {}", prefix, el.name, el.value.to_string())).join("\n"),
+        }
     }
 }
 
