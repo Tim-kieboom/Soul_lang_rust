@@ -99,12 +99,21 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatementType> {
             "(" => {
                 has_round_bracket = true;
                 traverse_bracket_stack(stream, "(", ")")?;
+                if consecutive_parts == 0 {
+                    consecutive_parts = 1
+                }
             },
             "<" => {
                 traverse_bracket_stack(stream, "<", ">")?;
+                if consecutive_parts == 0 {
+                    consecutive_parts = 1
+                }
             },
             "[" => {
                 traverse_bracket_stack(stream, "[", "]")?;
+                if consecutive_parts == 0 {
+                    consecutive_parts = 1
+                }
             },
             "\n" => {
                 if stream.peek_is(".") {

@@ -19,7 +19,7 @@ pub struct TokenStream {
     #[cfg(feature="dev_mode")]
     current_line_string: String,
     #[cfg(feature="dev_mode")]
-    current_line: usize,
+    current_line: i64,
 
     tokens: Vec<Token>,
     index: i64,
@@ -51,7 +51,14 @@ impl TokenStream {
             tokens, 
         };
 
-        this.update_line_string(0);
+        this.index = -1;
+        this.current_line = -1;
+        
+        this.change_token(0);
+        
+        this.index = 0;
+        this.current_line = 0;
+
         this
     }
 
@@ -184,23 +191,23 @@ impl TokenStream {
     #[cfg(feature="dev_mode")]
     fn change_token(&mut self, index: usize) {
         self.current = self.tokens[index].text.clone();
-        let old_line = self.tokens[self.index.max(0) as usize].span.line_number; 
-        let new_line = self.tokens[index].span.line_number;
+        let old_line = if self.index < 0 {-1} else {self.tokens[self.index as usize].span.line_number as i64}; 
+        let new_line = self.tokens[index].span.line_number as i64;
 
         if new_line != old_line {
-            self.update_line_string(new_line);
-            self.current_line = new_line;
+            self.update_line_string(new_line as i64);
+            self.current_line = new_line as i64;
         }
 
     }
 
     #[cfg(feature="dev_mode")]
-    fn update_line_string(&mut self, line_number: usize) {
+    fn update_line_string(&mut self, line_number: i64) {
         use itertools::Itertools;
 
         self.current_line_string = self.tokens
             .iter()
-            .flat_map(|token| if token.span.line_number == line_number {Some(&token.text)} else {None})
+            .flat_map(|token| if token.span.line_number as i64 == line_number {Some(&token.text)} else {None})
             .join(" ")
     }
 }

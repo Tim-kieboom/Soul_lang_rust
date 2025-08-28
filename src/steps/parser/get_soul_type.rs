@@ -132,7 +132,7 @@ fn get_named_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> 
         }
 
         if stream.current_text() == ")" {
-            return Ok(SoulType::from_type_kind(TypeKind::NamedTuple(types)))
+            break
         }
 
         check_name(stream.current_text())
@@ -162,13 +162,19 @@ fn get_named_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> 
         types.insert(name, ty);
 
         if stream.current_text() != "," {
-            return Err(new_from_stream_error(
-                SoulErrorKind::ArgError, 
-                stream.current_span(), 
-                format!("token: '{}' should be ','", stream.current_text()), FromStreamErrorKind::IsNotOfType,
-            ))
+            break
         }
     }
+
+    if stream.current_text() == ")" {
+        return Ok(SoulType::from_type_kind(TypeKind::NamedTuple(types)))
+    }
+
+    Err(new_from_stream_error(
+        SoulErrorKind::ArgError, 
+        stream.current_span(), 
+        format!("token: '{}' should be ','", stream.current_text()), FromStreamErrorKind::IsNotOfType,
+    ))
 }
 
 fn get_double_colon_type(stream: &mut TokenStream) -> Result<SoulType, FromStreamError> {
