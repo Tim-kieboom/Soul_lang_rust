@@ -62,10 +62,8 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
                 current_open_bracket = true;
             },
             '}' => {
-                if pretty_format {
-                    buffer.push(',');
-                    buffer.push_str("pretty=true");
-                }
+                buffer.push(',');
+                buffer.push_str(&pretty_format.to_string());
 
                 buffer.push(')');
                 pretty_format = false;
@@ -154,7 +152,6 @@ pub fn indexesof_qoutes<'a>(file_line: &'a FileLine) -> Vec<usize> {
         .map(|(start, _)| start)
         .collect()
 }
-
 
 
 

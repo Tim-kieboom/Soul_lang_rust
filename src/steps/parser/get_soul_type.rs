@@ -85,7 +85,14 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
 fn get_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<SoulType, FromStreamError> {
     debug_assert_eq!(stream.current_text(), "(");
-    if stream.peek_multiple_is(2, ":") {
+    let peek_i = if stream.peek_is("\n") {
+        3
+    }
+    else {
+        2
+    };
+    
+    if stream.peek_multiple_is(peek_i, ":") {
         return get_named_tuple_type(stream, scopes)
     }
 
@@ -93,6 +100,10 @@ fn get_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     loop {
 
         if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(stream))
         }
 
@@ -107,6 +118,10 @@ fn get_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         if stream.current_text() != "," {
             break
         }
+    }
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
     }
 
     if stream.current_text() == ")" {
@@ -128,6 +143,10 @@ fn get_named_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> 
     loop {
 
         if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(stream))
         }
 
@@ -157,6 +176,10 @@ fn get_named_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> 
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream))
         }
+        
+        if stream.next_if("\n").is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
 
         let ty = inner_from_stream(stream, scopes)?;
         types.insert(name, ty);
@@ -164,6 +187,10 @@ fn get_named_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> 
         if stream.current_text() != "," {
             break
         }
+    }
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
     }
 
     if stream.current_text() == ")" {

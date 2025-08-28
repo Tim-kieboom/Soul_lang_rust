@@ -75,7 +75,7 @@ fors() {
     }
 
     for (key, value) in [("hello", 1), ("world", 2)] {
-        Println(f"{key}: {value}")
+        Println(f"{key}: {#value}")
     }
 }
 

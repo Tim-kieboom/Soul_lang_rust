@@ -62,7 +62,14 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
     }
 
     let is_array = stream.current_text() == "[";
-    let is_named_tuple = !is_array && (stream.peek_is(":") || stream.peek_multiple_is(2, ":"));
+    let peek_i = if stream.peek_is("\n") {
+        3
+    }
+    else {
+        2
+    };
+
+    let is_named_tuple = !is_array && (stream.peek_is(":") || stream.peek_multiple_is(peek_i, ":"));
 
     if is_named_tuple {
         let values = parse_named_group(stream, scopes)?;
