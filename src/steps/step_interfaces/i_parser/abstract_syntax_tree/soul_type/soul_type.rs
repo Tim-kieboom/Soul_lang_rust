@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{soul_names::{NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::type_kind::TypeKind}};
+use crate::{soul_names::{NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::{self, get_number}, step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}, i_tokenizer::TokenStream}}};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct  SoulType {
@@ -51,7 +51,7 @@ impl SoulType {
                 "{}{}{}",
                 modifier,
                 self.base.to_string(),
-                self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
+                self.wrappers.iter().map(|wrap| wrap.to_string()).join("")
             )
         }
         else {
@@ -60,7 +60,7 @@ impl SoulType {
                 modifier,
                 self.base.to_string(),
                 self.generics.iter().map(|gene| gene.to_string()).join(","),
-                self.wrappers.iter().map(|wrap| wrap.to_str()).join("")
+                self.wrappers.iter().map(|wrap| wrap.to_string()).join("")
             )
         }
     }
@@ -85,6 +85,7 @@ impl TypeGenericKind {
 pub enum TypeWrapper {
     Invalid,
     Array,
+    StackArray(u32),
     ConstRef(Option<Lifetime>),
     MutRef(Option<Lifetime>),
     Pointer,
@@ -143,24 +144,60 @@ impl TypeWrapper {
         }
     }
     
-    pub fn from_str(str: &str) -> TypeWrapper {
-        match str {
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => TypeWrapper::ConstRef(None),
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => TypeWrapper::MutRef(None),
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Pointer) => TypeWrapper::Pointer,
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Array)  => TypeWrapper::Array,
-            _ => TypeWrapper::Invalid,
+    pub fn from_stream(stream: &mut TokenStream) -> TypeWrapper {
+        let wrap_i = stream.current_index();
+
+        match stream.current_text().as_str() {
+            "[" => (),
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => return TypeWrapper::ConstRef(None),
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Pointer) => return TypeWrapper::Pointer,
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => return TypeWrapper::MutRef(None),
+            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Array)  => return TypeWrapper::Array,
+            _ => return TypeWrapper::Invalid,
         }
+
+        if stream.next().is_none() {
+            stream.go_to_index(wrap_i);
+            return TypeWrapper::Invalid   
+        }
+
+        let size = match get_number(stream.current()) {
+            Ok(Literal::Int(num)) => if num < 0 {
+                stream.go_to_index(wrap_i);
+                return TypeWrapper::Invalid
+            }
+            else {
+                num as u32
+            },
+            Ok(Literal::Uint(num)) => num as u32,
+            _ => {
+                stream.go_to_index(wrap_i);
+                return TypeWrapper::Invalid
+            },
+        };
+
+        if !stream.peek_is("]") {
+            stream.go_to_index(wrap_i);
+            return TypeWrapper::Invalid
+        }
+        
+        if stream.next().is_none() {
+            stream.go_to_index(wrap_i);
+            return TypeWrapper::Invalid   
+        }
+
+        TypeWrapper::StackArray(size)
     }
 
-    pub fn to_str(&self) -> &str {
+    pub fn to_string(&self) -> String {
         match self {
-            TypeWrapper::Invalid => "<invalid>",
-            TypeWrapper::Array => SOUL_NAMES.get_name(NamesTypeWrapper::Array),
-            TypeWrapper::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
-            TypeWrapper::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
-            TypeWrapper::Pointer => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer),
-            TypeWrapper::ConstPointer => " const*",
+            TypeWrapper::Invalid => "<invalid>".into(),
+            TypeWrapper::Array => SOUL_NAMES.get_name(NamesTypeWrapper::Array).into(),
+            TypeWrapper::StackArray(num) => format!("[{}]", num),
+            TypeWrapper::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef).into(),
+            TypeWrapper::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef).into(),
+            TypeWrapper::Pointer => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer).into(),
+            TypeWrapper::ConstPointer => " const*".into(),
         }
     }
 }

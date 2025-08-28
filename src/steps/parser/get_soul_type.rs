@@ -71,7 +71,7 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
     loop {
 
-        let wrap = TypeWrapper::from_str(stream.current_text());
+        let wrap = TypeWrapper::from_stream(stream);
         if wrap == TypeWrapper::Invalid {
             break Ok(collection_type);
         }

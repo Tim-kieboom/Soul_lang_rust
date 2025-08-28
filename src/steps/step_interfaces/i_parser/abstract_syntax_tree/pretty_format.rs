@@ -289,7 +289,7 @@ impl ToString for Vec<Spanned<Parameter>> {
 impl ToString for Vec<TypeWrapper> {
     fn to_string(&self) -> String {
         self.iter()
-            .map(|wrap| wrap.to_str())
+            .map(|wrap| wrap.to_string())
             .join("")
     }
 }
@@ -369,7 +369,7 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::If(if_) => if_.to_pretty(tab, is_last),
             ExpressionKind::For(For{element, collection, block}) => format!("for {}{}\n{}", element.as_ref().map(|el| format!("{} in ", el.to_string())).unwrap_or("".into()), collection.to_pretty(tab + 1, is_last), block.to_pretty(tab+1, is_last)),
             ExpressionKind::While(While{condition, block}) => format!("while {}\n{}", condition.as_ref().map(|el| el.node.to_pretty(tab + 1, is_last)).unwrap_or("true".into()), block.to_pretty(tab+1, is_last)),
-            ExpressionKind::Match(Match{condition, cases}) => format!("match {}\n{}{}", condition.to_pretty(tab, is_last), tree_prefix(tab+1, is_last), cases.iter().map(|el| format!("{} => {}", el.if_expr.to_string(), el.do_fn.to_pretty(tab, is_last))).join(format!(",\n{}", tree_prefix(tab+1, is_last)).as_str()) ),
+            ExpressionKind::Match(Match{condition, cases}) => format!("match {}\n{}{}", condition.to_pretty(tab, is_last), tree_prefix(tab+1, is_last), cases.iter().map(|el| format!("{} => \n{}", el.if_expr.to_string(), el.do_fn.to_pretty(tab, is_last))).join(format!("\n{}", tree_prefix(tab+1, is_last)).as_str()) ),
             ExpressionKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!("{} ? {} : {}", condition.to_pretty(tab, is_last), if_branch.to_pretty(tab, is_last), else_branch.to_pretty(tab, is_last)),
 
             ExpressionKind::Deref(spanned) => format!("*{}", spanned.to_pretty(tab, is_last)),
@@ -387,8 +387,8 @@ impl PrettyString for ExpressionKind {
 impl PrettyString for CaseDoKind { 
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         match self {
-            CaseDoKind::Block(block) => block.to_pretty(tab, is_last),
-            CaseDoKind::Expression(spanned) => spanned.to_pretty(tab, is_last),
+            CaseDoKind::Block(block) => block.node.to_pretty(tab+2, is_last),
+            CaseDoKind::Expression(spanned) => format!("{}{}", tree_prefix(tab+2, is_last), spanned.to_pretty(tab+2, is_last)),
         }
     }
 }

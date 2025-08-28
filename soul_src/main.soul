@@ -90,6 +90,9 @@ expressionGroups() {
 
     Json json = (value: one())
     json = Json(sum: sum(1,2), other: 1)
+
+    int[] intArray = [1,2,3,4,5,6] 
+    int[6] intStackArray = [1,2,3,4,5,6] 
 }
 
 sum(int a, int b) int {
@@ -99,11 +102,6 @@ sum(int a, int b) int {
 int sum(this, int b) int {
     return this + b
 }
-
-
-
-
-
 
 
 

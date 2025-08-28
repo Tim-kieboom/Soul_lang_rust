@@ -1,4 +1,5 @@
 use std::mem;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::STATMENT_END_TOKENS;
 use crate::steps::step_interfaces::i_tokenizer::Token;
 use crate::steps::step_interfaces::i_parser::scope_builder::{ProgramMemmory};
 use crate::steps::parser::expression::parse_conditional::try_get_conditional;
@@ -7,12 +8,12 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Span
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::parser::expression::symbool::{Bracket, Operator, Symbool, SymboolKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
-use crate::soul_names::{check_name_allow_types, could_be_name, NamesTypeWrapper, SOUL_NAMES};
+use crate::soul_names::{check_name_allow_types, could_be_name, NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::parser::expression::parse_expression_groups::{get_function_call, try_get_expression_group};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Index, Ternary, Tuple, UnaryOperatorKind, VariableName};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Index, ReturnKind, ReturnLike, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
 
 pub struct ExprOptions {
@@ -186,6 +187,10 @@ fn convert_expression(
     if is_end_token(stream.current(), end_tokens, options) {
         return BREAK_LOOP
     }
+    else if let Some(kind) = get_return_kind(stream) {
+        add_return_like(kind, stream, scopes, stacks, end_tokens)?;
+        return BREAK_LOOP
+    }
 
     if let Some(ref_kind) = get_ref(stream, stacks) {
         stacks.refs.push(ref_kind);
@@ -224,7 +229,43 @@ fn convert_expression(
     return CONTINUE_LOOP
 }
 
+fn add_return_like(
+    kind: ReturnKind, 
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks,
+    end_tokens: &[&str],
+) -> Result<()> {
+    let return_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
 
+    let value = if end_tokens.iter().any(|el| *el == stream.current_text()) {
+        None
+    }
+    else {
+        Some(Box::new(get_expression(stream, scopes, end_tokens)?))
+    };
+
+    let span = stream[return_i].span.combine(&stream.current_span());
+    let return_like = Expression::new(
+        ExpressionKind::ReturnLike(ReturnLike{value, delete_list: vec![], kind}),
+        span
+    );
+
+    stacks.expressions.push(return_like);
+    Ok(())
+}
+
+fn get_return_kind(stream: &TokenStream) -> Option<ReturnKind> {
+    match stream.current_text().as_str() {
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Fall) => Some(ReturnKind::Fall),
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) => Some(ReturnKind::Return),
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::BreakLoop) => Some(ReturnKind::Break),
+        _=> None,
+    }
+}
 
 pub fn traverse_brackets(
     stream: &mut TokenStream, 

@@ -113,11 +113,11 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             Statement::from_expression(expression)
         },
         StatementType::While => {
-            let expression = todo!("get While");
+            let expression = get_while(stream, scopes)?;
             Statement::from_expression(expression)
         },
         StatementType::Match => {
-            let expression = todo!("get Match");
+            let expression = get_match(stream, scopes)?;
             Statement::from_expression(expression)
         },
 
@@ -125,21 +125,49 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             get_type_def(stream, scopes)?;
             return Ok(None);
         },
-        StatementType::Return => {
-            let expression = get_return_like(ReturnKind::Return, stream, scopes)?;
-            Statement::from_expression(expression)
-        },
-        StatementType::Break => {
-            let expression = get_return_like(ReturnKind::Break, stream, scopes)?;
-            Statement::from_expression(expression)
-        },
+        StatementType::Return |
+        StatementType::Break |
         StatementType::Fall => {
-            let expression = get_return_like(ReturnKind::Fall, stream, scopes)?;
+            let expression = get_return_like(stream, scopes)?;
             Statement::from_expression(expression)
         },
     };
 
     Ok(Some(statment))
+}
+
+fn get_match(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::MatchCase));
+
+    let expression = get_expression_statment(stream, scopes, STATMENT_END_TOKENS)?;
+
+    if let ExpressionKind::Match(_) = &expression.node {
+        Ok(expression)
+    }
+    else {
+        Err(new_soul_error(
+            SoulErrorKind::InternalError, 
+            stream.current_span(), 
+            "in get_match() function get_expression() did not return 'match' expression",
+        ))
+    }
+}
+
+fn get_while(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop));
+
+    let expression = get_expression_statment(stream, scopes, STATMENT_END_TOKENS)?;
+
+    if let ExpressionKind::While(_) = &expression.node {
+        Ok(expression)
+    }
+    else {
+        Err(new_soul_error(
+            SoulErrorKind::InternalError, 
+            stream.current_span(), 
+            "in get_while() function get_expression() did not return 'while' expression",
+        ))
+    }
 }
 
 fn get_for(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {
@@ -154,7 +182,7 @@ fn get_for(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expres
         Err(new_soul_error(
             SoulErrorKind::InternalError, 
             stream.current_span(), 
-            "in get_if() function get_expression() did not return if expression",
+            "in get_for() function get_expression() did not return 'for' expression",
         ))
     }
 }
@@ -171,7 +199,7 @@ fn get_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Express
         Err(new_soul_error(
             SoulErrorKind::InternalError, 
             stream.current_span(), 
-            "in get_if() function get_expression() did not return if expression",
+            "in get_if() function get_expression() did not return 'if' expression",
         ))
     }
 }
@@ -253,29 +281,25 @@ fn get_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(
     Ok(())
 }
 
-fn get_return_like(kind: ReturnKind, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {
+fn get_return_like(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {
     debug_assert!(
         stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Return) ||
         stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::BreakLoop) ||
         stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Fall)
     );
-    
 
-    let return_i = stream.current_index();
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    }  
+    let expression = get_expression_statment(stream, scopes, STATMENT_END_TOKENS)?;
 
-    let expr = get_expression(stream, scopes, STATMENT_END_TOKENS)?;
-    let value = if let ExpressionKind::Empty = expr.node {
-        None
+    if let ExpressionKind::ReturnLike(_) = &expression.node {
+        Ok(expression)
     }
     else {
-        Some(Box::new(expr))
-    };
-
-    let span = stream[return_i].span.combine(&stream.current_span());
-    Ok(Expression::new(ExpressionKind::ReturnLike(ReturnLike{value, kind, delete_list: vec![]}), span))
+        Err(new_soul_error(
+            SoulErrorKind::InternalError, 
+            stream.current_span(), 
+            "in get_return_like() function get_expression() did not return 'returnLike' expression",
+        ))
+    }
 }
     
 fn get_scope<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Block>> {

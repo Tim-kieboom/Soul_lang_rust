@@ -1,36 +1,58 @@
-// whiles() {
 
-//     i := 0
-//     while true {
-//         if i == 20 {
-//             break
-//         }
+matchs() {
+    match 1 == 2 {
+        true => Println("1 == 2"),
+        false => Println("1 != 2"),
+    }
 
-//         i++
-//     }
+    value := Some(1)
+    match value {
+        Some(num) => {
+            Println(num)
+            return
+        },
+        None => (),
+    }
 
-//     stack := List[1,2,3,4,5,6,7,8,9,10]
-//     while !stack.IsEmpty() {
-//         Println(stack.Pop().Unwrap())
-//     }
+    const num = match 1 == 2 {
+        true => fall 1,
+        false => fall 2,
+    }
+}
 
-//     // stack = List[1,2,3,4,5,6,7,8,9,10]
-//     // while typeof Some(element) = stack.Pop() {
-//     //     Println(element)
-//     // }
+whiles() {
 
-//     value := 0
-//     stack = List[1,2,3,4,5,6,7,8,9,10]
-//     const sum = while {
+    i := 0
+    while true {
+        if i == 20 {
+            break
+        }
 
-//         if !stack.IsEmpty() {
-//             value += stack.Pop().Unwrap()
-//         }
-//         else {
-//             break value
-//         }
-//     }
-// }
+        i++
+    }
+
+    stack := List[1,2,3,4,5,6,7,8,9,10]
+    while !stack.IsEmpty() {
+        Println(stack.Pop().Unwrap())
+    }
+
+    // stack = List[1,2,3,4,5,6,7,8,9,10]
+    // while typeof Some(element) = stack.Pop() {
+    //     Println(element)
+    // }
+
+    value := 0
+    stack = List[1,2,3,4,5,6,7,8,9,10]
+    const sum = while {
+
+        if !stack.IsEmpty() {
+            value += stack.Pop().Unwrap()
+        }
+        else {
+            break value
+        }
+    }
+}
 
 fors() {
     

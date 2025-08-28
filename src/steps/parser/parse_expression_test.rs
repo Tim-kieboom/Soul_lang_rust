@@ -953,7 +953,7 @@ fn test_field_access_and_methods() {
 // # Index 
 
 #[test]
-fn index_expressions() {
+fn test_index_expressions() {
     let mut scope = empty_scope();
 
     let mut stream = stream_from_strs(&["arr", "[", "1", "]", "[", "2", "]", "\n"]);
@@ -963,12 +963,11 @@ fn index_expressions() {
         result.clone().unwrap().node,
         ExpressionKind::Index(Index {
             collection: Box::new(Expression::new(
-                ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{
-                    collection_type: Some(SoulType::from_type_kind(TypeKind::Unknown("arr".into()))), 
-                    element_type: None, 
-                    values: vec![Expression::new(int_lit(1), SoulSpan::new(0,4,1))], 
-                })),
-                SoulSpan::new(0,0,6)
+                ExpressionKind::Index(Index{
+                    collection: Box::new(Expression::new(ExpressionKind::Variable(VariableName::new("arr")), SoulSpan::new(0,0,3))), 
+                    index: Box::new(Expression::new(int_lit(1), SoulSpan::new(0,4,1))),
+                }),
+                SoulSpan::new(0,5,1)
             )),
             index: Box::new(Expression::new(int_lit(2), SoulSpan::new(0,7,1)))
         })

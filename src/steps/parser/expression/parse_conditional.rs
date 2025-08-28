@@ -5,7 +5,7 @@ use crate::steps::parser::statment::parse_block::{get_block, get_block_no_scope_
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::STATMENT_END_TOKENS;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{ElseKind, Expression, ExpressionGroup, ExpressionKind, For, If, Tuple, VariableName};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{CaseDoKind, CaseSwitch, ElseKind, Expression, ExpressionGroup, ExpressionKind, For, If, Match, Tuple, VariableName, While};
 use crate::{soul_names::{NamesOtherKeyWords, SOUL_NAMES}, steps::{parser::expression::parse_expression::ExpressionStacks, step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream}}};
 
 pub fn try_get_conditional(
@@ -17,11 +17,129 @@ pub fn try_get_conditional(
     
     match stream.current_text().as_str() {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::If) => get_if(stream, scopes, stacks, is_statment)?,
+        
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::ForLoop) => get_for(stream, scopes, stacks)?,
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop) => get_while(stream, scopes, stacks)?,
+        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::MatchCase) => get_match(stream, scopes, stacks)?,
         _ => return Ok(false)
     }
 
     Ok(true)
+}
+
+fn get_match(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks,
+) -> Result<()> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::MatchCase));
+
+    let match_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    scopes.push_scope();
+    let condition = Box::new(get_expression(stream, scopes, &["\n", "{"])?);
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    if stream.current_text() != "{" {
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span(), 
+            format!("token: '{}' should be '{{'", stream.current_text()),
+        ))
+    }
+
+    let mut cases = vec![];
+    loop {
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.next_if("\n").is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() == "}" {
+            break
+        }
+
+        scopes.push_scope();
+        let if_expr = get_expression(stream, scopes, &["=>"])?;
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        let do_fn = if stream.current_text() == "{" {
+            let block = get_block_no_scope_push(stream, scopes, None, vec![])?;
+            CaseDoKind::Block(block)
+        }
+        else {
+            CaseDoKind::Expression(get_expression(stream, scopes, &[","])?)
+        };
+
+        scopes.pop_scope(stream.current_span())?;
+        
+        cases.push(CaseSwitch{if_expr, do_fn});
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    scopes.pop_scope(stream.current_span())?;
+    
+    let span = stream[match_i].span.combine(&stream.current_span());
+    let while_decl = Expression::new(
+        ExpressionKind::Match(Match{condition, cases}), 
+        span,
+    );
+
+    stacks.expressions.push(while_decl);
+    Ok(())
+}
+
+
+fn get_while(
+    stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder, 
+    stacks: &mut ExpressionStacks,
+) -> Result<()> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::WhileLoop));
+
+    let while_i = stream.current_index();
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    scopes.push_scope();
+    let condition = if stream.current_text() == "{" {
+        None
+    }
+    else {
+        Some(Box::new(get_expression(stream, scopes, &["\n", "{"])?))
+    };
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let block = get_block_no_scope_push(stream, scopes, None, vec![])?.node;
+
+    scopes.pop_scope(stream.current_span())?;
+    
+    let span = stream[while_i].span.combine(&stream.current_span());
+    let while_decl = Expression::new(
+        ExpressionKind::While(While{condition, block}), 
+        span,
+    );
+
+    stacks.expressions.push(while_decl);
+    Ok(())
 }
 
 fn get_for(
@@ -39,6 +157,10 @@ fn get_for(
     scopes.push_scope();
     let first = get_expression(stream, scopes, &["in", "{", "\n"])?;
     
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
     let (element, collection) = if stream.current_text() == "in" {
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream))

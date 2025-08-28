@@ -423,7 +423,7 @@ fn get_bool(token: &Token) -> Result<Literal, FromStreamError> {
     }
 }
 
-fn get_number(token: &Token) -> Result<Literal, FromStreamError> {
+pub fn get_number(token: &Token) -> Result<Literal, FromStreamError> {
     const BINARY: u32 = 2;
     const HEXIDECIMAL: u32 = 16;
 

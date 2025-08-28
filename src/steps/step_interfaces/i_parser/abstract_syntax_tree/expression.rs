@@ -135,7 +135,7 @@ pub struct CaseSwitch {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CaseDoKind {
-    Block(Block),
+    Block(Spanned<Block>),
     Expression(Expression),
 }
 
