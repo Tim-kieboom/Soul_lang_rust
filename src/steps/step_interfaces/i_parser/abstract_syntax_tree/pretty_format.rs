@@ -21,7 +21,7 @@ impl PrettyFormat for ScopeBuilder {
             .iter()
             .map(|scope| {
                 let body = scope.symbols.iter()
-                    .map(|(name, kind)| format!("\t{} => {},", name, kind.node.to_string()))
+                    .map(|(name, kind)| format!("\t{} => [\n\t\t{}\n\t],", name, kind.iter().map(|el| el.node.to_string()).join(",\n\t\t")))
                     .join("\n");
 
                 format!("scope({}) {{\n{}\n}}\n", scope.self_index, body) 
@@ -170,10 +170,11 @@ impl PrettyString for Trait {
         let prefix = tree_prefix(tab, is_last);
         let prefix2 = tree_prefix(tab+1, is_last);
         format!(
-            "{}Struct >> {}{}\n{}",
+            "{}Trait >> {}{}{}\n{}",
             prefix,
             self.signature.name,
             self.signature.generics.to_string(),
+            if self.signature.implements.is_empty() {"".into()} else {format!("impl {}", self.signature.implements.iter().map(|el| el.to_string()).join(" + "))},
             self.methodes.iter().map(|el| format!("{}Methode >>{}", prefix2, el.node.to_string())).join("\n"),
         )
     }
@@ -255,7 +256,7 @@ impl ToString for ScopeKind {
             ScopeKind::Struct(value) => format!("struct >> {}{}", value.name, value.generics.to_string()),
 
             ScopeKind::Variable(value) => format!("Variable >> {} {}{}", value.ty.to_string(), value.name, value.initialize_value.as_ref().map(|el| format!(" = {}", el.node.to_string())).unwrap_or(String::new())),
-            ScopeKind::Functions(values) => format!("Functions >> [{}]", values.iter().map(|func| func.signature.to_string()).join(", ")),
+            ScopeKind::Functions(values) => format!("Functions >> [{}]", values.iter().map(|func| func.node.signature.to_string()).join(", ")),
 
             ScopeKind::Enum(value) => format!("enum >> {}", value.name),
             ScopeKind::Union(value) => format!("union >> {}", value.name),
@@ -330,9 +331,16 @@ impl ToString for Tuple {
 
 impl ToString for NamedTuple {
     fn to_string(&self) -> String {
-        self.values.iter()
+        let args = self.values.iter()
             .map(|(name, value)| format!("{}: {}", name, value.to_string()))
-            .join(", ")
+            .join(", ");
+        
+        if self.insert_defaults {
+            format!("{}, ..", args)
+        }
+        else {
+            args
+        }
     }
 }
 

@@ -1,7 +1,6 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-
-use crate::{soul_names::{NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::{get_number}, step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}, i_tokenizer::TokenStream}}};
+use crate::{soul_names::{check_name_allow_types, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::get_number, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}}, i_tokenizer::TokenStream}}};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct  SoulType {
@@ -86,6 +85,7 @@ pub enum TypeWrapper {
     Invalid,
     Array,
     StackArray(u32),
+    StackArrayGeneric(SoulType),
     ConstRef(Option<Lifetime>),
     MutRef(Option<Lifetime>),
     Pointer,
@@ -161,18 +161,23 @@ impl TypeWrapper {
             return TypeWrapper::Invalid   
         }
 
-        let size = match get_number(stream.current()) {
+        let stack_array = match get_number(stream.current()) {
             Ok(Literal::Int(num)) => if num < 0 {
                 stream.go_to_index(wrap_i);
                 return TypeWrapper::Invalid
             }
             else {
-                num as u32
+                TypeWrapper::StackArray(num as u32)
             },
-            Ok(Literal::Uint(num)) => num as u32,
+            Ok(Literal::Uint(num)) => TypeWrapper::StackArray(num as u32),
             _ => {
-                stream.go_to_index(wrap_i);
-                return TypeWrapper::Invalid
+                if let Err(_) = check_name_allow_types(stream.current_text()) {
+                    return TypeWrapper::Invalid
+                }
+                else {
+                    let ty = SoulType::from_type_kind(TypeKind::Unknown(stream.current_text().into()));
+                    TypeWrapper::StackArrayGeneric(ty)
+                }
             },
         };
 
@@ -186,7 +191,7 @@ impl TypeWrapper {
             return TypeWrapper::Invalid   
         }
 
-        TypeWrapper::StackArray(size)
+        stack_array
     }
 
     pub fn to_string(&self) -> String {
@@ -194,6 +199,7 @@ impl TypeWrapper {
             TypeWrapper::Invalid => "<invalid>".into(),
             TypeWrapper::Array => SOUL_NAMES.get_name(NamesTypeWrapper::Array).into(),
             TypeWrapper::StackArray(num) => format!("[{}]", num),
+            TypeWrapper::StackArrayGeneric(ty) => format!("[{}]", ty.to_string()),
             TypeWrapper::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef).into(),
             TypeWrapper::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef).into(),
             TypeWrapper::Pointer => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer).into(),

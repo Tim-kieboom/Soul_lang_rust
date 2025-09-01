@@ -714,7 +714,7 @@ fn test_group_expressions() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone()}))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone(), insert_defaults: false}))
     );
 
     stream = stream_from_strs(&[
@@ -737,7 +737,7 @@ fn test_group_expressions() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.as_ref().unwrap().node,
-        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone()}))
+        ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values: values.clone(), insert_defaults: false}))
     );
 
     stream = stream_from_strs(&[
@@ -852,7 +852,7 @@ fn test_function_call() {
             arguments: NamedTuple{values: HashMap::from([
                 ("field".into(), Expression::new(ExpressionKind::Literal(Literal::Int(1)), SoulSpan::new(0,11,1))),
                 ("field2".into(), Expression::new(ExpressionKind::Literal(Literal::Int(2)), SoulSpan::new(0,20,1))),
-            ])},
+            ]), insert_defaults: false},
         }),
         SoulSpan::new(0,0,22)
     );

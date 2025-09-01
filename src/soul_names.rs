@@ -1,10 +1,9 @@
-use std::{collections::{HashMap, HashSet}, result};
-use enum_iterator::Sequence;
+use regex::Regex;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
-use regex::Regex;
+use enum_iterator::Sequence;
 use serde::{Serialize, Deserialize};
-
+use std::{collections::{HashMap, HashSet}};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::type_kind::{TypeKind, TypeSize}};
 
 pub static SOUL_NAMES: Lazy<SoulNames> = Lazy::new(|| {
@@ -38,25 +37,40 @@ pub fn could_be_name(name: &str) -> bool {
     true
 }
 
-pub fn check_name_allow_types(name: &str) -> result::Result<(), String> {
+pub fn check_name_allow_types(name: &str) -> Result<(), String> {
     inner_check_name(name, &SOUL_NAMES.type_less_iligal_names)
 }
 
-pub fn check_name(name: &str) -> result::Result<(), String> {
+pub fn check_name(name: &str) -> Result<(), String> {
     inner_check_name(name, &SOUL_NAMES.iligal_names)
 }
 
-fn inner_check_name(name: &str, iligal_names: &HashSet<&str>) -> result::Result<(), String> {
+fn inner_check_name(name: &str, iligal_names: &HashSet<&str>) -> Result<(), String> {
     if name.starts_with("__") {
         return Err(format!("name: '{}' can not begin wiht '__' ", name));
     }
 
-    if let Some(illigal_name) = iligal_names.get(name) {
+    if let Some(illigal) = iligal_names.get(name) {
+        
+
+        let illigal_name = if *illigal == "\n" {
+            "\\n"
+        }
+        else {
+            *illigal
+        };
+
         return Err(format!("name: '{}' is an illigal name", illigal_name));
     }
 
     if let Some(illigal_symbool) = name.chars().find(|ch| ILLIGAL_SYMBOOLS.contains(ch)) {
-        return Err(format!("name: '{}', has illigal symbool '{}'", name, illigal_symbool));
+        
+        return if illigal_symbool == '\n' {
+            Err(format!("name: '{}', has illigal symbool '\\n'", name.replace("\n", "\\n")))
+        }
+        else {
+            Err(format!("name: '{}', has illigal symbool '{}'", name, illigal_symbool))
+        }
     }
 
     Ok(())

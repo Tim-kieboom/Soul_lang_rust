@@ -11,7 +11,7 @@ pub struct GenericParameter {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GenericKind {
-    Type{default: Option<SoulType>},
+    Type{impl_type: Option<SoulType>, default: Option<SoulType>},
     Lifetime
 }
 
@@ -23,8 +23,13 @@ impl GenericParameter {
         };
 
         match &self.kind {
-            GenericKind::Type { default } => match default {
-                Some(val) => format!("{} = {}", str, val.to_string()),
+            GenericKind::Type{impl_type, default} => match default {
+                Some(val) => format!(
+                    "{}{} = {}", 
+                    str,
+                    impl_type.as_ref().map(|el| format!("impl {}", el.to_string())).unwrap_or("".into()),
+                    val.to_string(),
+                ),
                 None => str,
             },
             GenericKind::Lifetime => str,

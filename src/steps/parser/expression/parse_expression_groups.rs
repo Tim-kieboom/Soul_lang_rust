@@ -72,19 +72,19 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
     let is_named_tuple = !is_array && (stream.peek_is(":") || stream.peek_multiple_is(peek_i, ":"));
 
     if is_named_tuple {
-        let values = parse_named_group(stream, scopes)?;
+        let (values, insert_defaults) = parse_named_group(stream, scopes)?;
         let span = stream[group_i].span.combine(&stream.current_span());
 
         if let Some(ctor_ty) = collection_type {
 
             Ok(Some(Expression::new(
-                ExpressionKind::Constructor(Constructor{calle: ctor_ty, arguments: NamedTuple{values}}),
+                ExpressionKind::Constructor(Constructor{calle: ctor_ty, arguments: NamedTuple{values, insert_defaults}}),
                 span
             )))
         }
         else {
             Ok(Some(Expression::new(
-                ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values})), 
+                ExpressionKind::ExpressionGroup(ExpressionGroup::NamedTuple(NamedTuple{values, insert_defaults})), 
                 span,
             )))
         }
@@ -124,7 +124,7 @@ fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan)
     ))
 }
 
-fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<HashMap<Ident, Expression>> {
+fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(HashMap<Ident, Expression>, bool)> {
     let group_i = stream.current_index();
     let group_end_token = ")";
 
@@ -149,10 +149,11 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             ))
         }
 
-        return Ok(HashMap::new());
+        return Ok((HashMap::new(), true));
     }
 
     let mut values = HashMap::new();
+    let mut insert_defaults = false;
     loop {
 
         if stream.next_if("\n").is_none() {
@@ -160,11 +161,34 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         }
 
         if stream.current_text() == group_end_token {
-            return Ok(values)
+            break
         }
 
         if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(group_i, stream))
+        }
+
+        if stream.current_text() == ".." {
+            
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(group_i, stream))
+            }
+
+            if stream.next_if("\n").is_none() {
+                return Err(err_out_of_bounds(group_i, stream))
+            }
+
+            if stream.current_text() != group_end_token {
+                
+                return Err(new_soul_error(
+                    SoulErrorKind::UnexpectedToken,
+                    stream.current_span(),
+                    format!("token: '{}' should be ')', '..' should be last argument in namedTuple", stream.current_text()),
+                ))
+            }
+            
+            insert_defaults = true;
+            break
         }
 
         let name_i = stream.current_index();
@@ -203,8 +227,8 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(group_i, stream))
         }
 
-        if stream.current_text() == group_end_token {
-            return Ok(values)
+        else if stream.current_text() == group_end_token {
+            break
         }
         else if stream.current_text() != "," {
 
@@ -219,6 +243,8 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(group_i, stream))
         }
     }
+
+    Ok((values, insert_defaults))
 }
 
 fn parse_tuple_or_array(mut collection_type: Option<SoulType>, group_i: usize, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {

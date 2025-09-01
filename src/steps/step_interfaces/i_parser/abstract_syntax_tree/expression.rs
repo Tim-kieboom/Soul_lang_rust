@@ -94,6 +94,9 @@ pub struct ArrayFiller {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NamedTuple {
     pub values: HashMap<Ident, Expression>,
+    
+    // 'Foo(field: 1, ..)' is true if '..' meaning that all other fields use default value
+    pub insert_defaults: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

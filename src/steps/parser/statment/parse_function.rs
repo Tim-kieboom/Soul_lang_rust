@@ -11,21 +11,35 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{Fu
 
 
 pub fn get_function(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Function>> {
+    inner_get_function(stream, scopes, None)
+}
+
+pub fn get_methode(stream: &mut TokenStream, scopes: &mut ScopeBuilder, add_callee: SoulType) -> Result<Spanned<Function>> {
+    inner_get_function(stream, scopes, Some(add_callee))
+}
+
+pub fn get_methode_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder, add_callee: SoulType) -> Result<FunctionSignature> {
+    inner_get_function_signature(stream, scopes, Some(add_callee))
+}
+
+fn inner_get_function(stream: &mut TokenStream, scopes: &mut ScopeBuilder, add_callee: Option<SoulType>) -> Result<Spanned<Function>> {
     let func_i = stream.current_index();
 
-    let signature = get_function_signature(stream, scopes)?;
+    let signature = inner_get_function_signature(stream, scopes, add_callee)?;
 
     if stream.next_if("\n").is_none() {
         return Err(err_out_of_bounds(stream))
     }
 
     let block = get_block(stream, scopes, signature.callee.clone(), signature.parameters.clone())?.node;
-
+    let function = Function{signature, block};
     let span = stream[func_i].span.combine(&stream.current_span());
-    Ok(Spanned::new(Function{signature, block}, span))
+    
+    scopes.insert_function(function.clone(), span);
+    Ok(Spanned::new(function, span))
 }
 
-fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<FunctionSignature> {
+fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder, add_callee: Option<SoulType>) -> Result<FunctionSignature> {
     
     fn type_is_function_name(stream: &TokenStream) -> bool {
         stream.current_text() == "("
@@ -49,8 +63,14 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     }
 
     let type_i = stream.current_index();
-    let mut soul_type = SoulType::try_from_stream(stream, scopes)?;
     
+    let mut soul_type = if let Some(ty) = add_callee {
+        Some(ty)
+    }
+    else {
+        SoulType::try_from_stream(stream, scopes)?
+    };
+
     if soul_type.is_some() && type_is_function_name(stream) {
         stream.go_to_index(type_i);
         soul_type = None;
@@ -68,7 +88,7 @@ fn get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
             stream.current_span(), 
-            "inherating (e.g. 'typeof <trait>') in not allowed in function",
+            "inherating (e.g. 'impl <trait>') in not allowed in function",
         ))
     }
 
@@ -235,11 +255,11 @@ fn get_parameters(
 
 fn get_this_type(arg_position: usize, callee: &Option<SoulType>, stream: &mut TokenStream) -> Result<SoulType> {
     if callee.is_none() {
-        return Err(new_soul_error(
-            SoulErrorKind::ArgError, 
-            stream.current_span(), 
-            "'this' can only be used in extension function",
-        ))
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        return Ok(SoulType::none())
     }
 
     if arg_position != 1 {

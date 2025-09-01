@@ -15,7 +15,7 @@ use crate::steps::parser::expression::merge_expression::{convert_bracket_express
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Index, ReturnKind, ReturnLike, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
 
-pub struct ExprOptions {
+pub struct ExpressionOptions {
     /// `make 0 unless you are in a bracket`
     /// ```
     /// if '(' {round_bracket_stack += 1}
@@ -24,7 +24,7 @@ pub struct ExprOptions {
     pub round_bracket_stack: i64,
 }
 
-impl Default for ExprOptions {
+impl Default for ExpressionOptions {
     fn default() -> Self {
         Self { 
             round_bracket_stack: 0,
@@ -37,13 +37,13 @@ pub fn get_expression(
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str],
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, &mut ExprOptions::default(), false, end_tokens)
+    inner_get_expression(stream, scopes, &mut ExpressionOptions::default(), false, end_tokens)
 }
 
 pub fn get_expression_options(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
-    mut options: ExprOptions,
+    mut options: ExpressionOptions,
     end_tokens: &[&str],
 ) -> Result<Expression> {
     inner_get_expression(stream, scopes, &mut options, false, end_tokens)
@@ -54,13 +54,13 @@ pub fn get_expression_statment(
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str],
 ) -> Result<Expression> {
-    inner_get_expression(stream, scopes, &mut ExprOptions::default(), true, end_tokens)
+    inner_get_expression(stream, scopes, &mut ExpressionOptions::default(), true, end_tokens)
 }
 
 pub fn get_expression_statment_options(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
-    mut options: ExprOptions,
+    mut options: ExpressionOptions,
     end_tokens: &[&str],
 ) -> Result<Expression> {
     inner_get_expression(stream, scopes, &mut options, true, end_tokens)
@@ -69,7 +69,7 @@ pub fn get_expression_statment_options(
 fn inner_get_expression(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
-    options: &mut ExprOptions,
+    options: &mut ExpressionOptions,
     is_statment: bool,
     end_tokens: &[&str],
 ) -> Result<Expression> {
@@ -134,7 +134,7 @@ fn convert_expression(
     stacks: &mut ExpressionStacks, 
     end_tokens: &[&str],
     is_statment: bool,
-    options: &mut ExprOptions,
+    options: &mut ExpressionOptions,
 ) -> Result<bool> {
     const CLOSED_A_BRACKET: bool = true;
     const BREAK_LOOP: Result<bool> = Ok(true);
@@ -144,17 +144,16 @@ fn convert_expression(
         return BREAK_LOOP
     }
 
-    let first_literal_begin = stream.current_index();
-
+    let literal_i = stream.current_index();
     if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
 
-        add_literal(literal, stream, scopes, stacks, first_literal_begin);
+        add_literal(literal, stream, scopes, stacks, literal_i);
         end_loop(stream, scopes, stacks)?;
         return CONTINUE_LOOP
     }
 
     let begin_i = stream.current_index();
-    stream.go_to_index(first_literal_begin);
+    stream.go_to_index(literal_i);
     if let Some(group) = try_get_expression_group(stream, scopes)? {
         
         add_group_expressions(group, stacks)?;
@@ -169,10 +168,10 @@ fn convert_expression(
         convert_bracket_expression(stream, stacks)?;
     }
     
-    let second_literal_begin = stream.current_index();
+    let literal_i = stream.current_index();
     if let Some(literal) = Literal::try_from_stream(stream, scopes)? {
 
-        add_literal(literal, stream, scopes, stacks, second_literal_begin);
+        add_literal(literal, stream, scopes, stacks, literal_i);
         end_loop(stream, scopes, stacks)?;
         return CONTINUE_LOOP
     }
@@ -221,7 +220,7 @@ fn convert_expression(
             SoulErrorKind::UnexpectedToken,
             stream.current_span(), 
             format!("token: '{}' is not valid expression", stream.current_text())
-        ));
+        ))
     }
 
     end_loop(stream, scopes, stacks)?;
@@ -269,7 +268,7 @@ fn get_return_kind(stream: &TokenStream) -> Option<ReturnKind> {
 pub fn traverse_brackets(
     stream: &mut TokenStream, 
     stacks: &mut ExpressionStacks, 
-    options: &mut ExprOptions,
+    options: &mut ExpressionOptions,
 ) -> bool {
 
     const START: &str = "(";
@@ -421,7 +420,15 @@ fn add_field_or_methode(
     scopes: &mut ScopeBuilder, 
     stacks: &mut ExpressionStacks, 
 ) -> Result<()> {
-    if stream.next_multiple(2).is_none() {
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream));
+    }
+
+    if stream.next_if("\n").is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+    
+    if stream.next().is_none() {
         return Err(err_out_of_bounds(stream));
     }
 
@@ -665,12 +672,12 @@ fn has_no_operators(stacks: &ExpressionStacks) -> bool {
     stacks.symbools.iter().all(|sy| matches!(sy.node, SymboolKind::Bracket(..)))
 }
 
-fn is_end_token(token: &Token, end_tokens: &[&str], options: &ExprOptions) -> bool {
+fn is_end_token(token: &Token, end_tokens: &[&str], options: &ExpressionOptions) -> bool {
     end_tokens.iter().any(|str| str == &token.text) && 
     end_token_special_cases(token, options)
 
 }
-fn end_token_special_cases(token: &Token, options: &ExprOptions) -> bool {
+fn end_token_special_cases(token: &Token, options: &ExpressionOptions) -> bool {
     token.text != ")" || 
     // Special case: if one of the end_tokens is ')',
     // it is only valid if there are no unmatched opening

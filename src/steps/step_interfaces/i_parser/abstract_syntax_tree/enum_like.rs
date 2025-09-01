@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident, NamedTuple, Tuple}, generic::GenericParameter, pretty_format::ToString, soul_type::soul_type::SoulType, spanned::Spanned};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned};
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

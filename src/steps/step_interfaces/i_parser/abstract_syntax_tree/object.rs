@@ -27,6 +27,7 @@ pub struct Trait {
 pub struct TraitSignature {
     pub name: Ident,
     pub generics: Vec<GenericParameter>,
+    pub implements: Vec<SoulType>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

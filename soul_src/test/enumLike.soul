@@ -1,5 +1,5 @@
 enums() {
-    enum Paths typeof str {
+    enum Paths impl str {
         MainDisk = "C:\\",
         OtherDisk = "D:\\",
         MainFile = "src\\main.rs",
@@ -12,7 +12,7 @@ enums() {
         Three
     }
 
-    enum KeyValue typeof (str, int[3]) {
+    enum KeyValue impl (str, int[3]) {
         Foo = ("foo", [1,2,43]),
         Bar = ("bar", [2,45,6])
     }
@@ -32,7 +32,7 @@ unions() {
         None,
     }
 
-    union Result<K: Debug, E> 
+    union Result<K: Debug, E>
     where 
         E: Debug
     {

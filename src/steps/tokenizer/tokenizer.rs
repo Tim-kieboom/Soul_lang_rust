@@ -100,7 +100,10 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
         } 
 
         if *text == ";" &&
-           !splits.get(i+1).is_some_and(|token| token != &"\n") 
+            (
+                splits.index_is(i+1, &"\n") ||
+                (splits.index_is(i+1, &" ") && splits.index_is(i+2, &"\n"))
+            )
         {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidEscapeSequence, 
@@ -218,7 +221,14 @@ fn is_not_empty_line(file_line: &FileLine) -> bool {
     !file_line.line.trim().is_empty()
 }
 
-
+trait IndexIs<T: PartialEq> {
+    fn index_is(&self, i: usize, eq: &T) -> bool;
+}
+impl IndexIs<&str> for Vec<&str> {
+    fn index_is(&self, i: usize, eq: &&str) -> bool {
+        !self.get(i).is_some_and(|el| el != eq)
+    }
+}
 
 
 

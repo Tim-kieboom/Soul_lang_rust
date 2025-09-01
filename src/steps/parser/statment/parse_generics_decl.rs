@@ -8,7 +8,7 @@ use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::expression:
 
 pub struct GenericDecl {
     pub generics: Vec<GenericParameter>,
-    pub implements: Vec<Ident>,
+    pub implements: Vec<SoulType>,
 }
 
 pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<GenericDecl> {
@@ -40,9 +40,30 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             return Err(err_out_of_bounds(stream))
         }
 
+        
         let mut constraint = vec![];
+        let impl_type = if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) {
+
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream))
+            }
+
+            Some(SoulType::from_stream(stream, scopes)?)
+        }
+        else {
+            None
+        };
+        
         if stream.current_text() == ":" {
 
+            if impl_type.is_some() {
+                return Err(new_soul_error(
+                    SoulErrorKind::ArgError, 
+                    stream.current_span(), 
+                    "can not use type contraint in impl generic",
+                ))
+            }
+            
             if is_lifetime {
                 return Err(new_soul_error(
                     SoulErrorKind::ArgError, 
@@ -63,6 +84,15 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
         }
 
         let default = if stream.current_text() == "=" {
+            
+            if impl_type.is_some() {
+                return Err(new_soul_error(
+                    SoulErrorKind::ArgError, 
+                    stream.current_span(), 
+                    "can not use default type in impl generic",
+                ))
+            }
+            
             if is_lifetime {
                 return Err(new_soul_error(
                     SoulErrorKind::ArgError, 
@@ -71,11 +101,11 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
                 ))
             }
 
-            let ty = SoulType::from_stream(stream, scopes)?;
-            
             if stream.next().is_none() {
-                return Err(err_out_of_bounds(stream));
+                return Err(err_out_of_bounds(stream))
             }
+
+            let ty = SoulType::from_stream(stream, scopes)?;
 
             Some(ty)
         }
@@ -83,7 +113,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             None
         };
 
-        let kind = if is_lifetime {GenericKind::Lifetime} else {GenericKind::Type{default}};
+        let kind = if is_lifetime {GenericKind::Lifetime} else {GenericKind::Type{impl_type, default}};
         generics_decl.generics.push(GenericParameter{name: name.clone(), constraint, kind});
         
         if stream.current_text() != "," {
@@ -114,7 +144,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
         }
     }
 
-    add_impl(&mut generics_decl, stream)?;
+    add_impl(&mut generics_decl, stream, scopes)?;
     add_where(&mut generics_decl, stream, scopes)?;
 
     Ok(generics_decl)
@@ -194,6 +224,7 @@ fn add_where(
 fn add_impl(
     generics_decl: &mut GenericDecl, 
     stream: &mut TokenStream, 
+    scopes: &mut ScopeBuilder,
 ) -> Result<()> {
     
     if stream.next_if("\n").is_none() {
@@ -214,11 +245,7 @@ fn add_impl(
             return Err(err_out_of_bounds(stream))
         }
 
-        generics_decl.implements.push(stream.current_text().into());
-
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(stream))
-        }
+        generics_decl.implements.push(SoulType::from_stream(stream, scopes)?);
 
         if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(stream))
@@ -356,6 +383,32 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
 fn err_out_of_bounds(stream: &mut TokenStream) -> SoulError {
     new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing generic ctor")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

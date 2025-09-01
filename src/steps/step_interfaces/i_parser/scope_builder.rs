@@ -5,9 +5,11 @@ use serde::{Deserialize, Serialize};
 use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::soul_type::SoulType, spanned::Spanned}};
 
 
+type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScopeBuilder {
-    scopes: Vec<InnerScope<Spanned<ScopeKind>>>,
+    scopes: Vec<Scope>,
     current: usize,
     pub global_literals: ProgramMemmory,
 }
@@ -28,7 +30,7 @@ pub enum ScopeKind {
     Struct(Struct),
 
     Variable(Variable),
-    Functions(Vec<Function>),
+    Functions(Vec<Spanned<Function>>),
 
     Enum(Enum),
     Union(Union),
@@ -79,21 +81,21 @@ impl ScopeBuilder {
 
     pub fn new() -> Self {
         Self { 
-            scopes: vec![InnerScope::<Spanned<ScopeKind>>::new_global()], 
+            scopes: vec![Scope::new_global()], 
             current: Self::GLOBAL_SCOPE_INDEX, 
             global_literals: ProgramMemmory::new(),
         }
     }
 
-    pub fn get_scopes(&self) -> &Vec<InnerScope<Spanned<ScopeKind>>> {
+    pub fn get_scopes(&self) -> &Vec<Scope> {
         &self.scopes
     }
 
-    pub fn get_global_scope(&self) -> &InnerScope<Spanned<ScopeKind>>{
+    pub fn get_global_scope(&self) -> &Scope {
         &self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
 
-    pub fn current_scope(&self) -> &InnerScope<Spanned<ScopeKind>> {
+    pub fn current_scope(&self) -> &Scope {
         &self.scopes[self.current]
     }
 
@@ -138,24 +140,64 @@ impl ScopeBuilder {
     pub fn insert(&mut self, name: String, kind: ScopeKind, span: SoulSpan) {
         self.current_mut()
             .symbols
-            .insert(name, Spanned::new(kind, span));
+            .entry(name)
+            .or_default()
+            .push(Spanned::new(kind, span));
+    } 
+
+    pub fn insert_function(&mut self, function: Function, span: SoulSpan) {
+        let scope = self.current_mut()
+            .symbols
+            .entry(function.signature.name.0.clone())
+            .or_default();
+
+        if let Some(kind) = scope.iter_mut().find(|el| matches!(el.node, ScopeKind::Functions(_))) {
+            
+            if let ScopeKind::Functions(functions) = &mut kind.node {
+                functions.push(Spanned::new(function ,span));
+            }
+            else {unreachable!()}
+        }
+        else {
+            scope.push(Spanned::new(ScopeKind::Functions(vec![Spanned::new(function, span)]), span));
+        }
     } 
 
     pub fn insert_global(&mut self, name: String, kind: ScopeKind, span: SoulSpan) {
         self.global_mut()
             .symbols
-            .insert(name, Spanned::new(kind, span));
+            .entry(name)
+            .or_default()
+            .push(Spanned::new(kind, span));
     }
 
-        pub fn current(&self) -> &InnerScope<Spanned<ScopeKind>> {
+    pub fn insert_global_function(&mut self, function: Function, span: SoulSpan) {
+        let scope = self.global_mut()
+            .symbols
+            .entry(function.signature.name.0.clone())
+            .or_default();
+
+        if let Some(kind) = scope.iter_mut().find(|el| matches!(el.node, ScopeKind::Functions(_))) {
+            
+            if let ScopeKind::Functions(functions) = &mut kind.node {
+                functions.push(Spanned::new(function ,span));
+            }
+            else {unreachable!()}
+        }
+        else {
+            scope.push(Spanned::new(ScopeKind::Functions(vec![Spanned::new(function, span)]), span));
+        }
+    }
+
+    pub fn current(&self) -> &Scope {
         &self.scopes[self.current]
     }
 
-    pub fn current_mut(&mut self) -> &mut InnerScope<Spanned<ScopeKind>> {
+    pub fn current_mut(&mut self) -> &mut Scope {
         &mut self.scopes[self.current]
     }
 
-    pub fn global_mut(&mut self) -> &mut InnerScope<Spanned<ScopeKind>> {
+    pub fn global_mut(&mut self) -> &mut Scope {
         &mut self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
 }

@@ -1,0 +1,108 @@
+traits() {
+    trait Sub {
+        Sub(this, This a) This
+    }
+
+    trait Add<T, R = T> impl Debug + Number 
+    where 
+        T: Debug 
+    {
+        Add(this, T a) R
+        WouldAddOverflow(this@, T a) bool
+    }
+}
+
+structs() {
+    struct Object {
+        int field
+        int default = 0
+        int pubGet {set;} = 0
+        int pub {Get; Set;} = 0
+        int private {set; get;} = 0
+    }
+
+    struct Gen<T> 
+    where 
+        T: Default 
+    {
+        T field = ()
+    }
+
+    class Class {
+        int field
+        int default = 0
+        int pubGet {Get;} = 0
+        int pub {Get; Set;} = 0
+        int private {set; get;} = 0
+
+        int[] ints {Get;} = []
+
+        This(field) {
+            return This(field: field, ..)
+        }
+
+        This::[int[] array] {
+            return This(field: 0, ints: array, ..)            
+        }
+
+        PubConsume(this) This {
+            return this
+        }
+
+        privConsume(this) This {
+            return this            
+        }
+
+        ToNamedTuple(this@) (field: int, default: int, pubGet: int, pub: int, private: int, ints: int[]) {
+            const self = copy this
+            return (
+                pub: self.pub,
+                ints: self.ints,
+                field: self.field,
+                pubGet: self.punGet,
+                default: self.default,
+                private: self.private,
+            )
+        }
+
+        // impl Add<This> {
+           
+        //     Add(mut this, This a) This {
+        //         this.field += a.field
+        //         return this                
+        //     }
+        // }
+    }
+
+    // class GenClass<T>
+    // where 
+    //     T: Default
+    // {
+    //     T field = ()
+    //     Ctor() {
+    //         return This(:)
+    //     }
+
+    //     getField(this@) T@ {
+    //         return this.field
+    //     }
+    // }
+
+    let object = Object(field: 1, ..)
+
+    let object2 = Class(1)
+    object2 = Class[int: 1,2,3,4] 
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+

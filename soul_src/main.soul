@@ -3,6 +3,16 @@ type string typeof str
 main() {}
 
 functionCall() {
+    
+    sumStackArray<N impl uint>(int[N] arr) int {
+        sum := 0
+        for el in arr {
+            sum += el
+        }
+
+        return sum
+    }
+    
     sumInner(int a, int b) int {
         return a + b
     }
@@ -22,6 +32,14 @@ functionCall() {
     var.field
     var.Methode()  
     var.field.Methode()
+
+    colletion.Iter()
+        .Select()
+        .ToArray()
+
+    object.field
+        .Methode()
+        .field
 }
 
 variable() {
@@ -33,6 +51,10 @@ variable() {
     int intVar = 1
     const int intConst = 1
     Literal int intLiteral = 1
+
+    num() int {
+        return 1
+    }
 
     num := sum(1, 2)
     num = sum<int>(1, 2)
