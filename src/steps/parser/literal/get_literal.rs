@@ -45,9 +45,15 @@ fn inner_from_stream(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<
     if stream.current_text() == "[" || stream.current_text() == "[]" {
         return get_array(stream, scopes);
     }
+    else if stream.current_starts_with(&["{", "..", "}"]) {
+        return Ok(Literal::NamedTuple{values: BTreeMap::new(), insert_defaults: true})
+    }
     else if stream.current_text() == "(" || stream.current_text() == "()" {
-        return pick_tuple(stream, scopes);
-    }   
+        return get_tuple(stream, scopes);
+    }
+    else if stream.current_text() == "{" || stream.current_text() == "{}" {
+        return get_named_tuple(stream, scopes);
+    }
     else if stream.current_text().starts_with("\"") {
         let string = get_string(stream.current_text());
         if string.is_some() {
@@ -89,30 +95,6 @@ fn return_best_error(token: &Token, number: Result<Literal, FromStreamError>, ch
     }
 }
 
-#[inline]
-fn pick_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal, FromStreamError> {
-    let mut named_tuple = None;
-    if stream.peek_multiple(2).is_some_and(|token| token.text == ":") {
-        
-        named_tuple = Some(get_named_tuple(stream, scopes));
-        if named_tuple.as_ref().unwrap().is_ok() {
-            return named_tuple.unwrap();
-        }
-    }
-
-    let tuple = get_tuple(stream, scopes);
-    if tuple.is_ok() {
-        return tuple;
-    }
-
-    if let Some(tu) = named_tuple {
-        return Err(tu.unwrap_err());
-    }
-    else {
-        return Err(tuple.unwrap_err())
-    }
-}
-
 fn get_string(text: &str) -> Option<Result<Literal, FromStreamError>> {
     if text.len() >= 2 && text.starts_with('\"') && text.ends_with('\"') {
         Some(Ok(Literal::Str(text[1..text.len()-1].into())))
@@ -128,26 +110,35 @@ fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
     const TUPLE_EMPTY: &str = "()";
 
     if stream.current_text() == TUPLE_EMPTY {
-        return Ok(Literal::new_tuple(Vec::new()));
+        return Ok(Literal::new_tuple(Vec::new()))
     }
     else if stream.current_text() != TUPLE_START {
-        return Err(new_from_stream_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "tuple does not start with '('", FromStreamErrorKind::IsNotOfType));
+        return Err(new_from_stream_error(
+            SoulErrorKind::UnmatchedParenthesis, 
+            stream.current_span(), 
+            "tuple does not start with '('", FromStreamErrorKind::IsNotOfType,
+        ))
     }
     else if stream.peek().is_some_and(|token| token.text == TUPLE_END) {
-        return Ok(Literal::new_tuple(Vec::new()));
+        return Ok(Literal::new_tuple(Vec::new()))
     }
 
     let mut tuples = Vec::new();
     while stream.next().is_some() {
 
         if stream.current_text() == TUPLE_END {
-            return Ok(Literal::new_tuple(tuples));
+            return Ok(Literal::new_tuple(tuples))
         }
 
         if stream.peek().is_some_and(|token| token.text == ":") {
 
             if tuples.is_empty() {
-                return Err(new_from_stream_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "internal THIS SHOULD NOT BE THROWN get_tuple() condition: tuples.is_empty()", FromStreamErrorKind::IsNotOfType));
+                return Err(new_from_stream_error(
+                    SoulErrorKind::UnmatchedParenthesis, 
+                    stream.current_span(), 
+                    "internal THIS SHOULD NOT BE THROWN get_tuple() condition: tuples.is_empty()",
+                     FromStreamErrorKind::IsNotOfType,
+                    ))
             }
             
             return Err(new_from_stream_error(
@@ -155,7 +146,7 @@ fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
                 stream.current_span(), 
                 "can not have a named tuple element (e.g. (field: 1, fiedl2: 1)) and unnamed tuple element (e.g. (1, 2)) in the same tuple",
                 FromStreamErrorKind::IsOfType
-            ));
+            ))
         }
 
         let begin_i = stream.current_index();
@@ -166,21 +157,26 @@ fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
                     stream.go_to_index(begin_i);
                 }
                 
-                return Err(err);
+                return Err(err)
             }
         };
 
         tuples.push(literal);
 
         if stream.next().is_none() {
-            break;
+            break
         }
 
         if stream.current_text() == TUPLE_END {
-            return Ok(Literal::new_tuple(tuples));
+            return Ok(Literal::new_tuple(tuples))
         }
         else if stream.current_text() != "," {
-            return Err(new_from_stream_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("tuple '{}', should be ','", stream.current_text()), FromStreamErrorKind::IsNotOfType));
+            return Err(new_from_stream_error(
+                SoulErrorKind::UnmatchedParenthesis, 
+                stream.current_span(), 
+                format!("tuple '{}', should be ','", stream.current_text()), 
+                FromStreamErrorKind::IsNotOfType,
+            ))
         }
 
     }
@@ -190,25 +186,72 @@ fn get_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal,
 }
 
 fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal, FromStreamError> {
-    const TUPLE_START: &str = "(";
-    const TUPLE_END: &str = ")";
+    const START_TOKEN: &str = "{";
+    const END_TOKEN: &str = "}";
 
-    if stream.current_text() != TUPLE_START {
-        return Err(new_from_stream_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "named tuple does not start with '('", FromStreamErrorKind::IsNotOfType));
+    if stream.current_text() != START_TOKEN {
+        return Err(new_from_stream_error(
+            SoulErrorKind::UnexpectedEnd, 
+            stream.current_span(), 
+            format!("named tuple does not start with '{}'", START_TOKEN), 
+            FromStreamErrorKind::IsNotOfType,
+        ))
     }
 
 
     let mut tuples = BTreeMap::new();
-    while stream.next().is_some() {
+    loop {
 
-        if stream.current_text() == TUPLE_END {
-            return Ok(Literal::new_named_tuple(tuples));
+        if stream.next().is_none() {
+            break
+        }
+
+        if stream.next_if("\n").is_none() {
+            break
+        }
+
+        if stream.current_text() == ".." {
+            if stream.next().is_none() {
+                break
+            }
+
+            if stream.next_if("\n").is_none() {
+                break
+            }
+
+            if stream.current_text() != END_TOKEN {
+                return Err(new_from_stream_error(
+                    SoulErrorKind::InvalidType,
+                    stream.current_span(),
+                    "'..' has to be last argument in namedTuple",
+                    FromStreamErrorKind::IsOfType,
+                ))
+            }
+            return Ok(Literal::new_named_tuple(tuples, true))
+        }
+        else if stream.current_text() == END_TOKEN {
+            
+            if tuples.is_empty() {
+                return Err(new_from_stream_error(
+                    SoulErrorKind::InvalidType, 
+                    stream.current_span(), 
+                    "namedTuple can not be empty you could do '{..}' for namedtuple with default fields (only when namedTuple is typed)", 
+                    FromStreamErrorKind::IsOfType,
+                ))
+            }
+            
+            return Ok(Literal::new_named_tuple(tuples, false))
         }
 
         if stream.peek().is_some_and(|token| token.text != ":") {
 
             if tuples.is_empty() {
-                return Err(new_from_stream_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "internal THIS SHOULD NOT BE THROWN get_named_tuple() condition: tuples.is_empty()", FromStreamErrorKind::IsNotOfType));
+                return Err(new_from_stream_error(
+                    SoulErrorKind::UnmatchedParenthesis, 
+                    stream.current_span(), 
+                    "internal THIS SHOULD NOT BE THROWN get_named_tuple() condition: tuples.is_empty()", 
+                    FromStreamErrorKind::IsNotOfType,
+                ))
             }
             
             return Err(new_from_stream_error(
@@ -216,13 +259,13 @@ fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Li
                 stream.current_span(), 
                 "can not have a named tuple element (e.g. (field: 1, fiedl2: 1)) and unnamed tuple element (e.g. (1, 2)) in the same tuple",
                 FromStreamErrorKind::IsOfType,
-            ));
+            ))
         }
 
         let name_index = stream.current_index();
 
         if stream.next_multiple(2).is_none() {
-            break;
+            break
         }
 
         let begin_i = stream.current_index();
@@ -233,26 +276,36 @@ fn get_named_tuple(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Li
                     stream.go_to_index(begin_i);
                 }
                 
-                return Err(err);
+                return Err(err)
             }
         };
 
         tuples.insert(Ident(stream[name_index].text.clone()), literal);
 
         if stream.next().is_none() {
-            break;
+            break
         }
 
-        if stream.current_text() == TUPLE_END {
-            return Ok(Literal::new_named_tuple(tuples));
+        if stream.current_text() == END_TOKEN {
+            return Ok(Literal::new_named_tuple(tuples, false))
         }
         else if stream.current_text() != "," {
-            return Err(new_from_stream_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("tuple '{}', should be ','", stream.current_text()), FromStreamErrorKind::IsNotOfType));
+            return Err(new_from_stream_error(
+                SoulErrorKind::UnmatchedParenthesis, 
+                stream.current_span(), 
+                format!("tuple '{}', should be ','", stream.current_text()), 
+                FromStreamErrorKind::IsNotOfType,
+            ))
         }
 
     }
 
-    return Err(new_from_stream_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing tuple", FromStreamErrorKind::IsNotOfType));
+    return Err(new_from_stream_error(
+        SoulErrorKind::UnexpectedEnd, 
+        stream.current_span(), 
+        "unexpeced end while parsing namedTuple", 
+        FromStreamErrorKind::IsNotOfType,
+    ))
 }
 
 fn get_array(stream: &mut TokenStream, scopes: &ScopeBuilder) -> Result<Literal, FromStreamError> {

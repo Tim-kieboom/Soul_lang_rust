@@ -74,7 +74,10 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         },
         StatementType::FunctionCall => {
             Statement::from_expression(get_expression_statment(stream, scopes, STATMENT_END_TOKENS)?)
-        }
+        },
+        StatementType::StructContructor => {
+            Statement::from_expression(get_expression_statment(stream, scopes, STATMENT_END_TOKENS)?)
+        },
 
         StatementType::Class => {
             let class_decl = get_class(stream, scopes)?;

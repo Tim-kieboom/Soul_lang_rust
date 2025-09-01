@@ -138,7 +138,11 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatementType> {
                 return Ok(StatementType::Variable)
             },
             "{" => {
-                return Ok(StatementType::Function)
+                if has_round_bracket {
+                    return Ok(StatementType::Function)
+                }
+
+                return Ok(StatementType::StructContructor)
             },
             "=" => {
                 if !stream.next_till("\n") {
@@ -203,6 +207,7 @@ pub enum StatementType {
 
     Function,
     FunctionCall,
+    StructContructor,
 
     Class,
     Trait,

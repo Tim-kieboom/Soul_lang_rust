@@ -23,8 +23,8 @@ unions() {
     union WrapperKind {
         Array,
         StackArray(uint),
-        Pointer(isMut: bool),
-        Ref(lifeTime: LifeTime, isMut: bool),
+        Pointer{isMut: bool},
+        Ref{lifeTime: LifeTime, isMut: bool},
     }
     
     union Option<T> {
@@ -32,8 +32,9 @@ unions() {
         None,
     }
 
-    union Result<K: Debug, E>
+    union Result<K, E>
     where 
+        K: Debug,
         E: Debug
     {
         Ok(K),

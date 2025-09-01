@@ -154,7 +154,7 @@ fn convert_expression(
 
     let begin_i = stream.current_index();
     stream.go_to_index(literal_i);
-    if let Some(group) = try_get_expression_group(stream, scopes)? {
+    if let Some(group) = try_get_expression_group(stream, scopes, end_tokens)? {
         
         add_group_expressions(group, stacks)?;
         end_loop(stream, scopes, stacks)?;

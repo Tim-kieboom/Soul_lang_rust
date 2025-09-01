@@ -1,17 +1,18 @@
 use std::result;
 use std::collections::HashMap;
 use crate::steps::parser::expression::parse_expression::get_expression;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::parser_response::{FromTokenStream};
 use crate::steps::step_interfaces::i_parser::scope_builder::{ScopeKind, Variable};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{Constructor, FunctionCall};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{StructConstructor, FunctionCall};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind, TypeWrapper};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Array, ArrayFiller, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, VariableName};
 
-pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Expression>> {
+pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder, end_tokens: &[&str]) -> Result<Option<Expression>> {
     let group_i = stream.current_index();
     
     let mut collection_type = SoulType::try_from_stream(stream, scopes)?;
@@ -33,7 +34,7 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
         let array = ExpressionGroup::Array(Array{collection_type, element_type: None, values: vec![]});
         return Ok(Some(Expression::new(ExpressionKind::ExpressionGroup(array), span)));   
     }
-    else if stream.current_text() != "(" && stream.current_text() != "[" {
+    else if stream.current_text() != "(" && stream.current_text() != "[" && stream.current_text() != "{" {
         
         if let Some(ty) = collection_type {
             
@@ -61,24 +62,19 @@ pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuil
         }
     }
 
-    let is_array = stream.current_text() == "[";
-    let peek_i = if stream.peek_is("\n") {
-        3
-    }
-    else {
-        2
-    };
-
-    let is_named_tuple = !is_array && (stream.peek_is(":") || stream.peek_multiple_is(peek_i, ":"));
-
-    if is_named_tuple {
+    if stream.current_text() == "{" {
+        
+        if end_tokens.iter().any(|el| *el == "{") {
+            return Ok(None)
+        }
+        
         let (values, insert_defaults) = parse_named_group(stream, scopes)?;
         let span = stream[group_i].span.combine(&stream.current_span());
 
         if let Some(ctor_ty) = collection_type {
 
             Ok(Some(Expression::new(
-                ExpressionKind::Constructor(Constructor{calle: ctor_ty, arguments: NamedTuple{values, insert_defaults}}),
+                ExpressionKind::StructConstructor(StructConstructor{calle: ctor_ty, arguments: NamedTuple{values, insert_defaults}}),
                 span
             )))
         }
@@ -126,7 +122,7 @@ fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan)
 
 fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(HashMap<Ident, Expression>, bool)> {
     let group_i = stream.current_index();
-    let group_end_token = ")";
+    let group_end_token = "}";
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(group_i, stream));
@@ -136,16 +132,20 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         return Err(err_out_of_bounds(group_i, stream))
     }
 
-    if stream.current_text() == ":" {
+    if stream.current_text() == ".." {
         if stream.next().is_none() {
+            return Err(err_out_of_bounds(group_i, stream))
+        }
+
+        if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(group_i, stream))
         }
 
         if stream.current_text() != group_end_token {
             return Err(new_soul_error(
-                SoulErrorKind::UnexpectedToken, 
+                SoulErrorKind::InvalidType, 
                 stream.current_span(), 
-                format!("token: '{}' is invalid should be ')'", group_end_token),
+                "namedTuple can not be empty you could do '{..}' for namedtuple with default fields (only when namedTuple is typed)", 
             ))
         }
 
@@ -153,7 +153,6 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
     }
 
     let mut values = HashMap::new();
-    let mut insert_defaults = false;
     loop {
 
         if stream.next_if("\n").is_none() {
@@ -162,10 +161,6 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
         if stream.current_text() == group_end_token {
             break
-        }
-
-        if stream.next_if("\n").is_none() {
-            return Err(err_out_of_bounds(group_i, stream))
         }
 
         if stream.current_text() == ".." {
@@ -187,26 +182,28 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
                 ))
             }
             
-            insert_defaults = true;
-            break
+            return Ok((values, true))
         }
 
         let name_i = stream.current_index();
         let name = Ident::new(stream.current_text());
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(group_i, stream))
-        }
 
-        if stream.current_text() != ":" {
+        if !stream.peek_is(":") {
+
+            let expression = get_expression(stream, scopes, &[",", "\n", group_end_token])?;
+            if let ExpressionKind::Variable(_) = &expression.node {
+                values.insert(name, expression);
+                continue
+            }
 
             return Err(new_soul_error(
                 SoulErrorKind::InvalidType,
                 stream.current_span(),
-                "can not have a named tuple element (e.g. (field: 1, fiedl2: 1)) and unnamed tuple element (e.g. (1, 2)) in the same tuple",
+                format!("namedTuple element '{}' does not have a name", expression.to_string()),
             ))
         }
 
-        if stream.next().is_none() {
+        if stream.next_multiple(2).is_none() {
             return Err(err_out_of_bounds(group_i, stream))
         }
 
@@ -214,7 +211,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(group_i, stream))
         }
 
-        let expression = get_expression(stream, scopes, &[",", "\n", group_end_token])?;
+        let expression = get_expression(stream, scopes, &[",", "\n", group_end_token, ")"])?;
         if let Some(duplicate) = values.insert(name, expression) {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidName, 
@@ -244,7 +241,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         }
     }
 
-    Ok((values, insert_defaults))
+    Ok((values, false))
 }
 
 fn parse_tuple_or_array(mut collection_type: Option<SoulType>, group_i: usize, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {

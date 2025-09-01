@@ -25,12 +25,20 @@ pub const ASSIGN_SYMBOOLS: &[&str] = &["=", "+=", "-=", "*=", "/=", "%=", "&=", 
 pub const OPERATOR_ASSIGN_SYMBOOLS: &[&str] = &["+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="];
 
 pub fn could_be_name(name: &str) -> bool {
-    if name.len() == 1 && ILLIGAL_SYMBOOLS.get(&name.chars().next().unwrap_or('!')).is_some() {
+    let first_char = &name.chars()
+        .next()
+        .unwrap_or('!');
+
+    if name.len() == 1 && ILLIGAL_SYMBOOLS.get(first_char).is_some() {
         return false
     }
 
     const SEPARATE_SYMBOOLS: &[char] = &['(', '{', '[', ']', '}', ')', ',', '.', '\'', '\"'];
     if name.chars().any(|char| SEPARATE_SYMBOOLS.iter().any(|el| el == &char)) {
+        return false
+    }
+
+    if name == "=>" || OPERATOR_ASSIGN_SYMBOOLS.iter().any(|el| *el == name) {
         return false
     }
 

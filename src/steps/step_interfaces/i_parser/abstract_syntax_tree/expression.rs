@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
-use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{Constructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::{Spanned}, statement::Block}};
+use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{StructConstructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::{Spanned}, statement::Block}};
 
 pub type Expression = Spanned<ExpressionKind>;
 
@@ -16,8 +16,8 @@ pub enum ExpressionKind {
     
     Index(Index),
     Lambda(Lambda),
-    Constructor(Constructor),
     FunctionCall(FunctionCall),
+    StructConstructor(StructConstructor),
 
     AccessField(AccessField),
     StaticField(StaticField),
@@ -334,7 +334,7 @@ impl ExpressionKind {
             ExpressionKind::Literal(_) => "Literal",
             ExpressionKind::ConstRef(_) => "ConstRef",
             ExpressionKind::Variable(_) => "Variable",
-            ExpressionKind::Constructor(_) => "Constructor",
+            ExpressionKind::StructConstructor(_) => "Constructor",
             ExpressionKind::AccessField(_) => "AccessField",
             ExpressionKind::StaticField(_) => "StaticField",
             ExpressionKind::FunctionCall(_) => "FunctionCall",

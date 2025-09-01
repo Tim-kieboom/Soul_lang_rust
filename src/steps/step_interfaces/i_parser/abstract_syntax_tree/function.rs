@@ -32,7 +32,7 @@ pub struct FunctionCall {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Constructor {
+pub struct StructConstructor {
     pub calle: SoulType,
     pub arguments: NamedTuple,
 }

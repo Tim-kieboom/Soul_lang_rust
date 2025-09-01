@@ -20,7 +20,7 @@ pub enum Literal {
     // complex
     Array{ty: LiteralType, values: Vec<Literal>},
     Tuple{values: Vec<Literal>},
-    NamedTuple{values: BTreeMap<Ident, Literal>},
+    NamedTuple{values: BTreeMap<Ident, Literal>, insert_defaults: bool},
 
     // a type of Literal variable for complex literals and refing basic literals 
     ProgramMemmory(Ident, LiteralType),
@@ -178,8 +178,8 @@ impl Literal {
         this
     }
 
-    pub fn new_named_tuple(literals: BTreeMap<Ident, Literal>) -> Literal {
-        let mut this = Literal::NamedTuple{values: literals};
+    pub fn new_named_tuple(literals: BTreeMap<Ident, Literal>, insert_defaults: bool) -> Literal {
+        let mut this = Literal::NamedTuple{values: literals, insert_defaults};
         let lit_type = this.get_literal_type();
         if let Literal::Array{ty, ..} = &mut this {
             *ty = lit_type;
@@ -246,7 +246,11 @@ impl Literal {
             Literal::Str(_) => format!("Literal str"),
             Literal::Array{ty, ..} => format!("Literal {}[]", ty.type_to_string()),
             Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(", ")),
-            Literal::NamedTuple{values} => format!("Literal ({})", values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(", ")),
+            Literal::NamedTuple{values, insert_defaults} => format!(
+                "Literal {{{}{}}}", 
+                values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(", "),
+                if *insert_defaults {if values.is_empty() {".."} else {", .."}} else {""},
+            ),
 
             Literal::ProgramMemmory(name, ty) => format!("{}({})", name.0, ty.type_to_string()),
         }

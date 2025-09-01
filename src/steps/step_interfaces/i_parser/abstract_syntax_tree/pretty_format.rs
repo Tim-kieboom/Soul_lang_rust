@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Constructor, Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod}, generic::GenericParameter, literal::Literal, object::{Class, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, Implement, StatementKind}}, scope_builder::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{StructConstructor, Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod}, generic::GenericParameter, literal::Literal, object::{Class, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, Implement, StatementKind}}, scope_builder::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -368,7 +368,7 @@ impl PrettyString for ExpressionKind {
 
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_pretty(tab + 1, is_last), index.to_pretty(tab + 1, is_last)),
             ExpressionKind::Lambda(Lambda{signature, arguments, body, capture:_}) => format!("{}({}) => {}", signature.mode.get_lambda_name(), arguments.to_string(), body.to_pretty(tab + 1, is_last)),
-            ExpressionKind::Constructor(Constructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
+            ExpressionKind::StructConstructor(StructConstructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
             ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
 
             ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_pretty(tab + 1, is_last), field.name),
@@ -450,7 +450,7 @@ impl ToString for ExpressionKind {
             
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_string(), index.to_string()),
             ExpressionKind::Lambda(Lambda{signature, arguments, body:_, capture:_}) => format!("{}({})", signature.mode.get_lambda_name(), arguments.to_string()),
-            ExpressionKind::Constructor(Constructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
+            ExpressionKind::StructConstructor(StructConstructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
             ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
             
             ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_string(), field.name),
@@ -528,7 +528,11 @@ impl ToString for Literal {
             
             Literal::Tuple{values} => format!("({})", values.iter().map(|el| el.to_string()).join(", ")),
             Literal::Array{ty:_, values} => format!("[{}]", values.iter().map(|el| el.to_string()).join(", ")),
-            Literal::NamedTuple{values} => format!("({})", values.iter().map(|el| format!("{}: {}", el.0, el.1.to_string())).join(", ")),
+            Literal::NamedTuple{values, insert_defaults} => format!(
+                "{{{}{}}}", 
+                values.iter().map(|el| format!("{}: {}", el.0, el.1.to_string())).join(", "),
+                if *insert_defaults {if values.is_empty() {".."} else {", .."}} else {""}
+            ),
             
             Literal::ProgramMemmory(ident, _) => format!("{}", ident),
         }

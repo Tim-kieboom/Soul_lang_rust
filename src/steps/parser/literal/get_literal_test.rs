@@ -322,16 +322,16 @@ fn test_empty_tuple() {
 
 #[test]
 fn test_named_tuple() {
-    let mut stream = stream_from_strs(&["(", "name", ":", "true", ",", "name2", ":", "1",  ")"]);
+    let mut stream = stream_from_strs(&["{", "name", ":", "true", ",", "name2", ":", "1",  "}"]);
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes).unwrap();
 
     let mut expected = BTreeMap::new();
     expected.insert(Ident("name".to_string()), Literal::Bool(true));
     expected.insert(Ident("name2".to_string()), Literal::Int(1));
-    assert_eq!(result, Literal::new_named_tuple(expected));
+    assert_eq!(result, Literal::new_named_tuple(expected, false));
 
-    stream = stream_from_strs(&["(", "name1", ":", "1", ",", "name2", ":", "1.0", ",", ")", "\n"]);
+    stream = stream_from_strs(&["{", "name1", ":", "1", ",", "name2", ":", "1.0", ",", "}", "\n"]);
 
     let result = Literal::from_stream(&mut stream, &mut scopes).unwrap();
     
@@ -339,7 +339,21 @@ fn test_named_tuple() {
         values: BTreeMap::from([
             (Ident("name1".into()), Literal::Int(1)), 
             (Ident("name2".into()), Literal::Float(OrderedFloat(1.0))), 
-        ])
+        ]),
+        insert_defaults: false,
+    };
+
+    assert_eq_show_diff!(should_be, result);
+
+    stream = stream_from_strs(&["{", "name1", ":", "1", ",", "..", "}", "\n"]);
+
+    let result = Literal::from_stream(&mut stream, &mut scopes).unwrap();
+    
+    let should_be = Literal::NamedTuple{
+        values: BTreeMap::from([
+            (Ident("name1".into()), Literal::Int(1)), 
+        ]),
+        insert_defaults: true,
     };
 
     assert_eq_show_diff!(should_be, result);

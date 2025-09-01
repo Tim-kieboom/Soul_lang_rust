@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use ordered_float::OrderedFloat;
 
-use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{AccessField, Array, ArrayFiller, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Index, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{Constructor, FunctionCall}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
+use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{AccessField, Array, ArrayFiller, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Index, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{StructConstructor, FunctionCall}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
 
 // ---------- helpers ----------
 
@@ -196,8 +196,8 @@ fn complex_literals() {
     );
 
 
-    // named tuple literal (name1: 1, name2: 1.0)
-    let mut stream = stream_from_strs(&["(", "name1", ":", "1", ",", "name2", ":", "1.0", ",", ")", "\n"]);
+    // named tuple literal {name1: 1, name2: 1.0}
+    let mut stream = stream_from_strs(&["{", "name1", ":", "1", ",", "name2", ":", "1.0", ",", "}", "\n"]);
     scope = empty_scope();
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
@@ -695,11 +695,11 @@ fn test_group_expressions() {
 //
 
     stream = stream_from_strs(&[
-        "(",
+        "{",
             "field", ":", "var", ",",
             "field2", ":", "2", ",",
             "field3", ":", "3",
-        ")", "\n"
+        "}", "\n"
     ]);
     
     scope = empty_scope();
@@ -718,11 +718,11 @@ fn test_group_expressions() {
     );
 
     stream = stream_from_strs(&[
-        "(",
+        "{",
             "field", ":", "var", ",",
             "field2", ":", "2", ",",
-            "field3", ":", "(", "field", ":", "1", ")",
-        ")", "\n"
+            "field3", ":", "{", "field", ":", "1", "}",
+        "}", "\n"
     ]);
     
     scope = empty_scope();
@@ -741,10 +741,10 @@ fn test_group_expressions() {
     );
 
     stream = stream_from_strs(&[
-        "(",
+        "{",
             "field", ":", "var", ",",
             "field", ":", "2", ",",
-        ")", "\n"
+        "}", "\n"
     ]);
     
     scope = empty_scope();
@@ -843,11 +843,11 @@ fn test_function_call() {
     let expr = result.unwrap();
     assert_eq_show_diff!(expr, should_be);
 
-    stream = stream_from_strs(&["Type", "(", "field", ":", "1", ",", "field2", ":", "2", ")", "\n"]);
+    stream = stream_from_strs(&["Type", "{", "field", ":", "1", ",", "field2", ":", "2", "}", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
     let should_be = Expression::new(
-        ExpressionKind::Constructor(Constructor{
+        ExpressionKind::StructConstructor(StructConstructor{
             calle: SoulType::from_type_kind(TypeKind::Unknown("Type".into())),
             arguments: NamedTuple{values: HashMap::from([
                 ("field".into(), Expression::new(ExpressionKind::Literal(Literal::Int(1)), SoulSpan::new(0,11,1))),
@@ -883,10 +883,10 @@ fn test_function_call() {
     stream = stream_from_strs(&["sum", "(", "1", ",", "name", ":", ")", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
-    stream = stream_from_strs(&["sum", "(", "1", ",", "name", ":", ")", "\n"]);
+    stream = stream_from_strs(&["sum", "{", "name", ":", "1", ",", "2", "}", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
-    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::InvalidInContext, "{}", not_closing_fn.unwrap_err().to_err_message().join("\n"));
+    assert_eq!(not_closing_fn.as_ref().unwrap_err().get_last_kind(), SoulErrorKind::InvalidType, "{}", not_closing_fn.unwrap_err().to_err_message().join("\n"));
 }
 
 

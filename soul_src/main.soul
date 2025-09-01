@@ -1,3 +1,6 @@
+struct Obj {
+    (int field, str text) field
+}
 type string typeof str
 
 main() {}
@@ -25,7 +28,7 @@ functionCall() {
     Println(f"num == {num}")
     sumInner(1, 2)
     sumGeneric<int>(1, 2)
-    NamedTupleCtor(value: 1, field: "hello", sum: sum(1,2))
+    // NamedTupleCtor{value: 1, field: "hello", sum: sum(1,2)}
     int.MAX
     int.Parse("1")
 
@@ -62,9 +65,9 @@ variable() {
     num = num.sum(1)
     num = num.sum<int>(1)
 
-    Object defaultCtor = (:) 
-    obj := Object(field: 1)
-    obj = Object(:)
+    Object defaultCtor = () 
+    obj := Object{field: 1}
+    obj = Object{}
     obj = Object()
     num = obj.field
     num = obj.field.methode()
@@ -80,11 +83,11 @@ expressionGroups() {
     literalArray := [1, 2, 3.0, 4]
     foo := 100 log 10
     literalTuple := (true, 1, 2.0, 0b11, "4")
-    literalNamedTuple := (value: 1, text: "hello world")
+    literalNamedTuple := {value: 1, text: "hello world"}
 
     array := [1, 2, 3, 4, one()]
     tuple := (true, one(), 2.0, 0b11, "4")
-    namedTuple := (value: one(), text: "hello world")
+    namedTuple := {value: one(), text: "hello world"}
 
     list := List[f32: 1, 2, 3, 4, 5]
     arr := [f32: 1, 2, 3, 4, 5]
@@ -95,13 +98,13 @@ expressionGroups() {
         ("world", false),
     ]
 
-    Json json = (value: one())
-    json = Json(sum: sum(1,2), other: 1)
+    Json json = {value: one()}
+    json = Json{sum: sum(1,2), other: 1}
 
     int[] intArray1 = [1,2,3,4,5,6] 
     int[6] intStackArray1 = [1,2,3,4,5,6] 
     ((str, int), int[], int[3]) arrayTuple1 = (("foo", 1), [1,2,3], [1,2,3])
-    (foo: (str, int), bar: int[], bar2: int[3]) arrayTuple2 = (foo: ("foo", 1), bar: [1,2,3], bar2: [1,2,3])
+    ((str, int) foo, int[] bar, int[3] bar2) arrayTuple2 = {foo: ("foo", 1), bar: [1,2,3], bar2: [1,2,3]}
 
     const int[] intArray2 = [
         1,
@@ -125,16 +128,26 @@ expressionGroups() {
     )
 
     const (
-        foo: (str, int), 
-        bar: int[], 
-        bar2: 
-        int[3]
-    ) arrayTuple4 = (
+        (str, int) foo, 
+        int[] bar, 
+        int[3] bar2
+    ) arrayTuple4 = {
         foo: ("foo", 1), 
         bar: [1,2,3], 
         bar2: 
         [1,2,3]
-    )
+    }
+
+    tuple() (int, f32[]) {
+        return (0, [0.1])
+    }
+
+    namedTuple() (int field, f32[] nums) {
+        return {
+            field: 0,
+            nums: [0.5, 0.1]
+        }
+    }
 }
 
 sum(int a, int b) int {
