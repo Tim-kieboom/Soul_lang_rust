@@ -21,7 +21,7 @@ struct SerializableNode {
 impl SubFileTree {
 
     pub fn get_all_file_paths(&self) -> Vec<PathBuf> {
-        let mut result = Vec::with_capacity(self.files_len);
+        let mut result = Vec::with_capacity(self.files_amount);
         let root = self.tree.root();
         let mut stack = Vec::new();
 
@@ -148,7 +148,7 @@ impl Serialize for SubFileTree {
     where S: Serializer {
         let nodes = Self::flatten_tree(&self.tree);
         let mut seq = serializer.serialize_seq(Some(nodes.len() + 1))?;
-        seq.serialize_element(&self.files_len)?;
+        seq.serialize_element(&self.files_amount)?;
         for node in nodes {
             seq.serialize_element(&node)?;
         }
@@ -185,7 +185,7 @@ impl<'de> Deserialize<'de> for SubFileTree {
 
                 Ok(SubFileTree {
                     tree,
-                    files_len,
+                    files_amount: files_len,
                      })
             }
         }

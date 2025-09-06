@@ -32,7 +32,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
         };
 
         check_name(qoute_less_name)
-            .map_err(|child| new_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("while trying to parse generics: {}", child)))?;
+            .map_err(|child| new_soul_error(SoulErrorKind::ArgError, stream.current_span_some(), format!("while trying to parse generics: {}", child)))?;
 
         let name = Ident::new(stream.current_text());
 
@@ -59,7 +59,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             if impl_type.is_some() {
                 return Err(new_soul_error(
                     SoulErrorKind::ArgError, 
-                    stream.current_span(), 
+                    stream.current_span_some(), 
                     "can not use type contraint in impl generic",
                 ))
             }
@@ -67,7 +67,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             if is_lifetime {
                 return Err(new_soul_error(
                     SoulErrorKind::ArgError, 
-                    stream.current_span(), 
+                    stream.current_span_some(), 
                     "can not add type contraint to lifetime (e.g. remove ': <type>')",
                 ))
             }
@@ -88,7 +88,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             if impl_type.is_some() {
                 return Err(new_soul_error(
                     SoulErrorKind::ArgError, 
-                    stream.current_span(), 
+                    stream.current_span_some(), 
                     "can not use default type in impl generic",
                 ))
             }
@@ -96,7 +96,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
             if is_lifetime {
                 return Err(new_soul_error(
                     SoulErrorKind::ArgError, 
-                    stream.current_span(), 
+                    stream.current_span_some(), 
                     "can not add default type to lifetime (e.g. remove '= <type>')",
                 ))
             }
@@ -128,7 +128,7 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
     if stream.current_text() != ">" {
         return Err(new_soul_error(
             SoulErrorKind::UnmatchedParenthesis, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("while trying to get generics, generics should en with '>' but ends on '{}'", stream.current_text()),
         ))
     }
@@ -176,7 +176,7 @@ fn add_where(
         let where_generic_name = stream.current_text();
         let generic = generics_decl.generics.iter_mut()
             .find(|el| el.name.0 == *where_generic_name)
-            .ok_or(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' is invalid should be generic (e.g. 'where T: trait,')", stream.current_text())))?;
+            .ok_or(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span_some(), format!("token: '{}' is invalid should be generic (e.g. 'where T: trait,')", stream.current_text())))?;
         
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream))
@@ -186,7 +186,7 @@ fn add_where(
             
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("token: '{}' should be ':'", stream.current_text()),
             ))
         }
@@ -213,7 +213,7 @@ fn add_where(
     if stream.current_text() != "{" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' invalid should be '{{'", stream.current_text()),
         ))
     }
@@ -262,7 +262,7 @@ fn add_impl(
     {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedEnd, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' invalid end should be '{{' or endline of '{}' ", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Where)),
         ))
     }
@@ -286,7 +286,7 @@ fn add_generic_type_contraints(
         else if stream.current_text() == "[" {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 "'[' is not allowed in generic contraint, if you want a typeEnum try adding 'typeof' before '[' ('<T: [u8, i8]>' not ok, '<T: typeof[u8, i8]>' ok)"
             ))
         }
@@ -311,7 +311,7 @@ fn add_generic_type_contraints(
     if stream.current_text() != ">" && stream.current_text() != "," && stream.current_text() != "{" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' in not allowed in generic", stream.current_text()),
         ))
     }
@@ -326,13 +326,13 @@ fn add_generic_type_contraints(
 pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<TypeEnumBody> {
     
     fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing typeEnum")
+        new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpeced end while parsing typeEnum")
     }
     
     if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof)),
         ))
     }
@@ -342,7 +342,7 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     }
 
     if stream.current_text() != "[" {
-        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("token: '{}' is not valid to start typeEnum should start with '['", stream.current_text())))
+        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span_some(), format!("token: '{}' is not valid to start typeEnum should start with '['", stream.current_text())))
     }
 
     let mut types = vec![];
@@ -352,7 +352,7 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
         }
 
         let ty = SoulType::from_stream(stream, scopes)
-            .map_err(|child| pass_soul_error(SoulErrorKind::InvalidType, stream.current_span(), "while trying to get typeEnum", child))?;
+            .map_err(|child| pass_soul_error(SoulErrorKind::InvalidType, stream.current_span_some(), "while trying to get typeEnum", child))?;
 
         types.push(ty);
 
@@ -369,7 +369,7 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
     }
 
     if stream.current_text() != "]" {
-        return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), format!("token: '{}' is not valid to end typeEnum should end with ']'", stream.current_text())))
+        return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span_some(), format!("token: '{}' is not valid to end typeEnum should end with ']'", stream.current_text())))
     }
 
     if stream.next().is_none() {
@@ -381,7 +381,7 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
 
 
 fn err_out_of_bounds(stream: &mut TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpeced end while parsing generic ctor")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpeced end while parsing generic ctor")
 }
 
 

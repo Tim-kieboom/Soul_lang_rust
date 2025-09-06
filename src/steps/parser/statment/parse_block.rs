@@ -36,7 +36,7 @@ fn get_inner_block(
         if stream.current_text() != "{" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken,
-            stream.current_span(),
+            stream.current_span_some(),
             format!("'{}' is invalid token to start block should be '{{'", stream.current_text()),
         ));
     }
@@ -44,7 +44,7 @@ fn get_inner_block(
     if stream.next().is_none() {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedEnd, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "unexpeced end while parsing block",
         ))
     }
@@ -85,7 +85,7 @@ fn get_inner_block(
             }
 
             if stream.peek().is_none() {
-                return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while parsing block"))
+                return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while parsing block"))
             }
         }
     }

@@ -119,7 +119,7 @@ impl ScopeBuilder {
             Ok(())
         } 
         else {
-            Err(new_soul_error(SoulErrorKind::UnexpectedEnd, span, "can not remove global scope"))
+            Err(new_soul_error(SoulErrorKind::UnexpectedEnd, Some(span), "can not remove global scope"))
         }
     }
     
@@ -129,7 +129,7 @@ impl ScopeBuilder {
             Ok(())
         } 
         else {
-            Err(new_soul_error(SoulErrorKind::UnexpectedEnd, span, "can not remove global scope"))
+            Err(new_soul_error(SoulErrorKind::UnexpectedEnd, Some(span), "can not remove global scope"))
         }
     }
 

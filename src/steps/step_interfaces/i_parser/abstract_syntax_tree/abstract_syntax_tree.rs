@@ -21,9 +21,9 @@ impl BlockBuilder {
 
     pub fn push_global(&mut self, statment: Statement) -> Result<()> {
         match &statment.node {
-            super::statement::StatementKind::CloseBlock => return Err(new_soul_error(SoulErrorKind::InvalidInContext, statment.span, "can not have CloseBlock in global scope")),
-            super::statement::StatementKind::Assignment(_) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, statment.span, "can not have Assignment in global scope")),
-            super::statement::StatementKind::Expression(spanned) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, statment.span, format!("can not have '{}' expression in global scope", spanned.node.get_variant_name()))),
+            super::statement::StatementKind::CloseBlock => return Err(new_soul_error(SoulErrorKind::InvalidInContext, Some(statment.span), "can not have CloseBlock in global scope")),
+            super::statement::StatementKind::Assignment(_) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, Some(statment.span), "can not have Assignment in global scope")),
+            super::statement::StatementKind::Expression(spanned) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, Some(statment.span), format!("can not have '{}' expression in global scope", spanned.node.get_variant_name()))),
             _ => (),
         }
 

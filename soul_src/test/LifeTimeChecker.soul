@@ -1,0 +1,26 @@
+lifetimeCheckVsBorrowChecker() int {
+    int foo = 1                     //inforces LifeTimeChecker only
+
+    { 
+        int@ constRef = @foo        //Immutable borrow, allowed alongside mutable references
+        int& mutRef = &foo          //Mutable borrow, allowed since compiler permits multiple mutability within thread
+    } //ends lifetime of constRef and mutRef
+
+    //foo gets consumes end dropped for LifeTimeChecker end starts for BorrowChecker (note data is not deleted but moved)
+    Strict<int> bar = Strict(foo)    //Wrapping foo in Strict enforces aliasing rules: ends lifetime of previous refs starts inforcing BorrowChecker
+    
+    //!! foo is consumes this will cause error !!
+    // Println(foo)  
+
+    Mut<int> ref = bar.BorrowMut()   //Obtain a mutable reference from Strict wrapper
+
+    thread.Spawn((ref) => {
+        *ref += 1                    //Mutate inside another thread: Rust-like aliasing and thread safety rules enforced here
+    })
+
+    Println(bar)                    //Print the updated variable 'bar'
+
+    foo = bar.UnStrict()            //GoBack to LifeTimeChecker
+    int@ constRef = @foo        //Immutable borrow, allowed alongside mutable references
+    int& mutRef = &foo          //Mutable borrow, allowed since compiler permits multiple mutability within thread[]
+}

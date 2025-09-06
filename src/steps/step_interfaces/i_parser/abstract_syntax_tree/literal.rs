@@ -159,7 +159,7 @@ impl Literal {
         } else {
             return Err(new_soul_error(
                 SoulErrorKind::WrongType, 
-                *span, 
+                Some(*span), 
                 format!("Incompatible array literal types: {:?} vs {:?}", common_ty, next_ty)
             ));
         }

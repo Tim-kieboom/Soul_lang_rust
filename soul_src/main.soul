@@ -1,9 +1,8 @@
-struct Obj {
-    (int field, str text) field
-}
 type string typeof str
 
-main() {}
+main() {
+    Println("hello world")
+}
 
 functionCall() {
     
@@ -28,7 +27,7 @@ functionCall() {
     Println(f"num == {num}")
     sumInner(1, 2)
     sumGeneric<int>(1, 2)
-    // NamedTupleCtor{value: 1, field: "hello", sum: sum(1,2)}
+    NamedTupleCtor{value: 1, field: "hello", sum: sum(1,2)}
     int.MAX
     int.Parse("1")
 

@@ -21,7 +21,7 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     }
 
     check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
     
     let name: Ident = stream.current_text().into();
 
@@ -38,7 +38,7 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     if stream.current_text() != "{" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' should be '{{'", stream.current_text()),
         ))
     }
@@ -67,7 +67,7 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         else {
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("token: '{}' is invalid start token in struct body", stream.current_text()),
             ))
         }
@@ -90,7 +90,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
     
     let name: Ident = stream.current_text().into();
 
@@ -107,7 +107,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     if stream.current_text() != "{" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' should be '{{'", stream.current_text()),
         ))
     }
@@ -145,7 +145,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
             else {
                 return Err(new_soul_error(
                     SoulErrorKind::UnexpectedToken, 
-                    stream.current_span(), 
+                    stream.current_span_some(), 
                     format!("token: '{}' is invalid start token in struct body", stream.current_text()),
                 ))
             }
@@ -169,7 +169,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
 
     let name: Ident = stream.current_text().into();
 
@@ -184,7 +184,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     if stream.current_text() != "{" {
-        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span(), format!("token: '{}' should be '{{'", stream.current_text())))
+        return Err(new_soul_error(SoulErrorKind::UnexpectedToken, stream.current_span_some(), format!("token: '{}' should be '{{'", stream.current_text())))
     }
 
     if stream.next().is_none() {
@@ -237,7 +237,7 @@ fn get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Opti
     let name: Ident = stream.current_text().into();
 
     check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream))
@@ -282,7 +282,7 @@ fn get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Opti
     else {
         Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' is invalid end of field should be enter of ';' or '}}'", stream.current_text()),
         ))
     }
@@ -313,7 +313,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
                 if access.get.is_some() {
                     return Err(new_soul_error(
                         SoulErrorKind::InvalidStringFormat, 
-                        stream.current_span(), 
+                        stream.current_span_some(), 
                         "'get' and 'Get' can not go in the same field",
                     ))
                 }
@@ -324,7 +324,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
                 if access.set.is_some() {
                     return Err(new_soul_error(
                         SoulErrorKind::InvalidStringFormat, 
-                        stream.current_span(), 
+                        stream.current_span_some(), 
                         "'get' and 'Get' can not go in the same field",
                     ))
                 }
@@ -335,7 +335,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
                 if access.get.is_some() {
                     return Err(new_soul_error(
                         SoulErrorKind::InvalidStringFormat, 
-                        stream.current_span(), 
+                        stream.current_span_some(), 
                         "'get' and 'Get' can not go in the same field",
                     ))
                 }
@@ -346,7 +346,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
                 if access.set.is_some() {
                     return Err(new_soul_error(
                         SoulErrorKind::InvalidStringFormat, 
-                        stream.current_span(), 
+                        stream.current_span_some(), 
                         "'get' and 'Get' can not go in the same field",
                     ))
                 }
@@ -367,7 +367,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
             }
             _ => return Err(new_soul_error(
                 SoulErrorKind::InvalidStringFormat, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("'{}' is not allowed in field access (allowed tokens: 'get', 'Get', 'set', 'Set')", stream.current_text()),
             )),
         } 
@@ -379,7 +379,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
         if stream.current_text() != "\n" {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("token: '{}' invalid get/set should end on ';' or '\\n'", stream.current_text()),
             ));
         }
@@ -393,7 +393,7 @@ fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while trying to get statments")
 }
 
 

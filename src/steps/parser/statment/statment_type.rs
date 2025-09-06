@@ -181,7 +181,7 @@ fn traverse_bracket_stack(stream: &mut TokenStream, open: &str, close: &str) -> 
         else if stream.current_text() == close {
             
             if stack == 0 {
-                return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "')' with out '('"))
+                return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "')' with out '('"))
             }
 
             stack -= 1
@@ -232,7 +232,7 @@ pub enum StatementType {
 
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statmentType")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while trying to get statmentType")
 }
 
 

@@ -107,7 +107,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
         {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidEscapeSequence, 
-                SoulSpan::new(file_line.line_number, line_offset, text.len()), 
+                Some(SoulSpan::new(file_line.line_number, line_offset, text.len())), 
                 "can not end a line on ';'"
             ));
         }
@@ -133,7 +133,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             if i != splits.len() -1 {
                 return Err(new_soul_error(
                     SoulErrorKind::UnexpectedToken, 
-                    SoulSpan::new(file_line.line_number, line_offset, 1), 
+                    Some(SoulSpan::new(file_line.line_number, line_offset, 1)), 
                     "'\\' can only be placed at the end of a line"
                 ));
             }

@@ -120,7 +120,7 @@ fn inner_get_expression(
 
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream[begin_i].span, 
+            Some(stream[begin_i].span), 
             format!("expression: '{}' with '{}' is invalid (missing operator)", left.to_string(), right.to_string())
         ))
     }
@@ -213,12 +213,12 @@ fn convert_expression(
         if could_be_name(current) {
 
             check_name_allow_types(current)
-                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+                .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
         }
 
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken,
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' is not valid expression", stream.current_text())
         ))
     }
@@ -387,7 +387,7 @@ fn add_ternary(
     else {
         let last_symbool = stacks.symbools
             .last()
-            .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "missing operator"))?; 
+            .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span_some(), "missing operator"))?; 
 
         merge_expressions(stacks, last_symbool.node.get_precedence())?;
         Box::new(stacks.expressions.pop().unwrap())
@@ -459,7 +459,7 @@ fn add_field_or_methode(
 
 fn add_field(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<()> {
     let object = stacks.expressions.pop()
-        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
+        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span_some(), "trying to get object of field but no there is no object"))?;
 
     let span = object.span;
     let field = VariableName::new(stream.current_text());
@@ -480,7 +480,7 @@ fn add_methode(
     stacks: &mut ExpressionStacks,
 ) -> Result<()> {
     let object = stacks.expressions.pop()
-        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "trying to get object of field but no there is no object"))?;
+        .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span_some(), "trying to get object of field but no there is no object"))?;
 
     let mut function = match get_function_call(stream, scopes) {
         Ok(val) => val,
@@ -510,7 +510,7 @@ fn add_index(
     let index = Box::new(get_expression(stream, scopes, &["]"])
         .map_err(|err| pass_soul_error(
             SoulErrorKind::ArgError, 
-            stream[begin_i].span, 
+            Some(stream[begin_i].span), 
             "while trying to get index", 
             err
         ))?);
@@ -518,7 +518,7 @@ fn add_index(
     let collection = Box::new(stacks.expressions.pop()
         .ok_or(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "indexer without collection (e.g. '[1]' instead of 'array[1]')"
         ))?);
 
@@ -539,7 +539,7 @@ fn add_ref(
         let mut expression = stacks.expressions.pop()
             .ok_or(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 "trying to ref without expression to ref (e.g. '@'/'&' should be '@obj'/'&obj')"
             ))?;
 
@@ -737,7 +737,7 @@ impl RefKind {
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while parsing exprestion")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while parsing exprestion")
 }
 
 

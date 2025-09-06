@@ -49,6 +49,10 @@ impl SoulSpan {
         Self { line_number, end_line_number: None, line_offset, len }
     }
 
+    pub fn new_some(line_number: usize, line_offset: usize, len: usize) -> Option<Self> {
+        Some(Self { line_number, end_line_number: None, line_offset, len })
+    }
+
     pub fn eq(&self, other: &Self) -> bool {
         self.line_number == other.line_number && self.line_offset == other.line_offset && self.len == other.len
     }
@@ -90,7 +94,7 @@ pub type Result<T> = result::Result<T, SoulError>;
 #[derive(Debug, Clone)]
 pub struct SoulError {
     kinds: Vec<SoulErrorKind>,
-    spans: Vec<SoulSpan>,
+    spans: Vec<Option<SoulSpan>>,
     msgs: Vec<String>,
 
     #[cfg(feature = "throw_result")]
@@ -99,21 +103,25 @@ pub struct SoulError {
 
 impl SoulError {
     #[cfg(not(feature = "throw_result"))]
-    fn new(kind: SoulErrorKind, span: SoulSpan, msg: String) -> Self {
-        Self { kinds: vec![kind], spans: Vec::from([span]), msgs: Vec::from([msg]) }
+    fn new(kind: SoulErrorKind, span: Option<SoulSpan>, msg: String) -> Self {
+        Self { kinds: vec![kind], spans: vec![span], msgs: vec![msg] }
     }
 
 
     #[cfg(feature = "throw_result")]
-    fn new(kind: SoulErrorKind, span: SoulSpan, msg: String, backtrace: String) -> Self {
-        Self { kinds: vec![kind], spans: Vec::from([span]), msgs: Vec::from([msg]), backtrace }
+    fn new(kind: SoulErrorKind, span: Option<SoulSpan>, msg: String, backtrace: String) -> Self {
+        Self { kinds: vec![kind], spans: vec![span], msgs: vec![msg], backtrace }
     }
 
     fn get_message_stack(&self) -> Vec<String> {
         self.spans.iter()
             .zip(self.msgs.iter())
             .rev()
-            .map(|(span, msg)| format!("at {}:{}; {}", span.line_number, span.line_offset, msg))
+            .map(|(span, msg)| format!(
+                "{}{}", 
+                span.map(|span| format!("at {}:{}| ", span.line_number, span.line_offset)).unwrap_or("| ".to_string()), 
+                msg,
+            ))
             .collect::<Vec<_>>()
     }
 
@@ -125,7 +133,7 @@ impl SoulError {
         self.kinds[self.kinds.len()-1].clone()
     }
 
-    fn insert(mut self, kind: SoulErrorKind, span: SoulSpan, msg: String) -> Self {
+    fn insert(mut self, kind: SoulErrorKind, span: Option<SoulSpan>, msg: String) -> Self {
         self.spans.push(span);
         self.msgs.push(msg);
         self.kinds.push(kind);
@@ -142,7 +150,25 @@ impl SoulError {
         //an error that is not in any line number in the source code
         const NON_SPANABLE_ERROR: usize = 0;
         
-        let first_span = self.spans[0];
+        let first_span = {
+            
+            let mut first_span = None;
+            for span in &self.spans {
+
+                if span.is_some() {
+                    first_span = span.clone();
+                    break
+                }
+            }
+
+            if let Some(span) = first_span {
+                span
+            }
+            else {
+                return String::new()
+            }
+        };
+
         if first_span.line_number == NON_SPANABLE_ERROR {
             return String::new();
         } 
@@ -185,22 +211,22 @@ impl SoulError {
 }
 
 #[cfg(feature = "throw_result")]
-pub fn pass_soul_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg: S, child: SoulError) -> SoulError {
+pub fn pass_soul_error<S: Into<String>>(kind: SoulErrorKind, span: Option<SoulSpan>, msg: S, child: SoulError) -> SoulError {
     child.insert(kind, span, msg.into())
 }
 
 #[cfg(not(feature = "throw_result"))]
-pub fn pass_soul_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg: S, child: SoulError) -> SoulError {
+pub fn pass_soul_error<S: Into<String>>(kind: SoulErrorKind, span: Option<SoulSpan>, msg: S, child: SoulError) -> SoulError {
     child.insert(kind, span, msg.into())
 }
 
 #[cfg(feature = "throw_result")]
-pub fn new_soul_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg: S) -> SoulError {
+pub fn new_soul_error<S: Into<String>>(kind: SoulErrorKind, span: Option<SoulSpan>, msg: S) -> SoulError {
     SoulError::new(kind, span, msg.into(), std::backtrace::Backtrace::capture().to_string())
 }
 
 #[cfg(not(feature = "throw_result"))]
-pub fn new_soul_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg: S) -> SoulError {
+pub fn new_soul_error<S: Into<String>>(kind: SoulErrorKind, span: Option<SoulSpan>, msg: S) -> SoulError {
     SoulError::new(kind, span, msg.into())
 }
 

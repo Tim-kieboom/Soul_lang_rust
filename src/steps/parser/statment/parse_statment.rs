@@ -31,7 +31,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         }
 
         if scopes.is_in_global() {
-            return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "can not have a scope in global (consider making scope a function, struct or class)"))
+            return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span_some(), "can not have a scope in global (consider making scope a function, struct or class)"))
         }
 
         let block = get_scope(stream, scopes)?;
@@ -39,7 +39,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     }
     else if stream.current_text() == "}" {
         if scopes.is_in_global() {
-            return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span(), "there is a '}' without a '{'"))
+            return Err(new_soul_error(SoulErrorKind::UnmatchedParenthesis, stream.current_span_some(), "there is a '}' without a '{'"))
         }
 
         stream.next();
@@ -112,7 +112,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         StatementType::Else => {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 "can not have 'else' without 'if'",
             ))
         },
@@ -155,7 +155,7 @@ fn get_match(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expr
     else {
         Err(new_soul_error(
             SoulErrorKind::InternalError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "in get_match() function get_expression() did not return 'match' expression",
         ))
     }
@@ -172,7 +172,7 @@ fn get_while(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expr
     else {
         Err(new_soul_error(
             SoulErrorKind::InternalError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "in get_while() function get_expression() did not return 'while' expression",
         ))
     }
@@ -189,7 +189,7 @@ fn get_for(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expres
     else {
         Err(new_soul_error(
             SoulErrorKind::InternalError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "in get_for() function get_expression() did not return 'for' expression",
         ))
     }
@@ -206,7 +206,7 @@ fn get_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Express
     else {
         Err(new_soul_error(
             SoulErrorKind::InternalError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "in get_if() function get_expression() did not return 'if' expression",
         ))
     }
@@ -221,7 +221,7 @@ fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
 
     let name_i = stream.current_index();
     
@@ -234,7 +234,7 @@ fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     if !STATMENT_END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedEnd, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' is incorrect end of typeEnum should be one of these of ['{}']", stream.current_text(), STATMENT_END_TOKENS.iter().map(|el| if *el == "\n" {"\\n"} else {el}).join("' or '")),
         ));
     }
@@ -269,17 +269,21 @@ fn get_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(
     let type_i = stream.current_index();
     let new_type = SoulType::from_stream(stream, scopes)?;
     if !matches!(new_type.base, TypeKind::Unknown(_)) {
-        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("type: '{}' is invalid", stream[type_i].text)))
+        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span_some(), format!("type: '{}' is invalid", stream[type_i].text)))
     }
 
     let name = new_type.base.to_name_string();
 
     if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
-        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span(), format!("token: '{}', should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
+        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span_some(), format!("token: '{}', should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
     }
     
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream))
+    }
+
+    if stream.current_text() == "\n" {
+        return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), format!("not type after '{}'", SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
     }
 
     let of_type = SoulType::from_stream(stream, scopes)?;
@@ -304,7 +308,7 @@ fn get_return_like(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resul
     else {
         Err(new_soul_error(
             SoulErrorKind::InternalError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "in get_return_like() function get_expression() did not return 'returnLike' expression",
         ))
     }
@@ -329,7 +333,7 @@ fn get_scope<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while trying to get statments")
 }
 
 

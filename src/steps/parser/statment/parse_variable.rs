@@ -57,7 +57,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
             return Err(new_soul_error(
                 SoulErrorKind::InvalidEscapeSequence, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("global variables HAVE TO BE assigned at init, variable '{}' is not assigned", name),
             ))
         }
@@ -81,7 +81,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("'{}' is not allowed at end of default type invered initialize variable (use ':=')", stream.current_text())
             ));
         }
@@ -90,7 +90,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     else if stream.current_text() != "=" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("'{}' is not allowed at end of initialize variable (use '=')", &stream.current().text)
         ));
     }
@@ -103,7 +103,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
         let begin_i = stream.current_index();
         let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)
-            .map_err(|err| pass_soul_error(err.get_last_kind(), stream[begin_i].span, format!("while trying to get assignment of variable: '{}'", name).as_str(), err))?;
+            .map_err(|err| pass_soul_error(err.get_last_kind(), Some(stream[begin_i].span), format!("while trying to get assignment of variable: '{}'", name).as_str(), err))?;
 
         let ty = SoulType::none();
 
@@ -113,7 +113,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     else {
         let begin_i = stream.current_index();
         let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)
-            .map_err(|err| pass_soul_error(err.get_last_kind(), stream[begin_i].span, format!("while trying to get assignment of variable: '{}'", name).as_str(), err))?;
+            .map_err(|err| pass_soul_error(err.get_last_kind(), Some(stream[begin_i].span), format!("while trying to get assignment of variable: '{}'", name).as_str(), err))?;
 
         let mut ty = possible_type.unwrap();
         ty.modifier = modifier;
@@ -124,7 +124,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get initialization of variable")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while trying to get initialization of variable")
 }
 
 

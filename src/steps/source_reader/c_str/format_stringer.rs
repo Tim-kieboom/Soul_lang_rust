@@ -74,8 +74,14 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
             },
             '#' => {
                 if current_open_bracket {
+
                     if i-1 != start_bracket {
-                        return Err(new_soul_error(SoulErrorKind::InvalidStringFormat, SoulSpan::new(file_line.line_number, i, 1), "'#' is only allowed in stringformat at as the first char in arg (so 'f\"foo {#1}\"' is oke but 'f\"foo {1#} or { #1} or {##1}\"' not)"))
+
+                        return Err(new_soul_error(
+                            SoulErrorKind::InvalidStringFormat, 
+                            Some(SoulSpan::new(file_line.line_number, i, 1)), 
+                            "'#' is only allowed in stringformat at as the first char in arg (so 'f\"foo {#1}\"' is oke but 'f\"foo {1#} or { #1} or {##1}\"' not)",
+                        ))
                     }
                     pretty_format = true;
                 }
@@ -96,7 +102,7 @@ fn format_str_to_soul_formatter(file_line: &FileLine, span: &FormatSpan) -> Resu
     if current_open_bracket {
         return Err(new_soul_error(
             SoulErrorKind::InvalidStringFormat,
-            SoulSpan::new(file_line.line_number.max(0), i, buffer.len()), 
+            Some(SoulSpan::new(file_line.line_number.max(0), i, buffer.len())), 
             "string formatter opens a bracket with out closing it (add '}' somewhere in f\"...\")"
         ))
     } 
@@ -118,7 +124,7 @@ fn err_emty_format_arg(line: &FileLine, offset: usize) -> SoulError {
     let span = SoulSpan::new(line.line_number, offset, line.line.len());
     new_soul_error(
         SoulErrorKind::InvalidStringFormat,
-        span, 
+        Some(span), 
         "in format_string (so 'f\"...\"') format argument is empty"
     )
 }
@@ -128,7 +134,7 @@ fn err_string_in_format_arg(line: &FileLine, offset: usize) -> SoulError {
     let span = SoulSpan::new(line.line_number, offset, line.line.len());
     new_soul_error(
         SoulErrorKind::InvalidStringFormat,
-        span, 
+        Some(span), 
         "in format_string (so 'f\"...\"') can not contain a string literal as an argument"
     )
 }
@@ -140,7 +146,7 @@ fn get_end_of_string(line: &FileLine, index: usize, qoute_iter: &mut Iter<usize>
     else {
         Err(new_soul_error( 
             SoulErrorKind::UnterminatedStringLiteral,
-            SoulSpan::new(line.line_number, index, line.line.len()), 
+            Some(SoulSpan::new(line.line_number, index, line.line.len())), 
             format!("string has no end (probably missing a '{}')", QUOTE)
         ))
     }

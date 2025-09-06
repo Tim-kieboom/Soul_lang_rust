@@ -169,7 +169,7 @@ impl Logger {
     pub fn soul_info<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Info, soul_error, reader, options); }
     pub fn soul_debug<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Debug, soul_error, reader, options); }
 
-    pub fn exit_error(&self, err: &SoulError, options: &LogOptions) {
+    pub fn panic_error(&self, err: &SoulError, options: &LogOptions) {
         for line in err.to_err_message() {
             self.error(line, options);
         } 

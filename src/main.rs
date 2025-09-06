@@ -9,7 +9,10 @@ fn main() {
  
     let timer = Instant::now();
 
-    parse_increment(&run_options, &logger, &time_logs);
+    if let Err(msg) = parse_increment(&run_options, &logger, &time_logs) {
+        logger.error(msg, DEFAULT_LOG_OPTIONS);
+        return
+    }
     
     log_time_table(time_logs, &run_options, &logger);
     let error_count = 0; // temp dummy
@@ -92,11 +95,11 @@ fn log_time_table(times: Arc<Mutex<TimeLogs>>, run_option: &RunOptions, logger: 
         return
     }
 
-    const MAX_LEN: usize = 200;
+    const MAX_TABLE_LEN: usize = 200;
     let table = if run_option.show_times.contains(ShowTimes::SHOW_ALL) {
         times.lock()
             .unwrap()
-            .to_table_string(MAX_LEN)
+            .to_table_string(MAX_TABLE_LEN)
     }
     else {
         times.lock()
@@ -108,8 +111,6 @@ fn log_time_table(times: Arc<Mutex<TimeLogs>>, run_option: &RunOptions, logger: 
         logger.info(line, DEFAULT_LOG_OPTIONS);
     }
 }
-
-
 
 
 

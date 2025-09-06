@@ -99,7 +99,7 @@ pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
         ExpressionKind::FunctionCall(function_call) => Ok(Spanned::new(function_call, should_be_func.span)),
         _ => return Err(new_soul_error(
             SoulErrorKind::WrongType, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("expression should be functionCall nut is {} ", should_be_func.node.get_variant_name()),
         )),
     }
@@ -110,7 +110,7 @@ fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan)
     for kind in func_ty.generics  {
         match kind {
             TypeGenericKind::Type(soul_type) => generics.push(soul_type),
-            TypeGenericKind::Lifetime(_) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, span, "function call can not have lifetimes in generic")),
+            TypeGenericKind::Lifetime(_) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, Some(span), "function call can not have lifetimes in generic")),
         }
     }
 
@@ -144,7 +144,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         if stream.current_text() != group_end_token {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidType, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 "namedTuple can not be empty you could do '{..}' for namedtuple with default fields (only when namedTuple is typed)", 
             ))
         }
@@ -177,7 +177,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
                 
                 return Err(new_soul_error(
                     SoulErrorKind::UnexpectedToken,
-                    stream.current_span(),
+                    stream.current_span_some(),
                     format!("token: '{}' should be ')', '..' should be last argument in namedTuple", stream.current_text()),
                 ))
             }
@@ -198,7 +198,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
             return Err(new_soul_error(
                 SoulErrorKind::InvalidType,
-                stream.current_span(),
+                stream.current_span_some(),
                 format!("namedTuple element '{}' does not have a name", expression.to_string()),
             ))
         }
@@ -215,7 +215,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
         if let Some(duplicate) = values.insert(name, expression) {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidName, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("in NamedTuple fieldName: '{}' already exists at{}:{};", stream[name_i].text, duplicate.span.line_number, duplicate.span.line_offset),
             ))
         }
@@ -231,7 +231,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("expected ',' or '{}' in group expression", group_end_token),
             ))
         }
@@ -261,7 +261,7 @@ fn parse_tuple_or_array(mut collection_type: Option<SoulType>, group_i: usize, s
 
         if stream.current_text() == ":" {
             if !is_array {
-                return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span(), "can not put type in tuple"))
+                return Err(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span_some(), "can not put type in tuple"))
             }
     
             stream.next();
@@ -317,7 +317,7 @@ fn parse_tuple_or_array(mut collection_type: Option<SoulType>, group_i: usize, s
 
             return Err(new_soul_error(
                 SoulErrorKind::UnexpectedToken, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("expected ',' or '{}' in group expression", group_end_token),
             ))
         }
@@ -397,7 +397,7 @@ fn tuple_or_array_to_expression(
 }
 
 fn err_out_of_bounds(group_i: usize, stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream[group_i].span.combine(&stream.current_span()), "unexpeced end while parsing expression group")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, Some(stream[group_i].span.combine(&stream.current_span())), "unexpeced end while parsing expression group")
 }
 
 

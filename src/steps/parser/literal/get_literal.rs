@@ -29,7 +29,7 @@ impl FromTokenStream<Literal> for Literal {
 
         let res = match inner_from_stream(stream, scopes) {
             Ok(val) => Ok(val),
-            Err(err) => Err(pass_soul_error(SoulErrorKind::WrongType, stream.current_span(), "could not get literal", err.err)),
+            Err(err) => Err(pass_soul_error(SoulErrorKind::WrongType, stream.current_span_some(), "could not get literal", err.err)),
         };
 
         if res.is_err() {

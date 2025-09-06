@@ -1,46 +1,44 @@
 use itertools::Itertools;
 use threadpool::ThreadPool;
 use hsoul::subfile_tree::SubFileTree;
-use std::{fs::{self, write, File}, process::exit, time::SystemTime};
+use std::{fs::{self, write, File}, result, time::SystemTime};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
-use crate::{run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind, SoulSpan}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
+use crate::{errors::soul_error::SoulError, run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
 
 
-pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_logs: &Arc<Mutex<TimeLogs>>) {
+pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_logs: &Arc<Mutex<TimeLogs>>) -> result::Result<(), String> {
 
     let has_sub_tree = !run_options.sub_tree_path.as_os_str().is_empty();
 
+    let mut errors = vec![];
     if has_sub_tree {
         
         let files = get_sub_files(run_options)
-            .map_err(|err| logger.exit_error(&err, DEFAULT_LOG_OPTIONS))
+            .map_err(|err| logger.panic_error(&err, DEFAULT_LOG_OPTIONS))
             .unwrap();
 
-        parse_sub_files(run_options.clone(), files.clone(), logger, time_logs);
+        errors = Vec::with_capacity(files.files_amount+1);
+        parse_sub_files(run_options.clone(), files.clone(), logger, time_logs, &mut errors);
     }
 
     let main_file_path = Path::new(&run_options.file_path);
-    let result = parse_file(run_options.clone(), main_file_path, logger.clone(), time_logs.clone());
-    if let Err(err) = result {
-
-        let (mut reader, _) = get_file_reader(Path::new(&run_options.file_path))
-            .map_err(|err| pass_soul_error(err.get_last_kind(), SoulSpan::new(0,0,0), "while trying to get file reading", err))
-            .inspect_err(|err| logger.exit_error(err, DEFAULT_LOG_OPTIONS))
-            .unwrap();
-
-        logger.soul_error(&err, &mut reader, DEFAULT_LOG_OPTIONS);
-        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
-        exit(1);
+    if let Err(error) = parse_file(run_options.clone(), main_file_path, logger.clone(), time_logs.clone()) {
+        let main_file = run_options.file_path.to_string_lossy().to_string();
+        errors.push((error, main_file));
     }
+    
+    log_errors(errors, logger)
 }
 
 fn parse_sub_files(
     run_options: Arc<RunOptions>, 
     subfiles_tree: Arc<SubFileTree>, 
     logger: &Arc<Logger>, 
-    time_logs: &Arc<Mutex<TimeLogs>>
+    time_logs: &Arc<Mutex<TimeLogs>>,
+    errors: &mut Vec<(SoulError, String)>,
 ) {
+
     let num_threads = std::thread::available_parallelism().unwrap().get();
     let pool = ThreadPool::new(num_threads);
     let (sender, reciever) = channel();
@@ -61,32 +59,12 @@ fn parse_sub_files(
 
     drop(sender);
 
-    let mut errors = vec![];
-
     for (result, file) in reciever {
         if let Err(err) = result {
             errors.push((err, file));
         }
     }
 
-    if !errors.is_empty() {
-        logger.error("at line:col; !!error!! message\n", DEFAULT_LOG_OPTIONS);        
-        for (err, file) in errors {
-            let (mut reader, _) = get_file_reader(Path::new(&file))
-                .map_err(|err| pass_soul_error(err.get_last_kind(), SoulSpan::new(0,0,0), "while trying to get file reading", err))
-                .inspect_err(|err| logger.exit_error(err, DEFAULT_LOG_OPTIONS))
-                .unwrap();
-            
-            logger.error("---------------------------------------------", DEFAULT_LOG_OPTIONS);  
-            logger.error(format!("at subfile '{}':", file), DEFAULT_LOG_OPTIONS);
-            for line in err.to_err_message() {
-                logger.error(line, DEFAULT_LOG_OPTIONS);
-            }
-            logger.error(format!("\n{}", err.to_highlighed_message(&mut reader)), DEFAULT_LOG_OPTIONS);              
-        }
-        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
-        exit(1)
-    }
 }
 
 fn parse_file(
@@ -96,7 +74,7 @@ fn parse_file(
     time_logs: Arc<Mutex<TimeLogs>>
 ) -> Result<()> {
 
-    let empty_span = SoulSpan::new(0,0,0);
+    let empty_span = None;
 
     let (reader, _) = get_file_reader(file_path)
         .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while trying to get file reading", err))?;
@@ -116,19 +94,38 @@ fn parse_file(
     Ok(())
 }
 
+fn log_errors(errors: Vec<(SoulError, String)>, logger: &Arc<Logger>) -> result::Result<(), String> {
+    if errors.is_empty() {
+        return Ok(())
+    }
+
+    let amount_errors = errors.len();
+    for (mut error, file_name) in errors {
+        let (mut reader, _) = get_file_reader(Path::new(&file_name))
+                .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while trying to get file reading", err))
+                .inspect_err(|err| logger.panic_error(err, DEFAULT_LOG_OPTIONS))
+                .unwrap();
+
+        error = pass_soul_error(error.get_last_kind(), None, format!("at file: '{}'", file_name), error);
+        logger.soul_error(&error, &mut reader, DEFAULT_LOG_OPTIONS);
+    }
+
+    Err(format!("build interrupted because of '{}' error{}", amount_errors, if amount_errors > 1 {"s"} else {""}))
+} 
+
 fn get_sub_files(run_options: &Arc<RunOptions>) -> Result<Arc<SubFileTree>> {
     let sub_tree = SubFileTree::from_bin_file(Path::new(&run_options.sub_tree_path))
-        .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, SoulSpan::new(0,0,0), format!("!!internal error!! while trying to get subfilesTree\n{}", msg.to_string())))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, None, format!("!!internal error!! while trying to get subfilesTree\n{}", msg.to_string())))?;
     
     Ok(Arc::new(sub_tree))
 }
 
 pub fn get_file_reader(path: &Path) -> Result<(BufReader<File>, Option<SystemTime>)> {
     let file = File::open(&path)
-        .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), format!("while trying to open file path: '{}'\n{}", path.to_str().unwrap(), err.to_string())))?;
+        .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, None, format!("while trying to open file path: '{}'\n{}", path.to_str().unwrap(), err.to_string())))?;
     
     let meta_data = file.metadata()
-        .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), format!("while trying to open metadate of file path: '{}'\n{}", path.to_str().unwrap(), err.to_string())))?;
+        .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, None, format!("while trying to open metadate of file path: '{}'\n{}", path.to_str().unwrap(), err.to_string())))?;
 
     Ok((BufReader::new(file), meta_data.modified().ok()))
 }
@@ -163,7 +160,7 @@ fn source_reader<'a, R: Read>(reader: BufReader<R>, info: &RunStepsInfo<'a>) -> 
 
         fs::create_dir_all(&print_path).unwrap();
         write(file_path, contents)
-            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, None, err.to_string()))?;
         if info.run_options.show_times.contains(ShowTimes::SHOW_SOURCE_READER) {
             info.time_logs
                 .lock().unwrap()
@@ -195,7 +192,7 @@ pub fn tokenizer<'a>(source_file: SourceFileResponse, info: &RunStepsInfo<'a>) -
             .join(" ");
 
         write(file_path, contents)
-            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, None, err.to_string()))?;
 
         if info.run_options.show_times.contains(ShowTimes::SHOW_TOKENIZER) {
             info.time_logs
@@ -225,10 +222,10 @@ pub fn parser<'a>(token_response: TokenizeResonse, info: &RunStepsInfo<'a>) -> R
         let scopes_file_path = format!("{}/parserScopes.soulc", print_path);
 
         write(file_path, parse_response.tree.to_pretty_string())
-            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, None, err.to_string()))?;
 
         write(scopes_file_path, parse_response.scopes.to_pretty_string())
-            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(0,0,0), err.to_string()))?;
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, None, err.to_string()))?;
 
         if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
             info.time_logs

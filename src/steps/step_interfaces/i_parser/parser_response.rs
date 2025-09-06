@@ -33,11 +33,11 @@ pub enum FromStreamErrorKind {
 }
 
 pub fn new_from_stream_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg: S, err_kind: FromStreamErrorKind) -> FromStreamError {
-    FromStreamError{err: new_soul_error(kind, span, msg), kind: err_kind}
+    FromStreamError{err: new_soul_error(kind, Some(span), msg), kind: err_kind}
 }
 
 pub fn pass_from_stream_error<S: Into<String>>(kind: SoulErrorKind, span: SoulSpan, msg: S, child: SoulError, err_kind: FromStreamErrorKind) -> FromStreamError {
-    FromStreamError{err: pass_soul_error(kind, span, msg, child), kind: err_kind}
+    FromStreamError{err: pass_soul_error(kind, Some(span), msg, child), kind: err_kind}
 }
 
 

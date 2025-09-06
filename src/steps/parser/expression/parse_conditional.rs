@@ -49,7 +49,7 @@ fn get_match(
     if stream.current_text() != "{" {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' should be '{{'", stream.current_text()),
         ))
     }
@@ -200,7 +200,7 @@ fn for_element_to_scope(stream: &TokenStream, expression: &Expression, scopes: &
         },
         _ => return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("can not use expression type '{}' for element in for loop", expression.node.get_variant_name())
         ))
     }
@@ -307,7 +307,7 @@ fn add_else_if(
     let mut expression = stacks.expressions.pop()
         .ok_or(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "can not have 'else' without 'if' statment",
         ))?;
 
@@ -331,7 +331,7 @@ fn add_else_if(
     else {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "can not have 'else' without 'if' statment",
         ))
     }
@@ -356,7 +356,7 @@ fn add_else(
     let mut expression = stacks.expressions.pop()
         .ok_or(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "can not have 'else' without 'if' statment",
         ))?;
 
@@ -374,7 +374,7 @@ fn add_else(
     else {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "can not have 'else' without 'if' statment",
         ))
     }
@@ -439,7 +439,7 @@ impl IfKind {
                 else {
                     Err(new_soul_error(
                         SoulErrorKind::InvalidInContext, 
-                        stream.current_span(), 
+                        stream.current_span_some(), 
                         format!("token: '{}' not allowed after 'if' (try adding 'else' first)", stream.current_text())
                     ))
                 }
@@ -449,7 +449,7 @@ impl IfKind {
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while parsing expression")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while parsing expression")
 }
 
 

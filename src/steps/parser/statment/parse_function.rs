@@ -48,7 +48,7 @@ fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuil
     fn pass_err(err: SoulError, func_name: &str, stream: &TokenStream) -> SoulError {
         pass_soul_error(
             err.get_last_kind(), 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("while trying to get function '{}'", func_name), 
             err
         )
@@ -87,7 +87,7 @@ fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuil
         
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "inherating (e.g. 'impl <trait>') in not allowed in function",
         ))
     }
@@ -116,7 +116,7 @@ fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuil
 
     if is_array_ctor {
         if parameters.len() != 1 {
-            return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span(), "array ctor should only have 1 parameter of type '<type>[]'"))
+            return Err(new_soul_error(SoulErrorKind::ArgError, stream.current_span_some(), "array ctor should only have 1 parameter of type '<type>[]'"))
         }
     }
 
@@ -138,7 +138,7 @@ fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuil
         if soul_type.is_none() {
             return Err(new_soul_error(
                 SoulErrorKind::ArgError, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 "ctor should be an extention methode (this is a contructor function because you named it 'ctor' so add type before function name to make extention type",
             ))
         }
@@ -146,7 +146,7 @@ fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuil
         if return_type.is_some() {
             return Err(new_soul_error(
                 SoulErrorKind::ArgError, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 "ctor should not have a return type is by default this type",
             ))
         }
@@ -184,7 +184,7 @@ fn get_parameters(
     else if stream.current_text() != "(" {
         return Err(new_soul_error(
             SoulErrorKind::ArgError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}', should be '(' to start in function", stream.current_text()),
         ))
     }
@@ -219,10 +219,10 @@ fn get_parameters(
 
         let arg_start_i = stream.current_index();
         let ty = SoulType::from_stream(stream, scopes)
-            .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("while trying to get parameter number {}", parameter_position), child))?;
+            .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream.current_span_some(), format!("while trying to get parameter number {}", parameter_position), child))?;
 
         check_name(stream.current_text())
-            .map_err(|child| new_soul_error(SoulErrorKind::ArgError, stream.current_span(), format!("while trying to parse parameter: {}", child)))?;
+            .map_err(|child| new_soul_error(SoulErrorKind::ArgError, stream.current_span_some(), format!("while trying to parse parameter: {}", child)))?;
 
         let name = Ident::new(stream.current_text());
 
@@ -245,7 +245,7 @@ fn get_parameters(
     if stream.current_text() != ")" {
         return Err(new_soul_error(
             SoulErrorKind::ArgError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("while trying to get parameter, parameter should en with ')' but ends on '{}'", stream.current_text())
         ));
     }
@@ -265,7 +265,7 @@ fn get_this_type(arg_position: usize, callee: &Option<SoulType>, stream: &mut To
     if arg_position != 1 {
         return Err(new_soul_error(
             SoulErrorKind::ArgError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "'this' is only allowed as first parameter (e.g. '<type> func(this, ...)' )",
         ))
     }
@@ -302,7 +302,7 @@ fn get_this_type(arg_position: usize, callee: &Option<SoulType>, stream: &mut To
     else {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' is not valid atfer 'this' use '@' or '&'", stream.current_text())
         ))
     }
@@ -322,7 +322,7 @@ fn get_ctor_type(stream: &mut TokenStream, function_name: &mut String, is_array_
         if stream.current_text() != "]" {
             return Err(new_soul_error(
                 SoulErrorKind::UnmatchedParenthesis, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("token: '{}' should be ']'", stream.current_text(),
             )))
         }
@@ -336,7 +336,7 @@ fn get_ctor_type(stream: &mut TokenStream, function_name: &mut String, is_array_
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while parsing function")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while parsing function")
 }
 
 

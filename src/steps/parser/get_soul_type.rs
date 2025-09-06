@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-
-use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name, check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, Modifier, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
+use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, Modifier, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
 
 impl FromTokenStream<SoulType> for SoulType {
     fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<SoulType>, SoulError> {
@@ -171,7 +170,7 @@ fn get_named_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> 
         }
         
         types.insert(name, ty);
-        
+
         if stream.current_text() != "," {
             break
         }

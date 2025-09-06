@@ -12,7 +12,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
 
     let name = stream.current_text().into();
     
@@ -26,7 +26,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     if !generics.implements.is_empty() {
         return Err(new_soul_error(
             SoulErrorKind::InvalidInContext,
-            stream.current_span(),
+            stream.current_span_some(),
             "union could not have impl",
         ))
     }
@@ -35,7 +35,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' should be '{{'", stream.current_text()),
         ))
     }
@@ -56,7 +56,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         }
 
         check_name_allow_types(&stream.current_text())
-            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
 
         let name = stream.current_text().into();
 
@@ -78,7 +78,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
             TypeKind::NamedTuple(tuple) => UnionVariantKind::NamedTuple(tuple),
             _ => return Err(new_soul_error(
                 SoulErrorKind::WrongType, 
-                stream.current_span(), 
+                stream.current_span_some(), 
                 format!("union variant should be tuple or namedTuple not {}", soul_type.to_string()),
             )),
         };
@@ -102,7 +102,7 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(),
+            stream.current_span_some(),
             format!("token: '{}' should be '}}' or you have a missing ','", stream.current_text()) 
         ))
     }
@@ -128,7 +128,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
     }
 
     check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
 
     let name = stream.current_text().into();
     
@@ -151,7 +151,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             format!("token: '{}' should be '{{'", stream.current_text()),
         ))
     }
@@ -180,7 +180,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         }
 
         check_name_allow_types(&stream.current_text())
-            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span(), msg))?;
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
 
         let name = stream.current_text().into();
 
@@ -216,7 +216,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
                     Literal::Uint(num) => num as i64,
                     _ => return Err(new_soul_error(
                         SoulErrorKind::WrongType, 
-                        stream.current_span(), 
+                        stream.current_span_some(), 
                         format!("'{}' is not a literal number", stream[literal_i].text),
                     )),
                 };
@@ -249,7 +249,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            stream.current_span(),
+            stream.current_span_some(),
             format!("token: '{}' should be '}}'", stream.current_text()) 
         ))
     }
@@ -267,7 +267,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {
-    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span(), "unexpected end while trying to get statments")
+    new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpected end while trying to get statments")
 }
 
 

@@ -43,7 +43,7 @@ pub fn convert_bracket_expression(
     if !stacks.symbools.pop().is_some_and(|symbool| symbool.node == BRACKET_CLOSE) {
         return Err(new_soul_error(
             SoulErrorKind::UnmatchedParenthesis, 
-            stream.peek_multiple(-1).unwrap_or(stream.current()).span, 
+            Some(stream.peek_multiple(-1).unwrap_or(stream.current()).span), 
             "in 'getBracketBinairyExpression()': symoboolStack top is not ')'"
         ));
     }
@@ -80,15 +80,15 @@ fn convert_single(
     let mut second = stacks.symbools.pop();
 
     if first != Some(BRACKET_CLOSE) {
-        return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression first symbool is not ')'"));
+        return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span_some(), "while doing convert_bracket_expression first symbool is not ')'"));
     }
     
     if second.is_none() {
-        return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is not None"));
+        return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span_some(), "while doing convert_bracket_expression second symbool is not None"));
     }
 
     match &second.as_ref().unwrap().node {
-        SymboolKind::BinaryOperator(_) => return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span(), "while doing convert_bracket_expression second symbool is binary operator")),
+        SymboolKind::BinaryOperator(_) => return Err(new_soul_error(SoulErrorKind::InternalError, stream.current_span_some(), "while doing convert_bracket_expression second symbool is binary operator")),
         SymboolKind::UnaryOperator(unary_operator) => {
             let expr = get_unary_expression(stacks, unary_operator.clone(), second.as_ref().unwrap().span)?;
             stacks.expressions.push(expr);
@@ -100,7 +100,7 @@ fn convert_single(
     if !second.is_some_and(|symbool| symbool.node == BRACKET_OPEN) {
         return Err(new_soul_error(
             SoulErrorKind::InternalError, 
-            stream.current_span(), 
+            stream.current_span_some(), 
             "while doing convert_bracket_expression second symbool is not None",
         ));
     }
@@ -116,14 +116,14 @@ pub fn get_binary_expression(
     let right = stacks.expressions.pop()
         .ok_or(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            span, 
+            Some(span), 
             format!("found binary operator '{}' but no expression", operator.to_str()),
         ))?;
 
     let left = stacks.expressions.pop()
         .ok_or(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            span, 
+            Some(span), 
             format!("missing right expression in binary expression (so '{} {} <missing>')", right.node.to_string(), operator.to_str()),
         ))?;
 
@@ -146,7 +146,7 @@ pub fn get_unary_expression(
     let expr = stacks.expressions.pop()
         .ok_or(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
-            span, 
+            Some(span), 
             format!("found unary operator '{}' but no expression", operator.to_str())
         ))?;
     
