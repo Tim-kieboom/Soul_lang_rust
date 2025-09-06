@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use ordered_float::OrderedFloat;
 
-use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{AccessField, Array, ArrayFiller, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Index, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{StructConstructor, FunctionCall}, literal::{Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
+use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{AccessField, Array, ArrayFiller, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Index, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{FunctionCall, StructConstructor}, literal::{Double, Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
 
 // ---------- helpers ----------
 
@@ -46,7 +46,7 @@ fn uint_lit(v: u64) -> ExpressionKind {
 }
 
 fn float_lit(v: f64) -> ExpressionKind {
-    ExpressionKind::Literal(Literal::Float(OrderedFloat(v)))
+    ExpressionKind::Literal(Literal::Float(Double::new(v)))
 }
 
 fn bool_lit(v: bool) -> ExpressionKind {

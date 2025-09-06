@@ -1,5 +1,6 @@
 use std::{io::{BufRead, BufReader, Read, Seek, SeekFrom}, result};
 
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use crate::utils::show_diff::generate_highlighted_string;
@@ -33,7 +34,7 @@ pub enum SoulErrorKind {
     UnexpectedEnd,
 }
 
-#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub struct SoulSpan {
     pub line_number: usize,
     ///for multiline span

@@ -1,3 +1,4 @@
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, SoulError, SoulErrorKind, SoulSpan};
@@ -5,7 +6,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_synt
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeBuilder;
 use crate::steps::step_interfaces::i_tokenizer::TokenStream;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct ParserResponse {
     pub tree: AbstractSyntacTree,
     pub scopes: ScopeBuilder,

@@ -8,7 +8,7 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::I
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeBuilder;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Literal, LiteralType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Double, Literal, LiteralType};
 
 fn token<T: Into<String>>(text: T) -> Token {
     let str = text.into();
@@ -84,7 +84,7 @@ fn test_parse_float() {
     let mut scopes = dummy_scopes();
     let result = Literal::from_stream(&mut stream, &mut scopes)
         .inspect_err(|err| panic!("{}", err.to_err_message().join("\n"))).unwrap();
-    assert_eq_show_diff!(result, Literal::Float(OrderedFloat(3.14)));
+    assert_eq_show_diff!(result, Literal::Float(Double::new(3.14)));
 }
 
 #[test]
@@ -178,7 +178,7 @@ fn test_parse_2d_array_diffrent_numeric_types() {
         ty: LiteralType::Array(Box::new(LiteralType::Float)), 
         values: vec![
             Literal::Array { ty: LiteralType::Int, values: vec![Literal::Int(1), Literal::Uint(255), Literal::Int(3)] },
-            Literal::Array { ty: LiteralType::Float, values: vec![Literal::Float(ordered_float::OrderedFloat(1.0))] }
+            Literal::Array { ty: LiteralType::Float, values: vec![Literal::Float(Double::new(1.0))] }
         ] 
     };
 
@@ -207,7 +207,7 @@ fn test_parse_array_diffrent_numeric_types() {
 
     assert_eq_show_diff!(
         lit,
-        Literal::Array{ty: LiteralType::Float, values: vec![Literal::Int(-1), Literal::Uint(1), Literal::Float(ordered_float::OrderedFloat(3.0))]}
+        Literal::Array{ty: LiteralType::Float, values: vec![Literal::Int(-1), Literal::Uint(1), Literal::Float(Double::new(3.0))]}
     );
 }
 
@@ -286,7 +286,7 @@ fn test_tuple_mixed() {
             values: vec![
                 Literal::Int(1), 
                 Literal::Uint(0b1), 
-                Literal::Float(OrderedFloat(2.0)), 
+                Literal::Float(Double::new(2.0)), 
                 Literal::Bool(true),
                 Literal::Str("string".into()),
                 Literal::Array { ty: LiteralType::Int, values: vec![Literal::Int(1), Literal::Int(2), Literal::Int(3)] }
@@ -304,7 +304,7 @@ fn test_tuple_with_array() {
 
     assert_eq_show_diff!(
         result,
-        Literal::new_tuple(vec![Literal::new_array(vec![Literal::Int(1), Literal::Float(ordered_float::OrderedFloat(2.0))], &SoulSpan::new(0,0,7)).unwrap(), Literal::Bool(true)])
+        Literal::new_tuple(vec![Literal::new_array(vec![Literal::Int(1), Literal::Float(Double::new(2.0))], &SoulSpan::new(0,0,7)).unwrap(), Literal::Bool(true)])
     );
 }
 
@@ -338,7 +338,7 @@ fn test_named_tuple() {
     let should_be = Literal::NamedTuple{
         values: BTreeMap::from([
             (Ident("name1".into()), Literal::Int(1)), 
-            (Ident("name2".into()), Literal::Float(OrderedFloat(1.0))), 
+            (Ident("name2".into()), Literal::Float(Double::new(1.0))), 
         ]),
         insert_defaults: false,
     };

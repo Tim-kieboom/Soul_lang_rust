@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::soul_type::SoulType, spanned::Spanned}};
@@ -7,14 +8,14 @@ use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulS
 
 type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct ScopeBuilder {
     scopes: Vec<Scope>,
     current: usize,
     pub global_literals: ProgramMemmory,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct InnerScope<T> {
     pub parent_index: Option<usize>,
     pub children: Vec<usize>,
@@ -23,7 +24,7 @@ pub struct InnerScope<T> {
     pub symbols: HashMap<String, T>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub enum ScopeKind {
     Class(Class),
     Trait(Trait),
@@ -39,17 +40,17 @@ pub enum ScopeKind {
     TypeDef{new_type: SoulType, of_type: SoulType},
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Variable {
     pub name: Ident,
     pub ty: SoulType,
     pub initialize_value: Option<Expression>,
 }
 
-#[derive(Debug, Hash, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Hash, Clone, Copy, Serialize, Deserialize, Encode, Decode)]
 pub struct ProgramMemmoryId(pub usize);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct ProgramMemmory {
     pub store: BTreeMap<Literal, ProgramMemmoryId>,
     pub last_id: ProgramMemmoryId,

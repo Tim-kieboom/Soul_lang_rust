@@ -20,26 +20,26 @@ enums() {
 
 unions() {
     
-    union WrapperKind {
-        Array,
-        StackArray(uint),
-        Pointer{isMut: bool},
-        Ref{lifeTime: LifeTime, isMut: bool},
-    }
+    // union WrapperKind {
+    //     Array,
+    //     StackArray(uint),
+    //     Pointer{isMut: bool},
+    //     Ref{lifeTime: LifeTime, isMut: bool},
+    // }
     
-    union Option<T> {
-        Some(T),
-        None,
-    }
+    // union Option<T> {
+    //     Some(T),
+    //     None,
+    // }
 
-    union Result<K, E>
-    where 
-        K: Debug,
-        E: Debug
-    {
-        Ok(K),
-        Err(E)
-    }
+    // union Result<K, E>
+    // where 
+    //     K: Debug,
+    //     E: Debug
+    // {
+    //     Ok(K),
+    //     Err(E)
+    // }
 }
 
 typeEnums() {

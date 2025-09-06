@@ -1,3 +1,4 @@
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{StructConstructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::{Spanned}, statement::Block}};
@@ -8,7 +9,7 @@ pub type BoxExpression = Box<Expression>;
 pub type UnaryOperator = Spanned<UnaryOperatorKind>;
 pub type BinaryOperator = Spanned<BinaryOperatorKind>;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum ExpressionKind {
     Empty,
     Default,
@@ -53,21 +54,21 @@ impl Default for ExpressionKind {
 
 pub type DeleteList = Vec<String>;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ReturnLike {
     pub value: Option<BoxExpression>,
     pub delete_list: DeleteList,
     pub kind: ReturnKind
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum ReturnKind {
     Return,
     Fall,
     Break,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum ExpressionGroup {
     Tuple(Tuple),
     Array(Array),
@@ -75,14 +76,14 @@ pub enum ExpressionGroup {
     ArrayFiller(ArrayFiller),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Array {
     pub collection_type: Option<SoulType>,
     pub element_type: Option<SoulType>,
     pub values: Vec<Expression>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ArrayFiller {
     pub collection_type: Option<SoulType>,
     pub element_type: Option<SoulType>,
@@ -91,7 +92,7 @@ pub struct ArrayFiller {
     pub fill_expr: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct NamedTuple {
     pub values: HashMap<Ident, Expression>,
     
@@ -99,117 +100,117 @@ pub struct NamedTuple {
     pub insert_defaults: bool,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Tuple {
     pub values: Vec<Expression>
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Ternary {
     pub condition: BoxExpression,
     pub if_branch: BoxExpression,
     pub else_branch: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct While {
     pub condition: Option<BoxExpression>,
     pub block: Block,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct For {
     pub element: Option<BoxExpression>,
     pub collection: BoxExpression,
     pub block: Block,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Match {
     pub condition: BoxExpression,
     pub cases: Vec<CaseSwitch>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct CaseSwitch {
     pub if_expr: Expression,
     pub do_fn: CaseDoKind,
 } 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum CaseDoKind {
     Block(Spanned<Block>),
     Expression(Expression),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct If {
     pub condition: BoxExpression,
     pub block: Block,
     pub else_branchs: Vec<Spanned<ElseKind>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum ElseKind {
     ElseIf(Box<Spanned<If>>),
     Else(Spanned<Block>)
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ExternalExpression {
     pub path: SoulPagePath,
     pub expr: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum UnwrapVariable {
     Variable(VariableName),
     MultiVariable{vars: Vec<VariableName>, ty: SoulType, initializer: Option<BoxExpression>}
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Unary {
     pub operator: UnaryOperator,
     pub expression: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Binary {
     pub left: BoxExpression,
     pub operator: BinaryOperator,
     pub right: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct CompareTypeOf {
     pub left: BoxExpression,
     pub ty: SoulType,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct StaticField {
     pub object: SoulType,
     pub field: VariableName,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct AccessField {
     pub object: BoxExpression,
     pub field: VariableName,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Index {
     pub collection: BoxExpression,
     pub index: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct VariableName {
     pub name: Ident
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub enum UnaryOperatorKind {
     Invalid,
     Neg, // -
@@ -218,7 +219,7 @@ pub enum UnaryOperatorKind {
     Decrement{before_var: bool}, // --
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub enum BinaryOperatorKind {
     Invalid,
     Add, // +
@@ -247,7 +248,7 @@ pub enum BinaryOperatorKind {
     TypeOf, // <variable> typeof <type>
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct Ident(pub String);
 
 impl VariableName {

@@ -1,3 +1,4 @@
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, ExpressionKind, VariableName}, function::Function, object::{Class, Struct, Trait, TraitSignature}, soul_type::soul_type::{Modifier, SoulType}, spanned::{SpannedAttribute}}};
 
@@ -6,7 +7,7 @@ pub type Statement = SpannedAttribute<StatementKind>;
 
 pub const STATMENT_END_TOKENS: &[&str] = &["\n", "}"];
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum StatementKind {
     Expression(Expression),
 
@@ -27,20 +28,20 @@ pub enum StatementKind {
     CloseBlock,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Assignment {
     pub variable: Expression,
     pub value: Expression,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Implement {
     pub impl_trait: Option<TraitSignature>,
     pub ty: SoulType,
     pub block: Block,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Block {
     pub ruleset: Modifier,
     pub statments: Vec<Statement>,

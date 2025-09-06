@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use ordered_float::OrderedFloat;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Double;
 use crate::steps::step_interfaces::i_tokenizer::Token;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeBuilder;
 use crate::errors::soul_error::{pass_soul_error, SoulError, SoulErrorKind};
@@ -516,7 +517,7 @@ pub fn get_number(token: &Token) -> Result<Literal, FromStreamError> {
         .map(|val| Literal::Int(val));
 
     let float_res = token.text.parse::<f64>()
-        .map(|val| Literal::Float(OrderedFloat(val)));
+        .map(|val| Literal::Float(Double::new(val)));
     
     if let Ok(int) = int_res {
         return Ok(int);

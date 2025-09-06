@@ -1,5 +1,8 @@
 type string typeof str
 
+const PublicVar = 1
+PublicFuntion() {}
+
 main() {
     Println("hello world")
 }

@@ -1,8 +1,9 @@
+use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use crate::{soul_names::{check_name_allow_types, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::get_number, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}}, i_tokenizer::TokenStream}}};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct  SoulType {
     pub modifier: Modifier,
     pub base: TypeKind,
@@ -65,7 +66,7 @@ impl SoulType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum TypeGenericKind {
     Type(SoulType),
     Lifetime(Lifetime)
@@ -80,7 +81,7 @@ impl TypeGenericKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum TypeWrapper {
     Invalid,
     Array,
@@ -92,17 +93,17 @@ pub enum TypeWrapper {
     ConstPointer
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum Modifier {
     Default,
     Literal,
     Const,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Encode, Decode)]
 pub struct Lifetime{pub name: Ident}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum AnyRef {
     Invalid,
     ConstRef(Option<Lifetime>),

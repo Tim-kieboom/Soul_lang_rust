@@ -1,10 +1,11 @@
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::Statement;
 use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::statement::Block};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct AbstractSyntacTree {
     pub root: Block,
 }

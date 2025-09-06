@@ -1,41 +1,42 @@
 use std::collections::HashMap;
 
+use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned};
 
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Enum {
     pub name: Ident,
     pub variants: EnumVariantKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Union {
     pub name: Ident,
     pub generics: Vec<GenericParameter>,
     pub variants: Vec<Spanned<UnionVariant>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct TypeEnum {
     pub name: Ident,
     pub body: TypeEnumBody,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct TypeEnumBody {
     pub types: Vec<SoulType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct UnionVariant {
     pub name: Ident,
     pub field: UnionVariantKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum UnionVariantKind {
     Tuple(Vec<SoulType>),
     NamedTuple(HashMap<Ident, SoulType>)
@@ -50,13 +51,13 @@ impl UnionVariantKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum EnumVariantKind {
     Int(Vec<EnumVariant<i64>>),
     Expression(Vec<EnumVariant<Expression>>)
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct EnumVariant<T> {
     pub name: Ident,
     pub value: T,

@@ -3,7 +3,7 @@ use threadpool::ThreadPool;
 use hsoul::subfile_tree::SubFileTree;
 use std::{fs::{self, write, File}, result, time::SystemTime};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
-use crate::{errors::soul_error::SoulError, run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
+use crate::{errors::soul_error::{SoulError, SoulSpan}, file_cache::FileCache, run_options::run_options::RunOptions, steps::step_interfaces::i_parser::header::Header, utils::{logger::Logger, time_logs::TimeLogs}};
 use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
 
 
@@ -23,7 +23,7 @@ pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time
     }
 
     let main_file_path = Path::new(&run_options.file_path);
-    if let Err(error) = parse_file(run_options.clone(), main_file_path, logger.clone(), time_logs.clone()) {
+    if let Err(error) = parse_file(main_file_path, logger.clone(), run_options.clone(), time_logs.clone()) {
         let main_file = run_options.file_path.to_string_lossy().to_string();
         errors.push((error, main_file));
     }
@@ -52,7 +52,7 @@ fn parse_sub_files(
         let log = logger.clone();
         let t_log = time_logs.clone();
         pool.execute(move || {
-            let result = parse_file(run_option, Path::new(&file), log, t_log);
+            let result = parse_file(Path::new(&file), log, run_option, t_log);
             sender.send((result, file)).expect("channel receiver should be alive");
         });
     }
@@ -68,30 +68,57 @@ fn parse_sub_files(
 }
 
 fn parse_file(
-    run_options: Arc<RunOptions>, 
     file_path: &Path, 
     logger: Arc<Logger>, 
+    run_options: Arc<RunOptions>, 
     time_logs: Arc<Mutex<TimeLogs>>
 ) -> Result<()> {
 
-    let empty_span = None;
+    let (reader, file_date) = get_file_reader(file_path)
+        .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while trying to get file reading", err))?;
 
-    let (reader, _) = get_file_reader(file_path)
-        .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while trying to get file reading", err))?;
+    #[cfg(not(feature="dev_mode"))]
+    if let Some(date) = file_date {
+        
+
+        let last_modified_date = FileCache::read_date(&run_options, file_path);
+        if last_modified_date.ok() == Some(date) {
+            logger.debug(format!("using cache for file: {}", file_path.to_str().unwrap()), DEFAULT_LOG_OPTIONS);
+            return Ok(())
+        }
+    }
 
     let path_string = file_path.to_string_lossy().to_string();
-    let info = RunStepsInfo{current_path: &path_string, logger: &logger, run_options: &run_options, time_logs: &time_logs};
+    let info = RunStepsInfo{
+        logger: &logger, 
+        time_logs: &time_logs,
+        run_options: &run_options, 
+        current_path: &path_string, 
+    };
     
     let source_response = source_reader(reader, &info)
-        .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while reading source file", err))?;
+        .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while reading source file", err))?;
     
     let tokenize_response = tokenizer(source_response, &info)
-        .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while tokenizing file", err))?;
+        .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while tokenizing file", err))?;
 
     let parser_reponse = parser(tokenize_response, &info)
-        .map_err(|err| pass_soul_error(err.get_last_kind(), empty_span, "while parsersing file", err))?;
+        .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while parsing file", err))?;
 
-    Ok(())
+    cache_file(parser_reponse, &run_options, file_path)
+        .map_err(|msg| new_soul_error(
+            SoulErrorKind::InternalError, 
+            None, 
+            format!("error while trying to cache parsed file\n{}", msg.to_string())),
+        )
+}
+
+type DynResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+fn cache_file(response: ParserResponse, run_options: &RunOptions, file_path: &Path) -> DynResult<()> {
+
+    let header = Header::from_scope(&response.scopes);
+    let cache = FileCache::new(file_path, header, response)?;
+    cache.write_to_disk(run_options, file_path)   
 }
 
 fn log_errors(errors: Vec<(SoulError, String)>, logger: &Arc<Logger>) -> result::Result<(), String> {

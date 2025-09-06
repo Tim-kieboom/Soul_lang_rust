@@ -1,15 +1,16 @@
+use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{BoxExpression, Ident, NamedTuple, Tuple, VariableName}, generic::GenericParameter, soul_type::soul_type::{Modifier, SoulType}, spanned::Spanned, statement::Block};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Function {
     pub signature: FunctionSignature,
     pub block: Block,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Lambda {
     pub signature: LambdaSignature,
     pub arguments: Tuple,
@@ -17,13 +18,13 @@ pub struct Lambda {
     pub capture: Capture,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum LambdaBody {
     Block(Block),
     Expression(BoxExpression),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct FunctionCall {
     pub name: Ident,
     pub callee: Option<BoxExpression>,
@@ -31,13 +32,13 @@ pub struct FunctionCall {
     pub arguments: Tuple,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct StructConstructor {
     pub calle: SoulType,
     pub arguments: NamedTuple,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct StaticMethod {
     pub callee: Spanned<SoulType>,
     pub name: Ident,
@@ -45,7 +46,7 @@ pub struct StaticMethod {
     pub arguments: Tuple,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct FunctionSignature {
     pub name: Ident,
     pub callee: Option<Spanned<FunctionCallee>>,
@@ -55,19 +56,19 @@ pub struct FunctionSignature {
     pub return_type: Option<SoulType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct FunctionCallee {
     pub extention_type: SoulType,
     pub this: Option<SoulType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Parameter {
     pub name: Ident,
     pub ty: SoulType,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct LambdaSignature {
     pub params: Vec<Spanned<Parameter>>,
     pub return_type: Option<Box<SoulType>>,
@@ -86,20 +87,20 @@ impl LambdaSignature {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Capture {
     pub variable: VariableName,
     pub kind: CaptureKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum CaptureKind {
     ConstRef,
     MutRef,
     Consume,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum LambdaMode {
     Mut,
     Const,

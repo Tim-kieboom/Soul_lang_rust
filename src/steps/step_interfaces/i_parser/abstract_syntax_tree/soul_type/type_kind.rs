@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
+use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use crate::{soul_names::{NamesInternalType, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, function::{FunctionSignature, LambdaMode, LambdaSignature}, soul_type::soul_type::SoulType, spanned::Spanned}};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum TypeSize {
     Bit8,
     Bit16,
@@ -13,7 +14,7 @@ pub enum TypeSize {
     Bit64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum TypeKind {
 // Primitives
     None,
@@ -56,38 +57,38 @@ pub enum TypeKind {
     LifeTime(Ident),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ExternalPath {
     pub name: Ident, 
     pub path: SoulPagePath,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ExternalType {
     pub path: SoulPagePath,
     pub name: Ident,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum UntypedKind {
     UntypedInt,
     UntypedUint,
     UntypedFloat,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct UnionType {
     pub union: UnionKind, 
     pub variant: Ident
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum UnionKind {
     Union(Ident),
     External(ExternalType),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct SoulPagePath(pub String);
 
 impl UnionType {

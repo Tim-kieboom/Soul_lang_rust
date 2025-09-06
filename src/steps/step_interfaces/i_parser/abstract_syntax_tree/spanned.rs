@@ -1,7 +1,8 @@
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use crate::errors::soul_error::SoulSpan;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub struct Spanned<T> {
     pub node: T,
     pub span: SoulSpan,
@@ -24,7 +25,7 @@ where
 
 pub type Attribute = u8/*dummy*/;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct SpannedAttribute<T> {
     pub node: T,
     pub span: SoulSpan,
