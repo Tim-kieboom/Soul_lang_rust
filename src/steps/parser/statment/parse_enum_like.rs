@@ -165,6 +165,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
 
     scopes.push_scope();
 
+    let mut current_number = 0i64;
     loop {
 
         if stream.next().is_none() {
@@ -187,7 +188,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         if !stream.peek_is("=") {
             
             match &mut variants {
-                EnumVariantKind::Int(enum_variants) => enum_variants.push(EnumVariant{name, value: enum_variants.len() as i64}),
+                EnumVariantKind::Int(enum_variants) => enum_variants.push(EnumVariant{name, value: current_number}),
                 EnumVariantKind::Expression(enum_variants) => enum_variants.push(EnumVariant{name, value: Expression::new(ExpressionKind::Default, stream.current_span())}),
             }
 
@@ -196,6 +197,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
             }
 
             if stream.current_text() == "," {
+                current_number += 1;
                 continue
             }
             else {
@@ -225,6 +227,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
                     return Err(err_out_of_bounds(stream))
                 }
 
+                current_number = num;
                 enum_variants.push(EnumVariant{name, value: num});
             },
             EnumVariantKind::Expression(enum_variants) => {
@@ -234,6 +237,7 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         }
 
         if stream.current_text() == "," {
+            current_number += 1;
             continue
         }
         else {

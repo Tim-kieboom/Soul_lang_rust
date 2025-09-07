@@ -1,7 +1,9 @@
 type string typeof str
 
-const PublicVar = 1
-PublicFuntion() {}
+const One = 1
+Sum(int a, int b) int {
+    return a + b
+} 
 
 main() {
     Println("hello world")

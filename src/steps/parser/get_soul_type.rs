@@ -95,7 +95,10 @@ fn get_tuple_type(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     }
 
     let ty = inner_from_stream(stream, scopes)?;
-    if stream.current_text() != "," {
+    if stream.current_text() == ")" {
+        return Ok(SoulType::from_type_kind(TypeKind::Tuple(vec![ty])))
+    }
+    else if stream.current_text() != "," {
         stream.go_to_index(tuple_i);
         return get_named_tuple_type(stream, scopes)
     }

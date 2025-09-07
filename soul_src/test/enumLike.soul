@@ -6,10 +6,10 @@ enums() {
     }
 
     enum Nums {
-        One,
-        Two,
+        One, //0
+        Two, //1
         Ten = 10,
-        Three
+        Three //11
     }
 
     enum KeyValue impl (str, int[3]) {
@@ -20,26 +20,26 @@ enums() {
 
 unions() {
     
-    // union WrapperKind {
-    //     Array,
-    //     StackArray(uint),
-    //     Pointer{isMut: bool},
-    //     Ref{lifeTime: LifeTime, isMut: bool},
-    // }
+    union WrapperKind {
+        Array,
+        StackArray(uint),
+        Pointer(bool isMut),
+        Ref(LifeTime lifeTime, bool isMut),
+    }
     
-    // union Option<T> {
-    //     Some(T),
-    //     None,
-    // }
+    union Option<T> {
+        Some(T),
+        None,
+    }
 
-    // union Result<K, E>
-    // where 
-    //     K: Debug,
-    //     E: Debug
-    // {
-    //     Ok(K),
-    //     Err(E)
-    // }
+    union Result<K, E>
+    where 
+        K: Debug,
+        E: Debug
+    {
+        Ok(K),
+        Err(E)
+    }
 }
 
 typeEnums() {

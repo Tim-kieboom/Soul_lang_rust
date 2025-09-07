@@ -14,6 +14,7 @@ edition = "2024"
 regex = "1.11.1"
 chrono = "0.4.41"
 colored = "3.0.0"
+bincode = "2.0.1"
 bitflags = "2.9.0"
 itertools = "0.14.0"
 once_cell = "1.21.3"
@@ -25,7 +26,6 @@ hsoul = { path = "hsoul" }
 serde = { version = "1.0.219", features = ["derive"] }
 ordered-float = { version = "5.0.0", features = ["serde"] }
 criterion = { version = "0.6.0", features = ["html_reports"] }
-bincode = "2.0.1"
 
 [[bench]]
 name = "my_benchmark"
