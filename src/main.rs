@@ -46,18 +46,17 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {
     let logger = match get_logger(&run_options) {
         Ok(val) => Arc::new(val),
         Err(err) => {
-            let (mut first, mut second) = (
-                err.white(), 
-                "build interrupted because of 1 error".white()
-            );
+            let first = err;
+            let second = "build interrupted because of 1 error";
             
             if DEFAULT_LOG_OPTIONS.colored {
-                first = first.red();
-                second = second.red()
+                eprintln!("{}", first.red()); 
+                eprintln!("{}", second.red());
             }
-            
-            eprintln!("{}", first); 
-            eprintln!("{}", second);
+            else {
+                eprintln!("{}", first); 
+                eprintln!("{}", second);
+            }
             exit(1)
         },
     };

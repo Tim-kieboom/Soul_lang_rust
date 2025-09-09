@@ -1,10 +1,8 @@
-use regex::Regex;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use enum_iterator::Sequence;
 use serde::{Serialize, Deserialize};
 use std::{collections::{HashMap, HashSet}};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::type_kind::{TypeKind, TypeSize}};
 
 pub static SOUL_NAMES: Lazy<SoulNames> = Lazy::new(|| {
     SoulNames::new()
@@ -278,57 +276,6 @@ impl SoulNames {
 
     pub fn get_name<T: std::fmt::Debug + SoulNameEnum>(&self, key: T) -> &'static str {
         key.get_name(self).expect(format!("Internal Error: in SOUL_NAMES.get_name() name: {:?}, is not defined", key).as_str())
-    }
-
-    pub fn str_vec_to_regex(vec: &Vec<&str>) -> Regex {
-        Regex::new(
-            &vec.iter()
-                .map(|token| regex::escape(token))
-                .collect::<Vec<String>>()
-                .join("|")
-        ).unwrap()
-    }
-
-    pub fn get_internal_type(&self, text: &str) -> Option<TypeKind> {
-        let internal_type = match self.internal_types.iter().find(|ty| *ty.1 == text) {
-            Some(val) => val.0.clone(),
-            None => return None,
-        };
-
-        Some(match internal_type {
-            NamesInternalType::None => TypeKind::None,
-            
-            NamesInternalType::Character => TypeKind::Char(TypeSize::Bit8),
-            NamesInternalType::Character16 => TypeKind::Char(TypeSize::Bit16),
-            NamesInternalType::Character32 => TypeKind::Char(TypeSize::Bit32),
-            NamesInternalType::Character64 => TypeKind::Char(TypeSize::Bit64),
-            NamesInternalType::String => TypeKind::Str,
-            
-            NamesInternalType::Boolean => TypeKind::Bool,
-
-            NamesInternalType::UntypedInt => TypeKind::UntypedInt,
-            NamesInternalType::Int => TypeKind::SystemInt,
-            NamesInternalType::Int8 => TypeKind::Int(TypeSize::Bit8),
-            NamesInternalType::Int16 => TypeKind::Int(TypeSize::Bit16),
-            NamesInternalType::Int32 => TypeKind::Int(TypeSize::Bit32),
-            NamesInternalType::Int64 => TypeKind::Int(TypeSize::Bit64),
-            
-            NamesInternalType::UntypedUint => TypeKind::UntypedUint,
-            NamesInternalType::Uint => TypeKind::SystemUint,
-            NamesInternalType::Uint8 => TypeKind::Uint(TypeSize::Bit8),
-            NamesInternalType::Uint16 => TypeKind::Uint(TypeSize::Bit16),
-            NamesInternalType::Uint32 => TypeKind::Uint(TypeSize::Bit32),
-            NamesInternalType::Uint64 => TypeKind::Uint(TypeSize::Bit64),
-            
-            NamesInternalType::UntypedFloat => TypeKind::UntypedFloat,
-            NamesInternalType::Float8 => TypeKind::Float(TypeSize::Bit8),
-            NamesInternalType::Float16 => TypeKind::Float(TypeSize::Bit8),
-            NamesInternalType::Float32 => TypeKind::Float(TypeSize::Bit8),
-            NamesInternalType::Float64 => TypeKind::Float(TypeSize::Bit8),
-            
-            NamesInternalType::Range => TypeKind::Custom(Ident::new("Range")),
-            NamesInternalType::List => TypeKind::Class(Ident::new("List")),
-        })
     }
 }
 

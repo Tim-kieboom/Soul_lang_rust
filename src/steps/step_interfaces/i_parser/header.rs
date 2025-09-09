@@ -10,7 +10,7 @@ pub struct Header {
 
 
 impl Header {
-    pub fn from_scope(scopes: &ScopeBuilder) -> Header {
+    pub fn from_scope_builder(scopes: &ScopeBuilder) -> Header {
         let mut header = Self{scope: HashMap::new()};
         
         for (name, scopes) in &scopes.get_global_scope().symbols {

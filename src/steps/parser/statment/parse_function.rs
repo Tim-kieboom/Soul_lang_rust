@@ -100,7 +100,7 @@ fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuil
         }
     }
 
-    let is_ctor = function_name == "Ctor" || function_name == "ctor";
+    let is_ctor = function_name == "This" || function_name == "this";
     let mut is_array_ctor = false;
 
     if is_ctor {
@@ -111,8 +111,14 @@ fn inner_get_function_signature(stream: &mut TokenStream, scopes: &mut ScopeBuil
         return Err(err_out_of_bounds(stream))
     }
 
-    let (parameters, this) = get_parameters(&soul_type, stream, scopes)
-        .map_err(|err| pass_err(err, &function_name, stream))?;
+    let params = if is_array_ctor {
+        get_parameters(&soul_type, stream, scopes, "[", "]", "[]")
+    }
+    else {
+        get_parameters(&soul_type, stream, scopes, "(", ")", "()")
+    };
+    
+    let (parameters, this) = params.map_err(|err| pass_err(err, &function_name, stream))?; 
 
     if is_array_ctor {
         if parameters.len() != 1 {
@@ -175,17 +181,25 @@ fn get_parameters(
     callee: &Option<SoulType>,
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder,
+    start_symbool: &str,
+    end_symbool: &str,
+    empty_symbool: &str,
 ) -> Result<(Vec<Spanned<Parameter>>, Option<SoulType>)> {
+    debug_assert!(
+        stream.current_text() == start_symbool ||
+        stream.current_text() == empty_symbool
+    );
+    
     let mut parameters = vec![];
 
-    if stream.current_text() == "()" {
+    if stream.current_text() == empty_symbool {
         return Ok((parameters, None))
     }
-    else if stream.current_text() != "(" {
+    else if stream.current_text() != start_symbool {
         return Err(new_soul_error(
             SoulErrorKind::ArgError, 
             stream.current_span_some(), 
-            format!("token: '{}', should be '(' to start in function", stream.current_text()),
+            format!("token: '{}', should be '{}' to start in function", stream.current_text(), start_symbool),
         ))
     }
 
@@ -193,7 +207,7 @@ fn get_parameters(
         return Err(err_out_of_bounds(stream))
     }
 
-    if stream.current_text() == ")" {
+    if stream.current_text() == end_symbool {
         return Ok((parameters, None))
     }
 
@@ -212,7 +226,7 @@ fn get_parameters(
                 
                 continue
             }
-            else if stream.current_text() == ")" {
+            else if stream.current_text() == end_symbool {
                 break
             }
         }
@@ -220,6 +234,10 @@ fn get_parameters(
         let arg_start_i = stream.current_index();
         let ty = SoulType::from_stream(stream, scopes)
             .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream.current_span_some(), format!("while trying to get parameter number {}", parameter_position), child))?;
+        
+        if stream.current_text() == end_symbool {
+            break
+        }
 
         check_name(stream.current_text())
             .map_err(|child| new_soul_error(SoulErrorKind::ArgError, stream.current_span_some(), format!("while trying to parse parameter: {}", child)))?;
@@ -242,11 +260,11 @@ fn get_parameters(
         }
     }
 
-    if stream.current_text() != ")" {
+    if stream.current_text() != end_symbool {
         return Err(new_soul_error(
             SoulErrorKind::ArgError, 
             stream.current_span_some(), 
-            format!("while trying to get parameter, parameter should en with ')' but ends on '{}'", stream.current_text())
+            format!("while trying to get parameter, parameter should en with '{}' but ends on '{}'", end_symbool, stream.current_text())
         ));
     }
 
@@ -309,27 +327,13 @@ fn get_this_type(arg_position: usize, callee: &Option<SoulType>, stream: &mut To
 }
 
 fn get_ctor_type(stream: &mut TokenStream, function_name: &mut String, is_array_ctor: &mut bool) -> Result<()> {
-    if stream.peek_is("[]") {
+    if stream.peek_is("::") {
         stream.next();
         *is_array_ctor = true
     }
-    else if stream.peek_is("[") {
-        *is_array_ctor = true;
-        if stream.next_multiple(2).is_none() {
-            return Err(err_out_of_bounds(stream))
-        }   
-
-        if stream.current_text() != "]" {
-            return Err(new_soul_error(
-                SoulErrorKind::UnmatchedParenthesis, 
-                stream.current_span_some(), 
-                format!("token: '{}' should be ']'", stream.current_text(),
-            )))
-        }
-    }
 
     if *is_array_ctor {
-        function_name.push_str("[]");
+        function_name.push_str("::[]");
     }
 
     Ok(())

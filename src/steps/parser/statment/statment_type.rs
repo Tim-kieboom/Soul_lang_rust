@@ -160,6 +160,9 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatementType> {
                     return Ok(StatementType::Assignment)
                 }
             },
+            "." => {
+                consecutive_parts = 0;
+            },
             val if OPERATOR_ASSIGN_SYMBOOLS.iter().any(|symbool| *symbool == val) => {
                 if !stream.next_till("\n") {
                     return Err(err_out_of_bounds(stream))

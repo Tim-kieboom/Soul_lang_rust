@@ -41,7 +41,7 @@ functionCall() {
     var.field.Methode()
 
     colletion.Iter()
-        .Select()
+        .IterFunction()
         .ToArray()
 
     object.field
@@ -76,6 +76,8 @@ variable() {
     num = obj.field
     num = obj.field.methode()
     num = obj.field.methode<int>()
+
+    obj.field = 1
 }
 
 expressionGroups() {
@@ -161,8 +163,6 @@ sum(int a, int b) int {
 int sum(this, int b) int {
     return this + b
 }
-
-
 
 
 

@@ -1,12 +1,12 @@
 use crate::soul_names::{check_name, NamesOtherKeyWords, SOUL_NAMES};
-use crate::steps::parser::expression::parse_expression::get_expression;
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
+use crate::steps::parser::expression::parse_expression::get_expression;
 use crate::steps::parser::statment::parse_generics_decl::get_generics_decl;
-use crate::steps::parser::statment::parse_function::{get_methode, get_methode_signature};
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
+use crate::steps::parser::statment::parse_function::{get_methode, get_methode_signature};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
@@ -131,11 +131,17 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         if stream.current_text() == "}" {
             break
         }
+        
+        if stream.current_text() != "This" && stream.current_text() != "this" {
 
-        if let Some(field) = get_field(stream, scopes)? {
-            fields.push(field);
+            if let Some(field) = get_field(stream, scopes)? {
+                
+                fields.push(field);
+                continue
+            }
         }
-        else if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) {
+        
+        if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) {
             todo!("todo>> impl trait in class")
         }
         else {
@@ -228,63 +234,79 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 }
 
 fn get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Spanned<Field>>> {
-    let field_i = stream.current_index();
-    let ty = match SoulType::try_from_stream(stream, scopes)? {
-        Some(val) => val,
-        None => return Ok(None),
-    };
-
-    let name: Ident = stream.current_text().into();
-
-    check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
-
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream))
-    }
-
-    const END_TOKENS: &[&str] = &["\n", ";"];
-    if END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
-        let field = Field{
-            name,
-            ty,
-            vis: FieldAccess::default(),
-            default_value: None,
+    
+    fn inner(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<Spanned<Field>>> {
+        let field_i = stream.current_index();
+        let ty = match SoulType::try_from_stream(stream, scopes)? {
+            Some(val) => val,
+            None => return Ok(None),
         };
 
-        let span = stream[field_i].span.combine(&stream.current_span());
-        return Ok(Some(Spanned::new(field, span)))
-    }
+        if stream.current_text() == "(" {
+            return Ok(None)
+        }
 
-    let vis = get_field_access(stream)?;
-    let default_value = if stream.current_text() == "=" {
+        let name: Ident = stream.current_text().into();
+
+        check_name(&stream.current_text())
+            .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
+
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream))
         }
 
-        Some(get_expression(stream, scopes, END_TOKENS)?)
-    }
-    else {
-        None
-    };
+        const END_TOKENS: &[&str] = &["\n", ";"];
+        if END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
+            let field = Field{
+                name,
+                ty,
+                vis: FieldAccess::default(),
+                default_value: None,
+            };
 
-    if stream.current_text() == "}" {
-        stream.next_multiple(-1);
-        let field = Field{ name, ty, default_value, vis};
-        let span = stream[field_i].span.combine(&stream.current_span());
-        Ok(Some(Spanned::new(field, span)))
+            let span = stream[field_i].span.combine(&stream.current_span());
+            return Ok(Some(Spanned::new(field, span)))
+        }
+
+        let vis = get_field_access(stream)?;
+        let default_value = if stream.current_text() == "=" {
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream))
+            }
+
+            Some(get_expression(stream, scopes, END_TOKENS)?)
+        }
+        else {
+            None
+        };
+
+        if stream.current_text() == "}" {
+            stream.next_multiple(-1);
+            let field = Field{ name, ty, default_value, vis};
+            let span = stream[field_i].span.combine(&stream.current_span());
+            Ok(Some(Spanned::new(field, span)))
+        }
+        else if END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
+            let field = Field{ name, ty, default_value, vis};
+            let span = stream[field_i].span.combine(&stream.current_span());
+            Ok(Some(Spanned::new(field, span)))
+        }
+        else {
+            Err(new_soul_error(
+                SoulErrorKind::InvalidInContext, 
+                stream.current_span_some(), 
+                format!("token: '{}' is invalid end of field should be enter of ';' or '}}'", stream.current_text()),
+            ))
+        }
     }
-    else if END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
-        let field = Field{ name, ty, default_value, vis};
-        let span = stream[field_i].span.combine(&stream.current_span());
-        Ok(Some(Spanned::new(field, span)))
-    }
-    else {
-        Err(new_soul_error(
-            SoulErrorKind::InvalidInContext, 
-            stream.current_span_some(), 
-            format!("token: '{}' is invalid end of field should be enter of ';' or '}}'", stream.current_text()),
-        ))
+
+    let start_i = stream.current_index(); 
+    match inner(stream, scopes)? {
+        Some(field) => Ok(Some(field)),
+        None => {
+            stream.go_to_index(start_i);
+            Ok(None)
+        },
     }
 }
 

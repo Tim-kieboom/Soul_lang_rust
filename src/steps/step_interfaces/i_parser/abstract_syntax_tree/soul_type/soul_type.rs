@@ -217,14 +217,6 @@ impl AnyRef {
             _ => AnyRef::Invalid,
         }
     }
-
-    pub fn to_str(&self) -> &str {
-        match self {
-            AnyRef::Invalid => "<invalid>",
-            AnyRef::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
-            AnyRef::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
-        }
-    }
 }
 
 

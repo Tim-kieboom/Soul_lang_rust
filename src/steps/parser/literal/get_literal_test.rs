@@ -1,13 +1,10 @@
 use std::collections::BTreeMap;
-
-use ordered_float::OrderedFloat;
-
 use crate::assert_eq_show_diff;
 use crate::errors::soul_error::{SoulErrorKind, SoulSpan};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
-use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
-use crate::steps::step_interfaces::i_parser::scope_builder::ScopeBuilder;
 use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream};
+use crate::steps::step_interfaces::i_parser::scope_builder::ScopeBuilder;
+use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::{Double, Literal, LiteralType};
 
 fn token<T: Into<String>>(text: T) -> Token {

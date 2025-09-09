@@ -204,7 +204,7 @@ impl PrettyString for Class {
             self.name,
             self.generics.to_string(),
             self.fields.iter().map(|el| format!("{}Field >>{}", prefix2, el.node.to_string())).join("\n"),
-            self.methodes.iter().map(|el| format!("{}Methode >>{}", prefix2, el.node.to_pretty(tab+1, is_last))).join("\n"),
+            self.methodes.iter().map(|el| el.node.to_pretty(tab+1, is_last)).join("\n"),
         )
     }
 }

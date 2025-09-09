@@ -122,7 +122,7 @@ fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan)
 
 fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(HashMap<Ident, Expression>, bool)> {
     let group_i = stream.current_index();
-    let group_end_token = "}";
+    const GROUP_END_TOKEN: &str = "}";
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(group_i, stream));
@@ -141,7 +141,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(group_i, stream))
         }
 
-        if stream.current_text() != group_end_token {
+        if stream.current_text() != GROUP_END_TOKEN {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidType, 
                 stream.current_span_some(), 
@@ -159,7 +159,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(group_i, stream))
         }
 
-        if stream.current_text() == group_end_token {
+        if stream.current_text() == GROUP_END_TOKEN {
             break
         }
 
@@ -173,7 +173,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
                 return Err(err_out_of_bounds(group_i, stream))
             }
 
-            if stream.current_text() != group_end_token {
+            if stream.current_text() != GROUP_END_TOKEN {
                 
                 return Err(new_soul_error(
                     SoulErrorKind::UnexpectedToken,
@@ -190,10 +190,13 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
 
         if !stream.peek_is(":") {
 
-            let expression = get_expression(stream, scopes, &[",", "\n", group_end_token])?;
+            let expression = get_expression(stream, scopes, &[",", "\n", GROUP_END_TOKEN])?;
             if let ExpressionKind::Variable(_) = &expression.node {
                 values.insert(name, expression);
-                continue
+                match end_named_loop(stream, group_i, GROUP_END_TOKEN)? {
+                    BREAK => break,
+                    CONTINUE => continue,
+                }
             }
 
             return Err(new_soul_error(
@@ -211,7 +214,7 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(group_i, stream))
         }
 
-        let expression = get_expression(stream, scopes, &[",", "\n", group_end_token, ")"])?;
+        let expression = get_expression(stream, scopes, &[",", "\n", GROUP_END_TOKEN, ")"])?;
         if let Some(duplicate) = values.insert(name, expression) {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidName, 
@@ -224,24 +227,36 @@ fn parse_named_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Res
             return Err(err_out_of_bounds(group_i, stream))
         }
 
-        else if stream.current_text() == group_end_token {
-            break
-        }
-        else if stream.current_text() != "," {
-
-            return Err(new_soul_error(
-                SoulErrorKind::UnexpectedToken, 
-                stream.current_span_some(), 
-                format!("expected ',' or '{}' in group expression", group_end_token),
-            ))
-        }
-
-        if stream.next().is_none() {
-            return Err(err_out_of_bounds(group_i, stream))
+        match end_named_loop(stream, group_i, GROUP_END_TOKEN)? {
+            BREAK => break,
+            CONTINUE => continue,
         }
     }
 
     Ok((values, false))
+}
+
+const BREAK: bool = true;
+const CONTINUE: bool = false;
+fn end_named_loop(stream: &mut TokenStream, group_i: usize, end_token: &str) -> Result<bool> {
+    if stream.current_text() == end_token {
+        return Ok(BREAK)
+    }
+    else if stream.current_text() != "," {
+
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span_some(), 
+            format!("expected ',' or '{}' in group expression", end_token),
+        ))
+    }
+
+    if stream.next().is_none() {
+        Err(err_out_of_bounds(group_i, stream))
+    }
+    else {
+        Ok(CONTINUE)
+    }
 }
 
 fn parse_tuple_or_array(mut collection_type: Option<SoulType>, group_i: usize, stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {

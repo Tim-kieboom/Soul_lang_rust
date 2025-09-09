@@ -1,40 +1,38 @@
 use std::collections::{BTreeMap, HashMap};
-
-use ordered_float::OrderedFloat;
-
 use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{AccessField, Array, ArrayFiller, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Index, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{FunctionCall, StructConstructor}, literal::{Double, Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
 
 // ---------- helpers ----------
 
 
 fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
-let mut line_number = 0;
-let mut line_offset = 0;
-let mut tokens = vec![];
-for text in text_tokens {
-tokens.push(Token {
-text: text.to_string(),
-span: SoulSpan::new(line_number, line_offset, text.len()),
-});
-line_offset += text.len();
-if *text == "\n" {
-line_number += 1;
-line_offset = 0;
-}
-}
+    let mut line_number = 0;
+    let mut line_offset = 0;
+    let mut tokens = vec![];
 
+    for text in text_tokens {
 
-TokenStream::new(tokens)
+        tokens.push(Token {
+            text: text.to_string(),
+            span: SoulSpan::new(line_number, line_offset, text.len()),
+        });
+
+        line_offset += text.len();
+
+        if *text == "\n" {
+            line_number += 1;
+            line_offset = 0;
+        }
+    }
+
+    TokenStream::new(tokens)
 }
-
 
 fn empty_scope() -> ScopeBuilder {
-ScopeBuilder::new()
+    ScopeBuilder::new()
 }
 
-
 fn soul_mem_name(id: usize) -> Ident {
-ProgramMemmory::to_program_memory_name(&ProgramMemmoryId(id))
+    ProgramMemmory::to_program_memory_name(&ProgramMemmoryId(id))
 }
 
 fn int_lit(v: i64) -> ExpressionKind {
@@ -234,6 +232,7 @@ fn test_simple_binary() {
 
     assert_eq_show_diff!(res, should_be);
 
+
     stream = stream_from_strs(&["1", "==", "2", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
 
@@ -251,6 +250,7 @@ fn test_simple_binary() {
 
     assert_eq_show_diff!(res, should_be);
 
+
     stream = stream_from_strs(&["\"hello \"", "+", "\"world\"", "\n"]);
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
 
@@ -264,6 +264,28 @@ fn test_simple_binary() {
             Expression::new(str_lit("world"), SoulSpan::new(0, 9, 7)), 
         )),
         SoulSpan::new(0,0,16)
+    );
+
+    assert_eq_show_diff!(res, should_be);
+
+    
+    let mut stream = stream_from_strs(&["1", "+", "[", "0", "]", "\n"]);
+    let mut scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
+    let res = result.unwrap();
+
+    let should_be = Expression::new(
+        ExpressionKind::Binary(Binary::new(
+            Expression::new(int_lit(1), SoulSpan::new(0, 0, 1)), 
+            BinaryOperator::new(BinaryOperatorKind::Add, SoulSpan::new(0,1,1)), 
+            Expression::new(
+                ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::Array(Box::new(LiteralType::Int)))),
+                SoulSpan::new(0, 2, 3)
+            ), 
+        )),
+        SoulSpan::new(0,0,5)
     );
 
     assert_eq_show_diff!(res, should_be);
@@ -293,10 +315,8 @@ fn test_multiple_binary() {
     );
 
     let expr = result.unwrap();
-    assert_eq_show_diff!(
-        expr,
-        should_be
-    );
+    assert_eq_show_diff!(expr, should_be);
+
 
     let mut scope = empty_scope();
     let mut stream = stream_from_strs(&["(","1", "+", "2", ")", "*", "4", "\n"]);
@@ -319,11 +339,8 @@ fn test_multiple_binary() {
     );
 
     let expr = result.unwrap();
-    assert_eq_show_diff!(
-        expr,
-        should_be,
-        "2"
-    );
+    assert_eq_show_diff!(expr, should_be);
+
 
 
     stream = stream_from_strs(&["(","1", "+", "2", "*", "5", ")", "\n"]);
@@ -347,10 +364,35 @@ fn test_multiple_binary() {
     );
 
     let expr = result.unwrap();
-    assert_eq_show_diff!(
-        expr,
-        should_be
+    assert_eq_show_diff!(expr, should_be);
+
+        
+    let mut stream = stream_from_strs(&["obj", ".", "field", "+", "[", "0", "]", "\n"]);
+    let mut scope = empty_scope();
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
+    let res = result.unwrap();
+
+    let should_be = Expression::new(
+        ExpressionKind::Binary(Binary::new(
+            Expression::new(
+                ExpressionKind::AccessField(AccessField{
+                    object: Box::new(Expression::new(ExpressionKind::Variable(VariableName::new("obj")), SoulSpan::new(0,0,3))), 
+                    field: VariableName::new("field"),
+                }), 
+                SoulSpan::new(0, 0, 9),
+            ), 
+            BinaryOperator::new(BinaryOperatorKind::Add, SoulSpan::new(0,9,1)), 
+            Expression::new(
+                ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::Array(Box::new(LiteralType::Int)))),
+                SoulSpan::new(0, 10, 3)
+            ), 
+        )),
+        SoulSpan::new(0,0,13)
     );
+
+    assert_eq_show_diff!(res, should_be);
 }
 
 // # Unary

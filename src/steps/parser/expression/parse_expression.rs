@@ -7,10 +7,10 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Span
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::literal::Literal;
 use crate::steps::parser::expression::symbool::{Bracket, Operator, Symbool, SymboolKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
-use crate::soul_names::{check_name_allow_types, could_be_name, NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES};
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
-use crate::steps::parser::expression::parse_expression_groups::{get_function_call, try_get_expression_group};
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
+use crate::steps::parser::expression::parse_expression_groups::{get_function_call, try_get_expression_group};
+use crate::soul_names::{check_name_allow_types, could_be_name, NamesOtherKeyWords, NamesTypeWrapper, SOUL_NAMES};
 use crate::steps::parser::expression::merge_expression::{convert_bracket_expression, get_binary_expression, get_unary_expression, merge_expressions};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{AccessField, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Index, ReturnKind, ReturnLike, Ternary, Tuple, UnaryOperatorKind, VariableName};
 
@@ -40,30 +40,12 @@ pub fn get_expression(
     inner_get_expression(stream, scopes, &mut ExpressionOptions::default(), false, end_tokens)
 }
 
-pub fn get_expression_options(
-    stream: &mut TokenStream, 
-    scopes: &mut ScopeBuilder, 
-    mut options: ExpressionOptions,
-    end_tokens: &[&str],
-) -> Result<Expression> {
-    inner_get_expression(stream, scopes, &mut options, false, end_tokens)
-}
-
 pub fn get_expression_statment(
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder, 
     end_tokens: &[&str],
 ) -> Result<Expression> {
     inner_get_expression(stream, scopes, &mut ExpressionOptions::default(), true, end_tokens)
-}
-
-pub fn get_expression_statment_options(
-    stream: &mut TokenStream, 
-    scopes: &mut ScopeBuilder, 
-    mut options: ExpressionOptions,
-    end_tokens: &[&str],
-) -> Result<Expression> {
-    inner_get_expression(stream, scopes, &mut options, true, end_tokens)
 }
 
 fn inner_get_expression(
@@ -635,8 +617,15 @@ impl AfterExpressionSymbools {
             None => return Self::None,
         };
 
+        
+
         match token {
-            "[" => Self::Index,
+            "[" => if Self::can_be_index(stacks) {
+                Self::Index
+            } 
+            else {
+                Self::None
+            },
             "." => Self::FieldOrMethode,
             "?" => Self::Ternary,
             _ => Self::None,
@@ -645,6 +634,10 @@ impl AfterExpressionSymbools {
 
     fn should_convert_to_ref(stacks: &ExpressionStacks) -> bool {
         !stacks.refs.is_empty() && !stacks.expressions.is_empty()
+    }
+
+    fn can_be_index(stacks: &ExpressionStacks) -> bool {
+        stacks.symbools.len() != stacks.expressions.len()
     }
 }
 
@@ -675,8 +668,8 @@ fn has_no_operators(stacks: &ExpressionStacks) -> bool {
 fn is_end_token(token: &Token, end_tokens: &[&str], options: &ExpressionOptions) -> bool {
     end_tokens.iter().any(|str| str == &token.text) && 
     end_token_special_cases(token, options)
-
 }
+
 fn end_token_special_cases(token: &Token, options: &ExpressionOptions) -> bool {
     token.text != ")" || 
     // Special case: if one of the end_tokens is ')',
@@ -724,14 +717,6 @@ impl RefKind {
             val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Pointer) => Some(Self::Deref),
             val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => Some(Self::ConstRef),
             _ => None,
-        }
-    }
-
-    pub fn to_str(&self) -> &str {
-        match self {
-            RefKind::Deref => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer),
-            RefKind::MutRef => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
-            RefKind::ConstRef => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
         }
     }
 }
