@@ -14,6 +14,8 @@ pub struct GenericDecl {
 pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<GenericDecl> {
     let mut generics_decl = GenericDecl{generics: vec![], implements: vec![]};
 
+    try_add_impl(&mut generics_decl, stream, scopes)?;
+
     if stream.current_text() != "<" {
         return Ok(generics_decl)
     }
@@ -144,13 +146,13 @@ pub fn get_generics_decl(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
         }
     }
 
-    add_impl(&mut generics_decl, stream, scopes)?;
-    add_where(&mut generics_decl, stream, scopes)?;
+    try_add_impl(&mut generics_decl, stream, scopes)?;
+    try_add_where(&mut generics_decl, stream, scopes)?;
 
     Ok(generics_decl)
 }
 
-fn add_where(
+fn try_add_where(
     generics_decl: &mut GenericDecl, 
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder,
@@ -221,12 +223,12 @@ fn add_where(
     Ok(())
 }
 
-fn add_impl(
+fn try_add_impl(
     generics_decl: &mut GenericDecl, 
     stream: &mut TokenStream, 
     scopes: &mut ScopeBuilder,
 ) -> Result<()> {
-    
+
     if stream.next_if("\n").is_none() {
         return Err(err_out_of_bounds(stream))
     }
@@ -278,16 +280,17 @@ fn add_generic_type_contraints(
     
     loop {
 
-        if stream.current_text() == "typeof" {
+        if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) {
             
             let types = get_type_enum_body(stream, scopes)?;
             contraints.push(TypeConstraint::LiteralTypeEnum(types));
         }
         else if stream.current_text() == "[" {
+            let symbool = SOUL_NAMES.get_name(NamesOtherKeyWords::Impl);
             return Err(new_soul_error(
                 SoulErrorKind::InvalidInContext, 
                 stream.current_span_some(), 
-                "'[' is not allowed in generic contraint, if you want a typeEnum try adding 'typeof' before '[' ('<T: [u8, i8]>' not ok, '<T: typeof[u8, i8]>' ok)"
+                format!("'[' is not allowed in generic contraint, if you want a typeEnum try adding '{}' before '[' ('<T: [u8, i8]>' not ok, '<T: {}[u8, i8]>' ok)", symbool, symbool), 
             ))
         }
         else {
@@ -329,11 +332,11 @@ pub fn get_type_enum_body(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -
         new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), "unexpeced end while parsing typeEnum")
     }
     
-    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
+    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
             stream.current_span_some(), 
-            format!("token: '{}' should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof)),
+            format!("token: '{}' should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Impl)),
         ))
     }
 

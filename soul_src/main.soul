@@ -1,4 +1,4 @@
-type string typeof str
+type string impl str
 
 const One = 1
 Sum(int a, int b) int {
@@ -24,7 +24,7 @@ functionCall() {
         return a + b
     }
 
-    sumGeneric<T: Number + typeof[u8, i8, int]>(T a, T b) T {
+    sumGeneric<T: Number + impl[u8, i8, int]>(T a, T b) T {
         return a + b
     }
 
@@ -47,6 +47,9 @@ functionCall() {
     object.field
         .Methode()
         .field
+
+    sumStackArray([1,2,3,4,5])
+    sumStackArray<5>([1,2,3,4,5])
 }
 
 variable() {

@@ -163,7 +163,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     let span = stream[class_i].span.combine(&stream.current_span());
-    Ok(Spanned::new(Class{name, generics: generics.generics, fields, methodes}, span))
+    Ok(Spanned::new(Class{name, generics: generics.generics, implements: generics.implements, fields, methodes}, span))
 }
 
 pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Trait>> {

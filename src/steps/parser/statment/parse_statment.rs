@@ -274,8 +274,8 @@ fn get_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(
 
     let name = new_type.base.to_name_string();
 
-    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
-        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span_some(), format!("token: '{}', should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
+    if stream.current_text() != SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) {
+        return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span_some(), format!("token: '{}', should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Impl))))
     }
     
     if stream.next().is_none() {
@@ -283,7 +283,7 @@ fn get_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(
     }
 
     if stream.current_text() == "\n" {
-        return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), format!("not type after '{}'", SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof))))
+        return Err(new_soul_error(SoulErrorKind::UnexpectedEnd, stream.current_span_some(), format!("not type after '{}'", SOUL_NAMES.get_name(NamesOtherKeyWords::Impl))))
     }
 
     let of_type = SoulType::from_stream(stream, scopes)?;

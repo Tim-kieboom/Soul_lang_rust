@@ -198,10 +198,18 @@ impl PrettyString for Class {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
         let prefix2 = tree_prefix(tab+1, is_last);
+        let impls = if self.implements.is_empty() {
+            ""
+        }
+        else {
+            &format!(" impl {}", self.implements.iter().map(|el| el.to_string()).join(" + "))
+        };
+
         format!(
-            "{}Class >> {}{}\n{}{}",
+            "{}Class >> {}{}{}\n{}{}",
             prefix,
             self.name,
+            impls,
             self.generics.to_string(),
             self.fields.iter().map(|el| format!("{}Field >>{}", prefix2, el.node.to_string())).join("\n"),
             self.methodes.iter().map(|el| el.node.to_pretty(tab+1, is_last)).join("\n"),

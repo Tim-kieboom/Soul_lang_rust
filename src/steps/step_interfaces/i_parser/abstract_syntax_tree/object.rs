@@ -14,6 +14,7 @@ pub struct Struct {
 pub struct Class {
     pub name: Ident,
     pub generics: Vec<GenericParameter>,
+    pub implements: Vec<SoulType>,
     pub fields: Vec<Spanned<Field>>,
     pub methodes: Vec<Spanned<Function>>,
 }

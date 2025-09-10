@@ -38,7 +38,7 @@ structs() {
 
 classes() {
 
-    class Class {
+    class Class impl Add<This> {
         int field
         int default = 0
         int pubGet {Get;} = 0
@@ -88,12 +88,22 @@ classes() {
 
         // impl Add<This> {
            
-        //     Add(mut this, This a) This {
-        //         this.field += a.field
+        //     Add(this, This a) This {
+        //         self := this.field.copy
+        //         self.field += a.field
         //         return this                
         //     }
         // }
     }
+
+    // use Class impl Sub<This> {
+
+    //     Sub(mut this, This a) This {
+    //         self := this.field.copy
+    //         self.field -= a.field
+    //         return this 
+    //     } 
+    // }
 
     class Data {
         int field
