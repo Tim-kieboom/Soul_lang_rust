@@ -51,10 +51,6 @@ fn inner_get_statment_type(stream: &mut TokenStream) -> Result<StatementType> {
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Trait) => {
             return Ok(StatementType::Trait)
         },
-
-        val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum) => {
-            return Ok(StatementType::TypeEnum)
-        },
         val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Union) => {
             return Ok(StatementType::Union)
         },
@@ -218,7 +214,6 @@ pub enum StatementType {
 
     Enum,
     Union,
-    TypeEnum,
 
     If,
     For,

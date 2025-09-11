@@ -44,11 +44,11 @@ unions() {
 
 typeEnums() {
 
-    typeEnum Float impl[f8, f16, f32, f64, untypedFloat]
-    typeEnum Interger impl[i8, i16, i32, i64, int, untypedInt]
-    typeEnum UInterger impl[u8, u16, u32, u64, uint, untypedUint]
+    type Float impl[f8, f16, f32, f64, untypedFloat]
+    type Interger impl[i8, i16, i32, i64, int, untypedInt]
+    type UInterger impl[u8, u16, u32, u64, uint, untypedUint]
 
-    typeEnum Number impl[Float, Interger, UInterger]
+    type Number impl[Float, Interger, UInterger]
 }
 
 

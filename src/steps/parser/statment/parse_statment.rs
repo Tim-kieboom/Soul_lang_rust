@@ -1,20 +1,19 @@
-use itertools::Itertools;
 use crate::steps::parser::statment::parse_function::get_function;
-use crate::steps::parser::statment::parse_object::{get_class, get_struct, get_trait};
 use crate::steps::parser::statment::parse_variable::get_variable;
 use crate::steps::step_interfaces::i_parser::scope_builder::ScopeKind;
+use crate::soul_names::{NamesOtherKeyWords, ASSIGN_SYMBOOLS, SOUL_NAMES};
 use crate::steps::parser::statment::parse_enum_like::{get_enum, get_union};
 use crate::steps::parser::statment::parse_generics_decl::{get_type_enum_body};
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
-use crate::soul_names::{check_name, NamesOtherKeyWords, ASSIGN_SYMBOOLS, SOUL_NAMES};
+use crate::steps::parser::statment::parse_object::{get_class, get_struct, get_trait};
 use crate::steps::parser::statment::statment_type::{get_statement_type, StatementType};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::enum_like::TypeEnum;
 use crate::steps::parser::expression::parse_expression::{get_expression, get_expression_statment};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, Ident, VariableName};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, VariableName};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Assignment, Block, StatementKind, STATMENT_END_TOKENS};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
 
@@ -100,10 +99,6 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             let union_decl = get_union(stream, scopes)?;
             Statement::new(StatementKind::Union(union_decl.node), union_decl.span)
         },
-        StatementType::TypeEnum => {
-            get_type_enum(stream, scopes)?;
-            return Ok(None);
-        },
 
         StatementType::If => {
             let expression = get_if(stream, scopes)?;
@@ -130,7 +125,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         },
 
         StatementType::Type => {
-            get_type_def(stream, scopes)?;
+            get_type_def_or_type_enum(stream, scopes)?;
             return Ok(None);
         },
         StatementType::Return |
@@ -212,40 +207,6 @@ fn get_if(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Express
     }
 }
 
-fn get_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
-    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::TypeEnum));
-
-    let type_def_i = stream.current_index();
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream))
-    }
-
-    check_name(&stream.current_text())
-        .map_err(|msg| new_soul_error(SoulErrorKind::InvalidName, stream.current_span_some(), msg))?;
-
-    let name_i = stream.current_index();
-    
-    if stream.next().is_none() {
-        return Err(err_out_of_bounds(stream));
-    } 
-
-    let type_enum_body = get_type_enum_body(stream, scopes)?; 
-
-    if !STATMENT_END_TOKENS.iter().any(|sym| sym == stream.current_text()) {
-        return Err(new_soul_error(
-            SoulErrorKind::UnexpectedEnd, 
-            stream.current_span_some(), 
-            format!("token: '{}' is incorrect end of typeEnum should be one of these of ['{}']", stream.current_text(), STATMENT_END_TOKENS.iter().map(|el| if *el == "\n" {"\\n"} else {el}).join("' or '")),
-        ));
-    }
-
-    let name = stream[name_i].text.as_str().into();
-    let span = stream[type_def_i].span.combine(&stream.current_span());
-    let type_enum = TypeEnum{name: Ident::new(&name), body: type_enum_body};
-
-    scopes.insert(name, ScopeKind::TypeEnum(type_enum), span);
-    Ok(())
-}
 
 fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Assignment>> {
     let assign_i = stream.current_index();
@@ -259,7 +220,7 @@ fn get_assignment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     Ok(Spanned::new(Assignment{variable, value}, span))
 }
 
-fn get_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
+fn get_type_def_or_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<()> {
     debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Type));
     
     if stream.next().is_none() {
@@ -278,6 +239,15 @@ fn get_type_def(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(
         return Err(new_soul_error(SoulErrorKind::InvalidType, stream.current_span_some(), format!("token: '{}', should be '{}'", stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Impl))))
     }
     
+    if stream.peek_is("[") {
+        let body = get_type_enum_body(stream, scopes)?;
+
+        let span = stream[type_i].span.combine(&stream.current_span());
+        scopes.insert(name.clone(), ScopeKind::TypeEnum(TypeEnum{name: name.into(), body}), span);
+        
+        return Ok(())
+    }
+
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream))
     }
