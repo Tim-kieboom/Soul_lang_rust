@@ -108,7 +108,7 @@ ifs() {
         Println("how????")
     }
 
-    let value = if true {
+    mut value = if true {
         fall 1
     }
     else {

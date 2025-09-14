@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{soul_names::{check_name_allow_types, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::get_number, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}}, i_tokenizer::TokenStream}}};
+use crate::{soul_names::{check_name_allow_types, NamesOtherKeyWords, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::get_number, step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}, i_tokenizer::TokenStream}}};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct  SoulType {

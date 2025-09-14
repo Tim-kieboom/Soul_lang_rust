@@ -28,12 +28,18 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     let is_let = stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Let);
 
     let modifier = if is_type_invered {
-        let modi = Modifier::from_str(stream.current_text());
+
+        let has_mut = stream.current_is("mut");
+        let mut modi = Modifier::from_str(stream.current_text());
         if modi != Modifier::Default || stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Let) {
 
             if stream.next().is_none() {
                 return Err(err_out_of_bounds(stream));
             }
+        }
+
+        if !has_mut && modi == Modifier::Default {
+            modi = Modifier::Const;
         }
 
         modi
@@ -105,7 +111,8 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)
             .map_err(|err| pass_soul_error(err.get_last_kind(), Some(stream[begin_i].span), format!("while trying to get assignment of variable: '{}'", name).as_str(), err))?;
 
-        let ty = SoulType::none();
+        let mut ty = SoulType::none();
+        ty.modifier = modifier;
 
         let span = stream[begin_i].span.combine(&stream.current_span());
         return Ok(Spanned::new(Variable{name, ty, initialize_value: Some(expression)}, span))
