@@ -21,7 +21,7 @@ matchs() {
 
 whiles() {
 
-    i := 0
+    mut i := 0
     while true {
         if i == 20 {
             break
@@ -30,7 +30,7 @@ whiles() {
         i++
     }
 
-    stack := List[1,2,3,4,5,6,7,8,9,10]
+    mut stack := List[1,2,3,4,5,6,7,8,9,10]
     while !stack.IsEmpty() {
         Println(stack.Pop().Unwrap())
     }
@@ -40,7 +40,7 @@ whiles() {
     //     Println(element)
     // }
 
-    value := 0
+    mut value := 0
     stack = List[1,2,3,4,5,6,7,8,9,10]
     const sum = while {
 
@@ -55,7 +55,7 @@ whiles() {
 
 fors() {
     
-    value := 0
+    mut value := 0
     for i in 0..10 {
         
         if i == 5 {

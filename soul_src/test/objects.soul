@@ -32,7 +32,7 @@ structs() {
         return This{field, ..}
     }
 
-    let object = Object{field: 1, ..}
+    mut object = Object{field: 1, ..}
     object = Object(1)
 }
 
@@ -133,7 +133,7 @@ classes() {
         }
     }
 
-    let object = Class(1)
+    mut object = Class(1)
     object = Class[int: 1,2,3,4] 
 }
 
