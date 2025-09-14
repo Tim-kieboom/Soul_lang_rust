@@ -1,6 +1,6 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, ExpressionKind, VariableName}, function::Function, object::{Class, Struct, Trait, TraitSignature}, soul_type::soul_type::{Modifier, SoulType}, spanned::{SpannedAttribute}}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, ExpressionKind, VariableName}, function::Function, object::{Class, Struct, Trait}, soul_type::soul_type::{Modifier, SoulType}, spanned::{SpannedAttribute}}};
 
 
 pub type Statement = SpannedAttribute<StatementKind>;
@@ -15,7 +15,7 @@ pub enum StatementKind {
     Assignment(Assignment),
     
     Function(Function),
-    Implement(Implement),
+    UseBlock(UseBlock),
 
     Class(Class),
     Struct(Struct),
@@ -35,8 +35,8 @@ pub struct Assignment {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
-pub struct Implement {
-    pub impl_trait: Option<TraitSignature>,
+pub struct UseBlock {
+    pub impl_trait: Option<SoulType>,
     pub ty: SoulType,
     pub block: Block,
 }

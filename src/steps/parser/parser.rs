@@ -5,9 +5,9 @@ use crate::steps::step_interfaces::{i_parser::parser_response::ParserResponse, i
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::{AbstractSyntacTree, BlockBuilder};
 
 
-pub fn parse_ast(tokens: TokenizeResonse) -> Result<ParserResponse> {
+pub fn parse_ast(tokens: TokenizeResonse, project_name: String) -> Result<ParserResponse> {
     let mut stream = tokens.stream;
-    let mut scopes = ScopeBuilder::new();
+    let mut scopes = ScopeBuilder::new(project_name);
 
     let mut block_builder = BlockBuilder::new(SoulSpan::new(0,0,0));
     loop {

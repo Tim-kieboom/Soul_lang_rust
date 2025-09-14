@@ -1,7 +1,7 @@
 use crate::errors::soul_error::{Result, SoulSpan};
 use crate::steps::parser::statment::parse_statment::get_statment;
 use crate::steps::step_interfaces::i_parser::scope_builder::{ScopeKind, Variable};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::StatementKind;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{StatementKind, UseBlock};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::BlockBuilder;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind};
@@ -25,6 +25,16 @@ pub fn get_block_no_scope_push(
     get_inner_block(stream, scopes, possible_this, parameters, false)
 }
 
+pub fn get_use_block(
+    stream: &mut TokenStream,
+    scopes: &mut ScopeBuilder,
+    this: SoulType,
+    possible_impl_trait: Option<SoulType>,
+) -> Result<Spanned<UseBlock>> {
+    debug_assert!(stream.current_is("{"));
+
+    todo!()
+}
 
 fn get_inner_block(
     stream: &mut TokenStream,
@@ -33,7 +43,7 @@ fn get_inner_block(
     parameters: Vec<Spanned<Parameter>>,
     push_scope: bool,
 ) -> Result<Spanned<Block>> {
-        if stream.current_text() != "{" {
+    if !stream.current_is("{") {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken,
             stream.current_span_some(),

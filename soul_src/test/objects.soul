@@ -86,14 +86,14 @@ classes() {
             }
         }
 
-        // impl Add<This> {
+        impl Add<This> {
            
-        //     Add(this, This a) This {
-        //         self := this.field.copy
-        //         self.field += a.field
-        //         return this                
-        //     }
-        // }
+            Add(this, This a) This {
+                self := this.field.copy
+                self.field += a.field
+                return this                
+            }
+        }
     }
 
     // use Class impl Sub<This> {

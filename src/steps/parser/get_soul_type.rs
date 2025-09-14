@@ -208,6 +208,16 @@ fn get_double_colon_type(stream: &mut TokenStream) -> Result<SoulType, FromStrea
             return Err(err_out_of_bounds(stream))
         }
 
+        if stream.current_text() == "[" {
+            
+            return Err(new_from_stream_error(
+                SoulErrorKind::InvalidType, 
+                stream.current_span(), 
+                format!("token: '[' is invalid for type is probably a use path"), 
+                FromStreamErrorKind::IsNotOfType,
+            ))
+        }
+
         check_name_allow_types(stream.current_text())
             .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
 

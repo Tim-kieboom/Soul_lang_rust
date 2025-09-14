@@ -224,7 +224,7 @@ impl SoulNames {
             (NamesOtherKeyWords::Trait, "trait"),
             (NamesOtherKeyWords::Impl, "impl"),
             (NamesOtherKeyWords::Where, "where"),
-            (NamesOtherKeyWords::Let, "let"),
+            (NamesOtherKeyWords::Let, "mut"),
             
             
             (NamesOtherKeyWords::CopyData, "copy"),

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::{Component, Path, PathBuf}};
 
 use bincode::{Decode, Encode};
 use itertools::Itertools;
@@ -90,6 +90,74 @@ pub enum UnionKind {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct SoulPagePath(pub String);
+impl SoulPagePath {
+    pub fn from_path(path: &PathBuf) -> Self {
+        let mut soul_path = String::new();
+        let mut components = path.components().peekable();
+
+        while let Some(component) = components.next() {
+            
+            if let Component::Normal(os_str) = component {
+                if soul_path.len() > 0 {
+                    soul_path.push_str(".");
+                }
+
+                if components.peek().is_none() {
+                    let path = PathBuf::from(&os_str);
+                    let stem = path.file_stem()
+                        .map(|s| s.to_string_lossy())
+                        .unwrap_or_else(|| os_str.to_string_lossy());
+                    
+                    soul_path.push_str(&stem);
+                } 
+                else {
+                    soul_path.push_str(&os_str.to_string_lossy());
+                }
+            }
+        }
+
+        Self(soul_path)
+    } 
+
+    pub fn to_path_buf(&self, add_soul_extention: bool) -> PathBuf {
+        let mut path = PathBuf::new();
+
+        for token in self.0.split(".") {
+            path.push(Path::new(token));
+        }
+        
+        if add_soul_extention {
+            Self::append_extension(&path, "soul")
+        }
+        else {
+            path
+        }
+    }
+
+    pub fn get_last_name(&self) -> &str {
+        self.0
+            .split(".")
+            .last()
+            .unwrap_or("")
+    }
+
+    pub fn pop(&mut self) -> bool {
+        if let Some(pos) = self.0.rfind('.') {
+            self.0.truncate(pos);
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    fn append_extension(path: &Path, ext: &str) -> PathBuf {
+        let mut os_string = path.as_os_str().to_owned();
+        os_string.push(".");
+        os_string.push(ext);
+        PathBuf::from(os_string)
+    }
+}
 
 impl UnionType {
     pub fn to_string(&self) -> String {
@@ -109,7 +177,13 @@ impl UnionType {
 
 impl ExternalType {
     pub fn to_string(&self) -> String {
-        format!("{}::{}", self.path.0, self.name.0)
+        format!("{}.{}", self.path.0, self.name.0)
+    }
+}
+
+impl ExternalPath {
+    pub fn to_string(&self) -> String {
+        format!("{}.{}", self.path.0, self.name.0)
     }
 }
 
@@ -244,8 +318,8 @@ impl TypeKind {
             TypeKind::Generic(ident) => ident.0.clone(),
             TypeKind::LifeTime(ident) => ident.0.clone(),
             TypeKind::Lambda(signature) => signature.to_type_string(),
-            TypeKind::ExternalType(ty) => ty.node.to_string(),
-            TypeKind::ExternalPath(path) => format!("<path>{}", path.node.name.0),
+            TypeKind::ExternalType(ty) => format!("|ExternalType| {}", ty.node.to_string()),
+            TypeKind::ExternalPath(path) => format!("|ExternalPath| {}", path.node.to_string()),
         }
     }
 

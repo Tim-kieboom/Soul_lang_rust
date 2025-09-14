@@ -214,28 +214,56 @@ fn get_parameters(
     let mut this = None;
     let mut parameter_position = 0;
     loop {
-
+        
         parameter_position += 1;
-        if stream.current_text() == "this" {
+        
+        let is_mutable;
+        if stream.current_is("mut") {
+            is_mutable = true;
+            if stream.next().is_none() {
+                return Err(err_out_of_bounds(stream))
+            }
+        }
+        else {
+            is_mutable = false;
+        }
+
+        if stream.current_is("this") {
             this = Some(get_this_type(parameter_position, callee, stream)?);
 
-            if stream.current_text() == "," {
+            if stream.current_is(",") {
                 if stream.next().is_none() {
                     return Err(err_out_of_bounds(stream))
                 }
                 
                 continue
             }
-            else if stream.current_text() == end_symbool {
+            else if stream.current_is(end_symbool) {
                 break
             }
         }
 
         let arg_start_i = stream.current_index();
-        let ty = SoulType::from_stream(stream, scopes)
+        let mut ty = SoulType::from_stream(stream, scopes)
             .map_err(|child| pass_soul_error(SoulErrorKind::ArgError, stream.current_span_some(), format!("while trying to get parameter number {}", parameter_position), child))?;
         
-        if stream.current_text() == end_symbool {
+        if ty.modifier != Modifier::Default {
+            
+            return Err(new_soul_error(
+                SoulErrorKind::InvalidType,
+                stream.current_span_some(),
+                format!("parameter can not have any modifier (only '<type> <name>' or 'mut <type> <name>' is allowed)"),
+            ))
+        }
+
+        ty.modifier = if is_mutable {
+            Modifier::Default
+        }
+        else {
+            Modifier::Const
+        };
+
+        if stream.current_is(end_symbool) {
             break
         }
 
@@ -251,7 +279,7 @@ fn get_parameters(
         let span = stream[arg_start_i].span.combine(&stream.current_span());
         parameters.push(Spanned::new(Parameter{name, ty}, span));
 
-        if stream.current_text() != "," {
+        if !stream.current_is(",") {
             break
         }
 
@@ -260,7 +288,7 @@ fn get_parameters(
         }
     }
 
-    if stream.current_text() != end_symbool {
+    if !stream.current_is(end_symbool) {
         return Err(new_soul_error(
             SoulErrorKind::ArgError, 
             stream.current_span_some(), 
@@ -314,7 +342,7 @@ fn get_this_type(arg_position: usize, callee: &Option<SoulType>, stream: &mut To
     };
 
     
-    if stream.current_text() == "," || stream.current_text() == ")" {
+    if stream.current_is(",") || stream.current_is(")") {
         return Ok(ty)
     }
     else {

@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, function::{Function, FunctionSignature}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, function::{Function, FunctionSignature}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned, statement::UseBlock};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Struct {
@@ -15,8 +15,7 @@ pub struct Class {
     pub name: Ident,
     pub generics: Vec<GenericParameter>,
     pub implements: Vec<SoulType>,
-    pub fields: Vec<Spanned<Field>>,
-    pub methodes: Vec<Spanned<Function>>,
+    pub children: Vec<ClassChild>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -30,6 +29,13 @@ pub struct TraitSignature {
     pub name: Ident,
     pub generics: Vec<GenericParameter>,
     pub implements: Vec<SoulType>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum ClassChild {
+    Field(Spanned<Field>),
+    Methode(Spanned<Function>),
+    ImplBlock(Spanned<UseBlock>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]

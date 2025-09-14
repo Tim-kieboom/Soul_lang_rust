@@ -39,7 +39,7 @@ pub struct SoulSpan {
     pub line_number: usize,
     ///for multiline span
     pub end_line_number: Option<usize>,
-    ///lineoffset from last line
+    ///line_offset from last line
     pub line_offset: usize,
     ///length from from last line line_offset to end
     pub len: usize,
@@ -58,6 +58,7 @@ impl SoulSpan {
         self.line_number == other.line_number && self.line_offset == other.line_offset && self.len == other.len
     }
 
+    /// gets lowest begin and highest en of both spans and combines them
     pub fn combine(&self, other: &Self) -> Self {
         if self.line_number != other.line_number {
             let line_number = self.line_number.min(other.line_number);

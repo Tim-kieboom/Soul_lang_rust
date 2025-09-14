@@ -98,7 +98,11 @@ impl TokenStream {
 
     pub fn current_text(&self) -> &String {
         &self.current().text
-    }    
+    } 
+
+    pub fn current_is(&self, text: &str) -> bool {
+        self.current().text == text
+    }   
     
     pub fn current_span(&self) -> SoulSpan {
         self.current().span

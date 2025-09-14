@@ -245,7 +245,7 @@ pub fn parser<'a>(token_response: TokenizeResonse, info: &RunStepsInfo<'a>) -> R
     
     let start = Instant::now(); 
 
-    let parse_response = parse_ast(token_response)?;
+    let parse_response = parse_ast(token_response, info.run_options.project_name.clone())?;
     if info.run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
         info.time_logs
             .lock().unwrap()

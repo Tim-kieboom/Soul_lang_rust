@@ -18,7 +18,7 @@ fn stream_from_strs(tokens: &[&str]) -> TokenStream {
 }
 
 fn dummy_scopes() -> ScopeBuilder {
-    ScopeBuilder::new()
+    ScopeBuilder::new("testProject".to_string())
 }
 
 #[test]

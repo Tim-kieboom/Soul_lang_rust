@@ -1,9 +1,7 @@
-use std::collections::{BTreeMap, HashMap};
-
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-
-use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::soul_type::SoulType, spanned::Spanned}};
+use std::collections::{BTreeMap, HashMap};
+use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::{soul_type::SoulType}, spanned::Spanned}};
 
 
 type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
@@ -13,6 +11,7 @@ pub struct ScopeBuilder {
     scopes: Vec<Scope>,
     current: usize,
     pub global_literals: ProgramMemmory,
+    pub project_name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -38,6 +37,7 @@ pub enum ScopeKind {
     TypeEnum(TypeEnum),
     Type(SoulType),
     TypeDef{new_type: SoulType, of_type: SoulType},
+    UseTypeDef{new_type: SoulType, of_type: SoulType},
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -80,11 +80,13 @@ impl ScopeBuilder {
 
     const GLOBAL_SCOPE_INDEX: usize = 0;
 
-    pub fn new() -> Self {
+    pub fn new(project_name: String) -> Self {
         Self { 
             scopes: vec![Scope::new_global()], 
             current: Self::GLOBAL_SCOPE_INDEX, 
             global_literals: ProgramMemmory::new(),
+            
+            project_name,
         }
     }
 

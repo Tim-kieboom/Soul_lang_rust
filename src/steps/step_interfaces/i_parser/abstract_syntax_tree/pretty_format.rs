@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{StructConstructor, Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod}, generic::GenericParameter, literal::Literal, object::{Class, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, Implement, StatementKind}}, scope_builder::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod, StructConstructor}, generic::GenericParameter, literal::Literal, object::{Class, ClassChild, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, StatementKind, UseBlock}}, scope_builder::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -84,21 +84,21 @@ impl PrettyString for StatementKind {
             StatementKind::Union(union) => union.to_pretty(tab, is_last),
             StatementKind::TypeEnum(type_enum) => type_enum.to_pretty(tab, is_last),
 
-            StatementKind::Implement(implement) => implement.to_pretty(tab, is_last),
+            StatementKind::UseBlock(implement) => implement.to_pretty(tab, is_last),
 
             StatementKind::CloseBlock => format!("{}CloseBlock\n{}", prefix, tree_next_line_prefix(tab)),
         }
     }
 }
 
-impl PrettyString for Implement {
+impl PrettyString for UseBlock {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
         format!(
             "{}Implement >> use {}{}\n{}",
             prefix,
             self.ty.to_string(),
-            self.impl_trait.as_ref().map(|el| format!("impl {}{}", el.name, el.generics.to_string())).unwrap_or(String::new()),
+            self.impl_trait.as_ref().map(|el| format!(" impl {}", el.to_string())).unwrap_or(String::new()),
             self.block.to_pretty(tab+1, is_last),
         )
     }
@@ -206,13 +206,16 @@ impl PrettyString for Class {
         };
 
         format!(
-            "{}Class >> {}{}{}\n{}{}",
+            "{}Class >> {}{}{}\n{}",
             prefix,
             self.name,
             impls,
             self.generics.to_string(),
-            self.fields.iter().map(|el| format!("{}Field >>{}", prefix2, el.node.to_string())).join("\n"),
-            self.methodes.iter().map(|el| el.node.to_pretty(tab+1, is_last)).join("\n"),
+            self.children.iter().map(|el| match el {
+                ClassChild::Field(spanned) => format!("{}Field >>{}", prefix2, spanned.node.to_string()),
+                ClassChild::Methode(spanned) => spanned.node.to_pretty(tab+1, is_last),
+                ClassChild::ImplBlock(spanned) => spanned.node.to_pretty(tab+1, is_last),
+            }).join("\n"),
         )
     }
 }
@@ -275,7 +278,8 @@ impl ToString for ScopeKind {
             ),
 
             ScopeKind::Type(soul_type) => format!("Type >> {} ", soul_type.to_string()),
-            ScopeKind::TypeDef{new_type, of_type} => format!("TypeDef >> {} typeof {}", new_type.to_string(), of_type.to_string()),
+            ScopeKind::TypeDef{new_type, of_type} => format!("TypeDef >> type {} impl {}", new_type.to_string(), of_type.to_string()),
+            ScopeKind::UseTypeDef{new_type, of_type} => format!("UseTypeDef >> use {} impl {}", new_type.to_string(), of_type.to_string()),
         }  
     }
 }

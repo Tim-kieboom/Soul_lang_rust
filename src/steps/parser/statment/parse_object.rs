@@ -10,7 +10,9 @@ use crate::steps::parser::statment::parse_function::{get_methode, get_methode_si
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::object::{Class, Field, FieldAccess, Struct, Trait, TraitSignature, Visibility};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::BlockBuilder;
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Statement, StatementKind, UseBlock};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::object::{Class, ClassChild, Field, FieldAccess, Struct, Trait, TraitSignature, Visibility};
 
 pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Struct>> {
     debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Struct));
@@ -78,7 +80,10 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     }
 
     let span = stream[struct_i].span.combine(&stream.current_span());
-    Ok(Spanned::new(Struct{name, generics: generics.generics, fields}, span))
+    let struct_decl = Struct{name: name.clone(), generics: generics.generics, fields};
+    scopes.insert(name.0, ScopeKind::Struct(struct_decl.clone()), span);
+
+    Ok(Spanned::new(struct_decl, span))
 }
 
 pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Class>> {
@@ -121,8 +126,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     let class_ty = SoulType::from_type_kind(TypeKind::Unknown(name.clone()));
-    let mut fields = vec![];
-    let mut methodes = vec![];
+    let mut children = vec![];
     loop {
         if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(stream))
@@ -136,17 +140,18 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 
             if let Some(field) = get_field(stream, scopes)? {
                 
-                fields.push(field);
+                children.push(ClassChild::Field(field));
                 continue
             }
         }
         
         if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Impl) {
-            todo!("todo>> impl trait in class")
+            let block = get_impl_block(stream, scopes, &class_ty)?;
+            children.push(ClassChild::ImplBlock(block));
         }
         else {
             if let Ok(methode) = get_methode(stream, scopes, class_ty.clone()) {
-                methodes.push(methode);
+                children.push(ClassChild::Methode(methode));
             }
             else {
                 return Err(new_soul_error(
@@ -163,7 +168,10 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     let span = stream[class_i].span.combine(&stream.current_span());
-    Ok(Spanned::new(Class{name, generics: generics.generics, implements: generics.implements, fields, methodes}, span))
+    let class_decl = Class{name: name.clone(), generics: generics.generics, implements: generics.implements, children};
+    scopes.insert(name.0, ScopeKind::Class(class_decl.clone()), span);
+    
+    Ok(Spanned::new(class_decl, span))
 }
 
 pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Trait>> {
@@ -308,6 +316,64 @@ fn get_field(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Opti
             Ok(None)
         },
     }
+}
+
+fn get_impl_block(stream: &mut TokenStream, scopes: &mut ScopeBuilder, class_type: &SoulType) -> Result<Spanned<UseBlock>> {
+    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Impl));
+    let impl_i =stream.current_index();
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let trait_type = SoulType::from_stream(stream, scopes)?;
+
+    if stream.current_text() != "{" {
+    
+        return Err(new_soul_error(
+            SoulErrorKind::UnexpectedToken, 
+            stream.current_span_some(), 
+            format!("token: '{}' should be '{{'", stream.current_text())
+        ))
+    }
+
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    scopes.push_scope();
+    let mut block_builder = BlockBuilder::new(stream[impl_i].span);
+    loop {
+        if stream.next_if("\n").is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
+
+        if stream.current_text() == "}" {
+            break
+        }
+        
+        if let Ok(methode) = get_methode(stream, scopes, trait_type.clone()) {
+            block_builder.push(Statement::new(StatementKind::Function(methode.node), methode.span));
+        }
+        else {
+            return Err(new_soul_error(
+                SoulErrorKind::UnexpectedToken, 
+                stream.current_span_some(), 
+                format!("token: '{}' is invalid start token in struct body", stream.current_text()),
+            ))
+        }
+    }
+
+    scopes.pop_scope(stream.current_span())?;
+    if stream.next().is_none() {
+        return Err(err_out_of_bounds(stream))
+    }
+
+    let Spanned{node: block, span} = block_builder.into_block();
+    Ok(Spanned::new(
+        UseBlock{impl_trait: Some(trait_type), ty: class_type.clone(), block},
+        span
+    ))
 }
 
 fn get_field_access(stream: &mut TokenStream) -> Result<FieldAccess> {

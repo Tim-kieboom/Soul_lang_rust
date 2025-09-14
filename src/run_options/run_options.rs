@@ -14,6 +14,7 @@ use super::show_output::ShowOutputs;
 
 pub struct RunOptions {
     pub file_path: PathBuf, 
+    pub project_name: String,
     pub is_file_path_raw_file_str: bool, 
     pub show_times: ShowTimes,
     pub show_outputs: ShowOutputs,
@@ -22,6 +23,7 @@ pub struct RunOptions {
     pub tab_char_len: u32,
     pub command: String,
     pub sub_tree_path: PathBuf,
+
     pub log_path: Option<PathBuf>,
     pub log_level: LogLevel,
     pub log_mode: LogMode,
@@ -115,7 +117,15 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.log_colored = input.parse()
-                        .map_err(|err: ParseBoolError| err.to_string())?;
+                    .map_err(|err: ParseBoolError| err.to_string())?;
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--projectName",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.project_name = input.to_string();
                 Ok(())
             }) as ArgFunc
         ),
@@ -140,6 +150,14 @@ impl RunOptions {
             log_mode: LogMode::ShowAll,
             log_path: None,
             log_colored: true,
+
+            project_name: std::env::current_dir()
+                .expect("can not get current dir")
+                .file_name()
+                .expect("could not get name of dir")
+                .to_str()
+                .expect("current dir name is not UTF8 valid")
+                .to_string()
         };
 
         let mut args = _args.collect::<Vec<_>>();

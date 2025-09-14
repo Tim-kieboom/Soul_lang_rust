@@ -28,7 +28,7 @@ fn stream_from_strs(text_tokens: &[&str]) -> TokenStream {
 }
 
 fn empty_scope() -> ScopeBuilder {
-    ScopeBuilder::new()
+    ScopeBuilder::new("testProject".to_string())
 }
 
 fn soul_mem_name(id: usize) -> Ident {
