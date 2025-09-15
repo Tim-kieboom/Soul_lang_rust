@@ -5,7 +5,7 @@ use crate::steps::parser::statment::parse_block::{get_block, get_block_no_scope_
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::STATMENT_END_TOKENS;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{CaseDoKind, CaseSwitch, ElseKind, Expression, ExpressionGroup, ExpressionKind, For, If, Match, Tuple, VariableName, While};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{CaseDoKind, CaseSwitch, ElseKind, Expression, ExpressionGroup, ExpressionKind, For, If, Match, Tuple, UnwrapVariable, VariableName, While};
 use crate::{soul_names::{NamesOtherKeyWords, SOUL_NAMES}, steps::{parser::expression::parse_expression::ExpressionStacks, step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream}}};
 
 pub fn try_get_conditional(
@@ -46,7 +46,7 @@ fn get_match(
         return Err(err_out_of_bounds(stream))
     }
 
-    if stream.current_text() != "{" {
+    if !stream.current_is("{") {
         return Err(new_soul_error(
             SoulErrorKind::UnexpectedToken, 
             stream.current_span_some(), 
@@ -64,7 +64,7 @@ fn get_match(
             return Err(err_out_of_bounds(stream))
         }
 
-        if stream.current_text() == "}" {
+        if stream.current_is("}") {
             break
         }
 
@@ -74,7 +74,7 @@ fn get_match(
             return Err(err_out_of_bounds(stream))
         }
 
-        let do_fn = if stream.current_text() == "{" {
+        let do_fn = if stream.current_is("{") {
             let block = get_block_no_scope_push(stream, scopes, None, vec![])?;
             CaseDoKind::Block(block)
         }
@@ -117,7 +117,7 @@ fn get_while(
     }
 
     scopes.push_scope();
-    let condition = if stream.current_text() == "{" {
+    let condition = if stream.current_is("{") {
         None
     }
     else {
@@ -161,7 +161,7 @@ fn get_for(
         return Err(err_out_of_bounds(stream))
     }
 
-    let (element, collection) = if stream.current_text() == "in" {
+    let (element, collection) = if stream.current_is("in") {
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream))
         }
@@ -261,7 +261,7 @@ fn parse_if(
         return Err(err_out_of_bounds(stream))
     }
 
-    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::If));
+    debug_assert!(stream.current_is(SOUL_NAMES.get_name(NamesOtherKeyWords::If)));
 
     let if_i = stream.current_index();
     if stream.next().is_none() {
@@ -270,8 +270,8 @@ fn parse_if(
 
     scopes.push_scope();
 
-    let condition = if stream.current_text() == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) {
-        todo!("impl 'if typeof'")
+    let condition = if stream.current_is(SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof)) {
+        todo!("impl if typeof")
     }
     else {
         get_expression(stream, scopes, &["{"])?
@@ -301,7 +301,7 @@ fn add_else_if(
         return Err(err_out_of_bounds(stream))
     }
 
-    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Else));
+    debug_assert!(stream.current_is(SOUL_NAMES.get_name(NamesOtherKeyWords::Else)));
     
     let else_i = stream.current_index();
     let mut expression = stacks.expressions.pop()
@@ -350,7 +350,7 @@ fn add_else(
         return Err(err_out_of_bounds(stream))
     }
 
-    debug_assert_eq!(stream.current_text(), SOUL_NAMES.get_name(NamesOtherKeyWords::Else));
+    debug_assert!(stream.current_is(SOUL_NAMES.get_name(NamesOtherKeyWords::Else)));
     
     let else_i = stream.current_index();
     let mut expression = stacks.expressions.pop()
@@ -409,7 +409,7 @@ enum IfKind {
 impl IfKind {
     pub fn from_stream(stream: &TokenStream, is_statment: bool) -> Result<Self> {
         
-        let peek_i = if stream.current_text() == "\n" {
+        let peek_i = if stream.current_is("\n") {
             1
         }
         else {            

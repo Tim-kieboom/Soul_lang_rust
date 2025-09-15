@@ -96,14 +96,14 @@ classes() {
         }
     }
 
-    // use Class impl Sub<This> {
+    use Class impl Sub<This> {
 
-    //     Sub(mut this, This a) This {
-    //         self := this.field.copy
-    //         self.field -= a.field
-    //         return this 
-    //     } 
-    // }
+        Sub(mut this, This a) This {
+            self := this.field.copy
+            self.field -= a.field
+            return this 
+        } 
+    }
 
     class Data {
         int field
