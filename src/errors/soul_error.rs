@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::show_diff::generate_highlighted_string;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Encode, Decode)]
 pub enum SoulErrorKind {
     NoKind, // no kind selected
 
@@ -93,7 +93,7 @@ impl SoulSpan {
 
 pub type Result<T> = result::Result<T, SoulError>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Encode, Decode)]
 pub struct SoulError {
     kinds: Vec<SoulErrorKind>,
     spans: Vec<Option<SoulSpan>>,

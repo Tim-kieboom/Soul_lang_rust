@@ -2,7 +2,7 @@ extern crate soul_lang_rust;
 
 use colored::Colorize;
 use std::{io::stderr, process::exit, result, sync::{Arc, Mutex}, time::Instant};
-use soul_lang_rust::{increments::parse_increment, run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::{logger::{LogOptions, Logger, DEFAULT_LOG_OPTIONS, MUT_DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
+use soul_lang_rust::{code_generate::{generate_code, SoulFault, SoulFaultKind}, errors::soul_error::pass_soul_error, increments::{get_file_reader, parse_increment}, run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::{logger::{LogLevel, LogOptions, Logger, DEFAULT_LOG_OPTIONS, MUT_DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
 
 fn main() {
     let (run_options, logger, time_logs) = init();
@@ -13,17 +13,38 @@ fn main() {
         logger.error(msg, DEFAULT_LOG_OPTIONS);
         return
     }
+
+    let errors = generate_code(&run_options, &logger, &time_logs);
+    let error_len = errors.len();
     
+    log_faults(errors, &logger);
     log_time_table(time_logs, &run_options, &logger);
-    let error_count = 0; // temp dummy
 
     if run_options.show_times.contains(ShowTimes::SHOW_TOTAL) {
         logger.info(format!("Total time: {}", format_duration(timer.elapsed())), DEFAULT_LOG_OPTIONS);    
     }
 
-    if error_count > 0 {
-        logger.error(format!("build failed because of {} error{}", error_count, if error_count > 1 {"s"} else {""}), DEFAULT_LOG_OPTIONS);
+    if error_len > 0 {
+        logger.error(format!("build failed because of {} error{}", error_len, if error_len > 1 {"s"} else {""}), DEFAULT_LOG_OPTIONS);
         return
+    }
+}
+
+fn log_faults(errors: Vec<SoulFault>, logger: &Logger) {
+    
+    for error in errors {
+        let level = match error.kind {
+            SoulFaultKind::Note => LogLevel::Info,
+            SoulFaultKind::Error => LogLevel::Error,
+            SoulFaultKind::Warning => LogLevel::Warning,
+        };
+
+        let (mut reader, _) = get_file_reader(&error.file)
+            .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while trying to get file reading", err))
+            .inspect_err(|err| logger.panic_error(err, DEFAULT_LOG_OPTIONS))
+            .unwrap();
+
+        logger._log_soul_error(level, &error.msg, &mut reader, DEFAULT_LOG_OPTIONS);
     }
 }
 

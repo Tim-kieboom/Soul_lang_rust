@@ -203,6 +203,15 @@ impl ScopeBuilder {
     pub fn global_mut(&mut self) -> &mut Scope {
         &mut self.scopes[Self::GLOBAL_SCOPE_INDEX]
     }
+
+    pub fn __consume_to_tuple(self) -> (Vec<Scope>, usize, ProgramMemmory, String) {
+        (
+            self.scopes,
+            self.current,
+            self.global_literals,
+            self.project_name,
+        )
+    }
 }
 
 impl<T> InnerScope<T> {
