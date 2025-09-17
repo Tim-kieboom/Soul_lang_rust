@@ -2,7 +2,8 @@ extern crate soul_lang_rust;
 
 use colored::Colorize;
 use std::{io::stderr, process::exit, result, sync::{Arc, Mutex}, time::Instant};
-use soul_lang_rust::{code_generate::{generate_code, SoulFault, SoulFaultKind}, errors::soul_error::pass_soul_error, increments::{get_file_reader, parse_increment}, run_options::{run_options::RunOptions, show_times::ShowTimes}, utils::{logger::{LogLevel, LogOptions, Logger, DEFAULT_LOG_OPTIONS, MUT_DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
+use soul_lang_rust::{code_generate::generate_code, errors::soul_error::pass_soul_error, increments::{get_file_reader, parse_increment}, run_options::{run_options::RunOptions, show_times::ShowTimes}, steps::step_interfaces::i_sementic::soul_fault::{SoulFault, SoulFaultKind}, utils::{logger::{LogLevel, LogOptions, Logger, DEFAULT_LOG_OPTIONS, MUT_DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
+
 
 fn main() {
     let (run_options, logger, time_logs) = init();
