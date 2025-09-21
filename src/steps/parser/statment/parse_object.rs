@@ -81,7 +81,7 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
 
     let span = stream[struct_i].span.combine(&stream.current_span());
     let struct_decl = Struct{name: name.clone(), generics: generics.generics, fields};
-    scopes.insert(name.0, ScopeKind::Struct(struct_decl.clone()), span);
+    scopes.insert(name.0, ScopeKind::Struct(struct_decl.clone()), span)?;
 
     Ok(Spanned::new(struct_decl, span))
 }
@@ -169,7 +169,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
 
     let span = stream[class_i].span.combine(&stream.current_span());
     let class_decl = Class{name: name.clone(), generics: generics.generics, implements: generics.implements, children};
-    scopes.insert(name.0, ScopeKind::Class(class_decl.clone()), span);
+    scopes.insert(name.0, ScopeKind::Class(class_decl.clone()), span)?;
     
     Ok(Spanned::new(class_decl, span))
 }
@@ -237,7 +237,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     };
     
     let span = stream[trait_i].span.combine(&stream.current_span());
-    scopes.insert(name.0.clone(), ScopeKind::Trait(trait_decl.clone()), span);
+    scopes.insert(name.0.clone(), ScopeKind::Trait(trait_decl.clone()), span)?;
     Ok(Spanned::new(trait_decl, span))
 }
 

@@ -1,7 +1,8 @@
-use crate::steps::step_interfaces::{i_parser::abstract_syntax_tree::abstract_syntax_tree::AbstractSyntacTree, i_sementic::{scope_vistitor::ScopeVisitor, soul_fault::{SoulFault, SoulFaultKind}}};
+use crate::{errors::soul_error::SoulError, steps::step_interfaces::{i_parser::abstract_syntax_tree::abstract_syntax_tree::AbstractSyntacTree, i_sementic::{scope_vistitor::ScopeVisitor, soul_fault::{SoulFault}}}};
 
 pub trait AstAnalyser {
     fn analyse_ast(&mut self, tree: &mut AbstractSyntacTree);
+    fn consume(self) -> (ScopeVisitor, Vec<SoulFault>, bool);
 }
 
 /*put macros before here before other analysers*/
@@ -121,12 +122,15 @@ macro_rules! impl_default_methods {
                     Self{scope, faults, has_error}
                 }
 
-                pub fn add_fault(&mut self, fault: SoulFault) { 
-                    if fault.kind == SoulFaultKind::Error {
-                        self.has_error = true;
-                    } 
-                    
-                    self.faults.push(fault); 
+                pub fn add_error(&mut self, msg: SoulError) { 
+                    self.has_error = true;
+                    self.faults.push(SoulFault::new_error(msg, self.scope.file_path.clone())); 
+                }
+                pub fn add_warning(&mut self, msg: SoulError) { 
+                    self.faults.push(SoulFault::new_warning(msg, self.scope.file_path.clone())); 
+                }
+                pub fn add_note(&mut self, msg: SoulError) { 
+                    self.faults.push(SoulFault::new_note(msg, self.scope.file_path.clone())); 
                 }
 
                 pub fn has_error(&self) -> bool {self.has_error}
@@ -134,7 +138,7 @@ macro_rules! impl_default_methods {
                 pub fn get_scope_mut(&mut self) -> &mut ScopeVisitor { &mut self.scope }
                 pub fn get_faults(&self) -> &Vec<SoulFault> { &self.faults }
                 pub fn get_faults_mut(&mut self) -> &mut Vec<SoulFault> { &mut self.faults }
-                fn consume_to_tuple(self) -> (ScopeVisitor, Vec<SoulFault>, bool) { (self.scope, self.faults, self.has_error) }
+                pub fn consume_to_tuple(self) -> (ScopeVisitor, Vec<SoulFault>, bool) { (self.scope, self.faults, self.has_error) }
             }
         )+
     };

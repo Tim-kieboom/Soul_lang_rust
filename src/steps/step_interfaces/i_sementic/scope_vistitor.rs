@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::spanned::Spanned, scope_builder::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeKind}};
 
 type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
@@ -7,66 +9,42 @@ pub struct ScopeVisitor {
     current: usize,
     pub global_literals: ProgramMemmory,
     pub project_name: String,
+    pub file_path: PathBuf,
 }
 
 impl ScopeVisitor {
 
     const GLOBAL_SCOPE_INDEX: usize = 0;
 
-    pub fn new(scope: ScopeBuilder) -> Self {
+    pub fn new(scope: ScopeBuilder, file_path: PathBuf) -> Self {
         let (scopes, current, global_literals, project_name) = scope.__consume_to_tuple();
         Self {
             scopes,
             current,
+            file_path,
             project_name,
             global_literals,
         }
     }
 
     pub fn reset(&mut self) {
-        self.current = Self::GLOBAL_SCOPE_INDEX
-    }
-
-    pub fn next_child(&mut self) -> bool {
-        if let Some(&first_child) = self.scopes[self.current].children.first() {
-            self.current = first_child;
-            true
-        }
-        else {
-            false
+        self.current = Self::GLOBAL_SCOPE_INDEX;
+        for scope in &mut self.scopes {
+            scope.current_child = 0;
         }
     }
 
-    pub fn next_sibling(&mut self) -> bool {
-        let this = &self.scopes[self.current];
-
-        let parent = match this.parent_index {
-            Some(val) => val,
-            None => return false,
-        };
-
-        let children = &self.scopes[parent].children;
-        if children.is_empty() {
-            return false
-        }
-
-        let this_index = children.iter().position(|&i| i == this.self_index).expect("this_index in parent.children not found");
-        if this_index == children.len()-1 {
-            return false;
-        }
-
-        self.current = children[this_index+1];
-        true
+    pub fn push(&mut self) -> Option<&Scope> {
+        let scope = self.scopes.get_mut(self.current)?;
+        
+        self.current = *scope.children.get(scope.current_child)?;
+        scope.current_child += 1;
+        self.scopes.get(self.current)
     }
 
-    pub fn to_parent(&mut self) -> bool {
-        if let Some(parent) = self.scopes[self.current].parent_index {
-            self.current = parent;
-            true
-        } 
-        else {
-            false
-        }
+    pub fn pop(&mut self) -> Option<&Scope> {
+        self.current = self.scopes.get(self.current)?.parent_index?;
+        self.scopes.get(self.current)
     }
 
     pub fn is_in_global(&self) -> bool {

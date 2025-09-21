@@ -2,8 +2,9 @@ use crate::steps::step_interfaces::{i_parser::abstract_syntax_tree::abstract_syn
 
 pub struct SementicResponse {
     pub tree: AbstractSyntacTree,
-    pub scope: ScopeVisitor,
+    pub scopes: ScopeVisitor,
     pub faults: Vec<SoulFault>,
+    pub has_error: bool,
 }
 
 

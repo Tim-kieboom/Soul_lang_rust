@@ -58,7 +58,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
         StatementType::Variable => {
             let variable = get_variable(stream, scopes)?;
             let variable_name = VariableName::new(&variable.node.name);
-            scopes.insert(variable_name.name.0.clone(), ScopeKind::Variable(variable.node), variable.span);
+            scopes.insert(variable_name.name.0.clone(), ScopeKind::Variable(variable.node), variable.span)?;
 
             Statement::new(StatementKind::Variable(variable_name), variable.span)
         },
@@ -185,7 +185,7 @@ fn get_use(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option
         else {
             let name = this.base.to_name_string();
             let typedef = ScopeKind::UseTypeDef{new_type: this, of_type: impl_type};
-            scopes.insert(name, typedef, stream.current_span().combine(&stream[use_i].span));
+            scopes.insert(name, typedef, stream.current_span().combine(&stream[use_i].span))?;
             return Ok(None)
         }
     }
@@ -230,7 +230,7 @@ fn get_use_path(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(
             name, 
             ScopeKind::Type(ty), 
             span,
-        );
+        )?;
     }
 
     if stream.next().is_none() {
@@ -264,7 +264,7 @@ fn get_use_path(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<(
             name.0, 
             ScopeKind::Type(ty), 
             span,
-        );
+        )?;
     }
     
     Ok(())
@@ -420,9 +420,7 @@ fn get_type_def_or_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder
         let body = get_type_enum_body(stream, scopes)?;
 
         let span = stream[type_i].span.combine(&stream.current_span());
-        scopes.insert(name.clone(), ScopeKind::TypeEnum(TypeEnum{name: name.into(), body}), span);
-        
-        return Ok(())
+        return scopes.insert(name.clone(), ScopeKind::TypeEnum(TypeEnum{name: name.into(), body}), span)
     }
 
     if stream.next().is_none() {
@@ -436,8 +434,7 @@ fn get_type_def_or_type_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder
     let of_type = SoulType::from_stream(stream, scopes)?;
 
     let span = stream[type_i].span.combine(&stream.current_span());
-    scopes.insert(name, ScopeKind::TypeDef{new_type, of_type}, span);
-    Ok(())
+    scopes.insert(name, ScopeKind::TypeDef{new_type, of_type}, span)
 }
 
 fn get_return_like(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Expression> {

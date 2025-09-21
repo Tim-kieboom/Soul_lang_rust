@@ -57,6 +57,22 @@ impl Statement {
     }
 }
 
+impl StatementKind {
+    pub fn is_bodied_kind(&self) -> bool {
+        match self {
+            StatementKind::Enum(_) |
+            StatementKind::Trait(_) |
+            StatementKind::Class(_) |
+            StatementKind::Union(_) |
+            StatementKind::Struct(_) |
+            StatementKind::Function(_) |
+            StatementKind::UseBlock(_) => true,
+            
+            _ => false, 
+        }
+    }
+}
+
 impl Block {
     pub fn new() -> Self {
         Self{ruleset: Modifier::Default, statments: vec![]}

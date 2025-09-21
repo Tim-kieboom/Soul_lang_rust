@@ -355,7 +355,7 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
             ty: SoulType::none(), 
             initialize_value: Some(Expression::new(ExpressionKind::Empty, SoulSpan::new(0,0,0))),
         };
-        scopes.insert(name.0.clone(), ScopeKind::Variable(variable), stream.current_span());
+        scopes.insert(name.0.clone(), ScopeKind::Variable(variable), stream.current_span())?;
 
 
         if stream.next_multiple(2).is_none() {
@@ -373,6 +373,7 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
         scopes.remove_current(stream.current_span())?;
         return Ok(Err((collection_type, element_type)));
     }
+    scopes.pop_scope(stream.current_span())?;
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(group_i, stream));

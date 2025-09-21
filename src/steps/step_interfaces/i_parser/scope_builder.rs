@@ -1,6 +1,7 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use crate::errors::soul_error::Result;
+use std::{collections::{BTreeMap, HashMap}};
 use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::{soul_type::SoulType}, spanned::Spanned}};
 
 
@@ -18,6 +19,7 @@ pub struct ScopeBuilder {
 pub struct InnerScope<T> {
     pub parent_index: Option<usize>,
     pub children: Vec<usize>,
+    pub current_child: usize,
     pub self_index: usize,
 
     pub symbols: HashMap<String, T>,
@@ -113,7 +115,7 @@ impl ScopeBuilder {
         self.scopes.push(InnerScope::new_child(self.current, parent_index));
     }
 
-    pub fn remove_current(&mut self, span: SoulSpan) -> Result<(), SoulError> {
+    pub fn remove_current(&mut self, span: SoulSpan) -> std::result::Result<(), SoulError> {
         let current = self.current;
         if let Some(parent_index) = self.scopes[self.current].parent_index {
             self.current = parent_index;
@@ -126,7 +128,7 @@ impl ScopeBuilder {
         }
     }
     
-    pub fn pop_scope(&mut self, span: SoulSpan) -> Result<(), SoulError> {
+    pub fn pop_scope(&mut self, span: SoulSpan) -> std::result::Result<(), SoulError> {
         if let Some(parent_index) = self.scopes[self.current].parent_index {
             self.current = parent_index;
             Ok(())
@@ -140,12 +142,26 @@ impl ScopeBuilder {
         self.current == Self::GLOBAL_SCOPE_INDEX
     }
 
-    pub fn insert(&mut self, name: String, kind: ScopeKind, span: SoulSpan) {
-        self.current_mut()
+    pub fn insert(&mut self, name: String, kind: ScopeKind, span: SoulSpan) -> Result<()> {
+        use std::mem::discriminant;
+
+        let entry = self.current_mut()
             .symbols
-            .entry(name)
-            .or_default()
-            .push(Spanned::new(kind, span));
+            .entry(name.clone())
+            .or_default();
+
+        if entry.iter().any(|el| discriminant(&el.node) == discriminant(&kind)) {
+            
+            return Err(new_soul_error(
+                SoulErrorKind::InvalidName, 
+                Some(span),
+                format!("'{}' already exists", name),
+            ))
+        }
+
+        entry.push(Spanned::new(kind, span));
+        
+        Ok(())
     } 
 
     pub fn insert_function(&mut self, function: Function, span: SoulSpan) {
@@ -219,6 +235,7 @@ impl<T> InnerScope<T> {
         Self {
             parent_index: None,
             children: vec![],
+            current_child: 0,
             self_index: 0,
             symbols: HashMap::new(),
         }
@@ -228,6 +245,7 @@ impl<T> InnerScope<T> {
         Self {
             self_index,
             children: vec![],
+            current_child: 0,
             symbols: HashMap::new(),
             parent_index: Some(parent_index),
         }

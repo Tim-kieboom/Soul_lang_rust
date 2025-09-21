@@ -13,10 +13,18 @@ main() {
     Println("hello world")
 }
 
+scope() {
+        
+    mut number := 1
+    if true {
+        number += 1
+    }
+}
+
 functionCall() {
     
     sumStackArray<N impl uint>(int[N] arr) int {
-        sum := 0
+        mut sum := 0
         for el in arr {
             sum += el
         }
@@ -37,6 +45,7 @@ functionCall() {
         return a
     }
 
+    num := 1
     Println("hello world")
     Println(f"num == {num}")
     sumInner(1, 2)
@@ -45,6 +54,7 @@ functionCall() {
     int.MAX
     int.Parse("1")
 
+    var := Obj()
     var.field
     var.Methode()  
     var.field.Methode()
@@ -62,10 +72,10 @@ functionCall() {
 }
 
 variable() {
-    var := 1 //int(1)
+    var := 1 //const int(1)
     mut letVar = 1.0 //f32(1.0)
-    const constVar = 0b1 //uint(1)
-    Literal literalVar = -1 //int(-1)
+    const constVar = 0b1 //const uint(1)
+    Literal literalVar = -1 //Literal int(-1)
 
     int intVar = 1
     const int intConst = 1
@@ -176,19 +186,5 @@ sum(int a, int b) int {
 int sum(this, int b) int {
     return this + b
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

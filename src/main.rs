@@ -15,7 +15,14 @@ fn main() {
         return
     }
 
-    let errors = generate_code(&run_options, &logger, &time_logs);
+    let errors = match generate_code(&run_options, &logger, &time_logs) {
+        Ok(val) => val,
+        Err(err) => {
+            logger.error(err, DEFAULT_LOG_OPTIONS);
+            return
+        },
+    };
+
     let error_len = errors.len();
     
     log_faults(errors, &logger);

@@ -191,7 +191,7 @@ fn get_for(
 fn for_element_to_scope(stream: &TokenStream, expression: &Expression, scopes: &mut ScopeBuilder) -> Result<()> {
     match &expression.node {
         ExpressionKind::Variable(variable_name)  => {
-            variable_name_to_scope(variable_name, scopes, expression.span)
+            variable_name_to_scope(variable_name, scopes, expression.span)?
         },
         ExpressionKind::ExpressionGroup(ExpressionGroup::Tuple(Tuple{values})) => {
             for value in values {
@@ -383,7 +383,7 @@ fn add_else(
     Ok(())
 }
 
-fn variable_name_to_scope(variable_name: &VariableName, scopes: &mut ScopeBuilder, span: SoulSpan) {
+fn variable_name_to_scope(variable_name: &VariableName, scopes: &mut ScopeBuilder, span: SoulSpan) -> Result<()> {
     let variable = ScopeKind::Variable(Variable{
         name: variable_name.name.clone(), 
         ty: SoulType::none(), 
@@ -394,7 +394,7 @@ fn variable_name_to_scope(variable_name: &VariableName, scopes: &mut ScopeBuilde
         variable_name.name.0.clone(), 
         variable, 
         span,
-    );
+    )
 }
 
 #[derive(Debug, Clone, PartialEq)]

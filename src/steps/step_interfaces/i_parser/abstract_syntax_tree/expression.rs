@@ -345,6 +345,21 @@ impl ExpressionKind {
             ExpressionKind::ExternalExpression(_) => "ExternalExpression",
         }
     }
+
+    pub fn is_bodied_kind(&self) -> bool {
+        
+        match self {
+            ExpressionKind::If(_) |
+            ExpressionKind::For(_) |
+            ExpressionKind::While(_) |
+            ExpressionKind::Match(_) |
+            ExpressionKind::Block(_) |
+            ExpressionKind::Lambda(_) |
+            ExpressionKind::ExpressionGroup(ExpressionGroup::ArrayFiller(_)) => true,
+
+            _ => false,
+        } 
+    }
 }
 
 impl BinaryOperatorKind {

@@ -1,6 +1,5 @@
 use itertools::Itertools;
 use threadpool::ThreadPool;
-use hsoul::subfile_tree::SubFileTree;
 use std::{fs::{self, write, File}, path::PathBuf, result, time::SystemTime};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
 use crate::{errors::soul_error::SoulError, file_cache::FileCache, run_options::run_options::RunOptions, steps::step_interfaces::i_parser::header::Header, utils::{logger::Logger, time_logs::{format_duration, TimeLogs}}};
@@ -11,29 +10,10 @@ pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time
 
     let timer = Instant::now();
 
-    let has_sub_tree = !run_options.sub_tree_path.as_os_str().is_empty();
-    let main_file_path = run_options.file_path.clone();
+    let source_files = run_options.get_file_paths()
+        .map_err(|msg| msg.to_err_message().join(" "))?;
 
-    let mut errors;
-    let mut source_files = vec![main_file_path];
-    if has_sub_tree {
-        
-        let subfiles_tree = get_sub_files(run_options)
-            .map_err(|err| logger.panic_error(&err, DEFAULT_LOG_OPTIONS))
-            .unwrap();
-
-        source_files.extend(
-            subfiles_tree.get_all_file_paths()
-                .into_iter()
-                .map(|mut path| {path.set_extension("soul"); path})
-        );
-
-        errors = Vec::with_capacity(subfiles_tree.files_amount+1);
-    }
-    else {
-        errors = Vec::with_capacity(1);
-    }
-
+    let mut errors = Vec::with_capacity(source_files.len()+1);
     parse_all_files(run_options.clone(), source_files, logger, time_logs, &mut errors);
     
     if run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
@@ -150,12 +130,7 @@ fn log_errors(errors: Vec<(SoulError, PathBuf)>, logger: &Arc<Logger>) -> result
     Err(format!("build interrupted because of {} error{}", amount_errors, if amount_errors > 1 {"s"} else {""}))
 } 
 
-fn get_sub_files(run_options: &Arc<RunOptions>) -> Result<Arc<SubFileTree>> {
-    let sub_tree = SubFileTree::from_bin_file(Path::new(&run_options.sub_tree_path))
-        .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, None, format!("!!internal error!! while trying to get subfilesTree\n{}", msg.to_string())))?;
-    
-    Ok(Arc::new(sub_tree))
-}
+
 
 pub fn get_file_reader(path: &Path) -> Result<(BufReader<File>, Option<SystemTime>)> {
     let file = File::open(&path)

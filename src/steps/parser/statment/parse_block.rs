@@ -122,7 +122,7 @@ fn get_inner_block(
         
         if let Some(ty) = this.node.this {
 
-            push_this(ty, scopes, stream.current_span());
+            push_this(ty, scopes, stream.current_span())?;
         }
     }
 
@@ -135,7 +135,7 @@ fn get_inner_block(
             initialize_value: Some(Expression::new(ExpressionKind::Empty, span)),
         });
         
-        scopes.insert(name_string, var, span);
+        scopes.insert(name_string, var, span)?;
     }
 
     let mut block_builders = BlockBuilder::new(stream.current_span());
@@ -162,7 +162,7 @@ fn get_inner_block(
     Ok(block_builders.into_block())
 }
 
-fn push_this(this: SoulType, scopes: &mut ScopeBuilder, span: SoulSpan) {
+fn push_this(this: SoulType, scopes: &mut ScopeBuilder, span: SoulSpan) -> Result<()> {
     
     let kind = ScopeKind::Variable(Variable{
         ty: this, 
@@ -170,7 +170,7 @@ fn push_this(this: SoulType, scopes: &mut ScopeBuilder, span: SoulSpan) {
         initialize_value: Some(Expression::new(ExpressionKind::Empty, SoulSpan::new(0,0,0)))
     });
 
-    scopes.insert("this".into(), kind, span);
+    scopes.insert("this".into(), kind, span)
 }
 
 

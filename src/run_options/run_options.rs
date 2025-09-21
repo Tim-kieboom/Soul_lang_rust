@@ -1,12 +1,14 @@
 use std::io::Write;
 use std::num::ParseIntError;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::result;
 use std::env::Args;
 use std::str::ParseBoolError;
+use hsoul::subfile_tree::SubFileTree;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
+use crate::errors::soul_error::{new_soul_error, SoulErrorKind, Result};
 use crate::utils::logger::{LogLevel, LogMode};
 
 use super::show_times::ShowTimes;
@@ -30,7 +32,7 @@ pub struct RunOptions {
     pub log_colored: bool,
 } 
 
-type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send + Sync + 'static>;
+type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> std::result::Result<(), String> + Send + Sync + 'static>;
 
 static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
     HashMap::from([
@@ -197,6 +199,37 @@ impl RunOptions {
         else {
             Ok(options)
         }
+    }
+
+    fn has_sub_tree(&self) -> bool {
+        !self.sub_tree_path.as_os_str().is_empty()
+    }
+
+    pub fn get_file_paths(&self) -> Result<Vec<PathBuf>> {
+
+        let main_file_path = self.file_path.clone();
+
+        let mut source_files = vec![main_file_path];
+        if self.has_sub_tree() {
+            
+            let subfiles_tree = self.get_sub_files()?;
+
+            source_files.extend(
+                subfiles_tree.get_all_file_paths()
+                    .into_iter()
+                    .map(|mut path| {path.set_extension("soul"); path})
+            );
+
+        }
+
+        Ok(source_files)
+    } 
+
+    fn get_sub_files(&self) -> Result<SubFileTree> {
+        let sub_tree = SubFileTree::from_bin_file(Path::new(&self.sub_tree_path))
+            .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, None, format!("!!internal error!! while trying to get subfilesTree\n{}", msg.to_string())))?;
+        
+        Ok(sub_tree)
     }
 }
 
