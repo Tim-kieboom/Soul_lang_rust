@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use threadpool::ThreadPool;
@@ -16,7 +16,7 @@ pub fn generate_code(
     run_options: &Arc<RunOptions>, 
     logger: &Arc<Logger>, 
     time_logs: &Arc<Mutex<TimeLogs>>,
-) -> Result<Vec<SoulFault>, String> {
+) -> Result<Vec<(PathBuf, Vec<SoulFault>)>, String> {
     
     let source_files = run_options.get_file_paths()
         .map_err(|msg| msg.to_err_message().join(" "))?;
@@ -29,7 +29,7 @@ fn generate_all_codes(
     logger: &Arc<Logger>, 
     time_logs: &Arc<Mutex<TimeLogs>>,
     subfiles: Vec<PathBuf>,
-) -> Result<Vec<SoulFault>, String> {
+) -> Result<Vec<(PathBuf, Vec<SoulFault>)>, String> {
     
     let mut errors = vec![];
     let num_threads = std::thread::available_parallelism().unwrap().get();
@@ -58,7 +58,7 @@ fn generate_all_codes(
     drop(sender);
 
     for result in reciever {
-        errors.extend_from_slice(&result.faults);
+        errors.push((result.scopes.file_path, result.faults))
     }
 
     Ok(errors)

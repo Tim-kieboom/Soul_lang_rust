@@ -1,7 +1,7 @@
 extern crate soul_lang_rust;
 
 use colored::Colorize;
-use std::{io::stderr, process::exit, result, sync::{Arc, Mutex}, time::Instant};
+use std::{io::stderr, path::PathBuf, process::exit, result, sync::{Arc, Mutex}, time::Instant};
 use soul_lang_rust::{code_generate::generate_code, errors::soul_error::pass_soul_error, increments::{get_file_reader, parse_increment}, run_options::{run_options::RunOptions, show_times::ShowTimes}, steps::step_interfaces::i_sementic::soul_fault::{SoulFault, SoulFaultKind}, utils::{logger::{LogLevel, LogOptions, Logger, DEFAULT_LOG_OPTIONS, MUT_DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
 
 
@@ -38,21 +38,30 @@ fn main() {
     }
 }
 
-fn log_faults(errors: Vec<SoulFault>, logger: &Logger) {
+fn log_faults(errors: Vec<(PathBuf, Vec<SoulFault>)>, logger: &Logger) {
     
-    for error in errors {
-        let level = match error.kind {
-            SoulFaultKind::Note => LogLevel::Info,
-            SoulFaultKind::Error => LogLevel::Error,
-            SoulFaultKind::Warning => LogLevel::Warning,
-        };
+    let mut options = DEFAULT_LOG_OPTIONS.clone();
 
-        let (mut reader, _) = get_file_reader(&error.file)
+    for (file, errors) in errors {
+        let (mut reader, _) = get_file_reader(&file)
             .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while trying to get file reading", err))
             .inspect_err(|err| logger.panic_error(err, DEFAULT_LOG_OPTIONS))
             .unwrap();
 
-        logger._log_soul_error(level, &error.msg, &mut reader, DEFAULT_LOG_OPTIONS);
+        options = options.apply(|mut options| {
+            options.log_file_path = Some(file.clone());
+            options
+        });
+
+        for error in errors {
+            let level = match error.kind {
+                SoulFaultKind::Note => LogLevel::Info,
+                SoulFaultKind::Error => LogLevel::Error,
+                SoulFaultKind::Warning => LogLevel::Warning,
+            };
+
+            logger._log_soul_error(level, &error.msg, &mut reader, &options);
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod, StructConstructor}, generic::GenericParameter, literal::Literal, object::{Class, ClassChild, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeWrapper}, spanned::Spanned, statement::{Block, StatementKind, UseBlock}}, scope_builder::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod, StructConstructor}, generic::GenericParameter, literal::Literal, object::{Class, ClassChild, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeGenericKind, TypeWrapper}, spanned::Spanned, statement::{Block, StatementKind, UseBlock}}, scope_builder::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -24,7 +24,7 @@ impl PrettyFormat for ScopeBuilder {
                     .map(|(name, kind)| format!("\t{} => [\n\t\t{}\n\t],", name, kind.iter().map(|el| el.node.to_string()).join(",\n\t\t")))
                     .join("\n");
 
-                format!("scope({}) {{\n{}\n}}\n", scope.self_index, body) 
+                format!("scope({}) {{\n{}\n}}\n", scope.self_index.0, body) 
             })
             .join("");
 
@@ -379,7 +379,7 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::Literal(literal) => literal.to_string(),
 
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_pretty(tab + 1, is_last), index.to_pretty(tab + 1, is_last)),
-            ExpressionKind::Lambda(Lambda{signature, arguments, body, capture:_}) => format!("{}({}) => {}", signature.mode.get_lambda_name(), arguments.to_string(), body.to_pretty(tab + 1, is_last)),
+            ExpressionKind::Lambda(Lambda{signature, arguments, body, capture:_, scope_id:_}) => format!("{}({}) => {}", signature.mode.get_lambda_name(), arguments.to_string(), body.to_pretty(tab + 1, is_last)),
             ExpressionKind::StructConstructor(StructConstructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
             ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
 
@@ -399,7 +399,7 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::If(if_) => if_.to_pretty(tab, is_last),
             ExpressionKind::For(For{element, collection, block}) => format!("for {}{}\n{}", element.as_ref().map(|el| format!("{} in ", el.to_string())).unwrap_or("".into()), collection.to_pretty(tab + 1, is_last), block.to_pretty(tab+1, is_last)),
             ExpressionKind::While(While{condition, block}) => format!("while {}\n{}", condition.as_ref().map(|el| el.node.to_pretty(tab + 1, is_last)).unwrap_or("true".into()), block.to_pretty(tab+1, is_last)),
-            ExpressionKind::Match(Match{condition, cases}) => format!("match {}\n{}{}", condition.to_pretty(tab, is_last), tree_prefix(tab+1, is_last), cases.iter().map(|el| format!("{} => \n{}", el.if_expr.to_string(), el.do_fn.to_pretty(tab, is_last))).join(format!("\n{}", tree_prefix(tab+1, is_last)).as_str()) ),
+            ExpressionKind::Match(Match{condition, cases, scope_id:_}) => format!("match {}\n{}{}", condition.to_pretty(tab, is_last), tree_prefix(tab+1, is_last), cases.iter().map(|el| format!("{} => \n{}", el.if_expr.to_string(), el.do_fn.to_pretty(tab, is_last))).join(format!("\n{}", tree_prefix(tab+1, is_last)).as_str()) ),
             ExpressionKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!("{} ? {} : {}", condition.to_pretty(tab, is_last), if_branch.to_pretty(tab, is_last), else_branch.to_pretty(tab, is_last)),
 
             ExpressionKind::Deref(spanned) => format!("*{}", spanned.to_pretty(tab, is_last)),
@@ -423,7 +423,7 @@ impl PrettyString for CaseDoKind {
     }
 }
 
-fn generic_to_string(types: &Vec<SoulType>) -> String {
+fn generic_to_string(types: &Vec<TypeGenericKind>) -> String {
     if types.is_empty() {
         "".into()
     }
@@ -461,7 +461,7 @@ impl ToString for ExpressionKind {
             ExpressionKind::Literal(literal) => literal.to_string(),
             
             ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_string(), index.to_string()),
-            ExpressionKind::Lambda(Lambda{signature, arguments, body:_, capture:_}) => format!("{}({})", signature.mode.get_lambda_name(), arguments.to_string()),
+            ExpressionKind::Lambda(Lambda{signature, arguments, body:_, capture:_, scope_id:_}) => format!("{}({})", signature.mode.get_lambda_name(), arguments.to_string()),
             ExpressionKind::StructConstructor(StructConstructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
             ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
             
@@ -488,7 +488,7 @@ impl ToString for ExpressionKind {
             ),
             ExpressionKind::For(For{element, collection, block:_}) => format!("for {}{}", element.as_ref().map(|el| format!("{} in ", el.to_string())).unwrap_or("".into()), collection.to_string()),
             ExpressionKind::While(While{condition, block:_}) => format!("while {}", condition.as_ref().map(|el| el.node.to_string()).unwrap_or("true".into())),
-            ExpressionKind::Match(Match{condition, cases:_}) => format!("match {}", condition.to_string()),
+            ExpressionKind::Match(Match{condition, cases:_, scope_id:_}) => format!("match {}", condition.to_string()),
             ExpressionKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!("{} ? {} : {}", condition.to_string(), if_branch.to_string(), else_branch.to_string()),
             
             ExpressionKind::Deref(spanned) => format!("*{}", spanned.to_string()),

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::Statement;
+use crate::steps::step_interfaces::i_parser::scope_builder::{ScopeBuilder, ScopeId, ScopeKind};
 use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::statement::Block};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
@@ -16,8 +17,8 @@ pub struct BlockBuilder {
 }
 
 impl BlockBuilder {
-    pub fn new(span: SoulSpan) -> Self {
-        Self{block: Spanned::new(Block::new(), span)}
+    pub fn new(scope_id: ScopeId, span: SoulSpan) -> Self {
+        Self{block: Spanned::new(Block::new(scope_id), span)}
     }
 
     pub fn push_global(&mut self, statment: Statement) -> Result<()> {

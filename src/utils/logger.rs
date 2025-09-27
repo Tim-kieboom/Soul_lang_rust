@@ -77,15 +77,20 @@ pub struct Logger {
 pub struct LogOptions {
     pub colored: bool,
     pub highlight_soul: bool,
+    pub log_file_path: Option<PathBuf>,
 }
 impl LogOptions {
-    pub fn new(colored: bool, highlight_soul: bool) -> Self {
-        Self{colored, highlight_soul}
+    pub fn new(colored: bool, highlight_soul: bool, log_file_path: Option<PathBuf>) -> Self {
+        Self{colored, highlight_soul, log_file_path}
     }
-    pub const fn const_default() -> Self {Self{colored: true, highlight_soul: false}}
+    pub const fn const_default() -> Self {Self{colored: true, highlight_soul: false, log_file_path: None}}
+
+    pub fn apply<F: FnOnce(Self) -> Self>(self, apply: F) -> Self {
+        apply(self)
+    }
 }
 impl Default for LogOptions {
-    fn default() -> Self {Self{colored: true, highlight_soul: false}}
+    fn default() -> Self {Self{colored: true, highlight_soul: false, log_file_path: None}}
 }
 
 impl Logger {
@@ -153,6 +158,10 @@ impl Logger {
 
     pub fn _log_soul_error<R: Read + Seek>(&self, level: LogLevel, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
         self._log(level, "---------------------------------------------", options);
+        if let Some(path) = &options.log_file_path {
+            self._log(level, format!("in file: {}", path.to_string_lossy()), options);
+        }
+
         for line in soul_error.to_err_message() {
             self._log(level, line, options);
         }

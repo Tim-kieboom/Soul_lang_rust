@@ -111,8 +111,9 @@ pub fn get_union(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         return Err(err_out_of_bounds(stream))
     }
 
+    let scope_id = scopes.current_id();
     scopes.pop_scope(stream.current_span())?;
-    let union_decl = Union{name, generics: generics.generics, variants};
+    let union_decl = Union{name, generics: generics.generics, variants, scope_id};
     let span = stream[union_i].span.combine(&stream.current_span());
 
     scopes.insert(union_decl.name.0.clone(), ScopeKind::Union(union_decl.clone()), span)?;
@@ -262,8 +263,9 @@ pub fn get_enum(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<S
         return Err(err_out_of_bounds(stream))
     }
 
+    let scope_id = scopes.current_id();
     scopes.pop_scope(stream.current_span())?;
-    let enum_decl = Enum{name, variants};
+    let enum_decl = Enum{name, variants, scope_id};
     let span = stream[enum_i].span.combine(&stream.current_span());
 
     scopes.insert(enum_decl.name.0.clone(), ScopeKind::Enum(enum_decl.clone()), span)?;

@@ -7,20 +7,23 @@ use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulS
 
 type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct ScopeId(pub usize);
+
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct ScopeBuilder {
     scopes: Vec<Scope>,
-    current: usize,
+    current: ScopeId,
     pub global_literals: ProgramMemmory,
     pub project_name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct InnerScope<T> {
-    pub parent_index: Option<usize>,
-    pub children: Vec<usize>,
-    pub current_child: usize,
-    pub self_index: usize,
+    pub parent_index: Option<ScopeId>,
+    pub children: Vec<ScopeId>,
+    pub current_child: ScopeId,
+    pub self_index: ScopeId,
 
     pub symbols: HashMap<String, T>,
 }
@@ -80,7 +83,7 @@ impl ProgramMemmory {
 
 impl ScopeBuilder {
 
-    const GLOBAL_SCOPE_INDEX: usize = 0;
+    const GLOBAL_SCOPE_INDEX: ScopeId = ScopeId(0);
 
     pub fn new(project_name: String) -> Self {
         Self { 
@@ -97,30 +100,30 @@ impl ScopeBuilder {
     }
 
     pub fn get_global_scope(&self) -> &Scope {
-        &self.scopes[Self::GLOBAL_SCOPE_INDEX]
+        &self.scopes[Self::GLOBAL_SCOPE_INDEX.0]
     }
 
     pub fn current_scope(&self) -> &Scope {
-        &self.scopes[self.current]
+        &self.scopes[self.current.0]
     }
 
     pub fn current_index(&self) -> usize {
-        self.current
+        self.current.0
     }
 
     pub fn push_scope(&mut self) {
         let parent_index = self.current;
-        self.current = self.scopes.len();
-        self.scopes[parent_index].children.push(self.current);
+        self.current = ScopeId(self.scopes.len());
+        self.scopes[parent_index.0].children.push(self.current);
         self.scopes.push(InnerScope::new_child(self.current, parent_index));
     }
 
     pub fn remove_current(&mut self, span: SoulSpan) -> std::result::Result<(), SoulError> {
         let current = self.current;
-        if let Some(parent_index) = self.scopes[self.current].parent_index {
+        if let Some(parent_index) = self.scopes[self.current.0].parent_index {
             self.current = parent_index;
-            let self_index = self.scopes[parent_index].children.iter().enumerate().find(|(_i, el)| **el == current).unwrap().0;
-            self.scopes[parent_index].children.remove(self_index);
+            let self_index = self.scopes[parent_index.0].children.iter().enumerate().find(|(_i, el)| **el == current).unwrap().0;
+            self.scopes[parent_index.0].children.remove(self_index);
             Ok(())
         } 
         else {
@@ -129,7 +132,8 @@ impl ScopeBuilder {
     }
     
     pub fn pop_scope(&mut self, span: SoulSpan) -> std::result::Result<(), SoulError> {
-        if let Some(parent_index) = self.scopes[self.current].parent_index {
+        
+        if let Some(parent_index) = self.scopes[self.current.0].parent_index {
             self.current = parent_index;
             Ok(())
         } 
@@ -208,19 +212,23 @@ impl ScopeBuilder {
         }
     }
 
+    pub fn current_id(&self) -> ScopeId {
+        self.current
+    }
+
     pub fn current(&self) -> &Scope {
-        &self.scopes[self.current]
+        &self.scopes[self.current.0]
     }
 
     pub fn current_mut(&mut self) -> &mut Scope {
-        &mut self.scopes[self.current]
+        &mut self.scopes[self.current.0]
     }
 
     pub fn global_mut(&mut self) -> &mut Scope {
-        &mut self.scopes[Self::GLOBAL_SCOPE_INDEX]
+        &mut self.scopes[Self::GLOBAL_SCOPE_INDEX.0]
     }
 
-    pub fn __consume_to_tuple(self) -> (Vec<Scope>, usize, ProgramMemmory, String) {
+    pub fn __consume_to_tuple(self) -> (Vec<Scope>, ScopeId, ProgramMemmory, String) {
         (
             self.scopes,
             self.current,
@@ -235,17 +243,17 @@ impl<T> InnerScope<T> {
         Self {
             parent_index: None,
             children: vec![],
-            current_child: 0,
-            self_index: 0,
+            current_child: ScopeId(0),
+            self_index: ScopeId(0),
             symbols: HashMap::new(),
         }
     }
 
-    pub fn new_child(self_index: usize, parent_index: usize) -> Self {
+    pub fn new_child(self_index: ScopeId, parent_index: ScopeId) -> Self {
         Self {
             self_index,
             children: vec![],
-            current_child: 0,
+            current_child: ScopeId(0),
             symbols: HashMap::new(),
             parent_index: Some(parent_index),
         }

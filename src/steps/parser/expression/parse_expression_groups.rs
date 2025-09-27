@@ -9,7 +9,7 @@ use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeKind;
 use crate::steps::step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::function::{StructConstructor, FunctionCall};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeGenericKind, TypeWrapper};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType, TypeWrapper};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Array, ArrayFiller, Expression, ExpressionGroup, ExpressionKind, Ident, NamedTuple, Tuple, VariableName};
 
 pub fn try_get_expression_group(stream: &mut TokenStream, scopes: &mut ScopeBuilder, end_tokens: &[&str]) -> Result<Option<Expression>> {
@@ -106,16 +106,8 @@ pub fn get_function_call(stream: &mut TokenStream, scopes: &mut ScopeBuilder) ->
 } 
 
 fn tuple_to_function(func_ty: SoulType, values: Vec<Expression>, span: SoulSpan) -> Result<Expression> {
-    let mut generics = Vec::with_capacity(func_ty.generics.len()); 
-    for kind in func_ty.generics  {
-        match kind {
-            TypeGenericKind::Type(soul_type) => generics.push(soul_type),
-            TypeGenericKind::Lifetime(_) => return Err(new_soul_error(SoulErrorKind::InvalidInContext, Some(span), "function call can not have lifetimes in generic")),
-        }
-    }
-
     Ok(Expression::new(
-        ExpressionKind::FunctionCall(FunctionCall{name: func_ty.base.to_name_string().into(), callee: None, generics, arguments: Tuple{values}}),
+        ExpressionKind::FunctionCall(FunctionCall{name: func_ty.base.to_name_string().into(), callee: None, generics: func_ty.generics, arguments: Tuple{values}}),
         span
     ))
 }
@@ -373,6 +365,8 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
         scopes.remove_current(stream.current_span())?;
         return Ok(Err((collection_type, element_type)));
     }
+
+    let scope_id = scopes.current_id();
     scopes.pop_scope(stream.current_span())?;
 
     if stream.next().is_none() {
@@ -381,7 +375,7 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
 
     let fill_expr = Box::new(get_expression(stream, scopes, &["]"])?);
     
-    let array_filler = ArrayFiller{collection_type, element_type, amount, index, fill_expr};
+    let array_filler = ArrayFiller{collection_type, element_type, amount, index, fill_expr, scope_id};
     Ok(Ok(array_filler))
 }
 

@@ -1,13 +1,13 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, function::{Function, FunctionSignature}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned, statement::UseBlock};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, function::{Function, FunctionSignature}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned, statement::UseBlock}, scope_builder::ScopeId};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Struct {
     pub name: Ident,
     pub generics: Vec<GenericParameter>,
     pub fields: Vec<Spanned<Field>>,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -16,12 +16,14 @@ pub struct Class {
     pub generics: Vec<GenericParameter>,
     pub implements: Vec<SoulType>,
     pub children: Vec<ClassChild>,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Trait {
     pub signature: TraitSignature,
     pub methodes: Vec<Spanned<FunctionSignature>>,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]

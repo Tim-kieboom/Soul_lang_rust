@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, Modifier, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
+use crate::{errors::soul_error::{SoulError, SoulErrorKind}, soul_names::{check_name_allow_types, NamesInternalType, SOUL_NAMES}, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::{Lifetime, Modifier, SoulType, TypeGenericKind, TypeWrapper}, type_kind::TypeKind}}, parser_response::{new_from_stream_error, FromStreamError, FromStreamErrorKind, FromTokenStream}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}}};
 
 impl FromTokenStream<SoulType> for SoulType {
     fn try_from_stream(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Option<SoulType>, SoulError> {
@@ -241,7 +241,7 @@ fn get_type_generic(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
     let mut generics = vec![];
     loop {
-
+        
         if stream.current_text() == ">" {
             break
         }
@@ -252,13 +252,27 @@ fn get_type_generic(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             check_name_allow_types(name)
                 .map_err(|msg| new_from_stream_error(SoulErrorKind::WrongType, stream.current_span(), msg, FromStreamErrorKind::IsOfType))?;
 
-
             generics.push(TypeGenericKind::Lifetime(Lifetime{name: Ident::new(stream.current_text())}));
             continue
         }
 
-        let ty = inner_from_stream(stream, scopes)?;
-        generics.push(TypeGenericKind::Type(ty));
+        match inner_from_stream(stream, scopes) {
+            Ok(generic_type) => generics.push(TypeGenericKind::Type(generic_type)),
+            Err(err) => {
+                match get_expression(stream, scopes, &[",", ">"]) {
+                    Ok(expression) => generics.push(TypeGenericKind::Expression(expression)),
+                    Err(_) => return Err(err),
+                };
+            },
+        }
+
+        if stream.current_text() == ">" {
+            break
+        }
+    
+        if stream.next().is_none() {
+            return Err(err_out_of_bounds(stream))
+        }
     }
 
     if generics.is_empty() {

@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::SoulError, steps::step_interfaces::{i_parser::abstract_syntax_tree::abstract_syntax_tree::AbstractSyntacTree, i_sementic::{scope_vistitor::ScopeVisitor, soul_fault::{SoulFault}}}};
+use crate::{errors::soul_error::SoulError, steps::step_interfaces::{i_parser::abstract_syntax_tree::abstract_syntax_tree::AbstractSyntacTree, i_sementic::{scope_vistitor::ScopeVisitor, soul_fault::{SoulFault, SoulFaultKind}}}};
 
 pub trait AstAnalyser {
     fn analyse_ast(&mut self, tree: &mut AbstractSyntacTree);
@@ -122,15 +122,21 @@ macro_rules! impl_default_methods {
                     Self{scope, faults, has_error}
                 }
 
+                pub fn add_fault(&mut self, fault: SoulFault) {
+                    if let SoulFaultKind::Error = fault.kind {
+                        self.has_error = true;
+                    }
+                    self.faults.push(fault)
+                }
                 pub fn add_error(&mut self, msg: SoulError) { 
                     self.has_error = true;
-                    self.faults.push(SoulFault::new_error(msg, self.scope.file_path.clone())); 
+                    self.faults.push(SoulFault::new_error(msg)); 
                 }
                 pub fn add_warning(&mut self, msg: SoulError) { 
-                    self.faults.push(SoulFault::new_warning(msg, self.scope.file_path.clone())); 
+                    self.faults.push(SoulFault::new_warning(msg)); 
                 }
                 pub fn add_note(&mut self, msg: SoulError) { 
-                    self.faults.push(SoulFault::new_note(msg, self.scope.file_path.clone())); 
+                    self.faults.push(SoulFault::new_note(msg)); 
                 }
 
                 pub fn has_error(&self) -> bool {self.has_error}

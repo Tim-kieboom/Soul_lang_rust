@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::{soul_names::{check_name_allow_types, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::get_number, step_interfaces::{i_parser::abstract_syntax_tree::{expression::Ident, literal::Literal, soul_type::type_kind::TypeKind}, i_tokenizer::TokenStream}}};
+use crate::{soul_names::{check_name_allow_types, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::{parser::literal::get_literal::get_number, step_interfaces::{i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, literal::Literal, pretty_format::ToString, soul_type::type_kind::TypeKind}, i_tokenizer::TokenStream}}};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct  SoulType {
@@ -69,6 +69,7 @@ impl SoulType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum TypeGenericKind {
     Type(SoulType),
+    Expression(Expression),
     Lifetime(Lifetime)
 }
 
@@ -76,6 +77,7 @@ impl TypeGenericKind {
     pub fn to_string(&self) -> String {
         match self {
             TypeGenericKind::Type(soul_type) => soul_type.to_string(),
+            TypeGenericKind::Expression(expression) => expression.node.to_string(),
             TypeGenericKind::Lifetime(lifetime) => lifetime.name.0.clone(),
         }
     }

@@ -459,21 +459,25 @@ fn get_return_like(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resul
 }
     
 fn get_scope<'a>(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<Spanned<Block>> {
-    let mut block_builder = BlockBuilder::new(stream.current_span());
+    scopes.push_scope();
+    let mut block_builder = BlockBuilder::new(scopes.current_id(), stream.current_span());
 
-    loop {
+    let result = loop {
         let statment = match get_statment(stream, scopes)? {
             Some(val) => val,
-            None => return Ok(block_builder.into_block()),
+            None => break Ok(block_builder.into_block()),
         };
 
         if let StatementKind::CloseBlock = statment.node {
             block_builder.push(statment);
-            return Ok(block_builder.into_block());
+            break Ok(block_builder.into_block());
         }
 
         block_builder.push(statment);
-    }
+    };
+
+    scopes.pop_scope(stream.current_span())?;
+    result
 }
 
 fn err_out_of_bounds(stream: &TokenStream) -> SoulError {

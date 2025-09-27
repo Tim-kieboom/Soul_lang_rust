@@ -14,7 +14,7 @@ lifetimeCheckVsBorrowChecker() int {
 
     Mut<int> ref = bar.BorrowMut()   //Obtain a mutable reference from Strict wrapper
 
-    thread.Spawn((ref) => {
+    std.thread.Spawn((ref) => {
         *ref += 1                    //Mutate inside another thread: Rust-like aliasing and thread safety rules enforced here
     })
 

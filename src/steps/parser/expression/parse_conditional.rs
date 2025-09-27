@@ -82,20 +82,22 @@ fn get_match(
             CaseDoKind::Expression(get_expression(stream, scopes, &[","])?)
         };
 
+        let scope_id = scopes.current_id();
         scopes.pop_scope(stream.current_span())?;
         
-        cases.push(CaseSwitch{if_expr, do_fn});
+        cases.push(CaseSwitch{if_expr, do_fn, scope_id});
     }
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream))
     }
 
+    let scope_id = scopes.current_id();
     scopes.pop_scope(stream.current_span())?;
     
     let span = stream[match_i].span.combine(&stream.current_span());
     let while_decl = Expression::new(
-        ExpressionKind::Match(Match{condition, cases}), 
+        ExpressionKind::Match(Match{condition, cases, scope_id}), 
         span,
     );
 

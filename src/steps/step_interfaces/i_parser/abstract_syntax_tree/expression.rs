@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
-use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{function::{StructConstructor, FunctionCall, Lambda, StaticMethod}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::{Spanned}, statement::Block}};
+use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{function::{FunctionCall, Lambda, StaticMethod, StructConstructor}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::Spanned, statement::Block}, scope_builder::ScopeId}};
 
 pub type Expression = Spanned<ExpressionKind>;
 
@@ -90,6 +90,7 @@ pub struct ArrayFiller {
     pub amount: BoxExpression,
     pub index: Option<VariableName>,
     pub fill_expr: BoxExpression,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -129,12 +130,14 @@ pub struct For {
 pub struct Match {
     pub condition: BoxExpression,
     pub cases: Vec<CaseSwitch>,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct CaseSwitch {
     pub if_expr: Expression,
     pub do_fn: CaseDoKind,
+    pub scope_id: ScopeId,
 } 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -193,7 +196,7 @@ pub struct StaticField {
     pub field: VariableName,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct AccessField {
     pub object: BoxExpression,
     pub field: VariableName,
@@ -205,7 +208,7 @@ pub struct Index {
     pub index: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct VariableName {
     pub name: Ident
 }
@@ -248,7 +251,7 @@ pub enum BinaryOperatorKind {
     TypeOf, // <variable> typeof <type>
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct Ident(pub String);
 
 impl VariableName {
@@ -346,19 +349,19 @@ impl ExpressionKind {
         }
     }
 
-    pub fn is_bodied_kind(&self) -> bool {
+    pub fn get_scope_id(&self) -> Option<ScopeId> {
         
-        match self {
-            ExpressionKind::If(_) |
-            ExpressionKind::For(_) |
-            ExpressionKind::While(_) |
-            ExpressionKind::Match(_) |
-            ExpressionKind::Block(_) |
-            ExpressionKind::Lambda(_) |
-            ExpressionKind::ExpressionGroup(ExpressionGroup::ArrayFiller(_)) => true,
+        Some(match self {
+            ExpressionKind::If(if_) => if_.block.scope_id,
+            ExpressionKind::For(for_) => for_.block.scope_id,
+            ExpressionKind::While(while_) => while_.block.scope_id,
+            ExpressionKind::Match(match_) => match_.scope_id,
+            ExpressionKind::Block(block) => block.scope_id,
+            ExpressionKind::Lambda(lambda_) => lambda_.scope_id,
+            ExpressionKind::ExpressionGroup(ExpressionGroup::ArrayFiller(array)) => array.scope_id,
 
-            _ => false,
-        } 
+            _ => return None,
+        })
     }
 }
 

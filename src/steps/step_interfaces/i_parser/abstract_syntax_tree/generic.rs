@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::TypeEnumBody, expression::Ident, soul_type::soul_type::SoulType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::TypeEnumBody, expression::{Expression, Ident}, soul_type::soul_type::SoulType};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct GenericParameter {

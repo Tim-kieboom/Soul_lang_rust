@@ -1,15 +1,16 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, thread::Scope};
 
 use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{Expression, Ident}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{Expression, Ident}, generic::GenericParameter, soul_type::soul_type::SoulType, spanned::Spanned}, scope_builder::ScopeId};
 
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Enum {
     pub name: Ident,
     pub variants: EnumVariantKind,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -17,6 +18,7 @@ pub struct Union {
     pub name: Ident,
     pub generics: Vec<GenericParameter>,
     pub variants: Vec<Spanned<UnionVariant>>,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]

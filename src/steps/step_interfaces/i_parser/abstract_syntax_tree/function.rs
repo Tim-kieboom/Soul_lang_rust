@@ -2,7 +2,7 @@ use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::{BoxExpression, Ident, NamedTuple, Tuple, VariableName}, generic::GenericParameter, soul_type::soul_type::{Modifier, SoulType}, spanned::Spanned, statement::Block};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::{BoxExpression, Ident, NamedTuple, Tuple, VariableName}, generic::{GenericKind, GenericParameter}, soul_type::soul_type::{Modifier, SoulType, TypeGenericKind}, spanned::Spanned, statement::Block}, scope_builder::ScopeId};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Function {
@@ -16,6 +16,7 @@ pub struct Lambda {
     pub arguments: Tuple,
     pub body: LambdaBody,
     pub capture: Capture,
+    pub scope_id: ScopeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
@@ -28,7 +29,7 @@ pub enum LambdaBody {
 pub struct FunctionCall {
     pub name: Ident,
     pub callee: Option<BoxExpression>,
-    pub generics: Vec<SoulType>,
+    pub generics: Vec<TypeGenericKind>,
     pub arguments: Tuple,
 }
 
@@ -42,7 +43,7 @@ pub struct StructConstructor {
 pub struct StaticMethod {
     pub callee: Spanned<SoulType>,
     pub name: Ident,
-    pub generics: Vec<SoulType>,
+    pub generics: Vec<TypeGenericKind>,
     pub arguments: Tuple,
 }
 

@@ -9,7 +9,7 @@ pub fn parse_ast(tokens: TokenizeResonse, project_name: String) -> Result<Parser
     let mut stream = tokens.stream;
     let mut scopes = ScopeBuilder::new(project_name);
 
-    let mut block_builder = BlockBuilder::new(SoulSpan::new(0,0,0));
+    let mut block_builder = BlockBuilder::new(scopes.current_id(), SoulSpan::new(0,0,0));
     loop {
 
         if let Some(statment) = get_statment(&mut stream, &mut scopes)? {

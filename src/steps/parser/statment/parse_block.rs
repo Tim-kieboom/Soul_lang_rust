@@ -46,7 +46,7 @@ pub fn get_use_block(
 
     scopes.push_scope();
     
-    let mut block_builder = BlockBuilder::new(stream[use_i].span);
+    let mut block_builder = BlockBuilder::new(scopes.current_id(), stream[use_i].span);
     loop {
         if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(stream))
@@ -138,7 +138,7 @@ fn get_inner_block(
         scopes.insert(name_string, var, span)?;
     }
 
-    let mut block_builders = BlockBuilder::new(stream.current_span());
+    let mut block_builders = BlockBuilder::new(scopes.current_id(), stream.current_span());
     loop {
         
         if let Some(statment) = get_statment(stream, scopes)? {

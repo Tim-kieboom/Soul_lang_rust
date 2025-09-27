@@ -31,6 +31,8 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         return Err(err_out_of_bounds(stream))
     }
 
+    scopes.push_scope();
+
     let generics = get_generics_decl(stream, scopes)?;
 
     if stream.next_if("\n").is_none() {
@@ -79,8 +81,11 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
         return Err(err_out_of_bounds(stream))
     }
 
+    let scope_id = scopes.current_id();
+    scopes.pop_scope(stream.current_span());
+
     let span = stream[struct_i].span.combine(&stream.current_span());
-    let struct_decl = Struct{name: name.clone(), generics: generics.generics, fields};
+    let struct_decl = Struct{name: name.clone(), generics: generics.generics, fields, scope_id};
     scopes.insert(name.0, ScopeKind::Struct(struct_decl.clone()), span)?;
 
     Ok(Spanned::new(struct_decl, span))
@@ -103,6 +108,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         return Err(err_out_of_bounds(stream))
     }
 
+    scopes.push_scope();
     let generics = get_generics_decl(stream, scopes)?;
 
     if stream.next_if("\n").is_none() {
@@ -167,8 +173,11 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         return Err(err_out_of_bounds(stream))
     }
 
+    let scope_id = scopes.current_id();
+    scopes.pop_scope(stream.current_span());
+
     let span = stream[class_i].span.combine(&stream.current_span());
-    let class_decl = Class{name: name.clone(), generics: generics.generics, implements: generics.implements, children};
+    let class_decl = Class{name: name.clone(), generics: generics.generics, implements: generics.implements, children, scope_id};
     scopes.insert(name.0, ScopeKind::Class(class_decl.clone()), span)?;
     
     Ok(Spanned::new(class_decl, span))
@@ -191,6 +200,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         return Err(err_out_of_bounds(stream))
     }
 
+    scopes.push_scope();
     let generics = get_generics_decl(stream, scopes)?;
 
     if stream.next_if("\n").is_none() {
@@ -231,9 +241,13 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
         return Err(err_out_of_bounds(stream))
     }
 
+    let scope_id = scopes.current_id();
+    scopes.pop_scope(stream.current_span());
+
     let trait_decl = Trait{
         signature: TraitSignature{name: name.clone(), generics: generics.generics, implements: generics.implements}, 
-        methodes
+        methodes,
+        scope_id,
     };
     
     let span = stream[trait_i].span.combine(&stream.current_span());
@@ -342,7 +356,7 @@ fn get_impl_block(stream: &mut TokenStream, scopes: &mut ScopeBuilder, class_typ
     }
 
     scopes.push_scope();
-    let mut block_builder = BlockBuilder::new(stream[impl_i].span);
+    let mut block_builder = BlockBuilder::new(scopes.current_id(), stream[impl_i].span);
     loop {
         if stream.next_if("\n").is_none() {
             return Err(err_out_of_bounds(stream))

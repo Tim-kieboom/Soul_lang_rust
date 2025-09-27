@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{AccessField, Array, ArrayFiller, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Index, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{FunctionCall, StructConstructor}, literal::{Double, Literal, LiteralType}, soul_type::{soul_type::SoulType, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder}}, i_tokenizer::{Token, TokenStream}}}};
+use crate:: {assert_eq_show_diff, errors::soul_error::{SoulErrorKind, SoulSpan}, soul_tuple, steps::{parser::expression::parse_expression::get_expression, step_interfaces::{i_parser::{abstract_syntax_tree::{expression::{AccessField, Array, ArrayFiller, Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionGroup, ExpressionKind, Ident, Index, NamedTuple, Tuple, Unary, UnaryOperator, UnaryOperatorKind, VariableName}, function::{FunctionCall, StructConstructor}, literal::{Double, Literal, LiteralType}, soul_type::{soul_type::{SoulType, TypeGenericKind}, type_kind::TypeKind}}, scope_builder::{ProgramMemmory, ProgramMemmoryId, ScopeBuilder, ScopeId}}, i_tokenizer::{Token, TokenStream}}}};
 
 // ---------- helpers ----------
 
@@ -813,6 +813,7 @@ fn test_array_filler_expressions() {
                 amount: Box::new(Expression::new(int_lit(2), SoulSpan::new(0,4,1))),
                 index: None,
                 fill_expr: Box::new(Expression::new(var("var"), SoulSpan::new(0,7,3))),
+                scope_id: ScopeId(1),
             }
         ))
     );
@@ -838,6 +839,7 @@ fn test_array_filler_expressions() {
                     }), 
                     SoulSpan::new(0,7,3),
                 )),
+                scope_id: ScopeId(1),
             }
         ))
     );
@@ -916,6 +918,28 @@ fn test_function_call() {
     let expr = result.unwrap();
     assert_eq_show_diff!(expr, should_be);
 
+    stream = stream_from_strs(&["sumStackArray", "<", "int", ",", "5", ">", "(", ")", "\n"]);
+    let result = get_expression(&mut stream, &mut scope, &["\n"]);
+    assert!(result.is_ok(), "{}", result.unwrap_err().to_err_message().join("\n"));
+    let should_be = Expression::new(
+        ExpressionKind::FunctionCall(FunctionCall{
+            callee: None, 
+            name: Ident("sumStackArray".into()), 
+            generics: vec![
+                TypeGenericKind::Type(SoulType::from_type_kind(TypeKind::Unknown(Ident::new("int")))),
+                TypeGenericKind::Expression(Expression::new(
+                    ExpressionKind::Literal(Literal::Int(5)),
+                    SoulSpan::new(0,18,1)                    
+                ))
+            ], 
+            arguments: soul_tuple![],
+        }),
+        SoulSpan::new(0,0,22)
+    );
+    
+    let expr = result.unwrap();
+    assert_eq_show_diff!(expr, should_be);
+
     stream = stream_from_strs(&["sum", "(", "1", ",", "2", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
@@ -925,6 +949,7 @@ fn test_function_call() {
     stream = stream_from_strs(&["sum", "(", "1", ",", "name", ":", ")", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
+
     stream = stream_from_strs(&["sum", "{", "name", ":", "1", ",", "2", "}", "\n"]);
     let not_closing_fn = get_expression(&mut stream, &mut scope, &["\n"]);
     assert!(not_closing_fn.is_err());
