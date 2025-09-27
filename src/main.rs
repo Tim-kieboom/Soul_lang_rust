@@ -23,9 +23,9 @@ fn main() {
         },
     };
 
-    let error_len = errors.len();
+     
     
-    log_faults(errors, &logger);
+    let error_len = log_faults(errors, &logger);
     log_time_table(time_logs, &run_options, &logger);
 
     if run_options.show_times.contains(ShowTimes::SHOW_TOTAL) {
@@ -38,10 +38,10 @@ fn main() {
     }
 }
 
-fn log_faults(errors: Vec<(PathBuf, Vec<SoulFault>)>, logger: &Logger) {
+fn log_faults(errors: Vec<(PathBuf, Vec<SoulFault>)>, logger: &Logger) -> usize {
     
     let mut options = DEFAULT_LOG_OPTIONS.clone();
-
+    let mut errors_len = 0;
     for (file, errors) in errors {
         let (mut reader, _) = get_file_reader(&file)
             .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while trying to get file reading", err))
@@ -56,13 +56,18 @@ fn log_faults(errors: Vec<(PathBuf, Vec<SoulFault>)>, logger: &Logger) {
         for error in errors {
             let level = match error.kind {
                 SoulFaultKind::Note => LogLevel::Info,
-                SoulFaultKind::Error => LogLevel::Error,
+                SoulFaultKind::Error => {
+                    errors_len += 1;
+                    LogLevel::Error
+                },
                 SoulFaultKind::Warning => LogLevel::Warning,
             };
 
             logger._log_soul_error(level, &error.msg, &mut reader, &options);
         }
     }
+
+    errors_len
 }
 
 fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {

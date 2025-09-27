@@ -1,9 +1,11 @@
 use std::path::{PathBuf};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use threadpool::ThreadPool;
 
 use crate::file_cache::FileCache;
+use crate::run_options::show_times::ShowTimes;
 use crate::steps::step_interfaces::i_sementic::ast_visitor::{AstAnalyser, NameResolutionAnalyser};
 use crate::steps::step_interfaces::i_sementic::scope_vistitor::ScopeVisitor;
 use crate::steps::step_interfaces::i_sementic::soul_fault::SoulFault;
@@ -47,7 +49,7 @@ fn generate_all_codes(
             
             match FileCache::read_parse(&run_option, &file) {
                 Ok(parser_response) => {
-                    let response = sementic_analyse(parser_response, &run_option, &log, &t_log, file);
+                    let response = sementic_analyse(parser_response, &run_option, &t_log, file);
                     sender.send(response).expect("channel receiver should be alive");
                 },
                 Err(err) => log.error(err, DEFAULT_LOG_OPTIONS),
@@ -58,7 +60,7 @@ fn generate_all_codes(
     drop(sender);
 
     for result in reciever {
-        errors.push((result.scopes.file_path, result.faults))
+        errors.push((result.path, result.faults))
     }
 
     Ok(errors)
@@ -67,14 +69,15 @@ fn generate_all_codes(
 fn sementic_analyse(
     parser: ParserResponse, 
     run_options: &Arc<RunOptions>, 
-    logger: &Arc<Logger>, 
     time_logs: &Arc<Mutex<TimeLogs>>,
     file_path: PathBuf,
 ) -> SementicResponse {
     let ParserResponse{mut tree, scopes} = parser;
-    let scope_vistitor = ScopeVisitor::new(scopes, file_path);
+    let scope_vistitor = ScopeVisitor::new(scopes);
 
     const SHOULD_RESET_SCOPE: bool = true;
+
+    let start = Instant::now();
 
     let mut analyser = impl_ast_analyser(
         NameResolutionAnalyser::new(scope_vistitor, SHOULD_RESET_SCOPE)
@@ -83,7 +86,13 @@ fn sementic_analyse(
 
     let (scopes, faults, has_error) = analyser.consume();
 
-    SementicResponse{tree, scopes, faults, has_error}
+    if run_options.show_times.contains(ShowTimes::SHOW_CODE_GENERATOR) {
+        time_logs
+            .lock().unwrap()
+            .push(&file_path.to_string_lossy().to_string(), "semeticAnalyser", start.elapsed());
+    }
+
+    SementicResponse{tree, scopes, faults, has_error, path: file_path}
 }
 
 ///force analyser to impl AstAnalyser trait

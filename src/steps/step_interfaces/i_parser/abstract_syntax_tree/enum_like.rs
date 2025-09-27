@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread::Scope};
+use std::{collections::HashMap};
 
 use bincode::{Decode, Encode};
 use itertools::Itertools;

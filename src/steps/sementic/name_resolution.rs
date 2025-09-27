@@ -1,4 +1,6 @@
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::EnumVariantKind, expression::{AccessField, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, If, StaticField, UnwrapVariable, VariableName}, function::LambdaBody, object::{ClassChild, Field}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, statement::{Block, Statement, StatementKind}}, scope_builder::ScopeKind}, i_sementic::{ast_visitor::{AstAnalyser, NameResolutionAnalyser}, scope_vistitor::ScopeVisitor, soul_fault::SoulFault}}};
+use itertools::Itertools;
+
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::EnumVariantKind, expression::{AccessField, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, If, StaticField, UnwrapVariable, VariableName}, function::LambdaBody, object::{Class, ClassChild, Field}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, statement::{Block, Statement, StatementKind}}, scope_builder::ScopeKind}, i_sementic::{ast_visitor::{AstAnalyser, NameResolutionAnalyser}, scope_vistitor::ScopeVisitor, soul_fault::SoulFault}}};
 
 impl AstAnalyser for NameResolutionAnalyser {
     
@@ -20,7 +22,7 @@ impl NameResolutionAnalyser {
         if let Some(id) = statment.node.get_scope_id() {
 
             if self.get_scope_mut().set_current(id).is_none() {
-                panic!("could not get scope_id({}) at line: {}:{}, file: {}", id.0, statment.span.line_number, statment.span.line_offset, self.get_scope().file_path.to_string_lossy())
+                panic!("could not get scope_id({}) at line: {}:{}", id.0, statment.span.line_number, statment.span.line_offset)
             }
         }
 
@@ -49,29 +51,21 @@ impl NameResolutionAnalyser {
                     self.analyse_field(&mut field.node)
                 }
             },
-            StatementKind::Class(class) => {
-
-                for child in &mut class.children {
-                    match child {
-                        ClassChild::Field(field) => self.analyse_field(&mut field.node),
-                        ClassChild::Methode(methode) => self.analyse_block(&mut methode.node.block),
-                        ClassChild::ImplBlock(impl_block) => self.analyse_block(&mut impl_block.node.block),
-                    }
-                }
-            },
-            StatementKind::Function(function) => self.analyse_block(&mut function.block),
-            StatementKind::Expression(spanned) => self.analyse_expression(spanned),
-            StatementKind::UseBlock(use_block) => self.analyse_block(&mut use_block.block),
             StatementKind::Assignment(assignment) => {
                 self.analyse_expression(&mut assignment.variable);
                 self.analyse_expression(&mut assignment.value);
             }
+            StatementKind::Class(class) => self.analyse_class(class, statment.span),
+            StatementKind::Function(function) => self.analyse_block(&mut function.block),
+            StatementKind::Expression(spanned) => self.analyse_expression(spanned),
+            StatementKind::UseBlock(use_block) => self.analyse_block(&mut use_block.block),
         }
 
         self.get_scope_mut()
             .set_current(parent_id)
             .expect("scope_id should be valid");
     }
+
 
     fn analyse_expression(&mut self, expression: &mut Expression) {
         if let Err(fault) = self.try_analyse_expression(expression) {
@@ -85,7 +79,7 @@ impl NameResolutionAnalyser {
         if let Some(id) = expression.node.get_scope_id() {
 
             if self.get_scope_mut().set_current(id).is_none() {
-                panic!("could not get scope_id({}) at line: {}:{}, file: {}", id.0, expression.span.line_number, expression.span.line_offset, self.get_scope().file_path.to_string_lossy())
+                panic!("could not get scope_id({}) at line: {}:{}", id.0, expression.span.line_number, expression.span.line_offset)
             }
         }
 
@@ -248,6 +242,30 @@ impl NameResolutionAnalyser {
     }
 
 
+    fn analyse_class(&mut self, class: &mut Class, span: SoulSpan) {
+        
+        for child in &mut class.children {
+
+            let parent_id = self.get_scope().current_id();
+            if let Some(id) = child.get_scope_id() {
+                if self.get_scope_mut().set_current(id).is_none() {
+                    panic!("could not get scope_id({}) at line: {}:{}", id.0, span.line_number, span.line_offset)
+                }
+            }
+    
+
+            match child {
+                ClassChild::Field(field) => self.analyse_field(&mut field.node),
+                ClassChild::Methode(methode) => self.analyse_block(&mut methode.node.block),
+                ClassChild::ImplBlock(impl_block) => self.analyse_block(&mut impl_block.node.block),
+            }
+
+            self.get_scope_mut()
+                .set_current(parent_id)
+                .expect("scope_id should be valid");
+        }
+    }
+
     fn analyse_if(&mut self, if_decl: &mut If) -> Result<(), SoulFault> {
         self.try_analyse_expression(&mut if_decl.condition)?;
         self.analyse_block(&mut if_decl.block);
@@ -269,7 +287,14 @@ impl NameResolutionAnalyser {
             .is_some_and(|kinds| kinds.iter().any(|el| matches!(el.node, ScopeKind::Variable(_))))
         {
             Err(
-                SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidName, Some(span), format!("variable: '{}' not found in scope", variable_name.name)))
+                SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidName, Some(span), format!("variable: '{}' not found in scope: {}", variable_name.name, 
+                    self.get_scope()
+                        .current_scope()
+                        .symbols
+                        .iter()
+                        .map(|(name, _)| name)
+                        .join(",")
+                    )))
             )
         }
         else {

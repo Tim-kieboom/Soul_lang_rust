@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use bincode::{Decode, Encode};
 use crate::errors::soul_error::SoulError;
 

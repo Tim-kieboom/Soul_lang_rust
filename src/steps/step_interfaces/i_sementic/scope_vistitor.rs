@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::spanned::Spanned, scope_builder::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeId, ScopeKind}};
 
 type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
@@ -9,19 +7,17 @@ pub struct ScopeVisitor {
     current: ScopeId,
     pub global_literals: ProgramMemmory,
     pub project_name: String,
-    pub file_path: PathBuf,
 }
 
 impl ScopeVisitor {
 
     const GLOBAL_SCOPE_INDEX: ScopeId = ScopeId(0);
 
-    pub fn new(scope: ScopeBuilder, file_path: PathBuf) -> Self {
+    pub fn new(scope: ScopeBuilder) -> Self {
         let (scopes, current, global_literals, project_name) = scope.__consume_to_tuple();
         Self {
             scopes,
             current,
-            file_path,
             project_name,
             global_literals,
         }

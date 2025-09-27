@@ -82,7 +82,7 @@ pub fn get_struct(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result
     }
 
     let scope_id = scopes.current_id();
-    scopes.pop_scope(stream.current_span());
+    scopes.pop_scope(stream.current_span())?;
 
     let span = stream[struct_i].span.combine(&stream.current_span());
     let struct_decl = Struct{name: name.clone(), generics: generics.generics, fields, scope_id};
@@ -174,7 +174,7 @@ pub fn get_class(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     let scope_id = scopes.current_id();
-    scopes.pop_scope(stream.current_span());
+    scopes.pop_scope(stream.current_span())?;
 
     let span = stream[class_i].span.combine(&stream.current_span());
     let class_decl = Class{name: name.clone(), generics: generics.generics, implements: generics.implements, children, scope_id};
@@ -242,7 +242,7 @@ pub fn get_trait(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Result<
     }
 
     let scope_id = scopes.current_id();
-    scopes.pop_scope(stream.current_span());
+    scopes.pop_scope(stream.current_span())?;
 
     let trait_decl = Trait{
         signature: TraitSignature{name: name.clone(), generics: generics.generics, implements: generics.implements}, 
