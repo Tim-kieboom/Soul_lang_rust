@@ -135,10 +135,17 @@ pub struct Match {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct CaseSwitch {
-    pub if_expr: Expression,
+    pub if_kind: IfCaseKind,
     pub do_fn: CaseDoKind,
     pub scope_id: ScopeId,
 } 
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum IfCaseKind {
+    Expression(Expression),
+    Variant{name: Ident, params: Tuple},
+    NamedVariant{name: Ident, params: NamedTuple},
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum CaseDoKind {
@@ -315,6 +322,12 @@ impl Into<Ident> for &str {
         Ident::new(self)
     }
 } 
+
+impl AsRef<str> for Ident {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 impl ExpressionKind {
 

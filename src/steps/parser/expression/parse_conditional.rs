@@ -1,3 +1,4 @@
+use crate::soul_tuple;
 use crate::steps::parser::expression::parse_expression::{get_expression};
 use crate::steps::step_interfaces::i_parser::scope_builder::{ScopeKind, Variable};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Spanned;
@@ -5,7 +6,7 @@ use crate::steps::parser::statment::parse_block::{get_block, get_block_no_scope_
 use crate::errors::soul_error::{new_soul_error, Result, SoulError, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::STATMENT_END_TOKENS;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{CaseDoKind, CaseSwitch, ElseKind, Expression, ExpressionGroup, ExpressionKind, For, If, Match, Tuple, VariableName, While};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{CaseDoKind, CaseSwitch, ElseKind, Expression, ExpressionGroup, ExpressionKind, For, If, IfCaseKind, Match, Tuple, VariableName, While};
 use crate::{soul_names::{NamesOtherKeyWords, SOUL_NAMES}, steps::{parser::expression::parse_expression::ExpressionStacks, step_interfaces::{i_parser::scope_builder::ScopeBuilder, i_tokenizer::TokenStream}}};
 
 pub fn try_get_conditional(
@@ -70,6 +71,14 @@ fn get_match(
 
         scopes.push_scope();
         let if_expr = get_expression(stream, scopes, &["=>"])?;
+        let if_kind = match if_expr.node {
+            ExpressionKind::Variable(variable_name) => IfCaseKind::Variant{name: variable_name.name, params: soul_tuple![] },
+            ExpressionKind::FunctionCall(function_call) => IfCaseKind::Variant{name: function_call.name, params: function_call.arguments},
+            ExpressionKind::StructConstructor(struct_constructor) => IfCaseKind::NamedVariant{name: struct_constructor.calle.base.to_name_string().into(), params: struct_constructor.arguments},
+
+            _ => IfCaseKind::Expression(if_expr)
+        };
+
         if stream.next().is_none() {
             return Err(err_out_of_bounds(stream))
         }
@@ -85,7 +94,7 @@ fn get_match(
         let scope_id = scopes.current_id();
         scopes.pop_scope(stream.current_span())?;
         
-        cases.push(CaseSwitch{if_expr, do_fn, scope_id});
+        cases.push(CaseSwitch{if_kind, do_fn, scope_id});
     }
 
     if stream.next().is_none() {

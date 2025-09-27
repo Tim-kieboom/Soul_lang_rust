@@ -263,8 +263,13 @@ fn get_parameters(
             Modifier::Const
         };
 
-        if stream.current_is(end_symbool) {
-            break
+        if stream.current_is(end_symbool) || stream.current_is(",") {
+            
+            return Err(new_soul_error(
+                SoulErrorKind::UnexpectedEnd,
+                stream.current_span_some(),
+                "missing name for parameter",
+            ))
         }
 
         check_name(stream.current_text())

@@ -13,7 +13,7 @@ matchs() {
         None => (),
     }
 
-    const num = match 1 == 2 {
+    const num := match 1 == 2 {
         true => fall 1,
         false => fall 2,
     }
@@ -108,7 +108,7 @@ ifs() {
         Println("how????")
     }
 
-    mut value = if true {
+    mut value := if true {
         fall 1
     }
     else {

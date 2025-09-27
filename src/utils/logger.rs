@@ -1,12 +1,15 @@
-use std::{fmt::Display, fs::OpenOptions, io::{self, BufReader, Read, Seek, Write}, path::PathBuf, process::exit, sync::{Arc, Mutex}};
+use std::{fmt::Display, fs::OpenOptions, io::{self, BufReader, Read, Seek, Write}, path::PathBuf, process::exit, sync::{Arc, Mutex, RwLock, RwLockReadGuard}};
 use bitflags::bitflags;
 use chrono::Local;
 use colored::Colorize;
 
 use crate::errors::soul_error::SoulError;
 
-pub static mut MUT_DEFAULT_LOG_OPTIONS: LogOptions = LogOptions::const_default();
-pub static DEFAULT_LOG_OPTIONS: &LogOptions = unsafe{&*&raw const MUT_DEFAULT_LOG_OPTIONS};
+pub static DEFAULT_LOG_OPTIONS: RwLock<LogOptions> = RwLock::new(LogOptions::const_default());
+
+pub fn default_log_options<'a>() -> RwLockReadGuard<'a, LogOptions> {
+    DEFAULT_LOG_OPTIONS.read().unwrap()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {

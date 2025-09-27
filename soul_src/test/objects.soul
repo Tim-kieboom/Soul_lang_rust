@@ -54,7 +54,7 @@ classes() {
             this.ints[lastIndex] = el
         }
 
-        This(field) {
+        This(int field) {
             return This{field, ..}
         }
 

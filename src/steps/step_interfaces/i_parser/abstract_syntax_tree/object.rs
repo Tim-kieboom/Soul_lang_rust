@@ -82,7 +82,7 @@ impl ClassChild {
     pub fn get_scope_id(&self) -> Option<ScopeId> {
         
         match self {
-            ClassChild::Field(spanned) => None,
+            ClassChild::Field(_) => None,
             ClassChild::Methode(spanned) => Some(spanned.node.block.scope_id),
             ClassChild::ImplBlock(spanned) => Some(spanned.node.block.scope_id),
         } 

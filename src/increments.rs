@@ -2,8 +2,8 @@ use itertools::Itertools;
 use threadpool::ThreadPool;
 use std::{fs::{self, write, File}, path::PathBuf, result, time::SystemTime};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
-use crate::{errors::soul_error::SoulError, file_cache::FileCache, run_options::run_options::RunOptions, steps::step_interfaces::i_parser::header::Header, utils::{logger::Logger, time_logs::{format_duration, TimeLogs}}};
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}, utils::logger::DEFAULT_LOG_OPTIONS};
+use crate::{errors::soul_error::SoulError, file_cache::FileCache, run_options::run_options::RunOptions, steps::step_interfaces::i_parser::header::Header, utils::{logger::{default_log_options, Logger}, time_logs::{format_duration, TimeLogs}}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 ///run compiler up untill parser for all files and cache result in disk
 pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_logs: &Arc<Mutex<TimeLogs>>) -> result::Result<(), String> {
@@ -17,7 +17,7 @@ pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time
     parse_all_files(run_options.clone(), source_files, logger, time_logs, &mut errors);
     
     if run_options.show_times.contains(ShowTimes::SHOW_PARSER) {
-        logger.info(format!("Parse increment: {}", format_duration(timer.elapsed())), DEFAULT_LOG_OPTIONS);
+        logger.info(format!("Parse increment: {}", format_duration(timer.elapsed())), &default_log_options());
     }
     
     log_errors(errors, logger)
@@ -73,7 +73,7 @@ fn parse_file(
         
         let last_modified_date = FileCache::read_date(&run_options, file_path);
         if last_modified_date.ok() == Some(date) {
-            logger.debug(format!("using cache for file: {}", file_path.to_str().unwrap()), DEFAULT_LOG_OPTIONS);
+            logger.debug(format!("using cache for file: {}", file_path.to_str().unwrap()), &default_log_options());
             return Ok(())
         }
     }
@@ -120,11 +120,11 @@ fn log_errors(errors: Vec<(SoulError, PathBuf)>, logger: &Arc<Logger>) -> result
     for (mut error, file_path) in errors {
         let (mut reader, _) = get_file_reader(Path::new(&file_path))
                 .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while trying to get file reading", err))
-                .inspect_err(|err| logger.panic_error(err, DEFAULT_LOG_OPTIONS))
+                .inspect_err(|err| logger.panic_error(err, &default_log_options()))
                 .unwrap();
 
         error = pass_soul_error(error.get_last_kind(), None, format!("at file: '{}'", file_path.to_string_lossy()), error);
-        logger.soul_error(&error, &mut reader, DEFAULT_LOG_OPTIONS);
+        logger.soul_error(&error, &mut reader, &default_log_options());
     }
 
     Err(format!("build interrupted because of {} error{}", amount_errors, if amount_errors > 1 {"s"} else {""}))

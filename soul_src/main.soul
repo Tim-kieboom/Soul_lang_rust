@@ -14,9 +14,6 @@ main() {
 }
 
 scope() {
-    this = 1
-    this.el = 1
-
     mut number := 1
     if true {
         number += 1
@@ -71,6 +68,8 @@ functionCall() {
 
     sumStackArray([1,2,3,4,5])
     sumStackArray<5>([1,2,3,4,5])
+
+    function()
 }
 
 variable() {

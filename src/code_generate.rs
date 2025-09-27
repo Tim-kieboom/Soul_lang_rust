@@ -6,13 +6,14 @@ use threadpool::ThreadPool;
 
 use crate::file_cache::FileCache;
 use crate::run_options::show_times::ShowTimes;
-use crate::steps::step_interfaces::i_sementic::ast_visitor::{AstAnalyser, NameResolutionAnalyser};
-use crate::steps::step_interfaces::i_sementic::scope_vistitor::ScopeVisitor;
+use crate::utils::logger::DEFAULT_LOG_OPTIONS;
+use crate::steps::step_interfaces::i_parser::header::ExternalHeaders;
 use crate::steps::step_interfaces::i_sementic::soul_fault::SoulFault;
+use crate::steps::step_interfaces::i_sementic::scope_vistitor::ScopeVisitor;
 use crate::steps::step_interfaces::i_parser::parser_response::ParserResponse;
 use crate::steps::step_interfaces::i_sementic::sementic_response::SementicResponse;
-use crate::utils::logger::DEFAULT_LOG_OPTIONS;
 use crate::{run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
+use crate::steps::step_interfaces::i_sementic::ast_visitor::{AstAnalyser, ExternalHeaderAnalyser, NameResolutionAnalyser};
 
 pub fn generate_code(
     run_options: &Arc<RunOptions>, 
@@ -52,7 +53,7 @@ fn generate_all_codes(
                     let response = sementic_analyse(parser_response, &run_option, &t_log, file);
                     sender.send(response).expect("channel receiver should be alive");
                 },
-                Err(err) => log.error(err, DEFAULT_LOG_OPTIONS),
+                Err(err) => log.error(err, &DEFAULT_LOG_OPTIONS.read().unwrap()),
             }
         });
     }
@@ -60,7 +61,11 @@ fn generate_all_codes(
     drop(sender);
 
     for result in reciever {
-        errors.push((result.path, result.faults))
+        
+        match result {
+            Ok(response) => errors.push((response.path, response.faults)),
+            Err(err) => panic!("build interupted code generation failed, error: {}", err),
+        }
     }
 
     Ok(errors)
@@ -71,20 +76,21 @@ fn sementic_analyse(
     run_options: &Arc<RunOptions>, 
     time_logs: &Arc<Mutex<TimeLogs>>,
     file_path: PathBuf,
-) -> SementicResponse {
+) -> Result<SementicResponse, String> {
     let ParserResponse{mut tree, scopes} = parser;
-    let scope_vistitor = ScopeVisitor::new(scopes);
+    let scope_vistitor = ScopeVisitor::new(scopes, ExternalHeaders::new(run_options)?);
 
     const SHOULD_RESET_SCOPE: bool = true;
 
     let start = Instant::now();
 
-    let mut analyser = impl_ast_analyser(
-        NameResolutionAnalyser::new(scope_vistitor, SHOULD_RESET_SCOPE)
-    );
+    let mut analyser = NameResolutionAnalyser::new(scope_vistitor, SHOULD_RESET_SCOPE);
     analyser.analyse_ast(&mut tree);
 
-    let (scopes, faults, has_error) = analyser.consume();
+    let mut analyser = ExternalHeaderAnalyser::new(analyser, SHOULD_RESET_SCOPE);
+    analyser.analyse_ast(&mut tree);
+
+    let (scopes, faults, has_error) = analyser.consume_to_tuple();
 
     if run_options.show_times.contains(ShowTimes::SHOW_CODE_GENERATOR) {
         time_logs
@@ -92,11 +98,6 @@ fn sementic_analyse(
             .push(&file_path.to_string_lossy().to_string(), "semeticAnalyser", start.elapsed());
     }
 
-    SementicResponse{tree, scopes, faults, has_error, path: file_path}
-}
-
-///force analyser to impl AstAnalyser trait
-fn impl_ast_analyser(val: impl AstAnalyser) -> impl AstAnalyser {
-    val
+    Ok(SementicResponse{tree, scopes, faults, has_error, path: file_path})
 }
 

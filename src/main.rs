@@ -2,7 +2,7 @@ extern crate soul_lang_rust;
 
 use colored::Colorize;
 use std::{io::stderr, path::PathBuf, process::exit, result, sync::{Arc, Mutex}, time::Instant};
-use soul_lang_rust::{code_generate::generate_code, errors::soul_error::pass_soul_error, increments::{get_file_reader, parse_increment}, run_options::{run_options::RunOptions, show_times::ShowTimes}, steps::step_interfaces::i_sementic::soul_fault::{SoulFault, SoulFaultKind}, utils::{logger::{LogLevel, LogOptions, Logger, DEFAULT_LOG_OPTIONS, MUT_DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
+use soul_lang_rust::{code_generate::generate_code, errors::soul_error::pass_soul_error, increments::{get_file_reader, parse_increment}, run_options::{run_options::RunOptions, show_times::ShowTimes}, steps::step_interfaces::i_sementic::soul_fault::{SoulFault, SoulFaultKind}, utils::{logger::{default_log_options, LogLevel, LogOptions, Logger, DEFAULT_LOG_OPTIONS}, time_logs::{format_duration, TimeLogs}}};
 
 
 fn main() {
@@ -11,41 +11,40 @@ fn main() {
     let timer = Instant::now();
 
     if let Err(msg) = parse_increment(&run_options, &logger, &time_logs) {
-        logger.error(msg, DEFAULT_LOG_OPTIONS);
+        logger.error(msg, &default_log_options());
         return
     }
 
     let errors = match generate_code(&run_options, &logger, &time_logs) {
         Ok(val) => val,
         Err(err) => {
-            logger.error(err, DEFAULT_LOG_OPTIONS);
+            logger.error(err, &default_log_options());
             return
         },
     };
-
-     
     
+
     let error_len = log_faults(errors, &logger);
     log_time_table(time_logs, &run_options, &logger);
 
     if run_options.show_times.contains(ShowTimes::SHOW_TOTAL) {
-        logger.info(format!("Total time: {}", format_duration(timer.elapsed())), DEFAULT_LOG_OPTIONS);    
+        logger.info(format!("Total time: {}", format_duration(timer.elapsed())), &default_log_options());    
     }
 
     if error_len > 0 {
-        logger.error(format!("build failed because of {} error{}", error_len, if error_len > 1 {"s"} else {""}), DEFAULT_LOG_OPTIONS);
+        logger.error(format!("build failed because of {} error{}", error_len, if error_len > 1 {"s"} else {""}), &default_log_options());
         return
     }
 }
 
 fn log_faults(errors: Vec<(PathBuf, Vec<SoulFault>)>, logger: &Logger) -> usize {
     
-    let mut options = DEFAULT_LOG_OPTIONS.clone();
+    let mut options = default_log_options().clone();
     let mut errors_len = 0;
     for (file, errors) in errors {
         let (mut reader, _) = get_file_reader(&file)
             .map_err(|err| pass_soul_error(err.get_last_kind(), None, "while trying to get file reading", err))
-            .inspect_err(|err| logger.panic_error(err, DEFAULT_LOG_OPTIONS))
+            .inspect_err(|err| logger.panic_error(err, &default_log_options()))
             .unwrap();
 
         options = options.apply(|mut options| {
@@ -81,10 +80,7 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {
         },
     };
 
-    unsafe{
-        //changes 'DEFAULT_LOG_OPTIONS' (plz dont use in non single threaded contexts)
-        MUT_DEFAULT_LOG_OPTIONS = LogOptions{colored: run_options.log_colored, ..Default::default()};
-    }
+    *DEFAULT_LOG_OPTIONS.write().unwrap() = LogOptions{colored: run_options.log_colored, ..Default::default()};
 
     let logger = match get_logger(&run_options) {
         Ok(val) => Arc::new(val),
@@ -92,7 +88,7 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {
             let first = err;
             let second = "build interrupted because of 1 error";
             
-            if DEFAULT_LOG_OPTIONS.colored {
+            if default_log_options().colored {
                 eprintln!("{}", first.red()); 
                 eprintln!("{}", second.red());
             }
@@ -105,8 +101,8 @@ fn init() -> (Arc<RunOptions>, Arc<Logger>, Arc<Mutex<TimeLogs>>) {
     };
 
     if let Err(err) = create_output_dir(&run_options) {
-        logger.error(err.to_string(), DEFAULT_LOG_OPTIONS);
-        logger.error("build interrupted because of 1 error", DEFAULT_LOG_OPTIONS);
+        logger.error(err.to_string(), &default_log_options());
+        logger.error("build interrupted because of 1 error", &default_log_options());
         exit(1)
     }
 
@@ -150,18 +146,9 @@ fn log_time_table(times: Arc<Mutex<TimeLogs>>, run_option: &RunOptions, logger: 
     };
 
     for line in table.lines() {
-        logger.info(line, DEFAULT_LOG_OPTIONS);
+        logger.info(line, &default_log_options());
     }
 }
-
-
-
-
-
-
-
-
-
 
 
 

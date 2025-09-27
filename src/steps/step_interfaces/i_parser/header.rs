@@ -1,13 +1,16 @@
 use std::collections::HashMap;
 use bincode::{Decode, Encode};
+use crate::file_cache::FileCache;
 use serde::{Deserialize, Serialize};
-use crate::steps::step_interfaces::i_parser::{scope_builder::{ScopeBuilder, ScopeKind}};
+use crate::{run_options::{run_options::RunOptions}, steps::step_interfaces::i_parser::{abstract_syntax_tree::soul_type::type_kind::SoulPagePath, scope_builder::{ScopeBuilder, ScopeKind}}};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct Header {
     pub scope: HashMap<String, Vec<ScopeKind>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
+pub struct ExternalHeaders(HashMap<SoulPagePath, Header>);
 
 impl Header {
     pub fn from_scope_builder(scopes: &ScopeBuilder) -> Header {
@@ -27,6 +30,25 @@ impl Header {
         }
 
         header
+    }
+}
+
+impl ExternalHeaders {
+
+    pub fn new(run_options: &RunOptions) -> Result<Self, String> {
+        let pages = run_options.get_file_paths()
+            .map_err(|err| err.to_err_message().join(" "))?;
+
+        let mut headers = HashMap::with_capacity(pages.len());
+        for file_path in pages {
+            
+            let header = FileCache::read_header(run_options, &file_path)
+                .map_err(|err| err.to_string())?;
+            
+            headers.insert(SoulPagePath::from_path(&file_path), header);
+        }
+
+        Ok(Self(headers))
     }
 }
 

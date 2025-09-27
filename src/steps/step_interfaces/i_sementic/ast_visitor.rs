@@ -2,7 +2,6 @@ use crate::{errors::soul_error::SoulError, steps::step_interfaces::{i_parser::ab
 
 pub trait AstAnalyser {
     fn analyse_ast(&mut self, tree: &mut AbstractSyntacTree);
-    fn consume(self) -> (ScopeVisitor, Vec<SoulFault>, bool);
 }
 
 /*put macros before here before other analysers*/

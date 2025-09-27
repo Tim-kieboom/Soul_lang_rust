@@ -1,4 +1,4 @@
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::spanned::Spanned, scope_builder::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeId, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{spanned::Spanned}, header::{ExternalHeaders}, scope_builder::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeId, ScopeKind}};
 
 type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
 
@@ -7,19 +7,21 @@ pub struct ScopeVisitor {
     current: ScopeId,
     pub global_literals: ProgramMemmory,
     pub project_name: String,
+    pub external_headers: ExternalHeaders,
 }
 
 impl ScopeVisitor {
 
     const GLOBAL_SCOPE_INDEX: ScopeId = ScopeId(0);
 
-    pub fn new(scope: ScopeBuilder) -> Self {
+    pub fn new(scope: ScopeBuilder, external_headers: ExternalHeaders) -> Self {
         let (scopes, current, global_literals, project_name) = scope.__consume_to_tuple();
         Self {
             scopes,
             current,
             project_name,
             global_literals,
+            external_headers,
         }
     }
 
@@ -70,6 +72,22 @@ impl ScopeVisitor {
             }
 
             current_index = scope.parent_index;
+        }
+
+        None
+    }
+
+    pub fn lookup_mut(&mut self, name: &str) -> Option<&mut Vec<Spanned<ScopeKind>>> {
+        let mut current_index = Some(self.current);
+
+        while let Some(index) = current_index {
+            let has_kinds = self.scopes[index.0].get(name).is_some();
+
+            if has_kinds {
+                return self.scopes[index.0].get_mut(name)
+            }
+
+            current_index = self.scopes[index.0].parent_index;
         }
 
         None

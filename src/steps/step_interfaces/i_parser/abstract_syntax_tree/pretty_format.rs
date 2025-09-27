@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod, StructConstructor}, generic::GenericParameter, literal::Literal, object::{Class, ClassChild, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeGenericKind, TypeWrapper}, spanned::Spanned, statement::{Block, StatementKind, UseBlock}}, scope_builder::{ScopeBuilder, ScopeKind}};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, IfCaseKind, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod, StructConstructor}, generic::GenericParameter, literal::Literal, object::{Class, ClassChild, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeGenericKind, TypeWrapper}, spanned::Spanned, statement::{Block, StatementKind, UseBlock}}, scope_builder::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
@@ -399,7 +399,7 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::If(if_) => if_.to_pretty(tab, is_last),
             ExpressionKind::For(For{element, collection, block}) => format!("for {}{}\n{}", element.as_ref().map(|el| format!("{} in ", el.to_string())).unwrap_or("".into()), collection.to_pretty(tab + 1, is_last), block.to_pretty(tab+1, is_last)),
             ExpressionKind::While(While{condition, block}) => format!("while {}\n{}", condition.as_ref().map(|el| el.node.to_pretty(tab + 1, is_last)).unwrap_or("true".into()), block.to_pretty(tab+1, is_last)),
-            ExpressionKind::Match(Match{condition, cases, scope_id:_}) => format!("match {}\n{}{}", condition.to_pretty(tab, is_last), tree_prefix(tab+1, is_last), cases.iter().map(|el| format!("{} => \n{}", el.if_expr.to_string(), el.do_fn.to_pretty(tab, is_last))).join(format!("\n{}", tree_prefix(tab+1, is_last)).as_str()) ),
+            ExpressionKind::Match(Match{condition, cases, scope_id:_}) => format!("match {}\n{}{}", condition.to_pretty(tab, is_last), tree_prefix(tab+1, is_last), cases.iter().map(|el| format!("{} => \n{}", el.if_kind.to_string(), el.do_fn.to_pretty(tab, is_last))).join(format!("\n{}", tree_prefix(tab+1, is_last)).as_str()) ),
             ExpressionKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!("{} ? {} : {}", condition.to_pretty(tab, is_last), if_branch.to_pretty(tab, is_last), else_branch.to_pretty(tab, is_last)),
 
             ExpressionKind::Deref(spanned) => format!("*{}", spanned.to_pretty(tab, is_last)),
@@ -410,6 +410,16 @@ impl PrettyString for ExpressionKind {
             ExpressionKind::ReturnLike(return_like) => format!("{} {} >> free[{}]", return_like.kind.to_str(), return_like.value.as_ref().map(|el| el.to_string()).unwrap_or(String::new()), return_like.delete_list.iter().join(", ")),
             ExpressionKind::ExpressionGroup(expression_group) => expression_group.to_string(),
             ExpressionKind::Variable(var_name) => var_name.name.0.clone(),
+        }
+    }
+}
+
+impl ToString for IfCaseKind {
+    fn to_string(&self) -> String {
+        match self {
+            IfCaseKind::Expression(spanned) => spanned.node.to_string(),
+            IfCaseKind::Variant{name, params} => format!("{}({})", name.0, params.to_string()),
+            IfCaseKind::NamedVariant { name, params } => todo!("{}{{{}}}", name.0, params.to_string()),
         }
     }
 }

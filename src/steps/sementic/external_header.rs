@@ -1,14 +1,13 @@
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::EnumVariantKind, expression::{AccessField, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, If, IfCaseKind, StaticField, UnwrapVariable, VariableName}, function::LambdaBody, object::{Class, ClassChild, Field}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, statement::{Block, Statement, StatementKind}}, scope_builder::ScopeKind}, i_sementic::{ast_visitor::{AstAnalyser, NameResolutionAnalyser}, soul_fault::SoulFault}}};
+use crate::{errors::soul_error::SoulSpan, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::EnumVariantKind, expression::{AccessField, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, If, IfCaseKind, StaticField, UnwrapVariable}, function::LambdaBody, object::{Class, ClassChild, Field}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, statement::{Block, Statement, StatementKind}}}, i_sementic::{ast_visitor::{AstAnalyser, ExternalHeaderAnalyser}, soul_fault::SoulFault}}};
 
-impl AstAnalyser for NameResolutionAnalyser {
-    
+impl AstAnalyser for ExternalHeaderAnalyser {
     fn analyse_ast(&mut self, tree: &mut AbstractSyntacTree) {
         
         self.analyse_block(&mut tree.root);
     }
 }
 
-impl NameResolutionAnalyser {
+impl ExternalHeaderAnalyser {
     
     fn analyse_statment(&mut self, statment: &mut Statement) {
 
@@ -129,19 +128,12 @@ impl NameResolutionAnalyser {
                     self.try_analyse_expression(argument)?;
                 }
             },
-            ExpressionKind::Variable(variable_name) => {
-                self.check_variable(variable_name, expression.span)?;
-            },
+            ExpressionKind::Variable(_) => (),
             ExpressionKind::UnwrapVariable(unwrap_variable) => {
 
                 match unwrap_variable {
-                    UnwrapVariable::Variable(variable_name) => {
-                        self.check_variable(variable_name, expression.span)?;
-                    },
-                    UnwrapVariable::MultiVariable{vars, ty:_, initializer} => {
-                        for variable_name in vars {
-                            self.check_variable(variable_name, expression.span)?;
-                        }
+                    UnwrapVariable::Variable(_) => (),
+                    UnwrapVariable::MultiVariable{initializer, ..} => {
                         
                         if let Some(expression) = initializer {
                             self.try_analyse_expression(expression)?;
@@ -288,21 +280,8 @@ impl NameResolutionAnalyser {
         Ok(())
     }
 
-    fn check_variable(&mut self, variable_name: &VariableName, span: SoulSpan) -> Result<(), SoulFault> {
-        if !self.get_scope_mut()
-            .lookup(&variable_name.name.0)
-            .is_some_and(|kinds| kinds.iter().any(|el| matches!(el.node, ScopeKind::Variable(_))))
-        {
-            Err(
-                SoulFault::new_error(new_soul_error(SoulErrorKind::InvalidName, Some(span), format!("variable: '{}' not found", variable_name.name)))
-            )
-        }
-        else {
-            Ok(())
-        }
-    }
-
     fn analyse_field(&mut self, field: &mut Field) {
+        
         if let Some(expression) = &mut field.default_value {
             self.analyse_expression(expression);
         }
@@ -314,10 +293,4 @@ impl NameResolutionAnalyser {
             self.analyse_statment(statment);
         }
     }
-
-
 }
-
-
-
-
