@@ -7,7 +7,7 @@ pub enum NameType {
     /// only 1 char uppercase, 
     SingleLetterCapital, 
 
-    /// camelCase
+    ///camelCase
     CamelCase, 
     ///PascalCase
     PascalCase, 
@@ -113,6 +113,7 @@ impl NameType {
         }
     }
 
+    ///made this fn to avoid impl Eq Trait to force use of should_be() and could_be()
     fn eq(&self, other: &Self) -> bool {
         core::mem::discriminant(self) == core::mem::discriminant(other)
     }

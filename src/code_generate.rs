@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::path::{PathBuf};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
@@ -35,7 +36,13 @@ fn generate_all_codes(
 ) -> Result<Vec<(PathBuf, Vec<SoulFault>)>, String> {
     
     let mut errors = vec![];
-    let num_threads = std::thread::available_parallelism().unwrap().get();
+    let available_threads = std::thread::available_parallelism().unwrap().get();
+    let num_threads = if let Some(max_threads) = run_options.max_thread_count {
+        min(available_threads, max_threads)
+    }
+    else {
+        available_threads
+    };
 
     let pool = ThreadPool::new(num_threads.min(subfiles.len()));
     let (sender, reciever) = channel();

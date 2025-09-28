@@ -180,9 +180,10 @@ expressionGroups() {
     }
 }
 
-func_name() {
-    
-}
+class obj {}
+class Obj {}
+class OBJ {}
+
 
 sum(int a, int b) int {
     return a + b

@@ -219,6 +219,28 @@
                 "--subtreePath=soul_src\\soul_subfiles.tree.bin",
             ],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable HELP MSG 'soul_lang_rust'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=soul_lang_rust",
+                    "--package=soul_lang_rust",
+                    "--features",
+                    "dev_mode"
+                ],
+                "filter": {
+                    "name": "soul_lang_rust",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "help"
+            ],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
