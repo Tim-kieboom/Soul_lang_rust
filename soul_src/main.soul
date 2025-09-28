@@ -1,3 +1,5 @@
+class OBJ_OBJ {}
+
 use path.to.[thing, stuff]
 use this.foo.[this, bar]
 
@@ -182,8 +184,6 @@ expressionGroups() {
 
 class obj {}
 class Obj {}
-class OBJ {}
-
 
 sum(int a, int b) int {
     return a + b

@@ -22,7 +22,7 @@ impl NameType {
 
         if propertys.all_capital {
 
-            if propertys.name_len > 1 {
+            if propertys.name_len == 1 {
                 Ok(NameType::SingleLetterCapital)
             }
             else {
@@ -141,9 +141,10 @@ impl NamingPropertys {
             if char.is_uppercase() {
                 has_middle_capital = true;
             }
-            else {
+            else if char != '_' {
                 all_capital = false;
             }
+            
             if char == '_' {
                 has_middle_underscore = true;
             }

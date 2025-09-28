@@ -289,10 +289,6 @@ impl NameResolutionAnalyser {
     }
 
     fn analyse_class(&mut self, class: &mut Class, span: SoulSpan) {
-          
-        if let Err(msg) = NameType::could_be(&class.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
-            self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(span), msg));
-        }
 
         for child in &mut class.children {
 
