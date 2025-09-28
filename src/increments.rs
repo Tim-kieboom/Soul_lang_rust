@@ -110,12 +110,12 @@ fn parse_file(
         )
 }
 
-type DynResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-fn cache_file(response: ParserResponse, run_options: &RunOptions, file_path: &Path) -> DynResult<()> {
+fn cache_file(response: ParserResponse, run_options: &RunOptions, file_path: &Path) -> result::Result<(), String> {
 
     let header = Header::from_scope_builder(&response.scopes);
-    FileCache::new(file_path, header, response)?
-        .write_to_disk(run_options, file_path)   
+    FileCache::new(file_path, header, response)
+        .map_err(|err| err.to_string())?
+        .write_to_disk(run_options, file_path)
 }
 
 fn log_errors(errors: Vec<(SoulError, PathBuf)>, logger: &Arc<Logger>) -> result::Result<(), String> {

@@ -1,6 +1,6 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::{BufReader, Write}, path::{Path, PathBuf}, time::SystemTime};
+use std::{ffi::OsStr, fs::File, io::{BufReader, Write}, path::{Path, PathBuf}, time::SystemTime};
 use crate::{run_options::run_options::RunOptions, steps::step_interfaces::i_parser::{header::Header, parser_response::ParserResponse}};
 
 
@@ -23,24 +23,33 @@ impl FileCache {
         })
     }
 
-    pub fn read_date(run_option: &RunOptions, file_path: &Path) -> DynResult<SystemTime> {
-        Self::from_disk(&CachePaths::get_date(run_option, file_path))
+    pub fn read_date(run_option: &RunOptions, file_path: &Path) -> Result<SystemTime, String> {
+        let date = CachePaths::get_date(run_option, file_path);
+        Self::from_disk(&date).map_err(|err| format!("err: {}, path: {}", err.to_string(), date.to_string_lossy()))
     }
 
-    pub fn read_parse(run_option: &RunOptions, file_path: &Path) -> DynResult<ParserResponse> {
-        Self::from_disk(&CachePaths::get_parse(run_option, file_path))
+    pub fn read_parse(run_option: &RunOptions, file_path: &Path) -> Result<ParserResponse, String> {
+        let parse = CachePaths::get_parse(run_option, file_path);
+        Self::from_disk(&parse).map_err(|err| format!("err: {}, path: {}", err.to_string(), parse.to_string_lossy()))
     }
 
-    pub fn read_header(run_option: &RunOptions, file_path: &Path) -> DynResult<Header> {
-        Self::from_disk(&CachePaths::get_header(run_option, file_path))
+    pub fn read_header(run_option: &RunOptions, file_path: &Path) -> Result<Header, String> {
+        let header = CachePaths::get_header(run_option, file_path);
+        Self::from_disk(&header).map_err(|err| format!("err: {}, path: {}", err.to_string(), header.to_string_lossy()))
     }
 
-    pub fn write_to_disk(&self, run_option: &RunOptions, file_path: &Path) -> DynResult<()> {
-        std::fs::create_dir_all(CachePaths::get_cache_folder(run_option, file_path))?;
+    pub fn write_to_disk(&self, run_option: &RunOptions, file_path: &Path) -> Result<(), String> {
+        let folder = CachePaths::get_cache_folder(run_option, file_path);
+        std::fs::create_dir_all(&folder)
+            .map_err(|err| format!("err: {}, path: {}", err.to_string(), folder.to_string_lossy()))?;
 
-        Self::write_file(&self.date, &CachePaths::get_date(run_option, file_path))?;
-        Self::write_file(&self.parse, &CachePaths::get_parse(run_option, file_path))?;
-        Self::write_file(&self.header, &CachePaths::get_header(run_option, file_path))
+        let date = CachePaths::get_date(run_option, file_path);
+        let parse = CachePaths::get_parse(run_option, file_path);
+        let header = CachePaths::get_header(run_option, file_path);
+
+        Self::write_file(&self.date, &date).map_err(|err| format!("err: {}, path: '{}'", err.to_string(), date.to_string_lossy()))?;
+        Self::write_file(&self.parse, &parse).map_err(|err| format!("err: {}, path: '{}'", err.to_string(), parse.to_string_lossy()))?;
+        Self::write_file(&self.header, &header).map_err(|err| format!("err: {}, path: '{}'", err.to_string(), header.to_string_lossy()))
     }
     
     fn write_file<T: Encode>(val: &T, path: &Path) -> DynResult<()> {
@@ -85,20 +94,20 @@ impl CachePaths {
     }
 
     pub fn get_header(run_option: &RunOptions, file_path: &Path) -> PathBuf {
-        let mut dir = Self::get_dir_path(run_option, file_path);
-        dir.push(format!("{}.hdr", file_path.to_str().unwrap_or(&file_path.to_string_lossy())));
+        let mut dir = Self::get_cache_folder(run_option, file_path);
+        dir.push(format!("{}.hdr", Self::get_path_name(file_path).unwrap_or_else(|err| panic!("{err}")).to_string_lossy() ));
         dir
     }
 
     pub fn get_parse(run_option: &RunOptions, file_path: &Path) -> PathBuf {
-        let mut dir = Self::get_dir_path(run_option, file_path);
-        dir.push(format!("{}.ast", file_path.to_str().unwrap_or(&file_path.to_string_lossy())));
+        let mut dir = Self::get_cache_folder(run_option, file_path);
+        dir.push(format!("{}.ast", Self::get_path_name(file_path).unwrap_or_else(|err| panic!("{err}")).to_string_lossy() ));
         dir
     }
 
     pub fn get_date(run_option: &RunOptions, file_path: &Path) -> PathBuf {
-        let mut dir = Self::get_dir_path(run_option, file_path);
-        dir.push(format!("{}.dte", file_path.to_str().unwrap_or(&file_path.to_string_lossy())));
+        let mut dir = Self::get_cache_folder(run_option, file_path);
+        dir.push(format!("{}.dte", Self::get_path_name(file_path).unwrap_or_else(|err| panic!("{err}")).to_string_lossy() ));
         dir
     }
 
@@ -107,6 +116,10 @@ impl CachePaths {
         dir.push(&run_option.output_dir);
         dir.push(Self::PARSED_INCREMENTAL_FOLDER_NAME);
         dir
+    }
+
+    fn get_path_name<'a>(file_path: &'a Path) -> Result<&'a OsStr, String> {
+        file_path.file_name().ok_or(format!("path: '{}' is does not have file_name", file_path.to_string_lossy()))
     }
 }
 
