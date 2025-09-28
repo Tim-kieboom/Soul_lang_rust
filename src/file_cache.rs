@@ -25,31 +25,31 @@ impl FileCache {
 
     pub fn read_date(run_option: &RunOptions, file_path: &Path) -> Result<SystemTime, String> {
         let date = CachePaths::get_date(run_option, file_path);
-        Self::from_disk(&date).map_err(|err| format!("err: {}, path: {}", err.to_string(), date.to_string_lossy()))
+        Self::from_disk(&date).map_err(|err| format!("error: {}, path: {}", err.to_string(), date.to_string_lossy()))
     }
 
     pub fn read_parse(run_option: &RunOptions, file_path: &Path) -> Result<ParserResponse, String> {
         let parse = CachePaths::get_parse(run_option, file_path);
-        Self::from_disk(&parse).map_err(|err| format!("err: {}, path: {}", err.to_string(), parse.to_string_lossy()))
+        Self::from_disk(&parse).map_err(|err| format!("error: {}, path: {}", err.to_string(), parse.to_string_lossy()))
     }
 
     pub fn read_header(run_option: &RunOptions, file_path: &Path) -> Result<Header, String> {
         let header = CachePaths::get_header(run_option, file_path);
-        Self::from_disk(&header).map_err(|err| format!("err: {}, path: {}", err.to_string(), header.to_string_lossy()))
+        Self::from_disk(&header).map_err(|err| format!("error: {}, path: {}", err.to_string(), header.to_string_lossy()))
     }
 
     pub fn write_to_disk(&self, run_option: &RunOptions, file_path: &Path) -> Result<(), String> {
         let folder = CachePaths::get_cache_folder(run_option, file_path);
         std::fs::create_dir_all(&folder)
-            .map_err(|err| format!("err: {}, path: {}", err.to_string(), folder.to_string_lossy()))?;
+            .map_err(|err| format!("error: {}, path: {}", err.to_string(), folder.to_string_lossy()))?;
 
         let date = CachePaths::get_date(run_option, file_path);
         let parse = CachePaths::get_parse(run_option, file_path);
         let header = CachePaths::get_header(run_option, file_path);
 
-        Self::write_file(&self.date, &date).map_err(|err| format!("err: {}, path: '{}'", err.to_string(), date.to_string_lossy()))?;
-        Self::write_file(&self.parse, &parse).map_err(|err| format!("err: {}, path: '{}'", err.to_string(), parse.to_string_lossy()))?;
-        Self::write_file(&self.header, &header).map_err(|err| format!("err: {}, path: '{}'", err.to_string(), header.to_string_lossy()))
+        Self::write_file(&self.date, &date).map_err(|err| format!("error: {}, path: '{}'", err.to_string(), date.to_string_lossy()))?;
+        Self::write_file(&self.parse, &parse).map_err(|err| format!("error: {}, path: '{}'", err.to_string(), parse.to_string_lossy()))?;
+        Self::write_file(&self.header, &header).map_err(|err| format!("error: {}, path: '{}'", err.to_string(), header.to_string_lossy()))
     }
     
     fn write_file<T: Encode>(val: &T, path: &Path) -> DynResult<()> {
