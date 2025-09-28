@@ -1096,7 +1096,7 @@ fn test_ref_and_deref_expression() {
         result.clone().unwrap().node,
         const_ref(
             const_ref(
-                mut_ref(var("var", SoulSpan::new(0,0,3)), SoulSpan::new(0,3,3)),
+                mut_ref(var("var", SoulSpan::new(0,3,3)), SoulSpan::new(0,3,3)),
                 SoulSpan::new(0,2,4)
             ),
             SoulSpan::new(0,1,5)
