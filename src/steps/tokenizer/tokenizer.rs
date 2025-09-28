@@ -16,6 +16,47 @@ static TOKEN_SPLIT_REGEX: Lazy<Regex> = Lazy::new(|| {
     ).unwrap()
 });
 
+/// Converts a [`SourceFileResponse`] into a stream of lexical tokens.
+///
+/// This function:
+/// 1. Iterates through the preprocessed source lines from [`read_source_file`].
+/// 2. Splits lines into tokens using language-specific delimiters (`SOUL_NAMES.parse_tokens`)
+///    with a regex-based splitter.
+/// 3. Handles string literals by grouping everything between quotes (`"`).
+/// 4. Detects and reports invalid cases, such as:
+///    - A line ending with `;`
+///    - Misplaced backslashes (`\` not at end of line)
+/// 5. Normalizes some tokens (e.g., replacing `;` with a newline token `\n`).
+/// 6. Emits token spans (`SoulSpan`) with line/column metadata for error reporting.
+///
+/// # Parameters
+/// - `source_response`: The preprocessed source file, including estimated token counts
+///   and per-line content from the source reader.
+///
+/// # Returns
+/// - `Ok(TokenizeResonse)` containing a [`TokenStream`] with all tokens extracted from the file.
+/// - `Err(SoulError)` if an invalid escape, unexpected token, or other lexical error occurs.
+///
+/// # Notes
+/// - Uses `TOKEN_SPLIT_REGEX` to split on language delimiters.
+/// - Handles `.` specially via [`split_dot`] when it might be part of a number or operator.
+/// - Multi-line string handling is supported by accumulating text until the closing `"`.
+/// - Each line that contributes tokens is terminated with a newline token (`\n`), unless it ended
+///   with a continuation backslash.
+///
+/// # Example
+/// ```ignore
+/// use crate::steps::source_reader::read_source_file;
+/// use crate::steps::tokenizer::tokenize;
+/// use std::fs::File;
+/// use std::io::BufReader;
+///
+/// let file = File::open("example.soul").unwrap();
+/// let reader = BufReader::new(file);
+/// let source = read_source_file(reader, "    ").unwrap();
+/// let tokens = tokenize(source).unwrap();
+/// println!("Token count: {}", tokens.stream.len());
+/// ```
 pub fn tokenize(mut source_response: SourceFileResponse) -> Result<TokenizeResonse> {
     if source_response.source_file.is_empty() {
         return Ok(TokenizeResonse{stream: TokenStream::new(Vec::new())});

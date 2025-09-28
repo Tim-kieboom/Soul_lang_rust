@@ -5,7 +5,38 @@ use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, 
 use crate::{errors::soul_error::SoulError, file_cache::FileCache, run_options::run_options::RunOptions, steps::step_interfaces::i_parser::header::Header, utils::{logger::{default_log_options, Logger}, time_logs::{format_duration, TimeLogs}}};
 use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
-///run compiler up untill parser for all files and cache result in disk
+/// Runs the compiler up to the parsing stage for all source files and caches results on disk.
+///
+/// This function performs the following steps:
+/// 1. Collects all source file paths from the provided [`RunOptions`].
+/// 2. Spawns a thread pool to parse all files concurrently using [`parse_all_files`].
+/// 3. Caches successfully parsed files to disk, so unchanged files can be skipped in future runs.
+/// 4. Logs timing information if `ShowTimes::SHOW_PARSER` is enabled.
+/// 5. Reports and logs any errors encountered during parsing.
+///
+/// # Parameters
+/// - `run_options`: Shared configuration for the current compilation run, including 
+///   file paths, cache options, and display settings.
+/// - `logger`: Shared logging facility used for reporting information, warnings, and errors.
+/// - `time_logs`: Shared timing table for recording performance metrics across compilation stages.
+///
+/// # Returns
+/// - `Ok(())` if all files were parsed successfully.
+/// - `Err(String)` if one or more parsing errors occurred. The error string includes
+///   a summary of the number of failures.
+///
+/// # Notes
+/// - Uses cached results for files whose last modified timestamp has not changed since
+///   the last compilation (disabled if `dev_mode` feature is enabled).
+/// - This is typically invoked early in the compiler pipeline (before semantic analysis or code generation).
+///
+/// # Example
+/// ```ignore
+/// let (run_options, logger, time_logs) = init();
+/// if let Err(msg) = parse_increment(&run_options, &logger, &time_logs) {
+///     logger.error(msg, &default_log_options());
+/// }
+/// ```
 pub fn parse_increment(run_options: &Arc<RunOptions>, logger: &Arc<Logger>, time_logs: &Arc<Mutex<TimeLogs>>) -> result::Result<(), String> {
 
     let timer = Instant::now();

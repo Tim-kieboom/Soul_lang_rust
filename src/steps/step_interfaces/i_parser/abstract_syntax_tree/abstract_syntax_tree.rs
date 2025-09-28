@@ -6,6 +6,10 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::spanned::Span
 use crate::{steps::step_interfaces::i_parser::abstract_syntax_tree::statement::Block};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::Statement;
 
+/// The root node of the parsed program, representing the entire abstract syntax tree (AST).
+///
+/// This wraps a [`Block`] that contains the global scope of the program, including
+/// all top-level declarations (functions, classes, imports, etc.).
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct AbstractSyntacTree {
     pub root: Block,

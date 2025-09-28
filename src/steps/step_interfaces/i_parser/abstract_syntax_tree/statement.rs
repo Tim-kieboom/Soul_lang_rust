@@ -7,33 +7,62 @@ pub type Statement = SpannedAttribute<StatementKind>;
 
 pub const STATMENT_END_TOKENS: &[&str] = &["\n", "}"];
 
+/// The different kinds of statements that can appear in the language.
+///
+/// Each variant corresponds to a syntactic construct, ranging from expressions
+/// to type definitions and control structures.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum StatementKind {
+    /// A standalone expression.
     Expression(Expression),
 
+    /// A variable declaration.
     Variable(VariableName),
+    /// An assignment to an existing variable.
     Assignment(Assignment),
     
+    /// A function declaration (with body block).
     Function(Function),
+    /// A scoped `use` block (soul version of rusts 'impl' with optional trait implementation).
     UseBlock(UseBlock),
 
+    /// A class declaration.
     Class(Class),
+    /// A struct declaration.
     Struct(Struct),
+    /// A trait declaration.
     Trait(Trait),
     
+    /// An enum declaration (c like enum).
     Enum(Enum),
+    /// A union declaration (rust like enum).
     Union(Union),
+    /// A type-enum declaration (a type that is the trait of all the overlapping traits of the types defined).
     TypeEnum(TypeEnum),
 
+    /// Marker for closing a block (used during parsing).
     CloseBlock,
 }
 
+/// An assignment statement, e.g., `x = y + 1;`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Assignment {
     pub variable: Expression,
     pub value: Expression,
 }
 
+/// A `use` block, introducing a scope with optional trait implementation.
+///
+/// Example (hypothetical syntax):
+/// ```soul
+/// use MyType {
+///     methode() { }
+/// }
+/// 
+/// use MyType impl MyTrait {
+///     traitMethode() { }
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct UseBlock {
     pub impl_trait: Option<SoulType>,
@@ -41,6 +70,10 @@ pub struct UseBlock {
     pub block: Block,
 }
 
+/// A block of statements grouped under a scope.
+///
+/// Blocks may represent function bodies, type bodies (class/struct/trait),
+/// or the root of the program.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Block {
     pub ruleset: Modifier,

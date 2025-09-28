@@ -9,40 +9,70 @@ pub type BoxExpression = Box<Expression>;
 pub type UnaryOperator = Spanned<UnaryOperatorKind>;
 pub type BinaryOperator = Spanned<BinaryOperatorKind>;
 
+/// The different kinds of expressions in the language.
+///
+/// Expressions can be values, control-flow structures, function calls,
+/// or more complex constructs like lambdas and blocks.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum ExpressionKind {
+    /// An empty expression (placeholder).
     Empty,
+    /// A `default` literal or default value.
     Default,
+    /// A literal value (number, string, etc.).
     Literal(Literal),
     
+    /// Indexing into a collection, e.g., `arr[i]`.
     Index(Index),
+    /// A lambda `() => {}`.
     Lambda(Lambda),
+    /// A function call, e.g., `foo(x, y)`.
     FunctionCall(FunctionCall),
+    /// Constructing a struct, e.g., `Point { x: 1, y: 2 }`.
     StructConstructor(StructConstructor),
 
+    /// Accessing a field on an instance, e.g., `obj.field`.
     AccessField(AccessField),
+    /// Accessing a static field, e.g., `Type.field`.
     StaticField(StaticField),
+    /// Calling a static method, e.g., `Type.method()`.
     StaticMethod(StaticMethod),
 
+    /// Referring to a variable `var`.
     Variable(VariableName),
+    /// Variable unwrapping / pattern destructuring `Data{field1, field2} := data`.
     UnwrapVariable(UnwrapVariable),
+    /// An external expression from another page/module `path.to.something.expression`.
     ExternalExpression(ExternalExpression),
 
+    /// A unary operation (negation, increment, etc.) `!1`.
     Unary(Unary),
+    /// A binary operation (addition, multiplication, comparison, etc.) `1 + 2`.
     Binary(Binary),
 
+    /// An `if` expression `if true {Println("is true")}`.
     If(If),
+    /// A `for` loop `for i in 1..2 {Println(f"num:{i}")}`.
     For(For),
+    /// A `while` loop `while true {Println("loop")}`.
     While(While),
+    /// A `match` expression `match booleanVar {true => (), false => }`.
     Match(Match),
+    /// A ternary expression `cond ? a : b`.
     Ternary(Ternary),
 
+    /// A dereference, e.g., `*ptr`.
     Deref(BoxExpression),
+    /// A mutable reference, e.g., `&x`.
     MutRef(BoxExpression),
+    /// A constant reference, e.g., `@x`.
     ConstRef(BoxExpression),
 
+    /// A block of statements, returning the last expression `{/*stuff*/}`.
     Block(Block),
+    /// Return-like expressions (`return`, `break`, `fall`) `return 1`.
     ReturnLike(ReturnLike),
+    /// A grouped expression, e.g., tuples, namedTuples or arrays.
     ExpressionGroup(ExpressionGroup),
 }
 
@@ -54,6 +84,7 @@ impl Default for ExpressionKind {
 
 pub type DeleteList = Vec<String>;
 
+/// A `return`, `fall`, or `break`-like expression.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ReturnLike {
     pub value: Option<BoxExpression>,
@@ -61,21 +92,31 @@ pub struct ReturnLike {
     pub kind: ReturnKind
 }
 
+/// The kind of return-like expression.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum ReturnKind {
+    /// A returns function.
     Return,
+    /// A returns current block.
     Fall,
+    /// A returns current loop.
     Break,
 }
 
+/// A grouped expression type, such as tuple, array, or named tuple.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum ExpressionGroup {
+    /// A tuple, e.g., `(1, 2, 3)`.
     Tuple(Tuple),
+    /// An array literal, e.g., `[1, 2, 3]`.
     Array(Array),
+    /// A named tuple, e.g., `{x: 1, y: 2}`.
     NamedTuple(NamedTuple),
+    /// An array filler expression, e.g., `[5 => 1] //makes [1,1,1,1,1]`.
     ArrayFiller(ArrayFiller),
 }
 
+/// An array literal, e.g., `[1, 2, 3]`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Array {
     pub collection_type: Option<SoulType>,
@@ -83,6 +124,7 @@ pub struct Array {
     pub values: Vec<Expression>,
 }
 
+/// An array filler expression, e.g., `[5 => 1] //makes [1,1,1,1,1]`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ArrayFiller {
     pub collection_type: Option<SoulType>,
@@ -93,19 +135,22 @@ pub struct ArrayFiller {
     pub scope_id: ScopeId,
 }
 
+/// A named tuple, e.g., `{x: 1, y: 2}`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct NamedTuple {
     pub values: HashMap<Ident, Expression>,
     
-    // 'Foo(field: 1, ..)' is true if '..' meaning that all other fields use default value
+    // 'Foo{field: 1, ..}' is true if '..' meaning that all other fields use default value
     pub insert_defaults: bool,
 }
 
+/// A tuple, e.g., `(1, 2, 3)`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Tuple {
     pub values: Vec<Expression>
 }
 
+/// A ternary conditional expression, e.g., `cond ? a : b`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Ternary {
     pub condition: BoxExpression,

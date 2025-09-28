@@ -2,6 +2,44 @@ use std::io::{BufRead, BufReader, Read};
 use crate::errors::soul_error::Result;
 use crate::{errors::soul_error::{new_soul_error, pass_soul_error, SoulErrorKind, SoulSpan}, soul_names::SOUL_NAMES, steps::{source_reader::{c_str::{format_stringer::format_string}, remove_comment::remove_comment::remove_comment}, step_interfaces::i_source_reader::{FileLine, SourceFileResponse}}};
 
+/// Reads a source file into memory, applies preprocessing, and produces a [`SourceFileResponse`].
+///
+/// This function:
+/// 1. Iterates through the file line by line.
+/// 2. Replaces all tab characters (`\t`) with the configured number of spaces (`tab_as_spaces`).
+/// 3. Removes both single-line and multi-line comments (tracking multi-line comment state across lines).
+/// 4. Formats string literals using `format_string`.
+/// 5. Estimates the number of tokens on each line (used later by the tokenizer).
+/// 6. Skips lines that are empty or fully contained within a multi-line comment.
+/// 7. Collects cleaned [`FileLine`] entries into a [`SourceFileResponse`].
+///
+/// # Parameters
+/// - `reader`: A buffered reader over the source file.
+/// - `tab_as_spaces`: A string of spaces used to replace tab characters, based on `RunOptions::tab_char_len`.
+///
+/// # Returns
+/// - `Ok(SourceFileResponse)` containing all processed lines of the source file and an estimated token count.
+/// - `Err(SoulError)` if any I/O or formatting error occurs.
+///
+/// # Errors
+/// - Returns a [`SoulErrorKind::ReaderError`] if the file cannot be read or if string formatting fails.
+///
+/// # Notes
+/// - Lines inside multi-line comments are skipped entirely.
+/// - The `estimated_token_count` is a heuristic based on whitespace and known language tokens
+///   from [`SOUL_NAMES`], intended to help preallocate memory in later compilation stages.
+///
+/// # Example
+/// ```ignore
+/// use std::fs::File;
+/// use std::io::BufReader;
+/// use crate::steps::source_reader::read_source_file;
+///
+/// let file = File::open("example.soul").unwrap();
+/// let reader = BufReader::new(file);
+/// let response = read_source_file(reader, "    ")?; // replace tabs with 4 spaces
+/// println!("Read {} lines", response.source_file.len());
+/// ```
 pub fn read_source_file<R>(reader: BufReader<R>, tab_as_spaces: &str) -> Result<SourceFileResponse> 
 where 
     R: Read

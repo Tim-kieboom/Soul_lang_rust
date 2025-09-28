@@ -16,6 +16,45 @@ use crate::steps::step_interfaces::i_sementic::sementic_response::SementicRespon
 use crate::{run_options::run_options::RunOptions, utils::{logger::Logger, time_logs::TimeLogs}};
 use crate::steps::step_interfaces::i_sementic::ast_visitor::{AstAnalyser, ExternalHeaderAnalyser, NameResolutionAnalyser};
 
+/// Runs semantic analysis and code generation preparation for all parsed source files.
+///
+/// This function performs the following steps:
+/// 1. Collects all source file paths from the provided [`RunOptions`].
+/// 2. For each file, retrieves the cached [`ParserResponse`] from disk (produced by [`parse_increment`]).
+/// 3. Performs semantic analysis on the parsed AST using multiple analysers:
+///    - [`NameResolutionAnalyser`]
+///    - [`ExternalHeaderAnalyser`]
+///    - [`ScopeVisitor`]
+/// 4. Aggregates semantic faults and warnings from all files.
+/// 5. Records timing information for analysis if `ShowTimes::SHOW_CODE_GENERATOR` is enabled.
+///
+/// # Parameters
+/// - `run_options`: Shared configuration for the current compilation run, including 
+///   file paths, cache options, and display settings.
+/// - `logger`: Shared logging facility used for reporting information, warnings, and errors.
+/// - `time_logs`: Shared timing table for recording performance metrics across compilation stages.
+///
+/// # Returns
+/// - `Ok(Vec<(PathBuf, Vec<SoulFault>)>)` containing a list of files and the faults detected in each.
+/// - `Err(String)` if a failure prevents code generation from proceeding (e.g., missing cached parse data).
+///
+/// # Notes
+/// - Runs files in parallel using a thread pool (limited by [`RunOptions::max_thread_count`] or CPU count).
+/// - Panics if a thread sends back an unexpected error instead of a valid semantic response.
+/// - This step depends on [`parse_increment`] having successfully cached parser results for all files.
+///
+/// # Example
+/// ```ignore
+/// let (run_options, logger, time_logs) = init();
+/// match generate_code(&run_options, &logger, &time_logs) {
+///     Ok(errors) => {
+///         for (path, faults) in errors {
+///             println!("{} had {} issues", path.display(), faults.len());
+///         }
+///     }
+///     Err(err) => logger.error(err, &default_log_options()),
+/// }
+/// ```
 pub fn generate_code(
     run_options: &Arc<RunOptions>, 
     logger: &Arc<Logger>, 
