@@ -16,11 +16,6 @@ use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{
 
 
 pub struct ExpressionOptions {
-    /// `make 0 unless you are in a bracket`
-    /// ```
-    /// if '(' {round_bracket_stack += 1}
-    /// else if ')' {round_bracket_stack -= 1}
-    /// ```
     pub round_bracket_stack: i64,
 }
 
