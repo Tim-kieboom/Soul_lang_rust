@@ -11,7 +11,7 @@ where
     let mut in_multi_line_comment = false;
     for possible_line in reader.lines() {
         let line = possible_line
-            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(line_number, 0, 0), format!("while trying to get line from file reader\n{}", err.to_string())))?;
+            .map_err(|err| new_soul_error(SoulErrorKind::ReaderError, Some(SoulSpan::new(line_number, 0, 0)), format!("while trying to get line from file reader\n{}", err.to_string())))?;
     
         let mut file_line = FileLine{line, line_number};
 
@@ -19,7 +19,7 @@ where
 
         file_line = remove_comment(file_line, &mut in_multi_line_comment, &mut source_result);
         file_line = format_string(file_line)
-            .map_err(|err| pass_soul_error(SoulErrorKind::ReaderError, SoulSpan::new(line_number, 0, 0), "while trying to convert string_formaters", err))?;
+            .map_err(|err| pass_soul_error(SoulErrorKind::ReaderError, Some(SoulSpan::new(line_number, 0, 0)), "while trying to convert string_formaters", err))?;
 
         source_result.estimated_token_count += get_estimated_token_count(&file_line.line);
         line_number += 1;

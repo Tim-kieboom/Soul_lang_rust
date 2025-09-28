@@ -1,11 +1,12 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::{Component, Path, PathBuf}};
 
+use bincode::{Decode, Encode};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{soul_names::{NamesInternalType, NamesTypeModifiers, NamesTypeWrapper, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{expression::Ident, soul_type::soul_type::SoulType, spanned::Spanned, staments::{function::{FunctionSignatureRef, LambdaMode, LambdaSignatureRef}, statment::Lifetime}}, scope::SoulPagePath}};
+use crate::{soul_names::{NamesInternalType, SOUL_NAMES}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, function::{FunctionSignature, LambdaMode, LambdaSignature}, soul_type::soul_type::SoulType, spanned::Spanned}};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum TypeSize {
     Bit8,
     Bit16,
@@ -13,7 +14,7 @@ pub enum TypeSize {
     Bit64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum TypeKind {
 // Primitives
     None,
@@ -30,11 +31,12 @@ pub enum TypeKind {
     Str,
 
 // complex
+    Unknown(Ident),
     Custom(Ident),
     Tuple(Vec<SoulType>),
     NamedTuple(HashMap<Ident, SoulType>),
-    Function(Box<FunctionSignatureRef>),
-    Lambda(LambdaSignatureRef),
+    Function(Box<FunctionSignature>),
+    Lambda(LambdaSignature),
 
     Struct(Ident),
     Class(Ident),
@@ -55,39 +57,106 @@ pub enum TypeKind {
     LifeTime(Ident),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ExternalPath {
     pub name: Ident, 
-    pub path: SoulPagePath
+    pub path: SoulPagePath,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ExternalType {
     pub path: SoulPagePath,
     pub name: Ident,
 }
-impl ExternalType {
-    pub fn to_string(&self) -> String {
-        format!("{}::{}", self.path.0, self.name.0)
-    }
-}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum UntypedKind {
     UntypedInt,
     UntypedUint,
     UntypedFloat,
 }
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct UnionType {
     pub union: UnionKind, 
     pub variant: Ident
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub enum UnionKind {
     Union(Ident),
     External(ExternalType),
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
+pub struct SoulPagePath(pub String);
+impl SoulPagePath {
+    pub fn from_path(path: &PathBuf) -> Self {
+        let mut soul_path = String::new();
+        let mut components = path.components().peekable();
+
+        while let Some(component) = components.next() {
+            
+            if let Component::Normal(os_str) = component {
+                if soul_path.len() > 0 {
+                    soul_path.push_str(".");
+                }
+
+                if components.peek().is_none() {
+                    let path = PathBuf::from(&os_str);
+                    let stem = path.file_stem()
+                        .map(|s| s.to_string_lossy())
+                        .unwrap_or_else(|| os_str.to_string_lossy());
+                    
+                    soul_path.push_str(&stem);
+                } 
+                else {
+                    soul_path.push_str(&os_str.to_string_lossy());
+                }
+            }
+        }
+
+        Self(soul_path)
+    } 
+
+    pub fn to_path_buf(&self, add_soul_extention: bool) -> PathBuf {
+        let mut path = PathBuf::new();
+
+        for token in self.0.split(".") {
+            path.push(Path::new(token));
+        }
+        
+        if add_soul_extention {
+            Self::append_extension(&path, "soul")
+        }
+        else {
+            path
+        }
+    }
+
+    pub fn get_last_name(&self) -> &str {
+        self.0
+            .split(".")
+            .last()
+            .unwrap_or("")
+    }
+
+    pub fn pop(&mut self) -> bool {
+        if let Some(pos) = self.0.rfind('.') {
+            self.0.truncate(pos);
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    fn append_extension(path: &Path, ext: &str) -> PathBuf {
+        let mut os_string = path.as_os_str().to_owned();
+        os_string.push(".");
+        os_string.push(ext);
+        PathBuf::from(os_string)
+    }
 }
 
 impl UnionType {
@@ -103,6 +172,18 @@ impl UnionType {
             UnionKind::Union(ident) => ident.0.clone(),
             UnionKind::External(external_type) => external_type.name.0.clone(),
         }
+    }
+}
+
+impl ExternalType {
+    pub fn to_string(&self) -> String {
+        format!("{}.{}", self.path.0, self.name.0)
+    }
+}
+
+impl ExternalPath {
+    pub fn to_string(&self) -> String {
+        format!("{}.{}", self.path.0, self.name.0)
     }
 }
 
@@ -160,10 +241,11 @@ impl TypeKind {
                     },
             TypeKind::Bool => SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string(),
             TypeKind::Str => SOUL_NAMES.get_name(NamesInternalType::String).to_string(),
+            TypeKind::Unknown(ident) => ident.0.clone(),
             TypeKind::Custom(ident) => ident.0.clone(),
-            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string()).join(",")),
-            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string())).join(",")),
-            TypeKind::Function(function_signature) => function_signature.borrow().name.0.clone(),
+            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string()).join(", ")),
+            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string())).join(", ")),
+            TypeKind::Function(function_signature) => function_signature.name.0.clone(),
             TypeKind::Struct(ident) => ident.0.clone(),
             TypeKind::Class(ident) => ident.0.clone(),
             TypeKind::Trait(ident) => ident.0.clone(),
@@ -221,10 +303,11 @@ impl TypeKind {
                     },
             TypeKind::Bool => SOUL_NAMES.get_name(NamesInternalType::Boolean).to_string(),
             TypeKind::Str => SOUL_NAMES.get_name(NamesInternalType::String).to_string(),
+            TypeKind::Unknown(ident) => format!("Unknown|{}|", ident.0),
             TypeKind::Custom(ident) => ident.0.clone(),
-            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string()).join(",")),
-            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string())).join(",")),
-            TypeKind::Function(function_signature) => function_signature.borrow().name.0.clone(),
+            TypeKind::Tuple(soul_types) => format!("({})", soul_types.iter().map(|ty| ty.to_string()).join(", ")),
+            TypeKind::NamedTuple(hash_map) => format!("({})", hash_map.iter().map(|(name, ty)| format!("{}: {}", name.0, ty.to_string())).join(", ")),
+            TypeKind::Function(function_signature) => function_signature.name.0.clone(),
             TypeKind::Struct(ident) => ident.0.clone(),
             TypeKind::Class(ident) => ident.0.clone(),
             TypeKind::Trait(ident) => ident.0.clone(),
@@ -235,8 +318,8 @@ impl TypeKind {
             TypeKind::Generic(ident) => ident.0.clone(),
             TypeKind::LifeTime(ident) => ident.0.clone(),
             TypeKind::Lambda(signature) => signature.to_type_string(),
-            TypeKind::ExternalType(ty) => ty.node.to_string(),
-            TypeKind::ExternalPath(path) => format!("<path>{}", path.node.name.0),
+            TypeKind::ExternalType(ty) => format!("|ExternalType| {}", ty.node.to_string()),
+            TypeKind::ExternalPath(path) => format!("|ExternalPath| {}", path.node.to_string()),
         }
     }
 
@@ -274,6 +357,7 @@ impl TypeKind {
             },
             TypeKind::Bool => "bool",
             TypeKind::Str => "str",
+            TypeKind::Unknown(..) => "Unknown",
             TypeKind::Custom(..) => "Custom",
             TypeKind::Tuple(..) => "Tuple",
             TypeKind::NamedTuple(..) => "NamedTuple",
@@ -287,7 +371,7 @@ impl TypeKind {
             TypeKind::TypeEnum(..) => "typeEnum",
             TypeKind::Generic(..) => "generic",
             TypeKind::LifeTime(..) => "lifetime",
-            TypeKind::Lambda(signature) => match signature.borrow().mode {
+            TypeKind::Lambda(signature) => match signature.mode {
                 LambdaMode::Mut => "MutFn",
                 LambdaMode::Const => "ConstFn",
                 LambdaMode::Consume => "OnceFn",
@@ -298,108 +382,10 @@ impl TypeKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Modifier {
-    Default,
-    Literal,
-    Const,
-}
 
-impl Modifier {
-    pub fn is_mutable(&self) -> bool {
-        match self {
-            Modifier::Default => true,
-            Modifier::Literal |
-            Modifier::Const => false,
-        }
-    }
-}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum TypeWrapper {
-    Invalid,
-    Array,
-    ConstRef(Option<Lifetime>),
-    MutRef(Option<Lifetime>),
-    Pointer,
-    ConstPointer
-}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AnyRef {
-    Invalid,
-    ConstRef(Option<Lifetime>),
-    MutRef(Option<Lifetime>),
-}
 
-impl TypeWrapper {
-    pub fn is_any_ref(&self) -> bool {
-        match self {
-            TypeWrapper::ConstRef(..) |
-            TypeWrapper::MutRef(..) => true,
-            _ => false,
-        }
-    }
-}
-
-impl Modifier {
-    pub fn from_str(str: &str) -> Modifier {
-        match str {
-            val if val == SOUL_NAMES.get_name(NamesTypeModifiers::Constent) => Modifier::Const,
-            val if val == SOUL_NAMES.get_name(NamesTypeModifiers::Literal) => Modifier::Literal,
-            _ => Modifier::Default
-        }
-    }
-
-    pub fn to_str(&self) -> &str {
-        match self {
-            Modifier::Default => "",
-            Modifier::Literal => SOUL_NAMES.get_name(NamesTypeModifiers::Literal),
-            Modifier::Const => SOUL_NAMES.get_name(NamesTypeModifiers::Constent),
-        }
-    }
-}
-
-impl TypeWrapper {
-    pub fn from_str(str: &str) -> TypeWrapper {
-        match str {
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => TypeWrapper::ConstRef(None),
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => TypeWrapper::MutRef(None),
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Pointer) => TypeWrapper::Pointer,
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::Array)  => TypeWrapper::Array,
-            _ => TypeWrapper::Invalid,
-        }
-    }
-
-    pub fn to_str(&self) -> &str {
-        match self {
-            TypeWrapper::Invalid => "<invalid>",
-            TypeWrapper::Array => SOUL_NAMES.get_name(NamesTypeWrapper::Array),
-            TypeWrapper::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
-            TypeWrapper::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
-            TypeWrapper::Pointer => SOUL_NAMES.get_name(NamesTypeWrapper::Pointer),
-            TypeWrapper::ConstPointer => " const*",
-        }
-    }
-}
-
-impl AnyRef {
-    pub fn from_str(str: &str) -> AnyRef {
-        match str {
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef) => AnyRef::ConstRef(None),
-            val if val == SOUL_NAMES.get_name(NamesTypeWrapper::MutRef) => AnyRef::MutRef(None),
-            _ => AnyRef::Invalid,
-        }
-    }
-
-    pub fn to_str(&self) -> &str {
-        match self {
-            AnyRef::Invalid => "<invalid>",
-            AnyRef::ConstRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::ConstRef),
-            AnyRef::MutRef(..) => SOUL_NAMES.get_name(NamesTypeWrapper::MutRef),
-        }
-    }
-}
 
 
 

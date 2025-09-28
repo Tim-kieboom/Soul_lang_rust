@@ -1,18 +1,20 @@
-use itertools::Itertools;
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::fmt::Display;
+use bincode::{BorrowDecode, Decode, Encode};
+use itertools::Itertools;
 use ordered_float::OrderedFloat;
+use serde::{Deserialize, Serialize};
 use crate::errors::soul_error::Result;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{Modifier, TypeKind, TypeSize, TypeWrapper};
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::expression::Ident};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{Modifier, SoulType};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::TypeSize;
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{expression::Ident, soul_type::{soul_type::TypeWrapper, type_kind::TypeKind}}};
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub enum Literal {
     // basic
     Int(i64),
     Uint(u64),
-    Float(OrderedFloat<f64>),
+    Float(Double),
     Bool(bool),
     Char(char),
     Str(String),
@@ -20,13 +22,13 @@ pub enum Literal {
     // complex
     Array{ty: LiteralType, values: Vec<Literal>},
     Tuple{values: Vec<Literal>},
-    NamedTuple{values: BTreeMap<Ident, Literal>},
+    NamedTuple{values: BTreeMap<Ident, Literal>, insert_defaults: bool},
 
     // a type of Literal variable for complex literals and refing basic literals 
     ProgramMemmory(Ident, LiteralType),
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize, Encode, Decode)]
 pub enum LiteralType {
     Int,
     Uint,
@@ -40,6 +42,7 @@ pub enum LiteralType {
     ProgramMemmory(Box<LiteralType>),
 }
 
+
 impl LiteralType {
     pub fn type_to_string(&self) -> String {
         match self {
@@ -50,8 +53,8 @@ impl LiteralType {
             LiteralType::Char => format!("char"),
             LiteralType::Str => format!("str"),
             LiteralType::Array(ty) => format!("{}[]", ty.type_to_string()),
-            LiteralType::Tuple(tys) => format!("({})", tys.iter().map(|value| value.type_to_string()).join(",")),
-            LiteralType::NamedTuple(tys) => format!("({})", tys.iter().map(|(name, value)| format!("{}: {}", name.0, value.type_to_string())).join(",")),
+            LiteralType::Tuple(tys) => format!("({})", tys.iter().map(|value| value.type_to_string()).join(", ")),
+            LiteralType::NamedTuple(tys) => format!("({})", tys.iter().map(|(name, value)| format!("{}: {}", name.0, value.type_to_string())).join(", ")),
 
             LiteralType::ProgramMemmory(inner) => format!("promem({})", inner.type_to_string()),
         }
@@ -158,7 +161,7 @@ impl Literal {
         } else {
             return Err(new_soul_error(
                 SoulErrorKind::WrongType, 
-                *span, 
+                Some(*span), 
                 format!("Incompatible array literal types: {:?} vs {:?}", common_ty, next_ty)
             ));
         }
@@ -177,8 +180,8 @@ impl Literal {
         this
     }
 
-    pub fn new_named_tuple(literals: BTreeMap<Ident, Literal>) -> Literal {
-        let mut this = Literal::NamedTuple{values: literals};
+    pub fn new_named_tuple(literals: BTreeMap<Ident, Literal>, insert_defaults: bool) -> Literal {
+        let mut this = Literal::NamedTuple{values: literals, insert_defaults};
         let lit_type = this.get_literal_type();
         if let Literal::Array{ty, ..} = &mut this {
             *ty = lit_type;
@@ -244,8 +247,12 @@ impl Literal {
             Literal::Char(_) => format!("Literal char"),
             Literal::Str(_) => format!("Literal str"),
             Literal::Array{ty, ..} => format!("Literal {}[]", ty.type_to_string()),
-            Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(",")),
-            Literal::NamedTuple{values} => format!("Literal ({})", values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(",")),
+            Literal::Tuple{values} => format!("Literal ({})", values.iter().map(|val| val.type_to_string()).join(", ")),
+            Literal::NamedTuple{values, insert_defaults} => format!(
+                "Literal {{{}{}}}", 
+                values.iter().map(|(name, val)| format!("{}: {}", name.0, val.type_to_string())).join(", "),
+                if *insert_defaults {if values.is_empty() {".."} else {", .."}} else {""},
+            ),
 
             Literal::ProgramMemmory(name, ty) => format!("{}({})", name.0, ty.type_to_string()),
         }
@@ -259,9 +266,9 @@ impl Literal {
             Literal::Bool(val) => format!("{}", val),
             Literal::Char(char) => format!("{}", char),
             Literal::Str(str) => format!("{}", str),
-            Literal::Array{values, ..} => format!("[{}]", values.iter().map(|lit| lit.value_to_string()).join(",")),
-            Literal::Tuple{values, ..} => format!("({})", values.iter().map(|value| value.value_to_string()).join(",")),
-            Literal::NamedTuple{values, ..} => format!("({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.value_to_string())).join(",")),
+            Literal::Array{values, ..} => format!("[{}]", values.iter().map(|lit| lit.value_to_string()).join(", ")),
+            Literal::Tuple{values, ..} => format!("({})", values.iter().map(|value| value.value_to_string()).join(", ")),
+            Literal::NamedTuple{values, ..} => format!("({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.value_to_string())).join(", ")),
             
             Literal::ProgramMemmory(name, ty) => format!("{}({})", name.0, ty.type_to_string()),
         }
@@ -275,65 +282,51 @@ impl Literal {
             Literal::Bool(val) => format!("Literal bool {}", val),
             Literal::Char(char) => format!("Literal char {}", char),
             Literal::Str(str) => format!("Literal str \"{}\"", str),
-            Literal::Array{values, ..} => format!("Literal [{}; {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(",")),
-            Literal::Tuple{values, ..} => format!("Literal ({})", values.iter().map(|value| value.to_string()).join(",")),
-            Literal::NamedTuple{values, ..} => format!("Literal ({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.to_string())).join(",")),
+            Literal::Array{values, ..} => format!("Literal [{}: {}]", values.last().map(|lit| lit.type_to_string()).unwrap_or(format!("<unknown>")), values.iter().map(|lit| lit.value_to_string()).join(", ")),
+            Literal::Tuple{values, ..} => format!("Literal ({})", values.iter().map(|value| value.to_string()).join(", ")),
+            Literal::NamedTuple{values, ..} => format!("Literal ({})", values.iter().map(|(name, value)| format!("{}: {}", name.0, value.to_string())).join(", ")),
             Literal::ProgramMemmory(name, ty) => format!("Literal {}({})", name.0, ty.type_to_string()),
         }
     }
 }
 
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Double(OrderedFloat<f64>);
+impl Double {
+    pub fn new(val: f64) -> Self {
+        Self(OrderedFloat(val))
+    }
 
+    pub fn as_f64(&self) -> f64 {
+        self.0.0
+    }
+}
 
+impl Encode for Double {
+    fn encode<E: bincode::enc::Encoder>(&self, encoder: &mut E) -> std::result::Result<(), bincode::error::EncodeError> {
+        self.as_f64().encode(encoder)
+    }
+}
 
+impl<C> Decode<C> for Double {
+    fn decode<D: bincode::de::Decoder<Context = C>>(decoder: &mut D) -> std::result::Result<Self, bincode::error::DecodeError> {
+        Ok(Double::new(f64::decode(decoder)?))
+    }
+}
 
+impl<'de, C> BorrowDecode<'de, C> for Double {
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = C>>(
+        decoder: &mut D,
+    ) -> std::result::Result<Self, bincode::error::DecodeError> {
+        Ok(Double::new(f64::borrow_decode(decoder)?))
+    }
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+impl Display for Double {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_f64().fmt(f)
+    }
+}
 
 
 

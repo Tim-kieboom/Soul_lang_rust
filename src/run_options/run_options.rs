@@ -1,11 +1,14 @@
 use std::io::Write;
 use std::num::ParseIntError;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::result;
 use std::env::Args;
+use std::str::ParseBoolError;
+use hsoul::subfile_tree::SubFileTree;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
+use crate::errors::soul_error::{new_soul_error, SoulErrorKind, Result};
 use crate::utils::logger::{LogLevel, LogMode};
 
 use super::show_times::ShowTimes;
@@ -13,6 +16,7 @@ use super::show_output::ShowOutputs;
 
 pub struct RunOptions {
     pub file_path: PathBuf, 
+    pub project_name: String,
     pub is_file_path_raw_file_str: bool, 
     pub show_times: ShowTimes,
     pub show_outputs: ShowOutputs,
@@ -21,12 +25,16 @@ pub struct RunOptions {
     pub tab_char_len: u32,
     pub command: String,
     pub sub_tree_path: PathBuf,
+
     pub log_path: Option<PathBuf>,
     pub log_level: LogLevel,
-    pub log_mode: LogMode
+    pub log_mode: LogMode,
+    pub log_colored: bool,
+
+    pub max_thread_count: Option<usize>,
 } 
 
-type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> Result<(), String> + Send + Sync + 'static>;
+type ArgFunc = Box<dyn Fn(&String, &mut RunOptions) -> std::result::Result<(), String> + Send + Sync + 'static>;
 
 static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
     HashMap::from([
@@ -51,11 +59,11 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
             Box::new(|arg: &String, options: &mut RunOptions| {
                 let input = get_input(arg)?;
                 options.tab_char_len = input.parse()
-                    .map_err(|err: ParseIntError| format!("input of argument '-tabCharLen' could not be parsed into u32 interger parserError:\n{}", err.to_string()))?;
+                    .map_err(|err: ParseIntError| format!("input of argument '--tabCharLen' could not be parsed into u32 interger parserError:\n{}", err.to_string()))?;
                 
                 const MAX_TAB_LEN: u32 = 128;
                 if options.tab_char_len > MAX_TAB_LEN {
-                    return Err(format!("-tabCharLen can not be larger then {}", MAX_TAB_LEN));
+                    return Err(format!("--tabCharLen can not be larger then {}", MAX_TAB_LEN));
                 }
                 Ok(())
             }) as ArgFunc
@@ -108,6 +116,32 @@ static OPTIONS: Lazy<HashMap<&'static str, ArgFunc>> = Lazy::new(|| {
                 Ok(())
             }) as ArgFunc
         ),
+        (
+            "--logColored",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.log_colored = input.parse()
+                    .map_err(|err: ParseBoolError| err.to_string())?;
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--projectName",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.project_name = input.to_string();
+                Ok(())
+            }) as ArgFunc
+        ),
+        (
+            "--maxThreads",
+            Box::new(|arg: &String, options: &mut RunOptions| {
+                let input = get_input(arg)?;
+                options.max_thread_count = Some(input.parse()
+                    .map_err(|err: ParseIntError| format!("input of argument '--maxThreads' could not be parsed into usize interger parserError:\n{}", err.to_string()))?);
+                Ok(())
+            }) as ArgFunc
+        ),
     ])
 });
 
@@ -128,6 +162,16 @@ impl RunOptions {
             log_level: LogLevel::Any,
             log_mode: LogMode::ShowAll,
             log_path: None,
+            log_colored: true,
+
+            project_name: std::env::current_dir()
+                .expect("can not get current dir")
+                .file_name()
+                .expect("could not get name of dir")
+                .to_str()
+                .expect("current dir name is not UTF8 valid")
+                .to_string(),
+            max_thread_count: None,
         };
 
         let mut args = _args.collect::<Vec<_>>();
@@ -167,6 +211,37 @@ impl RunOptions {
         else {
             Ok(options)
         }
+    }
+
+    fn has_sub_tree(&self) -> bool {
+        !self.sub_tree_path.as_os_str().is_empty()
+    }
+
+    pub fn get_file_paths(&self) -> Result<Vec<PathBuf>> {
+
+        let main_file_path = self.file_path.clone();
+
+        let mut source_files = vec![main_file_path];
+        if self.has_sub_tree() {
+            
+            let subfiles_tree = self.get_sub_files()?;
+
+            source_files.extend(
+                subfiles_tree.get_all_file_paths()
+                    .into_iter()
+                    .map(|mut path| {path.set_extension("soul"); path})
+            );
+
+        }
+
+        Ok(source_files)
+    } 
+
+    fn get_sub_files(&self) -> Result<SubFileTree> {
+        let sub_tree = SubFileTree::from_bin_file(Path::new(&self.sub_tree_path))
+            .map_err(|msg| new_soul_error(SoulErrorKind::InternalError, None, format!("!!internal error!! while trying to get subfilesTree\n{}", msg.to_string())))?;
+        
+        Ok(sub_tree)
     }
 }
 
@@ -224,8 +299,8 @@ have fun :).
         --showTime      info: select which steps in the compiler gets timed and this time printed on screan
                         args(chainable): SHOW_NONE, (Default)SHOW_TOTAL, SHOW_SOURCE_READER, SHOW_TOKENIZER, SHOW_PARSER, SHOW_CODE_GENERATOR, SHOW_ALL 
         
-        --tabCharLen    info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will display the wrong char
-                        args: (Deafult)4, <any positive interger> 
+        --tabCharLen    info: the amount of spaces in your ide for a tab this is if this amount is wrong your errors will highlight the wrong char
+                        args: (Default)4, <any positive interger> 
 
         --outputDir     info: the path of the output folder
                         args: (Default)<empty>, <any path>
@@ -239,13 +314,19 @@ have fun :).
         --logLevel      info: the lowest level that will be show
                         args: (Default)ANY, ERROR, WARNING, INFO, DEBUG  
 
-        --logMode       info: what info will be show when a massage in printed 
+        --logMode       info: what info will be show when a message in printed 
                         args(chainable): (Default)SHOW_ALL, SHOW_DATE, SHOW_LEVEL  
+        
+        --logColored    info: if `true` will terminal print colored text else will print default color
+                        args: (Default)true, false
+        
+        --maxThreads    info: the max amout of threads allowed to be used in compiler
+                        args: (Default)<max amount available>, <any positive interger>
 ";
 
     println!("{}", HELP_ARGS_LIST);
 
-    // inshore this gets printed
+    // insure this gets printed
     std::io::stdout().flush().expect("could not flush");
 }
 

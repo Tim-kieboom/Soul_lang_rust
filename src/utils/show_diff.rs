@@ -196,7 +196,3 @@ pub fn generate_highlighted_string(
 
 
 
-
-
-
-

@@ -1,9 +1,8 @@
-use std::{collections::{HashMap, HashSet}, result};
-use enum_iterator::Sequence;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
-use regex::Regex;
+use enum_iterator::Sequence;
 use serde::{Serialize, Deserialize};
+use std::{collections::{HashMap, HashSet}};
 
 pub static SOUL_NAMES: Lazy<SoulNames> = Lazy::new(|| {
     SoulNames::new()
@@ -17,38 +16,67 @@ static ILLIGAL_SYMBOOLS: Lazy<HashSet<char>> = Lazy::new(|| HashSet::from([
     '}', '\\', '|', ';',
     '\'', '\"', ',', '.',
     '<', '>', '/', '?', 
-    '`', '~',
+    '`', '~', '\n', '\t',
 ]));
 
-pub fn check_name_allow_types(name: &str) -> result::Result<(), String> {
-  
-    if name.starts_with("__") {
-        return Err(format!("name: '{}' can not begin wiht '__' ", name));
+pub const ASSIGN_SYMBOOLS: &[&str] = &["=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="];
+pub const OPERATOR_ASSIGN_SYMBOOLS: &[&str] = &["+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="];
+
+pub fn could_be_name(name: &str) -> bool {
+    let first_char = &name.chars()
+        .next()
+        .unwrap_or('!');
+
+    if name.len() == 1 && ILLIGAL_SYMBOOLS.get(first_char).is_some() {
+        return false
     }
 
-    if let Some(illigal_name) = SOUL_NAMES.type_less_iligal_names.get(name) {
-        return Err(format!("name: '{}' is illigal", illigal_name));
+    const SEPARATE_SYMBOOLS: &[char] = &['(', '{', '[', ']', '}', ')', ',', '.', '\'', '\"'];
+    if name.chars().any(|char| SEPARATE_SYMBOOLS.iter().any(|el| el == &char)) {
+        return false
     }
 
-    if let Some(illigal_symbool) = name.chars().find(|ch| ILLIGAL_SYMBOOLS.contains(ch)) {
-        return Err(format!("name: '{}', has illigal symbool '{}'", name, illigal_symbool));
+    if name == "=>" || OPERATOR_ASSIGN_SYMBOOLS.iter().any(|el| *el == name) {
+        return false
     }
 
-    Ok(())
+    true
 }
 
-pub fn check_name(name: &str) -> result::Result<(), String> {
-  
+pub fn check_name_allow_types(name: &str) -> Result<(), String> {
+    inner_check_name(name, &SOUL_NAMES.type_less_iligal_names)
+}
+
+pub fn check_name(name: &str) -> Result<(), String> {
+    inner_check_name(name, &SOUL_NAMES.iligal_names)
+}
+
+fn inner_check_name(name: &str, iligal_names: &HashSet<&str>) -> Result<(), String> {
     if name.starts_with("__") {
         return Err(format!("name: '{}' can not begin wiht '__' ", name));
     }
 
-    if let Some(illigal_name) = SOUL_NAMES.iligal_names.get(name) {
-        return Err(format!("name: '{}' is illigal", illigal_name));
+    if let Some(illigal) = iligal_names.get(name) {
+        
+
+        let illigal_name = if *illigal == "\n" {
+            "\\n"
+        }
+        else {
+            *illigal
+        };
+
+        return Err(format!("name: '{}' is an illigal name", illigal_name));
     }
 
     if let Some(illigal_symbool) = name.chars().find(|ch| ILLIGAL_SYMBOOLS.contains(ch)) {
-        return Err(format!("name: '{}', has illigal symbool '{}'", name, illigal_symbool));
+        
+        return if illigal_symbool == '\n' {
+            Err(format!("name: '{}', has illigal symbool '\\n'", name.replace("\n", "\\n")))
+        }
+        else {
+            Err(format!("name: '{}', has illigal symbool '{}'", name, illigal_symbool))
+        }
     }
 
     Ok(())
@@ -190,13 +218,13 @@ impl SoulNames {
             (NamesOtherKeyWords::TypeEnum, "typeEnum"),
             (NamesOtherKeyWords::Enum, "enum"),
             
-            (NamesOtherKeyWords::SwitchCase, "match"),
+            (NamesOtherKeyWords::MatchCase, "match"),
             (NamesOtherKeyWords::Typeof, "typeof"),
             (NamesOtherKeyWords::Type, "type"),
             (NamesOtherKeyWords::Trait, "trait"),
             (NamesOtherKeyWords::Impl, "impl"),
             (NamesOtherKeyWords::Where, "where"),
-            (NamesOtherKeyWords::Let, "let"),
+            (NamesOtherKeyWords::Let, "mut"),
             
             
             (NamesOtherKeyWords::CopyData, "copy"),
@@ -211,19 +239,21 @@ impl SoulNames {
             ":=", ",", "[]", "[", "]", 
             "(", ")", "{", "}", ":", "..", 
             ";", "=", "\\", " ", "\t", "\"",
-            "\\\"", "::", "=>",
+            "::", "=>",
         ];
 
         let mut iligal_names = HashSet::<&str>::new();
         iligal_names.insert(operator_names.get(&NamesOperator::Logarithm).expect("log not impl"));
         iligal_names.extend(type_modifiers.iter().map(|(_, str)| *str));
         iligal_names.extend(other_keywords_names.iter().map(|(_, str)| *str));
+        iligal_names.extend(["1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+        
         let type_less_iligal_names = iligal_names.clone();
         iligal_names.extend(internal_types.iter().map(|(_, str)| *str));
 
         let mut parse_tokens: Vec<&str> = BASE_TOKENS.iter().copied().collect();
         parse_tokens.extend(operator_names.iter().filter(|(key, _)| key != &&NamesOperator::Logarithm).map(|(_, str)| *str));
-        parse_tokens.extend(assign_symbools.iter().map(|(_, str)| *str));
+        parse_tokens.extend(assign_symbools.iter().filter(|(key, _)| key != &&NamesAssignType::GetObjectInner).map(|(_, str)| *str));
         parse_tokens.extend(type_wappers.iter().map(|(_, str)| *str));
 
         //this is so that the tokenizer takes priority over for example '**' over '*'
@@ -246,15 +276,6 @@ impl SoulNames {
 
     pub fn get_name<T: std::fmt::Debug + SoulNameEnum>(&self, key: T) -> &'static str {
         key.get_name(self).expect(format!("Internal Error: in SOUL_NAMES.get_name() name: {:?}, is not defined", key).as_str())
-    }
-
-    pub fn str_vec_to_regex(vec: &Vec<&str>) -> Regex {
-        Regex::new(
-            &vec.iter()
-                .map(|token| regex::escape(token))
-                .collect::<Vec<String>>()
-                .join("|")
-        ).unwrap()
     }
 }
 
@@ -294,7 +315,7 @@ pub enum NamesOtherKeyWords {
     Impl,
     Where,
 
-    SwitchCase,
+    MatchCase,
     Typeof,
     Type,
     Let,
@@ -410,46 +431,4 @@ pub enum NamesInternalType {
     List,
 }
 impl_soul_name_enum!(NamesInternalType, internal_types);
-
-/// ORDER OF THIS FIRST FEW IN ARRAY MATTERS (should be untypedInt, untypedUint, untypedFl, int, uint, fl, ...)
-pub const NAMES_INTERNAL_TYPE_NUMBER: [NamesInternalType; 15] = [
-    NamesInternalType::UntypedInt,
-    NamesInternalType::UntypedUint,
-    NamesInternalType::UntypedFloat,
-    
-    NamesInternalType::Int,
-    NamesInternalType::Uint,
-    NamesInternalType::Float32,
-    
-    NamesInternalType::Int8,
-    NamesInternalType::Int16,
-    NamesInternalType::Int32,
-    NamesInternalType::Int64,
-
-    NamesInternalType::Uint8,
-    NamesInternalType::Uint16,
-    NamesInternalType::Uint32,
-    NamesInternalType::Uint64,
-
-    NamesInternalType::Float64,
-];
-
-/// ORDER OF FIRST FEW IN THIS ARRAY MATTERS (should be int, uint, fl, ...)
-pub const NAMES_INTERNAL_TYPE_NUMBER_NON_UNTYPED: [NamesInternalType; 12] = [
-    NamesInternalType::Int,
-    NamesInternalType::Uint,
-    NamesInternalType::Float32,
-
-    NamesInternalType::Int8,
-    NamesInternalType::Int16,
-    NamesInternalType::Int32,
-    NamesInternalType::Int64,
-
-    NamesInternalType::Uint8,
-    NamesInternalType::Uint16,
-    NamesInternalType::Uint32,
-    NamesInternalType::Uint64,
-
-    NamesInternalType::Float64,
-];
 

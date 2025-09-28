@@ -5,14 +5,14 @@ use serde::{Serialize, Deserialize};
 #[derive(Debug, Clone)]
 pub struct SubFileTree {
     pub tree: Tree<TreeNode>,
-    pub files_len: usize,
+    pub files_amount: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct SubFileTreeBuilder {
     tree: Tree<TreeNode>,
     current: NodeId,
-    files_len: usize,
+    files_amount: usize,
     current_dir: PathBuf,
 }
 
@@ -22,7 +22,7 @@ impl SubFileTreeBuilder {
         let current = tree.root().id();
         let mut current_dir = PathBuf::new();
         current_dir.push(root);
-        Self{tree, current, files_len: 0, current_dir }
+        Self{tree, current, files_amount: 0, current_dir }
     }
 
     pub fn add_subfile<S: Into<String> + AsRef<Path>>(&mut self, name: S, is_public: bool) {
@@ -30,7 +30,7 @@ impl SubFileTreeBuilder {
             .expect("current in subfiletree not found")
             .append(TreeNode::new_subfile(name.into(), is_public));
         
-        self.files_len += 1;
+        self.files_amount += 1;
     }
 
     pub fn get_current_dir(&self) -> PathBuf {
@@ -61,7 +61,7 @@ impl SubFileTreeBuilder {
     }
 
     pub fn get_all_file_paths(&self) -> Vec<String> {
-        let mut result = Vec::with_capacity(self.files_len);
+        let mut result = Vec::with_capacity(self.files_amount);
         let root = self.tree.root();
         let mut stack = Vec::new();
 
@@ -95,7 +95,7 @@ impl SubFileTreeBuilder {
     }
 
     pub fn consume_to_sub_file_tree(self) -> SubFileTree {
-        SubFileTree { tree: self.tree, files_len: self.files_len }
+        SubFileTree { tree: self.tree, files_amount: self.files_amount }
     }
 }
 

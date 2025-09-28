@@ -1,13 +1,196 @@
+use path.to.[thing, stuff]
+use this.foo.[this, bar]
+
+type string impl str
+use String impl str
+
+const One = 1
+Sum(int a, int b) int {
+    return a + b
+} 
+
 main() {
-    Println("hello wrold")
+    Println("hello world")
 }
 
- 
+scope() {
+    mut number := 1
+    if true {
+        number += 1
+    }
+}
+
+functionCall() {
+    
+    sumStackArray<N impl uint>(int[N] arr) int {
+        mut sum := 0
+        for el in arr {
+            sum += el
+        }
+
+        return sum
+    }
+    
+    sumInner(int a, int b) int {
+        return a + b
+    }
+
+    sumGeneric<T: Number + impl[u8, i8, int]>(T a, T b) T {
+        return a + b
+    }
+
+    increment(mut int a) int {
+        a += 1
+        return a
+    }
+
+    num := 1
+    Println("hello world")
+    Println(f"num == {num}")
+    sumInner(1, 2)
+    sumGeneric<int>(1, 2)
+    NamedTupleCtor{value: 1, field: "hello", sum: sum(1,2)}
+    int.MAX
+    int.Parse("1")
+
+    var := Obj()
+    var.field
+    var.Methode()  
+    var.field.Methode()
+
+    colletion.Iter()
+        .IterFunction()
+        .ToArray()
+
+    object.field
+        .Methode()
+        .field
+
+    sumStackArray([1,2,3,4,5])
+    sumStackArray<5>([1,2,3,4,5])
+
+    function()
+}
+
+variable() {
+    var := 1 //const int(1)
+    mut letVar = 1.0 //f32(1.0)
+    const constVar = 0b1 //const uint(1)
+    Literal literalVar = -1 //Literal int(-1)
+
+    int intVar = 1
+    const int intConst = 1
+    Literal int intLiteral = 1
+
+    num() int {
+        return 1
+    }
+
+    mut num := sum(1, 2)
+    num = sum<int>(1, 2)
+    num = 2
+    num = num.sum(1)
+    num = num.sum<int>(1)
+
+    Object defaultCtor = () 
+    mut obj := Object{field: 1}
+    obj = Object{}
+    obj = Object()
+    num = obj.field
+    num = obj.field.methode()
+    num = obj.field.methode<int>()
+
+    obj.field = 1
+}
+
+expressionGroups() {
+
+    one() int {
+        return 1
+    }
+
+    literalArray := [1, 2, 3.0, 4]
+    foo := 100 log 10
+    literalTuple := (true, 1, 2.0, 0b11, "4")
+    literalNamedTuple := {value: 1, text: "hello world"}
+
+    array := [1, 2, 3, 4, one()]
+    tuple := (true, one(), 2.0, 0b11, "4")
+    namedTuple := {value: one(), text: "hello world"}
+
+    list := List[f32: 1, 2, 3, 4, 5]
+    mut arr := [f32: 1, 2, 3, 4, 5]
+    arr = [f32: for 10 => 0]
+    arr = [for i in 10 => i%2]
+    map := [(str, bool):
+        ("hello", true),
+        ("world", false),
+    ]
+
+    Json json = {value: one()}
+    json = Json{sum: sum(1,2), other: 1}
+    // Json{sum, other} := json
+
+    int[] intArray1 = [1,2,3,4,5,6] 
+    int[6] intStackArray1 = [1,2,3,4,5,6]
+    ((str, int), int[], int[3]) arrayTuple1 = (("foo", 1), [1,2,3], [1,2,3])
+    ((str, int) foo, int[] bar, int[3] bar2) arrayTuple2 = {foo: ("foo", 1), bar: [1,2,3], bar2: [1,2,3]}
+
+    const int[] intArray2 = [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+    ] 
+
+    const int[6] intStackArray2 = [
+        1,2,3,4,5,6
+    ] 
+
+    const (
+        (str, int), int[], int[3]
+    ) arrayTuple3 = (
+        ("foo", 1), 
+        [1,2,3], 
+        [1,2,3],
+    )
+
+    const (
+        (str, int) foo, 
+        int[] bar, 
+        int[3] bar2
+    ) arrayTuple4 = {
+        foo: ("foo", 1), 
+        bar: [1,2,3], 
+        bar2: 
+        [1,2,3]
+    }
+
+    tuple() (int, f32[]) {
+        return (0, [0.1])
+    }
+
+    namedTuple() (int field, f32[] nums) {
+        return {
+            field: 0,
+            nums: [0.5, 0.1]
+        }
+    }
+}
+
+class obj {}
+class Obj {}
+class OBJ {}
 
 
+sum(int a, int b) int {
+    return a + b
+}
 
-
-
-
+int sum(this, int b) int {
+    return this + b
+}
 
 

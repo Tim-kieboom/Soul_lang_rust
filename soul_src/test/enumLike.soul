@@ -1,0 +1,59 @@
+enums() {
+    enum Paths impl str {
+        MainDisk = "C:\\",
+        OtherDisk = "D:\\",
+        MainFile = "src\\main.rs",
+    }
+
+    enum Nums {
+        One, //0
+        Two, //1
+        Ten = 10,
+        Three //11
+    }
+
+    enum KeyValue impl (str, int[3]) {
+        Foo = ("foo", [1,2,43]),
+        Bar = ("bar", [2,45,6])
+    }
+}
+
+unions() {
+    
+    union WrapperKind {
+        Array,
+        StackArray(uint),
+        Pointer(bool isMut),
+        Ref(LifeTime lifeTime, bool isMut),
+    }
+    
+    union Option<T> {
+        Some(T),
+        None,
+    }
+
+    union Result<K, E>
+    where 
+        K: Debug,
+        E: Debug
+    {
+        Ok(K),
+        Err(E)
+    }
+}
+
+typeEnums() {
+
+    type Float impl[f8, f16, f32, f64, untypedFloat]
+    type Interger impl[i8, i16, i32, i64, int, untypedInt]
+    type UInterger impl[u8, u16, u32, u64, uint, untypedUint]
+
+    type Number impl[Float, Interger, UInterger]
+}
+
+
+
+
+
+
+

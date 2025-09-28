@@ -1,4 +1,4 @@
-use std::{collections::{BTreeMap, BTreeSet, HashMap}, fmt::Write, time::Duration};
+use std::{collections::{BTreeMap, BTreeSet, HashMap}, fmt::Write, time::{Duration}};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9,7 +9,7 @@ pub struct TimeLogs {
 
 impl TimeLogs {
     pub fn new() -> Self {
-        Self { times: HashMap::new(), max_key_len: 0 }
+        Self { times: HashMap::new(), max_key_len: 0}
     }
 
     pub fn push<S: Into<String>>(&mut self, key: &String, description: S, time: Duration) {
@@ -99,7 +99,7 @@ impl TimeLogs {
         table
     }
 
-    pub fn to_total_table_string(&self) -> String {
+    pub fn to_total_only_table_string(&self) -> String {
         let descriptions: BTreeSet<String> = self.times
             .values()
             .flat_map(|map| map.keys().cloned())
@@ -162,5 +162,16 @@ pub fn format_duration(dur: Duration) -> String {
         format!("{}s", secs)
     }
 }
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -1,481 +1,574 @@
-use std::sync::RwLockReadGuard;
 use itertools::Itertools;
-use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::{AbstractSyntacTree, GlobalKind}, soul_type::type_kind::TypeKind, staments::{conditionals::{CaseDoKind, ElseKind, IfDecl}, enum_likes::{EnumDeclRef, TypeEnumDeclRef, UnionDeclRef}, function::{ExtFnDecl, FnDecl, FnDeclKind}, objects::{ClassDeclRef, InnerTraitDecl, StructDeclRef, TraitImpl}, statment::{Block, ReturnLike, StmtKind, VariableKind}}, visibility::{FieldAccess, Visibility}}, scope::{ScopeBuilder, ScopeKind}}, i_sementic::sementic_scope::ScopeVisitor};
+use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::{Enum, EnumVariantKind, TypeEnum, Union, UnionVariant, UnionVariantKind}, expression::{AccessField, Binary, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, ExternalExpression, For, If, IfCaseKind, Index, Match, NamedTuple, StaticField, Ternary, Tuple, Unary, UnwrapVariable, While}, function::{Function, FunctionCall, FunctionSignature, Lambda, LambdaBody, Parameter, StaticMethod, StructConstructor}, generic::GenericParameter, literal::Literal, object::{Class, ClassChild, Field, FieldAccess, Struct, Trait, Visibility}, soul_type::soul_type::{SoulType, TypeGenericKind, TypeWrapper}, spanned::Spanned, statement::{Block, StatementKind, UseBlock}}, scope_builder::{ScopeBuilder, ScopeKind}};
 
 pub trait PrettyFormat {
     fn to_pretty_string(&self) -> String;
 }
 
-pub trait PrettyPrint {
+pub trait PrettyString {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String;
 }
 
-impl PrettyFormat for ScopeVisitor {
-    fn to_pretty_string(&self) -> String {
-        format!(
-            "scopes: [\n\t{}\n]\ntypes: [\n\t{}\n]",
-            self.get_scopes()
-                .scopes
-                .iter()
-                .map(|scope| format!(
-                    "scope{}: [\n\t\t{}\n\t]", 
-                    scope.self_index, 
-                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
-                )).join(",\n\t"),
-            self.get_types()
-                .iter()
-                .map(|scope| format!(
-                    "scope{}: [\n\t\t{}\n\t]", 
-                    scope.self_index, 
-                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
-                )).join(",\n\t"),
-        )
-    }
+pub trait ToString {
+    fn to_string(&self) -> String;
 }
 
 impl PrettyFormat for ScopeBuilder {
     fn to_pretty_string(&self) -> String {
-        format!(
-            "scopes: [\n\t{}\n]\ntypes: [\n\t{}\n]",
-            self.get_scopes()
-                .scopes
+        use std::fmt::Write;
+
+        let mut string = self.get_scopes()
+            .iter()
+            .map(|scope| {
+                let body = scope.symbols.iter()
+                    .map(|(name, kind)| format!("\t{} => [\n\t\t{}\n\t],", name, kind.iter().map(|el| el.node.to_string()).join(",\n\t\t")))
+                    .join("\n");
+
+                format!("scope({}) {{\n{}\n}}\n", scope.self_index.0, body) 
+            })
+            .join("");
+
+        write!(
+            string, 
+            "\nprogramMemory() {{\n{}\n}}", 
+            self.global_literals
+                .store
                 .iter()
-                .map(|scope| format!(
-                    "scope{}: [\n\t\t{}\n\t]", 
-                    scope.self_index, 
-                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
-                )).join(",\n\t"),
-            self.get_types()
-                .iter()
-                .map(|scope| format!(
-                    "scope{}: [\n\t\t{}\n\t]", 
-                    scope.self_index, 
-                    scope.symbols.iter().map(|sm| format!("\"{}\": {}", sm.0, sm.1.to_pretty(3, false))).join(",\n\t\t")
-                )).join(",\n\t"),
-        )
-    }
-}
-
-impl PrettyPrint for Vec<ScopeKind> {
-    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
-        
-        let inner = self.iter().map(|kind| {
-            match kind {
-                ScopeKind::Invalid() => "<invalid>".into(),
-                ScopeKind::Variable(node_ref) => format!("let({})", node_ref.borrow().name.0),
-                ScopeKind::Struct(struct_decl) => format!("struct({})", struct_decl.borrow().name.0),
-                ScopeKind::Class(class_decl) => format!("class({})", class_decl.borrow().name.0),
-                ScopeKind::Trait(trait_decl) => format!("trait({})", trait_decl.borrow().name.0),
-                ScopeKind::Functions(node_ref) => format!("func({})", node_ref.borrow().last().map(|fnc| fnc.get_signature().borrow().name.0.clone()).unwrap_or("".into()) ),
-                ScopeKind::Enum(enum_decl) => format!("enum({})", enum_decl.borrow().name.0),
-                ScopeKind::Union(union_decl) => format!("union({})", union_decl.borrow().name.0),
-                ScopeKind::TypeEnum(type_enum_decl) => format!("typeEnum({})", type_enum_decl.borrow().name.0),
-            }
-        }).join(",");
-
-        format!("[{}]", inner)
-    }
-}
-
-impl PrettyPrint for TypeKind {
-    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
-        self.to_string()
+                .map(|(literal, id)| format!("\t__soul_mem_{}({})", id.0, literal.to_string()))
+                .join("\n"),
+        ).expect("error writing programMemory");
+        string
     }
 }
 
 impl PrettyFormat for AbstractSyntacTree {
     fn to_pretty_string(&self) -> String {
-        self.root
-            .iter()
-            .map(|node| node.node.to_pretty(0, true))
+        self.root.to_pretty(0, false)
+    }
+}
+
+impl PrettyString for Block {
+    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
+        self.statments.iter()
+            .enumerate()
+            .map(|(i, statment)| {
+                let is_last = i == self.statments.len() - 1;
+                statment.node.to_pretty(tab, is_last)
+            })
             .collect::<Vec<_>>()
-            .join("\n\n")
+            .join("\n")
     }
 }
 
-impl PrettyPrint for StmtKind {
+impl PrettyString for StatementKind {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
         match self {
-            StmtKind::ExprStmt(expr) => format!("{}ExprStmt<{}> >> {};", prefix, expr.node.get_variant_name(), expr.node.to_string(tab)),
-            StmtKind::VarDecl(var_ref) => var_ref.to_pretty(tab, is_last),
-            StmtKind::FnDecl(fn_decl) => fn_decl.to_pretty(tab, is_last),
-            StmtKind::ExtFnDecl(ext_fn) => ext_fn.to_pretty(tab, is_last),
-            StmtKind::StructDecl(struc) => struc.to_pretty(tab, is_last),
-            StmtKind::ClassDecl(class) => class.to_pretty(tab, is_last),
-            StmtKind::TraitDecl(trait_decl) => trait_decl.borrow().to_pretty(tab, is_last),
-            StmtKind::EnumDecl(enum_decl) => enum_decl.to_pretty(tab, is_last),
-            StmtKind::UnionDecl(union_decl) => union_decl.to_pretty(tab, is_last),
-            StmtKind::TypeEnumDecl(type_enum) => type_enum.to_pretty(tab, is_last),
-            StmtKind::TraitImpl(trait_impl) => trait_impl.to_pretty(tab, is_last),
-            StmtKind::Return(ReturnLike{value, delete_list, kind}) => format!(
-                "{}Return >> {} {} >> free([{}])",
-                prefix,
-                kind.to_str(),
-                value.as_ref().map(|ty| ty.node.to_string(tab)).unwrap_or_default(),
-                delete_list.iter().join(","),
+            StatementKind::Expression(spanned) => format!(
+                "{}Expression<{}> >> {}", 
+                prefix, 
+                spanned.node.get_variant_name(),
+                spanned.node.to_pretty(tab, is_last),
             ),
-            StmtKind::Assignment(assign) => format!(
-                "{}Assignment >> {} = {};",
-                prefix,
-                assign.target.node.to_string(tab),
-                assign.value.node.to_string(tab)
-            ),
-            StmtKind::If(if_decl) => if_decl.to_pretty(tab, is_last),
-            StmtKind::While(while_decl) => {
-                let cond = while_decl.condition.as_ref().map(|el| el.node.to_string(tab)).unwrap_or("<empty>".into());
-                let body = while_decl.body.to_pretty(tab + 1, true);
-                format!(
-                    "{}While >> while{}\n{}",
-                    prefix,
-                    cond,
-                    body
-                )
+
+            StatementKind::Variable(variable_name) => format!("{}Variable >> {}", prefix, variable_name.name),
+            StatementKind::Assignment(assignment) => format!("{}Assignment >> {} = {}", prefix, assignment.variable.node.to_string(), assignment.value.node.to_string()),
+
+            StatementKind::Function(function) => function.to_pretty(tab, is_last),
+
+            StatementKind::Class(class) => class.to_pretty(tab, is_last),
+            StatementKind::Struct(struct_) => struct_.to_pretty(tab, is_last),
+            StatementKind::Trait(trait_) => trait_.to_pretty(tab, is_last),
+
+            StatementKind::Enum(enum_) => enum_.to_pretty(tab, is_last),
+            StatementKind::Union(union) => union.to_pretty(tab, is_last),
+            StatementKind::TypeEnum(type_enum) => type_enum.to_pretty(tab, is_last),
+
+            StatementKind::UseBlock(implement) => implement.to_pretty(tab, is_last),
+
+            StatementKind::CloseBlock => format!("{}CloseBlock\n{}", prefix, tree_next_line_prefix(tab)),
+        }
+    }
+}
+
+impl PrettyString for UseBlock {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        format!(
+            "{}Implement >> use {}{}\n{}",
+            prefix,
+            self.ty.to_string(),
+            self.impl_trait.as_ref().map(|el| format!(" impl {}", el.to_string())).unwrap_or(String::new()),
+            self.block.to_pretty(tab+1, is_last),
+        )
+    }
+}
+
+impl PrettyString for TypeEnum {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        format!(
+            "{}TypeEnum >> {} typeof[{}]",
+            prefix,
+            self.name,
+            self.body.types.iter().map(|el| el.to_string()).join(", "),
+        )
+    }
+}
+
+impl PrettyString for Union {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        let prefix2 = tree_prefix(tab+1, is_last);
+        format!(
+            "{}Union >> {}{}\n{}",
+            prefix,
+            self.name,
+            self.generics.to_string(),
+            self.variants.iter().map(|el| format!("{}{}", prefix2, el.node.to_string())).join("\n")
+        )
+    }
+}
+
+impl ToString for UnionVariant {
+    fn to_string(&self) -> String {            
+        format!(
+            "{}{}", 
+            self.name, 
+            match &self.field {
+                UnionVariantKind::Tuple(tuple) => format!("({})", tuple.iter().map(|el| el.to_string()).join(",") ),
+                UnionVariantKind::NamedTuple(named_tuple) => format!("({})", named_tuple.iter().map(|(key, value)| format!("{}: {}", key.0, value.to_string())).join(",") ),
             }
-            StmtKind::Block(block) => block.to_pretty(tab, is_last),
-            StmtKind::CloseBlock(arr) => format!(
-                "{}CloseBlock >> free([{}])\n{}",
-                prefix,
-                arr.delete_list.iter().join(","),
-                tree_next_line_prefix(tab),
-            ),
-            StmtKind::For(for_decl) => {
-                let el = for_decl.element.0.clone();
-                let coll = for_decl.collection.node.to_string(tab);
-                let body = for_decl.body.to_pretty(tab + 1, true);
-                format!(
-                    "{}For >> for {} in {}\n{}",
-                    prefix,
-                    el,
-                    coll,
-                    body
-                )
-            },
-            StmtKind::Switch(switch) =>format!(
-                "SwitchCase >> match {}\n{}", 
-                switch.condition.node.to_string(tab),
-                switch.cases.iter().enumerate().map(|(i, stmt)| {
-                    let is_last = i == switch.cases.len() - 1;
-                    format!("\t{} => {}", stmt.if_expr.node.to_string(tab), stmt.do_fn.to_pretty(tab, is_last))
-                }).collect::<Vec<_>>().join("\n")
-            ),
-        }
+        )
     }
 }
 
-impl PrettyPrint for CaseDoKind {
+impl PrettyString for Enum {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        match self {
-            CaseDoKind::Block(block) => block.to_pretty(tab, is_last),
-            CaseDoKind::Expression(spanned) => spanned.node.to_string(tab),
-        }
+        let prefix = tree_prefix(tab, is_last);
+        format!(
+            "{}Enum >> {}\n{}",
+            prefix,
+            self.name,
+            self.variants.to_pretty(tab+1, is_last)
+        )
     }
 }
 
-impl PrettyPrint for ElseKind {
+impl PrettyString for EnumVariantKind {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
         match self {
-            ElseKind::ElseIf(if_decl) => format!(
-                "{}Else If >> else if {}\n{}",
-                prefix,
-                if_decl.node.condition.node.to_string(tab),
-                if_decl.node.body.to_pretty(tab + 1, true),
-            ),
-            ElseKind::Else(block) => {
-                let body = block.node.to_pretty(tab + 1, true);
-                format!("{}Else >> else\n{}", prefix, body)
-            }
+            EnumVariantKind::Int(enum_variants) => enum_variants.iter().map(|el| format!("{}{} = {}", prefix, el.name, el.value)).join("\n"),
+            EnumVariantKind::Expression(enum_variants) => enum_variants.iter().map(|el| format!("{}{} = {}", prefix, el.name, el.value.to_string())).join("\n"),
         }
     }
 }
 
-impl PrettyPrint for IfDecl {
+impl PrettyString for Trait {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let cond = self.condition.node.to_string(tab);
-        let mut output = vec![format!("{}If >> if ({})", prefix, cond)];
-
-        output.push(self.body.to_pretty(tab + 1, true));
-
-        for (i, e) in self.else_branchs.iter().enumerate() {
-            let last = i == self.else_branchs.len() - 1;
-            output.push(e.node.to_pretty(tab + 1, last));
-        }
-
-        output.join("\n")
+        let prefix2 = tree_prefix(tab+1, is_last);
+        format!(
+            "{}Trait >> {}{}{}\n{}",
+            prefix,
+            self.signature.name,
+            self.signature.generics.to_string(),
+            if self.signature.implements.is_empty() {"".into()} else {format!("impl {}", self.signature.implements.iter().map(|el| el.to_string()).join(" + "))},
+            self.methodes.iter().map(|el| format!("{}Methode >>{}", prefix2, el.node.to_string())).join("\n"),
+        )
     }
 }
 
-impl PrettyPrint for GlobalKind {
+impl PrettyString for Struct {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let content = match self {
-            GlobalKind::ClassDecl(class) => class.to_pretty(tab, true),
-            GlobalKind::StructDecl(struc) => struc.to_pretty(tab, true),
-            GlobalKind::TraitDecl(trait_decl) => trait_decl.borrow().to_pretty(tab, true),
-            GlobalKind::TraitImpl(impl_block) => impl_block.to_pretty(tab, true),
-            GlobalKind::FuncDecl(fn_decl) => fn_decl.to_pretty(tab, true),
-            GlobalKind::ExtFuncDecl(fn_decl) => fn_decl.to_pretty(tab, true),
-            GlobalKind::VarDecl(var) => var.to_pretty(tab, true),
-            GlobalKind::EnumDecl(enum_decl) => enum_decl.to_pretty(tab, true),
-            GlobalKind::UnionDecl(union_decl) => union_decl.to_pretty(tab, true),
-            GlobalKind::TypeEnumDecl(type_enum) => type_enum.to_pretty(tab, true),
+        let prefix2 = tree_prefix(tab+1, is_last);
+        format!(
+            "{}Struct >> {}{}\n{}",
+            prefix,
+            self.name,
+            self.generics.to_string(),
+            self.fields.iter().map(|el| format!("{}Field >>{}", prefix2, el.node.to_string())).join("\n"),
+        )
+    }
+}
+
+impl PrettyString for Class {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab, is_last);
+        let prefix2 = tree_prefix(tab+1, is_last);
+        let impls = if self.implements.is_empty() {
+            ""
+        }
+        else {
+            &format!(" impl {}", self.implements.iter().map(|el| el.to_string()).join(" + "))
         };
-        format!("{}{}", prefix, content)
+
+        format!(
+            "{}Class >> {}{}{}\n{}",
+            prefix,
+            self.name,
+            impls,
+            self.generics.to_string(),
+            self.children.iter().map(|el| match el {
+                ClassChild::Field(spanned) => format!("{}Field >>{}", prefix2, spanned.node.to_string()),
+                ClassChild::Methode(spanned) => spanned.node.to_pretty(tab+1, is_last),
+                ClassChild::ImplBlock(spanned) => spanned.node.to_pretty(tab+1, is_last),
+            }).join("\n"),
+        )
     }
 }
 
-impl PrettyPrint for RwLockReadGuard<'_, InnerTraitDecl> {
-    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        let prefix = tree_prefix(tab, is_last);
-        let header = format!("{}Trait {} >>", prefix, self.name.0);
-
-        let mut methods = self.methodes
-            .iter()
-            .enumerate()
-            .map(|(i, sig)| {
-                let last = i == self.methodes.len() - 1;
-                let inner_prefix = tree_prefix(tab + 1, last);
-                format!("{} {};", inner_prefix, sig.to_string())
-            })
-            .join("\n");
-
-        if methods.is_empty() {
-            methods = prefix;
-        }
-
-        format!("{}\n{}", header, methods)
+impl ToString for Field {
+    fn to_string(&self) -> String {
+        format!(
+            "{} {}{}{}",
+            self.ty.to_string(),
+            self.name,
+            self.vis.to_string(),
+            self.default_value.as_ref().map(|el| format!(" = {}", el.to_string())).unwrap_or(String::new()),
+        )
     }
 }
 
-impl PrettyPrint for TypeEnumDeclRef {
-    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
-        let this = self.borrow();
-        let types = this.types.iter().map(|t| t.to_string()).join(", ");
-        format!("TypeEnum {} = [{}];", this.name.0, types)
-    }
-}
-
-impl PrettyPrint for UnionDeclRef {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        let this = self.borrow();
-        let indent_str = indent(tab);
-        let variants = this.variants
-            .iter()
-            .map(|v| format!("{}{}{}", indent_str, v.name.0, v.field.to_string()))
-            .join(",\n");
-        format!("Union {} >>\n{}", this.name.0, variants)
-    }
-}
-
-impl PrettyPrint for EnumDeclRef {
-    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
-        let this = self.borrow();
-        let variants = this.variants
-            .iter()
-            .map(|v| format!("{}({:?})", v.name.0, v.value))
-            .join(", ");
-        format!("Enum {} >> [{}]", this.name.0, variants)
-    }
-}
-
-impl PrettyPrint for TraitImpl {
-    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        let mut methods = self.methodes
-            .iter()
-            .map(|fn_decl| fn_decl.node.to_pretty(tab + 1, true))
-            .join("\n\n");
-
-        if methods.is_empty() {
-            methods = tree_prefix(tab, is_last);
-        }
-
-        format!("Impl {} for {} >>\n{}", self.trait_name.0, self.for_type.to_string(), methods)
-    }
-}
-
-impl PrettyPrint for ClassDeclRef {
-    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        let this = self.borrow();
-        
-        let prefix = tree_prefix(tab, is_last);
-        let generics = if this.generics.is_empty() {
-            "".to_string()
-        } else {
-            format!("<{}>", this.generics.iter().map(|g| g.to_string()).join(", "))
-        };
-        let header = format!("{}Class {}{} >>", prefix, this.name.0, generics);
-
-        let last_index = this.fields.len().saturating_sub(1);
-        let is_empty = this.methodes.is_empty();
-
-        let fields = this.fields.iter().enumerate().map(|(i, f)| {
-            let is_last_field = i == last_index && is_empty;
-            let field_prefix = tree_prefix(tab + 1, is_last_field);
-            let access = match (&f.node.vis.get, &f.node.vis.set) {
-                (Some(Visibility::Public), Some(Visibility::Public)) => "{Get;Set;}",
-                (Some(Visibility::Public), _) => "{Get;}",
-                (_, Some(Visibility::Public)) => "{Set;}",
-                _ => "",
-            };
-            let default = f.node.default_value
-                .as_ref()
-                .map(|v| format!(" = {}", v.node.to_string(tab)))
-                .unwrap_or_default();
-            format!("{}{} {}: {}{}", field_prefix, access, f.node.name.0, f.node.ty.to_string(), default)
-        });
-
-
-        let len = this.methodes.len();
-        let methods = this.methodes.iter().enumerate().map(|(i, m)| {
-            let is_last_method = i == len - 1;
-            m.node.to_pretty(tab + 1, is_last_method)
-        });
-
-        let mut body = fields.chain(methods).join("\n");
-        if body.is_empty() {
-            body = prefix;
-        }
-
-        format!("{}\n{}", header, body)
-    }
-}
-
-impl PrettyPrint for FnDeclKind {
-
-    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        match self {
-            FnDeclKind::InternalFn(node_ref) => node_ref.to_string(),
-            FnDeclKind::Fn(fn_decl) => fn_decl.to_pretty(tab, is_last),
-            FnDeclKind::InternalCtor(multi_ref) => multi_ref.to_string(),
-            FnDeclKind::Ctor(fn_decl) => fn_decl.to_pretty(tab, is_last),
-            FnDeclKind::ExtFn(ext_fn_decl) => ext_fn_decl.to_pretty(tab, is_last),
-        }
-    }
-}
-
-impl PrettyPrint for StructDeclRef {
-    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        let prefix = tree_prefix(tab, is_last);
-        let header = format!("{}Struct {}{} >>", prefix, self.borrow().name.0, 
-            if self.borrow().generics.is_empty() {
-                "".to_string()
-            } else {
-                format!("<{}>", self.borrow().generics.iter().map(|g| g.to_string()).join(", "))
-            });
-
-        let mut body = self.borrow().fields
-            .iter()
-            .enumerate()
-            .map(|(i, f)| {
-                let last = i == self.borrow().fields.len() - 1;
-                let inner_prefix = tree_prefix(tab + 1, last);
-                if let Some(value) = &f.node.default_value {
-                    format!("{}{} {} {} = {}", inner_prefix, f.node.ty.to_string(), f.node.name.0, f.node.vis.to_pretty(0, false), value.node.to_string(tab))
-                } else {
-                    format!("{}{} {} {}", inner_prefix, f.node.ty.to_string(), f.node.name.0, f.node.vis.to_pretty(0, false))
-                }
-            })
-            .join("\n");
-
-        if body.is_empty() {
-            body = prefix;
-        }
-
-        format!("{}\n{}", header, body)
-    }
-}
-
-impl PrettyPrint for FieldAccess {
-    fn to_pretty(&self, _tab: usize, _is_last: bool) -> String {
+impl ToString for FieldAccess {
+    fn to_string(&self) -> String {
         if self.get.is_none() && self.set.is_none() {
-            return String::new()
+            String::new()
         }
-
-        let get = if let Some(get) = &self.get {
-            match get {
-                Visibility::Public => "Get;",
-                Visibility::Private => "get;",
-            }
+        else {
+            format!(
+                "{{{}{}}}",
+                self.get.as_ref().map(|el| if let Visibility::Public = el {"Get "} else {"get "}).unwrap_or(""),
+                self.set.as_ref().map(|el| if let Visibility::Public = el {"Set "} else {"set "}).unwrap_or(""),
+            )
         }
-        else {""};
-
-        let set = if let Some(set) = &self.set {
-            match set {
-                Visibility::Public => "Set;",
-                Visibility::Private => "set;",
-            }
-        }
-        else {""};
-
-        format!("{{{}{}}}", get, set)
     }
 }
 
-impl PrettyPrint for FnDecl {
+impl PrettyString for Function {
     fn to_pretty(&self, tab: usize, is_last: bool) -> String {
         let prefix = tree_prefix(tab, is_last);
-        let sig = self.signature.to_string();
-        let body = self.body.to_pretty(tab + 1, true); 
-        format!("{}FnDecl >> {}\n{}", prefix, sig, body)
+        format!(
+            "{}Function >> {}\n{}",
+            prefix,
+            self.signature.to_string(),
+            self.block.to_pretty(tab + 1, is_last)
+        )
     }
 }
 
-impl PrettyPrint for ExtFnDecl {
-    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        let prefix = tree_prefix(tab, is_last);
-        let sig = self.signature.to_string();
-        let body = self.body.to_pretty(tab + 1, true); 
-        format!("{}ExtFnDecl >> {}\n{}", prefix, sig, body)
-    }
-}
-
-impl PrettyPrint for Block {
-    fn to_pretty(&self, tab: usize, _is_last: bool) -> String {
-        self.statments.iter().enumerate().map(|(i, stmt)| {
-            let is_last = i == self.statments.len() - 1;
-            stmt.node.to_pretty(tab, is_last)
-        }).collect::<Vec<_>>().join("\n")
-    }
-}
-
-impl PrettyPrint for VariableKind {
-    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
-        let prefix = tree_prefix(tab, is_last);
+impl ToString for ScopeKind {
+    fn to_string(&self) -> String {
         match self {
-            VariableKind::Variable(node_ref) => {
-                let node = node_ref.borrow();
-                let init = match &node.initializer {
-                    Some(expr) => format!(" = {}", expr.node.to_string(tab)),
-                    None => "".to_string(),
-                };
-                format!("{}Var {} {}{}", prefix, node.ty.to_string(), node.name.0, init)
-            },
-            VariableKind::MultiVariable{vars, ty, initializer, lit_retention:_} => {
-                
-                let init = match &initializer {
-                    Some(expr) => format!(" = {}", expr.node.to_string(tab)),
-                    None => "".to_string(),
-                };
-                format!("{}Var {} ({}){}", prefix, ty.to_string(), vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow().name.0)).join(","), init)
-            },
+            ScopeKind::Class(value) => format!("class >> {}{}", value.name, value.generics.to_string()),
+            ScopeKind::Trait(value) => format!("trait >> {}{}", value.signature.name, value.signature.generics.to_string()),
+            ScopeKind::Struct(value) => format!("struct >> {}{}", value.name, value.generics.to_string()),
+
+            ScopeKind::Variable(value) => format!("Variable >> {} {}{}", value.ty.to_string(), value.name.name, value.initialize_value.as_ref().map(|el| format!(" = {}", el.node.to_string())).unwrap_or(String::new())),
+            ScopeKind::Functions(values) => format!("Functions >> [{}]", values.iter().map(|func| func.node.signature.to_string()).join(", ")),
+
+            ScopeKind::Enum(value) => format!("enum >> {}", value.name),
+            ScopeKind::Union(value) => format!("union >> {}", value.name),
+            ScopeKind::TypeEnum(value) => format!(
+                "typeEnum >> {} [{}]", 
+                value.name, 
+                value.body.types.iter().map(|el| el.to_string()).join(", "),
+            ),
+
+            ScopeKind::Type(soul_type) => format!("Type >> {} ", soul_type.to_string()),
+            ScopeKind::TypeDef{new_type, of_type} => format!("TypeDef >> type {} impl {}", new_type.to_string(), of_type.to_string()),
+            ScopeKind::UseTypeDef{new_type, of_type} => format!("UseTypeDef >> use {} impl {}", new_type.to_string(), of_type.to_string()),
+        }  
+    }
+}
+
+impl ToString for FunctionSignature {
+    fn to_string(&self) -> String {
+        format!(
+            "{}{}{}({}) {}",
+            self.callee.as_ref().map(|el| format!("{}{}", el.node.extention_type.to_string(), el.node.this.as_ref().map(|el| format!(" this{} ", el.wrappers.to_string())).unwrap_or(String::new()) )).unwrap_or(String::new()),
+            self.name,
+            self.generics.to_string(),
+            self.parameters.to_string(),
+            self.return_type.as_ref().unwrap_or(&SoulType::none()).to_string()
+        )
+    }
+}
+
+impl ToString for Vec<Spanned<Parameter>> {
+    fn to_string(&self) -> String {
+        self.iter()
+            .map(|param| format!(
+                "{} {}", 
+                param.node.ty.to_string(), 
+                param.node.name, 
+            ))
+            .join(", ")
+    }
+}
+
+impl ToString for Vec<TypeWrapper> {
+    fn to_string(&self) -> String {
+        self.iter()
+            .map(|wrap| wrap.to_string())
+            .join("")
+    }
+}
+
+impl ToString for Vec<GenericParameter> {
+    fn to_string(&self) -> String {
+        if self.is_empty() {
+            String::new()
+        } 
+        else {
+            format!(
+                "<{}>", 
+                self.iter()
+                    .map(|el| el.to_string())
+                    .join(", ")
+            )
         }
     }
 }
 
-fn indent(level: usize) -> String {
-    "    ".repeat(level)
+impl ToString for Tuple {
+    fn to_string(&self) -> String {
+        self.values.iter()
+            .map(|el| el.to_string())
+            .join(", ")
+    }
 }
 
-fn tree_prefix(indent: usize, is_last: bool) -> String {
-    if indent == 0 {
+impl ToString for NamedTuple {
+    fn to_string(&self) -> String {
+        let args = self.values.iter()
+            .map(|(name, value)| format!("{}: {}", name, value.to_string()))
+            .join(", ");
+        
+        if self.insert_defaults {
+            format!("{}, ..", args)
+        }
+        else {
+            args
+        }
+    }
+}
+
+impl PrettyString for LambdaBody {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        match self {
+            LambdaBody::Block(block) => format!("\n{}", block.to_pretty(tab, is_last)),
+            LambdaBody::Expression(spanned) => spanned.to_pretty(tab, is_last),
+        }
+    }
+}
+
+impl PrettyString for Expression {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        self.node.to_pretty(tab, is_last)
+    }
+}
+
+impl PrettyString for ExpressionKind {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        match self {
+            ExpressionKind::Empty => "<empty>".into(),
+            ExpressionKind::Default => "<default>".into(),
+            ExpressionKind::Literal(literal) => literal.to_string(),
+
+            ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_pretty(tab + 1, is_last), index.to_pretty(tab + 1, is_last)),
+            ExpressionKind::Lambda(Lambda{signature, arguments, body, capture:_, scope_id:_}) => format!("{}({}) => {}", signature.mode.get_lambda_name(), arguments.to_string(), body.to_pretty(tab + 1, is_last)),
+            ExpressionKind::StructConstructor(StructConstructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
+            ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
+
+            ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_pretty(tab + 1, is_last), field.name),
+            ExpressionKind::StaticField(StaticField{object, field}) => format!("{}.{}", object.to_string(), field.name),
+            ExpressionKind::StaticMethod(StaticMethod{callee, name, generics, arguments}) => format!("{}.{}{}({})", callee.node.to_string(), name, generic_to_string(generics), arguments.to_string()),
+
+            ExpressionKind::UnwrapVariable(unwrap_variable) => match unwrap_variable {
+                UnwrapVariable::Variable(variable_name) => variable_name.name.0.clone(),
+                UnwrapVariable::MultiVariable{vars, ty, initializer} => format!("{}({}){}", ty.to_string(), vars.iter().map(|el| &el.name.0).join(", "), initializer.as_ref().map(|el| format!(" = {}", el.to_string())).unwrap_or(String::new()) ),
+            },
+            ExpressionKind::ExternalExpression(ExternalExpression{path, expr}) => format!("{}::{}", path.0, expr.to_pretty(tab + 1, is_last)),
+
+            ExpressionKind::Unary(Unary{operator, expression}) => format!("{}{}", operator.node.to_str(), expression.to_pretty(tab + 1, is_last)),
+            ExpressionKind::Binary(Binary{left, operator, right}) => format!("{} {} {}", left.to_pretty(tab + 1, is_last), operator.node.to_str(), right.to_pretty(tab + 1, is_last)),
+
+            ExpressionKind::If(if_) => if_.to_pretty(tab, is_last),
+            ExpressionKind::For(For{element, collection, block}) => format!("for {}{}\n{}", element.as_ref().map(|el| format!("{} in ", el.to_string())).unwrap_or("".into()), collection.to_pretty(tab + 1, is_last), block.to_pretty(tab+1, is_last)),
+            ExpressionKind::While(While{condition, block}) => format!("while {}\n{}", condition.as_ref().map(|el| el.node.to_pretty(tab + 1, is_last)).unwrap_or("true".into()), block.to_pretty(tab+1, is_last)),
+            ExpressionKind::Match(Match{condition, cases, scope_id:_}) => format!("match {}\n{}{}", condition.to_pretty(tab, is_last), tree_prefix(tab+1, is_last), cases.iter().map(|el| format!("{} => \n{}", el.if_kind.to_string(), el.do_fn.to_pretty(tab, is_last))).join(format!("\n{}", tree_prefix(tab+1, is_last)).as_str()) ),
+            ExpressionKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!("{} ? {} : {}", condition.to_pretty(tab, is_last), if_branch.to_pretty(tab, is_last), else_branch.to_pretty(tab, is_last)),
+
+            ExpressionKind::Deref(spanned) => format!("*{}", spanned.to_pretty(tab, is_last)),
+            ExpressionKind::MutRef(spanned) => format!("&{}", spanned.to_pretty(tab, is_last)),
+            ExpressionKind::ConstRef(spanned) => format!("@{}", spanned.to_pretty(tab, is_last)),
+
+            ExpressionKind::Block(block) => block.to_pretty(tab, is_last),
+            ExpressionKind::ReturnLike(return_like) => format!("{} {} >> free[{}]", return_like.kind.to_str(), return_like.value.as_ref().map(|el| el.to_string()).unwrap_or(String::new()), return_like.delete_list.iter().join(", ")),
+            ExpressionKind::ExpressionGroup(expression_group) => expression_group.to_string(),
+            ExpressionKind::Variable(var_name) => var_name.name.0.clone(),
+        }
+    }
+}
+
+impl ToString for IfCaseKind {
+    fn to_string(&self) -> String {
+        match self {
+            IfCaseKind::Expression(spanned) => spanned.node.to_string(),
+            IfCaseKind::Variant{name, params} => format!("{}({})", name.0, params.to_string()),
+            IfCaseKind::NamedVariant { name, params } => todo!("{}{{{}}}", name.0, params.to_string()),
+        }
+    }
+}
+
+impl PrettyString for CaseDoKind { 
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        match self {
+            CaseDoKind::Block(block) => block.node.to_pretty(tab+2, is_last),
+            CaseDoKind::Expression(spanned) => format!("{}{}", tree_prefix(tab+2, is_last), spanned.to_pretty(tab+2, is_last)),
+        }
+    }
+}
+
+fn generic_to_string(types: &Vec<TypeGenericKind>) -> String {
+    if types.is_empty() {
+        "".into()
+    }
+    else {
+        format!("<{}>", types.iter().map(|el| el.to_string()).join(", "))
+    }
+}
+
+impl PrettyString for If {
+    fn to_pretty(&self, tab: usize, is_last: bool) -> String {
+        let prefix = tree_prefix(tab+1, is_last);
+        format!(
+            "if {}\n{}{}", 
+            self.condition.to_string(),
+            self.block.to_pretty(tab + 1, is_last),
+            self.else_branchs.iter().map(|el| match &el.node {
+                ElseKind::ElseIf(if_) => format!("\n{}else {}", prefix, if_.node.to_pretty(tab, is_last)),
+                ElseKind::Else(else_) => format!("{}else\n{}", prefix, else_.node.to_pretty(tab+1, is_last)),
+            }).join("\n"),
+        )
+    }
+} 
+
+impl ToString for Expression {
+    fn to_string(&self) -> String {
+        self.node.to_string()
+    }
+}
+
+impl ToString for ExpressionKind {
+    fn to_string(&self) -> String {
+        match self {
+            ExpressionKind::Empty => "<empty>".into(),
+            ExpressionKind::Default => "<default>".into(),
+            ExpressionKind::Literal(literal) => literal.to_string(),
+            
+            ExpressionKind::Index(Index{collection, index}) => format!("{}[{}]", collection.to_string(), index.to_string()),
+            ExpressionKind::Lambda(Lambda{signature, arguments, body:_, capture:_, scope_id:_}) => format!("{}({})", signature.mode.get_lambda_name(), arguments.to_string()),
+            ExpressionKind::StructConstructor(StructConstructor{calle, arguments}) => format!("{}(|ctor|{})", calle.to_string(), arguments.to_string()),
+            ExpressionKind::FunctionCall(FunctionCall{name, callee, generics, arguments}) => format!("{}{}{}({})", callee.as_ref().map(|el| format!("{}.",el.to_string())).unwrap_or(String::new()), name, generic_to_string(generics), arguments.to_string()),
+            
+            ExpressionKind::AccessField(AccessField{object, field}) => format!("{}.{}", object.to_string(), field.name),
+            ExpressionKind::StaticField(StaticField{object, field}) => format!("{}.{}", object.to_string(), field.name),
+            ExpressionKind::StaticMethod(StaticMethod{callee, name, generics, arguments}) => format!("{}.{}{}({})", callee.node.to_string(), name, generic_to_string(generics), arguments.to_string()),
+            
+            ExpressionKind::UnwrapVariable(unwrap_variable) => match unwrap_variable {
+                UnwrapVariable::Variable(variable_name) => variable_name.name.0.clone(),
+                UnwrapVariable::MultiVariable{vars, ty, initializer} => format!("{}({}){}", ty.to_string(), vars.iter().map(|el| &el.name.0).join(", "), initializer.as_ref().map(|el| format!(" = {}", el.to_string())).unwrap_or(String::new()) ),
+            },
+            ExpressionKind::ExternalExpression(ExternalExpression{path, expr}) => format!("{}::{}", path.0, expr.to_string()),
+            
+            ExpressionKind::Unary(Unary{operator, expression}) => format!("{}{}", operator.node.to_str(), expression.to_string()),
+            ExpressionKind::Binary(Binary{left, operator, right}) => format!("{} {} {}", left.to_string(), operator.node.to_str(), right.to_string()),
+            
+            ExpressionKind::If(If{condition, block:_, else_branchs}) => format!(
+                "if {}, {}", 
+                condition.to_string(),
+                else_branchs.iter().map(|el| match &el.node {
+                    ElseKind::ElseIf(if_) => format!("else if {}", if_.node.condition.to_string()),
+                    ElseKind::Else(_) => "else".into(),
+                }).join(", "),
+            ),
+            ExpressionKind::For(For{element, collection, block:_}) => format!("for {}{}", element.as_ref().map(|el| format!("{} in ", el.to_string())).unwrap_or("".into()), collection.to_string()),
+            ExpressionKind::While(While{condition, block:_}) => format!("while {}", condition.as_ref().map(|el| el.node.to_string()).unwrap_or("true".into())),
+            ExpressionKind::Match(Match{condition, cases:_, scope_id:_}) => format!("match {}", condition.to_string()),
+            ExpressionKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!("{} ? {} : {}", condition.to_string(), if_branch.to_string(), else_branch.to_string()),
+            
+            ExpressionKind::Deref(spanned) => format!("*{}", spanned.to_string()),
+            ExpressionKind::MutRef(spanned) => format!("&{}", spanned.to_string()),
+            ExpressionKind::ConstRef(spanned) => format!("@{}", spanned.to_string()),
+            
+            ExpressionKind::Block(_) => "BlockExpression".into(),
+            ExpressionKind::ReturnLike(return_like) => format!("{} {} >> free[{}]", return_like.kind.to_str(), return_like.value.as_ref().map(|el| el.to_string()).unwrap_or(String::new()), return_like.delete_list.iter().join(", ")),
+            ExpressionKind::ExpressionGroup(expression_group) => expression_group.to_string(),
+            ExpressionKind::Variable(var_name) => var_name.name.0.clone(),
+        }
+    }
+}
+
+impl ToString for ExpressionGroup {
+    fn to_string(&self) -> String {
+        match self {
+            ExpressionGroup::Tuple(tuple) => tuple.to_string(),
+            ExpressionGroup::NamedTuple(named_tuple) => named_tuple.to_string(),
+            ExpressionGroup::Array(array) => format!(
+                "{}[{}{}]", 
+                array.collection_type.as_ref().map(|el| el.to_string()).unwrap_or(String::new()),
+                array.element_type.as_ref().map(|el| format!("{}: ", el.to_string())).unwrap_or(String::new()),
+                array.values.iter().map(|el| el.to_string()).join(", "),
+            ),
+            ExpressionGroup::ArrayFiller(array_filler) => format!(
+                "{}[{}for {}{} => {}]",
+                array_filler.collection_type.as_ref().map(|el| el.to_string()).unwrap_or(String::new()),
+                array_filler.element_type.as_ref().map(|el| format!("{}: ", el.to_string())).unwrap_or(String::new()),
+                array_filler.index.as_ref().map(|el| format!("{} in ", el.name)).unwrap_or(String::new()),
+                array_filler.amount.to_string(),
+                array_filler.fill_expr.to_string(),
+            ),
+        }
+    }
+}
+
+impl ToString for Literal {
+    fn to_string(&self) -> String {
+        match self {
+            Literal::Int(num) => format!("{}", num),
+            Literal::Uint(num) => format!("{}", num),
+            Literal::Float(num) => format!("{}", num),
+            
+            Literal::Bool(bool_) => format!("{}", bool_),
+            
+            Literal::Char(char_) => format!("{}", char_),
+            Literal::Str(string) => format!("{}", string),
+            
+            Literal::Tuple{values} => format!("({})", values.iter().map(|el| el.to_string()).join(", ")),
+            Literal::Array{ty:_, values} => format!("[{}]", values.iter().map(|el| el.to_string()).join(", ")),
+            Literal::NamedTuple{values, insert_defaults} => format!(
+                "{{{}{}}}", 
+                values.iter().map(|el| format!("{}: {}", el.0, el.1.to_string())).join(", "),
+                if *insert_defaults {if values.is_empty() {".."} else {", .."}} else {""}
+            ),
+            
+            Literal::ProgramMemmory(ident, _) => format!("{}", ident),
+        }
+    }
+}
+
+fn tree_prefix(tab: usize, is_last: bool) -> String {
+    if tab == 0 {
         return String::new();
     }
 
     let mut prefix = String::new();
 
-    for _ in 0..indent - 1 {
+    for _ in 0..tab - 1 {
         prefix.push_str("│   ");
     }
 

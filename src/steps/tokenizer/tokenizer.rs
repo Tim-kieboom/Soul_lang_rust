@@ -57,8 +57,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
 
         add_offset_with_gap(offset, sum_gap)
     }
-
-
+        
     let splits = split_tokens(&file_line.line);
     let mut line_offset = 0;
     let mut last_is_forward_slash = false;
@@ -101,11 +100,14 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
         } 
 
         if *text == ";" &&
-           !splits.get(i+1).is_some_and(|token| token != &"\n") 
+            (
+                splits.index_is(i+1, &"\n") ||
+                (splits.index_is(i+1, &" ") && splits.index_is(i+2, &"\n"))
+            )
         {
             return Err(new_soul_error(
                 SoulErrorKind::InvalidEscapeSequence, 
-                SoulSpan::new(file_line.line_number, line_offset, text.len()), 
+                Some(SoulSpan::new(file_line.line_number, line_offset, text.len())), 
                 "can not end a line on ';'"
             ));
         }
@@ -114,12 +116,14 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             
             let possible_lifetime = if text.len() > 2 {&text[text.len()-2..]} else {&text};
             if text.chars().nth_back(1) == Some('\'') && text.len() > 2 {
-                let first = &text[..text.len()-2];
+                let mut first = &text[..text.len()-2];
+                first = if first == ";" {"\n"} else {first};
                 tokens.push(Token::new(first.to_string(), SoulSpan::new(file_line.line_number, line_offset, first.len())));
                 text = &possible_lifetime;
             }
             
             if *text != "\\" {
+                text = if *text == ";" {&"\n"} else {text};
                 tokens.push(Token::new(text.to_string(), SoulSpan::new(file_line.line_number, line_offset, text.len())));
                 
                 line_offset = add_offset_range(line_offset + text.len(), &mut gaps, line_offset);
@@ -129,7 +133,7 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             if i != splits.len() -1 {
                 return Err(new_soul_error(
                     SoulErrorKind::UnexpectedToken, 
-                    SoulSpan::new(file_line.line_number, line_offset, 1), 
+                    Some(SoulSpan::new(file_line.line_number, line_offset, 1)), 
                     "'\\' can only be placed at the end of a line"
                 ));
             }
@@ -144,34 +148,27 @@ fn get_tokens(file_line: FileLine, tokens: &mut Vec<Token>, source_result: &mut 
             continue;
         }
 
-        let dot_splits = text.split('.').collect::<Vec<_>>();
-        let last_index = dot_splits.len() - 1;
-        for (j, mut split) in dot_splits.into_iter().enumerate() {
+        let dot_splits = split_dot(text);
+        for mut split in dot_splits {
             if split.is_empty() || split == " " {
                 continue;
             }
 
             let possible_lifetime = if split.len() > 2 {&split[split.len()-2..]} else {&split};
             if split.chars().nth_back(1) == Some('\'') && split.len() > 2 {
-                let first = &split[..split.len()-2];
+                let mut first = &split[..split.len()-2];
+                first = if first == ";" {"\n"} else {first};
                 tokens.push(Token::new(first.to_string(), SoulSpan::new(file_line.line_number, line_offset, first.len())));
                 split = &possible_lifetime;
             }
 
+            split = if split == ";" {"\n"} else {split};
             tokens.push(Token::new(
                 split.to_string(),
                 SoulSpan::new(file_line.line_number, line_offset, split.len())
             ));
 
             line_offset = add_offset_range(line_offset + text.len(), &mut gaps, line_offset);
-
-            if j != last_index {
-                tokens.push(Token::new(
-                    ".".to_string(), 
-                    SoulSpan::new(file_line.line_number, line_offset, split.len())
-                ));
-                line_offset = add_offset_range(line_offset + 1, &mut gaps, line_offset);
-            }
         }
     }
 
@@ -206,6 +203,12 @@ fn split_tokens(this: &str) -> Vec<&str> {
     result
 }
 
+static DOT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^.]+|\.").unwrap());
+fn split_dot(token: &str) -> impl Iterator<Item = &str> {
+    DOT_REGEX.find_iter(token)
+        .map(|m| m.as_str())
+}
+
 fn needs_to_dot_tokenize(text: &str) -> bool {
     text != ".." && text.contains(".") && !token_is_number(text)
 }
@@ -218,7 +221,14 @@ fn is_not_empty_line(file_line: &FileLine) -> bool {
     !file_line.line.trim().is_empty()
 }
 
-
+trait IndexIs<T: PartialEq> {
+    fn index_is(&self, i: usize, eq: &T) -> bool;
+}
+impl IndexIs<&str> for Vec<&str> {
+    fn index_is(&self, i: usize, eq: &&str) -> bool {
+        !self.get(i).is_some_and(|el| el != eq)
+    }
+}
 
 
 

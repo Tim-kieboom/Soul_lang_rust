@@ -1,9 +1,15 @@
-use std::{fmt::Display, fs::OpenOptions, io::{self, BufReader, Read, Seek, Write}, path::PathBuf, sync::{Arc, Mutex}};
+use std::{fmt::Display, fs::OpenOptions, io::{self, BufReader, Read, Seek, Write}, path::PathBuf, process::exit, sync::{Arc, Mutex, RwLock, RwLockReadGuard}};
 use bitflags::bitflags;
 use chrono::Local;
 use colored::Colorize;
 
 use crate::errors::soul_error::SoulError;
+
+pub static DEFAULT_LOG_OPTIONS: RwLock<LogOptions> = RwLock::new(LogOptions::const_default());
+
+pub fn default_log_options<'a>() -> RwLockReadGuard<'a, LogOptions> {
+    DEFAULT_LOG_OPTIONS.read().unwrap()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
@@ -74,15 +80,20 @@ pub struct Logger {
 pub struct LogOptions {
     pub colored: bool,
     pub highlight_soul: bool,
+    pub log_file_path: Option<PathBuf>,
 }
 impl LogOptions {
-    pub fn new(colored: bool, highlight_soul: bool) -> Self {
-        Self{colored, highlight_soul}
+    pub fn new(colored: bool, highlight_soul: bool, log_file_path: Option<PathBuf>) -> Self {
+        Self{colored, highlight_soul, log_file_path}
     }
-    pub const fn const_default() -> Self {Self{colored: true, highlight_soul: false}}
+    pub const fn const_default() -> Self {Self{colored: true, highlight_soul: false, log_file_path: None}}
+
+    pub fn apply<F: FnOnce(Self) -> Self>(self, apply: F) -> Self {
+        apply(self)
+    }
 }
 impl Default for LogOptions {
-    fn default() -> Self {Self{colored: true, highlight_soul: false}}
+    fn default() -> Self {Self{colored: true, highlight_soul: false, log_file_path: None}}
 }
 
 impl Logger {
@@ -91,7 +102,11 @@ impl Logger {
     }
 
     pub fn with_file_path(path: &PathBuf, mode: LogMode, level: LogLevel) -> io::Result<Self> {
-        let file = OpenOptions::new().append(true).create(true).open(path)?;
+        let file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(path)?;
+        
         Ok(Self {
             level,
             mode,
@@ -104,7 +119,7 @@ impl Logger {
         now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
     }
 
-    fn log<S: Display>(&self, level: LogLevel, message: S, options: &LogOptions) {
+    pub fn _log<S: Display>(&self, level: LogLevel, message: S, options: &LogOptions) {
         if level <= self.level {
             let mut log_msg = String::new();
 
@@ -144,23 +159,35 @@ impl Logger {
         }
     }
 
-    fn log_soul_error<R: Read + Seek>(&self, level: LogLevel, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
-        self.log(level, "---------------------------------------------", options);
-        for line in soul_error.to_err_message() {
-            self.log(level, line, options);
+    pub fn _log_soul_error<R: Read + Seek>(&self, level: LogLevel, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
+        self._log(level, "---------------------------------------------", options);
+        if let Some(path) = &options.log_file_path {
+            self._log(level, format!("in file: {}", path.to_string_lossy()), options);
         }
-        self.log(level, format!("\n{}", soul_error.to_highlighed_message(reader)), options);
+
+        for line in soul_error.to_err_message() {
+            self._log(level, line, options);
+        }
+        self._log(level, format!("\n{}", soul_error.to_highlighed_message(reader)), options);
     }
 
-    pub fn error<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Error, &msg, options); }
-    pub fn warn<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Warning, &msg, options); }
-    pub fn info<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Info, &msg, options); }
-    pub fn debug<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Debug, &msg, options); }
+    pub fn error<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Error, &msg, options); }
+    pub fn warn<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Warning, &msg, options); }
+    pub fn info<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Info, &msg, options); }
+    pub fn debug<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Debug, &msg, options); }
     
-    pub fn soul_error<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Error, soul_error, reader, options); }
-    pub fn soul_warn<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Warning, soul_error, reader, options); }
-    pub fn soul_info<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Info, soul_error, reader, options); }
-    pub fn soul_debug<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self.log_soul_error(LogLevel::Debug, soul_error, reader, options); }
+    pub fn soul_error<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Error, soul_error, reader, options); }
+    pub fn soul_warn<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Warning, soul_error, reader, options); }
+    pub fn soul_info<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Info, soul_error, reader, options); }
+    pub fn soul_debug<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Debug, soul_error, reader, options); }
+
+    pub fn panic_error(&self, err: &SoulError, options: &LogOptions) {
+        for line in err.to_err_message() {
+            self.error(line, options);
+        } 
+        self.error("build interrupted because of 1 error", options);
+        exit(1);
+    }
 }
 
 

@@ -1,417 +1,237 @@
-use itertools::Itertools;
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{literal::Literal, pretty_format::PrettyPrint, soul_type::soul_type::SoulType, spanned::Spanned, staments::{conditionals::IfDecl, function::LambdaSignatureRef, statment::{Block, VariableKind, VariableRef}}}, scope::SoulPagePath}};
+use std::{collections::HashMap, fmt::Display};
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{function::{FunctionCall, Lambda, StaticMethod, StructConstructor}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::Spanned, statement::Block}, scope_builder::ScopeId}};
 
-pub type BoxExpr = Box<Expression>;
-pub type BinOp = Spanned<BinOpKind>;
-pub type UnaryOp = Spanned<UnaryOpKind>;
-pub type Expression = Spanned<ExprKind>;
+pub type Expression = Spanned<ExpressionKind>;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum ExprKind {
+pub type BoxExpression = Box<Expression>;
+pub type UnaryOperator = Spanned<UnaryOperatorKind>;
+pub type BinaryOperator = Spanned<BinaryOperatorKind>;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum ExpressionKind {
     Empty,
     Default,
-    Call(FnCall),
-    Index(Index),
-    Field(Field),
     Literal(Literal),
-    Unary(UnaryExpr),
-    Variable(Variable),
-    TypeOf(TypeOfExpr),
-    Binary(BinaryExpr),
-    StaticField(StaticField),
-    StaticMethode(StaticMethode),
+    
+    Index(Index),
+    Lambda(Lambda),
+    FunctionCall(FunctionCall),
+    StructConstructor(StructConstructor),
 
-    Ctor(FnCall),
-    UnwrapVarDecl(Box<VariableKind>),
+    AccessField(AccessField),
+    StaticField(StaticField),
+    StaticMethod(StaticMethod),
+
+    Variable(VariableName),
+    UnwrapVariable(UnwrapVariable),
     ExternalExpression(ExternalExpression),
 
-    Lambda(LambdaDecl),
-    If(Box<IfDecl>),
+    Unary(Unary),
+    Binary(Binary),
 
+    If(If),
+    For(For),
+    While(While),
+    Match(Match),
     Ternary(Ternary),
 
-    Deref(BoxExpr),
-    MutRef(BoxExpr),
-    ConstRef(BoxExpr),
+    Deref(BoxExpression),
+    MutRef(BoxExpression),
+    ConstRef(BoxExpression),
 
-    Array(Array),
-    ArrayFiller(ArrayFiller),
+    Block(Block),
+    ReturnLike(ReturnLike),
+    ExpressionGroup(ExpressionGroup),
+}
+
+impl Default for ExpressionKind {
+    fn default() -> Self {
+        Self::Empty
+    }
+} 
+
+pub type DeleteList = Vec<String>;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct ReturnLike {
+    pub value: Option<BoxExpression>,
+    pub delete_list: DeleteList,
+    pub kind: ReturnKind
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum ReturnKind {
+    Return,
+    Fall,
+    Break,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum ExpressionGroup {
     Tuple(Tuple),
+    Array(Array),
     NamedTuple(NamedTuple),
+    ArrayFiller(ArrayFiller),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ExternalExpression {
-    pub path: SoulPagePath,
-    pub expr: BoxExpr,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Field {
-    pub object: BoxExpr,
-    pub field: Variable,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StaticField {
-    pub object: Spanned<SoulType>,
-    pub field: Variable,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Array {
     pub collection_type: Option<SoulType>,
     pub element_type: Option<SoulType>,
     pub values: Vec<Expression>,
-} 
+}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct ArrayFiller {
-    pub amount: BoxExpr,
-    pub index: Option<VariableRef>,
-    pub fill_expr: BoxExpr,
+    pub collection_type: Option<SoulType>,
+    pub element_type: Option<SoulType>,
+    pub amount: BoxExpression,
+    pub index: Option<VariableName>,
+    pub fill_expr: BoxExpression,
+    pub scope_id: ScopeId,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Tuple {
-    pub values: Vec<Expression>,
-} 
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct NamedTuple {
-    pub object_type: Option<SoulType>,
-    pub values: BTreeMap<Ident, Expression>,
-} 
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Variable {
-    pub name: Ident,
-} 
-
-impl ExprKind {
-    pub fn to_string(&self, tab: usize) -> String {
-        match self {
-            ExprKind::Empty => "<EmptyExpression>".to_string(),
-            ExprKind::Default => "<defaultExpression>".to_string(),
-            ExprKind::Literal(literal) => literal.to_string(),
-            ExprKind::Variable(Variable{name}) => name.0.clone(),
-            ExprKind::TypeOf(TypeOfExpr{left, ty }) => format!("{} {} {}", left.node.to_string(tab), SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof), ty.to_string()),
-            ExprKind::Binary(BinaryExpr{left, operator, right}) => format!("({} {} {})", left.node.to_string(tab), operator.node.to_str(), right.node.to_string(tab)),
-            ExprKind::Index(Index{ collection, index }) => format!("{}[{}]", collection.node.to_string(tab), index.node.to_string(tab)),
-            ExprKind::Unary(UnaryExpr{ operator, expression }) => {
-                match operator.node {
-                    UnaryOpKind::Incr{before_var} |
-                    UnaryOpKind::Decr{before_var} => {
-                        if before_var {
-                            format!("{} {}", operator.node.to_str(), expression.node.to_string(tab))
-                        }
-                        else {
-                            format!("{} {}", expression.node.to_string(tab), operator.node.to_str())
-                        }
-                    }
-                    UnaryOpKind::Neg |
-                    UnaryOpKind::Not |
-                    UnaryOpKind::Invalid => format!("{} {}", operator.node.to_str(), expression.node.to_string(tab)),
-                }
-            },
-            ExprKind::Call(FnCall{callee, name, generics, arguments}) => {
-                let generics = if generics.is_empty() {
-                    String::new()
-                }
-                else {
-                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
-                };
-
-                if let Some(methode) = callee {
-                    format!("{}.{}{}({})", methode.node.to_string(tab), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
-                }
-                else {
-                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
-                }
-            },
-            ExprKind::ConstRef(spanned) => format!("@{}", spanned.node.to_string(tab)),
-            ExprKind::MutRef(spanned) => format!("&{}", spanned.node.to_string(tab)),
-            ExprKind::Deref(spanned) => format!("*{}", spanned.node.to_string(tab)),
-            ExprKind::Array(Array{collection_type, element_type, values}) => format!(
-                "{}[{}{}]", 
-                collection_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
-                element_type.as_ref().map(|ty| format!("{};", ty.to_string())).unwrap_or("".into()),
-                values.iter().map(|expr| expr.node.to_string(tab)).join(",")
-            ),
-            ExprKind::Tuple(Tuple{values}) => format!(
-                "({})", 
-                values.iter().map(|expr| expr.node.to_string(tab)).join(","),
-            ),
-            ExprKind::NamedTuple(NamedTuple{object_type, values}) => format!(
-                "{}({})", 
-                object_type.as_ref().map(|ty| ty.to_string()).unwrap_or("".into()), 
-                if !values.is_empty() {values.iter().map(|(name, expr)| format!("{}: {}", name.0, expr.node.to_string(tab))).join(",")}
-                else {":".into()},
-            ),
-            ExprKind::Field(Field{object, field}) => format!(
-                "{}.{}",
-                object.node.to_string(tab),
-                field.name.0
-            ),
-            ExprKind::StaticField(StaticField{object, field}) => format!(
-                "{}.{}",
-                object.node.to_string(),
-                field.name.0
-            ),
-            ExprKind::StaticMethode(StaticMethode{ callee, name, generics, arguments}) => {
-                let generics = if generics.is_empty() {
-                    String::new()
-                }
-                else {
-                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
-                };
-
-                format!("{}.{}{}({})", callee.node.to_string(), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
-            },
-            ExprKind::Lambda(LambdaDecl{signature, arguments, body, capture:_}) => {
-                let sig = signature.borrow();
-                format!(
-                    "{}({}): {} => {}",
-                    sig.mode.get_lambda_name(),
-                    arguments.iter().map(|el| el.node.to_string(tab)).join(","),
-                    sig.return_type.as_ref().unwrap_or(&SoulType::none()).to_string(),
-                    body.statments.iter().map(|el| el.node.to_pretty(0, false)).join(";")
-                )
-            },
-            ExprKind::Ternary(Ternary{condition, if_branch, else_branch}) => format!(
-                "({}) ? {} : {}",
-                condition.node.to_string(tab),
-                if_branch.node.to_string(tab),
-                else_branch.node.to_string(tab),
-            ),
-            ExprKind::If(if_box) => {
-                let IfDecl{condition, body, else_branchs} = &**if_box;
-                let cond = condition.node.to_string(tab);
-                let mut output = vec![format!("if ({})", cond)];
-
-                if !body.statments.is_empty() {
-                    output.push(body.to_pretty(tab + 1, true));
-                }
-
-                for (i, e) in else_branchs.iter().enumerate() {
-                    let last = i == else_branchs.len() - 1;
-                    output.push(e.node.to_pretty(tab + 1, last));
-                }
-
-                output.join("\n")
-            },
-            ExprKind::Ctor(FnCall{callee, name, generics, arguments}) => {
-                let generics = if generics.is_empty() {
-                    String::new()
-                }
-                else {
-                    format!("<{}>", generics.iter().map(|ty| ty.to_string()).join(","))
-                };
-
-                if let Some(methode) = callee {
-                    format!("{}.{}{}({})", methode.node.to_string(tab), name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
-                }
-                else {
-                    format!("{}{}({})", name.0, generics, arguments.iter().map(|arg| arg.to_string()).join(","))
-                }
-            },
-            ExprKind::UnwrapVarDecl(var) => {
-                match var.as_ref() {
-                    VariableKind::Variable(node_ref) => {
-                        let node = node_ref.borrow();
-                        format!(
-                            "<unwrap>{} {} = {}",
-                            node.ty.to_string(),
-                            node.name.0,
-                            node.initializer.as_ref().map(|init| init.node.to_string(tab)).unwrap_or(String::new())
-                        )
-                    },
-                    VariableKind::MultiVariable{vars, ty, initializer, ..} => format!(
-                        "<unwrap>{}({}) = {}", 
-                        ty.to_string(), 
-                        vars.iter().map(|(name, var)| format!("{}: {}", name.0, var.borrow().name.0.clone())).join(","),
-                        initializer.as_ref().map(|init| init.node.to_string(tab)).unwrap_or(String::new()),
-                    ),
-                }
-            },
-            ExprKind::ArrayFiller(ArrayFiller{amount, index, fill_expr}) => format!(
-                "[for {} {} => {}]",
-                index.as_ref().map(|el| format!("{} in", el.borrow().name.0)).unwrap_or(String::new()),
-                amount.node.to_string(0),
-                fill_expr.node.to_string(0),
-            ),
-            ExprKind::ExternalExpression(ExternalExpression{path, expr}) => format!(
-                "{}::{}",
-                path.0,
-                expr.node.to_string(0),
-            ),
-        }
-    }
-
-    pub fn is_any_ref(&self) -> bool {
-        match self {
-            ExprKind::MutRef(..) |
-            ExprKind::ConstRef(..) => true,
-
-            _ => false,
-        }
-    }
-
-    pub fn get_variant_name(&self) -> &'static str {
-        match self {
-            ExprKind::Empty => "<empty>",
-            ExprKind::Default => "<default>",
-
-            ExprKind::If(_) => "If",
-            ExprKind::Ctor{..} => "Ctor",
-            ExprKind::Index(_) => "index",
-            ExprKind::Unary(_) => "unary",
-            ExprKind::Call(_) => "FnCall",
-            ExprKind::Deref(_) => "DeRef",
-            ExprKind::Array(_) => "Array",
-            ExprKind::Tuple(_) => "Tuple",
-            ExprKind::Field(_) => "Field",
-            ExprKind::TypeOf(_) => "typeof",
-            ExprKind::Binary(_) => "binary",
-            ExprKind::MutRef(_) => "MutRef",
-            ExprKind::Lambda(_) => "Lambda",
-            ExprKind::Literal(_) => "Literal",
-            ExprKind::Ternary(_) => "Ternary",
-            ExprKind::Variable(_) => "Valiable",
-            ExprKind::ConstRef(_) => "ConstRef",
-            ExprKind::NamedTuple(_) => "NamedTuple",
-            ExprKind::ArrayFiller(_) => "ArrayFiller",
-            ExprKind::StaticField(_) => "StaticField",
-            ExprKind::StaticMethode(_) => "StaticCall",
-            ExprKind::UnwrapVarDecl(_) => "UnwrapVarDecl",
-            ExprKind::ExternalExpression(_) => "ExternalExpression",
-        }
-    }
-
+    pub values: HashMap<Ident, Expression>,
+    
+    // 'Foo(field: 1, ..)' is true if '..' meaning that all other fields use default value
+    pub insert_defaults: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TypeOfExpr {
-    pub left: BoxExpr,
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct Tuple {
+    pub values: Vec<Expression>
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct Ternary {
+    pub condition: BoxExpression,
+    pub if_branch: BoxExpression,
+    pub else_branch: BoxExpression,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct While {
+    pub condition: Option<BoxExpression>,
+    pub block: Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct For {
+    pub element: Option<BoxExpression>,
+    pub collection: BoxExpression,
+    pub block: Block,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct Match {
+    pub condition: BoxExpression,
+    pub cases: Vec<CaseSwitch>,
+    pub scope_id: ScopeId,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct CaseSwitch {
+    pub if_kind: IfCaseKind,
+    pub do_fn: CaseDoKind,
+    pub scope_id: ScopeId,
+} 
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum IfCaseKind {
+    Expression(Expression),
+    Variant{name: Ident, params: Tuple},
+    NamedVariant{name: Ident, params: NamedTuple},
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum CaseDoKind {
+    Block(Spanned<Block>),
+    Expression(Expression),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct If {
+    pub condition: BoxExpression,
+    pub block: Block,
+    pub else_branchs: Vec<Spanned<ElseKind>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum ElseKind {
+    ElseIf(Box<Spanned<If>>),
+    Else(Spanned<Block>)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct ExternalExpression {
+    pub path: SoulPagePath,
+    pub expr: BoxExpression,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub enum UnwrapVariable {
+    Variable(VariableName),
+    MultiVariable{vars: Vec<VariableName>, ty: SoulType, initializer: Option<BoxExpression>}
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct Unary {
+    pub operator: UnaryOperator,
+    pub expression: BoxExpression,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct Binary {
+    pub left: BoxExpression,
+    pub operator: BinaryOperator,
+    pub right: BoxExpression,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct CompareTypeOf {
+    pub left: BoxExpression,
     pub ty: SoulType,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FnCall {
-    pub callee: Option<BoxExpr>,
-    pub name: Ident,
-    pub generics: Vec<SoulType>,
-    pub arguments: Vec<Arguments>,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct StaticField {
+    pub object: SoulType,
+    pub field: VariableName,
 }
 
-impl FnCall {
-    pub fn consume_to_static_methode(self, ty: Spanned<SoulType>) -> StaticMethode {
-        StaticMethode{
-            callee: ty, 
-            name: self.name, 
-            generics: self.generics, 
-            arguments: self.arguments,
-        }
-    }
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
+pub struct AccessField {
+    pub object: BoxExpression,
+    pub field: VariableName,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct LambdaDecl {
-    pub signature: LambdaSignatureRef,
-    pub arguments: Vec<Expression>,
-    pub body: Block,
-    pub capture: Capture,
-} 
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Ternary {
-    pub condition: BoxExpr,
-    pub if_branch: BoxExpr,
-    pub else_branch: BoxExpr,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Capture {
-    pub variable: VariableRef,
-    pub kind: CaptureKind,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum CaptureKind {
-    ConstRef,
-    MutRef,
-    Consume,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct StaticMethode {
-    pub callee: Spanned<SoulType>,
-    pub name: Ident,
-    pub generics: Vec<SoulType>,
-    pub arguments: Vec<Arguments>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Index {
-    pub collection: BoxExpr,
-    pub index: BoxExpr,
+    pub collection: BoxExpression,
+    pub index: BoxExpression,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct UnaryExpr {
-    pub operator: UnaryOp,
-    pub expression: BoxExpr,
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
+pub struct VariableName {
+    pub name: Ident,
+    pub span: SoulSpan,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct BinaryExpr {
-    pub left: BoxExpr,
-    pub operator: BinOp,
-    pub right: BoxExpr,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+pub enum UnaryOperatorKind {
+    Invalid,
+    Neg, // -
+    Not, // !
+    Increment{before_var: bool}, // ++
+    Decrement{before_var: bool}, // --
 }
 
-impl BinaryExpr {
-    pub fn new(left: Expression, operator: BinOp, right: Expression) -> Self {
-        Self {left: Box::new(left), operator, right: Box::new(right)}
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Arguments {
-    pub name: Option<Ident>,
-    pub expression: Expression,
-}
-
-impl Arguments {
-    pub fn to_string(&self) -> String {
-        if let Some(optional) = &self.name {
-            format!("{}= {}", optional.0, self.expression.node.to_string(0))
-        }
-        else {
-            self.expression.node.to_string(0)
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Ident(pub String);
-
-impl UnaryExpr {
-    pub fn consume_to_expression(self, span: SoulSpan) -> Expression {
-        Expression::new(ExprKind::Unary(self), span)
-    }
-}
-
-impl BinaryExpr {
-    pub fn consume_to_expression(self, span: SoulSpan) -> Expression {
-        Expression::new(ExprKind::Binary(self), span)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BinOpKind {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+pub enum BinaryOperatorKind {
     Invalid,
     Add, // +
     Sub, // -
@@ -436,96 +256,130 @@ pub enum BinOpKind {
     Ge, // >=
 
     Range, //..
+    TypeOf, // <variable> typeof <type>
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum UnaryOpKind {
-    Invalid,
-    Neg, // -
-    Not, // !
-    Incr{before_var: bool}, // ++
-    Decr{before_var: bool}, // --
-}
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
+pub struct Ident(pub String);
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum OperatorKind {
-    BinOp(BinOpKind),
-    UnaryOp(UnaryOpKind),
-}
-
-impl OperatorKind {
-    pub fn from_str(text: &str) -> Option<OperatorKind> {
-        let bin = BinOpKind::from_str(text);
-        if bin != BinOpKind::Invalid {
-            return Some(OperatorKind::BinOp(bin));
-        }
-
-        let unary = UnaryOpKind::from_str(text);
-        if unary != UnaryOpKind::Invalid {
-            return Some(OperatorKind::UnaryOp(unary));
-        }
-
-        None
+impl VariableName {
+    pub fn new<T: Into<Ident>>(ident: T, span: SoulSpan) -> Self {
+        Self{name: ident.into(), span}
     }
 }
 
-impl BinOpKind {
-    pub fn get_precedence(&self) -> u8 {
+impl Ident {
+    pub fn new<T: Into<String>>(ident: T) -> Self {
+        Self(ident.into())
+    }
+
+    pub fn empty() -> Self {
+        Self(String::new())
+    }
+}
+
+impl Binary {
+    pub fn new(left: Expression, operator: BinaryOperator, right: Expression) -> Self {
+        Self { left: Box::new(left), operator, right: Box::new(right) }
+    }
+}
+
+impl ReturnKind {
+    pub fn to_str(&self) -> &'static str {
         match self {
-            BinOpKind::Invalid => 0,
-            
-            BinOpKind::Range |
-            BinOpKind::LogAnd |
-            BinOpKind::LogOr => 1,
-
-            BinOpKind::BitAnd |
-            BinOpKind::BitOr |
-            BinOpKind::BitXor => 2,
-
-            BinOpKind::Eq |
-            BinOpKind::NotEq => 3,
-
-            BinOpKind::Lt |
-            BinOpKind::Gt |
-            BinOpKind::Le |
-            BinOpKind::Ge => 4,
-
-            BinOpKind::Sub |
-            BinOpKind::Add => 5,
-            
-            BinOpKind::Mul |
-            BinOpKind::Div |
-            BinOpKind::Mod => 6,
-
-            BinOpKind::Log |
-            BinOpKind::Pow |
-            BinOpKind::Root => 7,
+            ReturnKind::Return => "return",
+            ReturnKind::Fall => "fall",
+            ReturnKind::Break => "break",
         }
     }
 }
 
-impl UnaryOpKind {
-    pub fn get_precedence(&self) -> u8 {
+impl Display for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Into<Ident> for String {
+    fn into(self) -> Ident {
+        Ident::new(self)
+    }
+}
+
+impl Into<Ident> for &Ident {
+    fn into(self) -> Ident {
+        self.clone()
+    }
+}
+
+impl Into<Ident> for &String {
+    fn into(self) -> Ident {
+        Ident::new(self)
+    }
+} 
+
+impl Into<Ident> for &str {
+    fn into(self) -> Ident {
+        Ident::new(self)
+    }
+} 
+
+impl AsRef<str> for Ident {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl ExpressionKind {
+
+    pub fn get_variant_name(&self) -> &'static str {
         match self {
-            UnaryOpKind::Invalid => 0,
-            UnaryOpKind::Neg |
-            UnaryOpKind::Not => 8,
-            UnaryOpKind::Incr{..} |
-            UnaryOpKind::Decr{..} => 9,
+            ExpressionKind::ReturnLike(return_kind) => return_kind.kind.to_str(),
+            ExpressionKind::If(_) => "If",
+            ExpressionKind::For(_) => "For",
+            ExpressionKind::While(_) => "While",
+            ExpressionKind::Match(_) => "Match",
+            ExpressionKind::Empty => "Empty",
+            ExpressionKind::Default => "Default",
+            ExpressionKind::Index(_) => "Index",
+            ExpressionKind::Unary(_) => "Unary",
+            ExpressionKind::Deref(_) => "Deref",
+            ExpressionKind::Block(_) => "Block",
+            ExpressionKind::MutRef(_) => "MutRef",
+            ExpressionKind::Binary(_) => "Binary",
+            ExpressionKind::Lambda(_) => "Lambda",
+            ExpressionKind::Ternary(_) => "Ternary",
+            ExpressionKind::Literal(_) => "Literal",
+            ExpressionKind::ConstRef(_) => "ConstRef",
+            ExpressionKind::Variable(_) => "Variable",
+            ExpressionKind::StructConstructor(_) => "Constructor",
+            ExpressionKind::AccessField(_) => "AccessField",
+            ExpressionKind::StaticField(_) => "StaticField",
+            ExpressionKind::FunctionCall(_) => "FunctionCall",
+            ExpressionKind::StaticMethod(_) => "StaticMethode",
+            ExpressionKind::UnwrapVariable(_) => "UnwrapVariable",
+            ExpressionKind::ExpressionGroup(_) => "ExpressionGroup",
+            ExpressionKind::ExternalExpression(_) => "ExternalExpression",
         }
     }
-}
 
-impl OperatorKind {
-    pub fn get_precedence(&self) -> u8 {
-        match self {
-            OperatorKind::BinOp(bin_op_kind) => bin_op_kind.get_precedence(),
-            OperatorKind::UnaryOp(unary_op_kind) => unary_op_kind.get_precedence(),
-        }       
+    pub fn get_scope_id(&self) -> Option<ScopeId> {
+        
+        Some(match self {
+            ExpressionKind::If(if_) => if_.block.scope_id,
+            ExpressionKind::For(for_) => for_.block.scope_id,
+            ExpressionKind::While(while_) => while_.block.scope_id,
+            ExpressionKind::Match(match_) => match_.scope_id,
+            ExpressionKind::Block(block) => block.scope_id,
+            ExpressionKind::Lambda(lambda_) => lambda_.scope_id,
+            ExpressionKind::ExpressionGroup(ExpressionGroup::ArrayFiller(array)) => array.scope_id,
+
+            _ => return None,
+        })
     }
 }
 
-impl BinOpKind {
+impl BinaryOperatorKind {
     pub fn from_str(name: &str) -> Self {
         match name {
             val if val == SOUL_NAMES.get_name(NamesOperator::Equals) => Self::Eq,
@@ -548,6 +402,7 @@ impl BinOpKind {
             val if val == SOUL_NAMES.get_name(NamesOperator::LogicalOr) => Self::LogOr,
             val if val == SOUL_NAMES.get_name(NamesOperator::LogicalAnd) => Self::LogAnd,
             val if val == SOUL_NAMES.get_name(NamesOperator::Range) => Self::Range,
+            val if val == SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof) => Self::TypeOf,
             _ => Self::Invalid, 
         }
     }
@@ -574,34 +429,91 @@ impl BinOpKind {
             Self::LogOr   => SOUL_NAMES.get_name(NamesOperator::LogicalOr),
             Self::LogAnd  => SOUL_NAMES.get_name(NamesOperator::LogicalAnd),
             Self::Range   => SOUL_NAMES.get_name(NamesOperator::Range),
+            Self::TypeOf  => SOUL_NAMES.get_name(NamesOtherKeyWords::Typeof),
             Self::Invalid => "<invalid>",
         }
     }
 
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            BinaryOperatorKind::Invalid => 0,
+            
+            BinaryOperatorKind::Range |
+            BinaryOperatorKind::LogAnd |
+            BinaryOperatorKind::LogOr => 1,
 
+            BinaryOperatorKind::BitAnd |
+            BinaryOperatorKind::BitOr |
+            BinaryOperatorKind::BitXor => 2,
+
+            BinaryOperatorKind::Eq |
+            BinaryOperatorKind::NotEq => 3,
+
+            BinaryOperatorKind::Lt |
+            BinaryOperatorKind::Gt |
+            BinaryOperatorKind::Le |
+            BinaryOperatorKind::Ge => 4,
+
+            BinaryOperatorKind::Sub |
+            BinaryOperatorKind::Add => 5,
+            
+            BinaryOperatorKind::Mul |
+            BinaryOperatorKind::Div |
+            BinaryOperatorKind::Mod => 6,
+
+            BinaryOperatorKind::Log |
+            BinaryOperatorKind::Pow |
+            BinaryOperatorKind::Root |
+            BinaryOperatorKind::TypeOf => 7,
+        }
+    }
 }
 
-impl UnaryOpKind {
+impl UnaryOperatorKind {
     pub fn from_str(name: &str) -> Self {
         match name {
             "-" => Self::Neg,
             val if val == SOUL_NAMES.get_name(NamesOperator::Not) => Self::Not,
-            val if val == SOUL_NAMES.get_name(NamesOperator::Increment) => Self::Incr{before_var: true},
-            val if val == SOUL_NAMES.get_name(NamesOperator::Decrement) => Self::Decr{before_var: true},
+            val if val == SOUL_NAMES.get_name(NamesOperator::Increment) => Self::Increment{before_var: true},
+            val if val == SOUL_NAMES.get_name(NamesOperator::Decrement) => Self::Decrement{before_var: true},
             _ => Self::Invalid,
         }
     }
 
     pub fn to_str(&self) -> &str {
         match self {
-            UnaryOpKind::Invalid => "<invalid>",
-            UnaryOpKind::Neg => "-",
-            UnaryOpKind::Not => "!",
-            UnaryOpKind::Incr{..} => "++",
-            UnaryOpKind::Decr{..} => "--",
+            Self::Invalid => "<invalid>",
+            Self::Neg => "-",
+            Self::Not => "!",
+            Self::Increment{..} => "++",
+            Self::Decrement{..} => "--",
+        }
+    }
+
+    pub fn get_precedence(&self) -> u8 {
+        match self {
+            UnaryOperatorKind::Invalid => 0,
+            UnaryOperatorKind::Neg |
+            UnaryOperatorKind::Not => 8,
+            UnaryOperatorKind::Increment{..} |
+            UnaryOperatorKind::Decrement{..} => 9,
         }
     }
 }
+
+#[macro_export]
+macro_rules! soul_tuple {
+    () => (
+        Tuple{values: vec![]}
+    );
+    ($($x:expr),+ $(,)?) => (
+        Tuple{values: vec![$($x),+]}
+    );
+}
+
+
+
+
 
 
 

@@ -1,16 +1,26 @@
 use std::{ops::Index, slice::Iter};
-use crate::errors::soul_error::SoulSpan;
+use crate::{errors::soul_error::SoulSpan};
 
+#[derive(Debug, Clone)]
 pub struct TokenizeResonse {
     pub stream: TokenStream,
 }
 
+#[derive(Debug, Clone)]
 pub struct Token {
     pub text: String,
     pub span: SoulSpan,
 }
 
+#[derive(Debug, Clone)]
 pub struct TokenStream {
+    #[cfg(feature="dev_mode")]
+    current: String,
+    #[cfg(feature="dev_mode")]
+    current_line_string: String,
+    #[cfg(feature="dev_mode")]
+    current_line: i64,
+
     tokens: Vec<Token>,
     index: i64,
 }
@@ -23,6 +33,7 @@ impl Token {
 }
 
 impl TokenStream {
+    #[cfg(not(feature="dev_mode"))]
     pub fn new(tokens: Vec<Token>) -> Self {
         TokenStream { 
             index: 0, 
@@ -30,8 +41,25 @@ impl TokenStream {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.go_to_index(0);
+    #[cfg(feature="dev_mode")]
+    pub fn new(tokens: Vec<Token>) -> Self {
+        let mut this = TokenStream { 
+            current: "<tokenstream uninit>".into(),
+            current_line_string: String::new(),
+            current_line: 0,
+            index: 0, 
+            tokens, 
+        };
+
+        this.index = -1;
+        this.current_line = -1;
+        
+        this.change_token(0);
+        
+        this.index = 0;
+        this.current_line = 0;
+
+        this
     }
 
     pub fn len(&self) -> usize {
@@ -45,11 +73,7 @@ impl TokenStream {
     pub fn iter(&'_ self) -> Iter<'_, Token> {
         self.tokens.iter()
     }
-
-    pub fn current(&self) -> &Token {
-        &self.tokens[self.index.max(0) as usize]
-    }
-
+    
     pub fn current_starts_with(&self, strs: &[&str]) -> bool {
         if self.index < 0 {
             return false
@@ -68,12 +92,24 @@ impl TokenStream {
             .eq(strs.iter().copied())
     }
 
-    pub fn current_text(&self) -> &String {
-        &self.tokens[self.index.max(0) as usize].text
+    pub fn current(&self) -> &Token {
+        &self.tokens[self.index.max(0) as usize]
     }
 
+    pub fn current_text(&self) -> &String {
+        &self.current().text
+    } 
+
+    pub fn current_is(&self, text: &str) -> bool {
+        self.current().text == text
+    }   
+    
     pub fn current_span(&self) -> SoulSpan {
-        self.tokens[self.index.max(0) as usize].span
+        self.current().span
+    }
+
+    pub fn current_span_some(&self) -> Option<SoulSpan> {
+        Some(self.current().span)
     }
 
     pub fn current_index(&self) -> usize {
@@ -84,12 +120,38 @@ impl TokenStream {
         self.next_multiple(1)
     }
 
+    pub fn next_if(&mut self, text: &str) -> Option<&Token> {
+        if self.current_text() == text {
+            self.next_multiple(1)
+        }
+        else {
+            Some(self.current())
+        }
+    }
+
     pub fn peek(&self) -> Option<&Token> {
         self.peek_multiple(1)
     }
 
     pub fn peek_is(&self, text: &str) -> bool {
         self.peek().is_some_and(|token| token.text == text)
+    }
+
+    pub fn peek_multiple_is(&self, steps: i64, text: &str) -> bool {
+        self.peek_multiple(steps).is_some_and(|token| token.text == text)
+    }
+
+    ///keeps calling '.next()' till 'token.text == text' or reached end
+    pub fn next_till(&mut self, text: &str) -> bool {
+        loop {
+            if self.current_text() == text {
+                return true
+            }
+
+            if self.next().is_none() {
+                return false
+            }
+        }
     }
 
     pub fn is_valid_index(&self, index: usize) -> bool {
@@ -100,6 +162,8 @@ impl TokenStream {
         if index >= self.tokens.len() {
             None
         } else {
+            #[cfg(feature="dev_mode")]
+            self.change_token(index);
             self.index = index as i64;
             Some(&self.tokens[self.index as usize])
         }
@@ -115,6 +179,8 @@ impl TokenStream {
             None
         } 
         else {
+            #[cfg(feature="dev_mode")]
+            self.change_token(next_index as usize);
             self.index = next_index;
             Some(&self.tokens[self.index as usize])
         }
@@ -129,6 +195,29 @@ impl TokenStream {
             None
         }
     }
+
+    #[cfg(feature="dev_mode")]
+    fn change_token(&mut self, index: usize) {
+        self.current = self.tokens[index].text.clone();
+        let old_line = if self.index < 0 {-1} else {self.tokens[self.index as usize].span.line_number as i64}; 
+        let new_line = self.tokens[index].span.line_number as i64;
+
+        if new_line != old_line {
+            self.update_line_string(new_line as i64);
+            self.current_line = new_line as i64;
+        }
+
+    }
+
+    #[cfg(feature="dev_mode")]
+    fn update_line_string(&mut self, line_number: i64) {
+        use itertools::Itertools;
+
+        self.current_line_string = self.tokens
+            .iter()
+            .flat_map(|token| if token.span.line_number as i64 == line_number {Some(&token.text)} else {None})
+            .join(" ")
+    }
 }
 
 impl Index<usize> for TokenStream {
@@ -138,7 +227,6 @@ impl Index<usize> for TokenStream {
         &self.tokens[index]
     }
 }
-
 
 
 
