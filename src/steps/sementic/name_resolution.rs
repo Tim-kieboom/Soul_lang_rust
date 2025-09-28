@@ -75,8 +75,20 @@ impl NameResolutionAnalyser {
                 self.analyse_expression(&mut assignment.variable);
                 self.analyse_expression(&mut assignment.value);
             }
-            StatementKind::Class(class) => self.analyse_class(class, statment.span),
-            StatementKind::Function(function) => self.analyse_block(&mut function.block),
+            StatementKind::Class(class) => {
+                if let Err(msg) = NameType::could_be(&class.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(statment.span), msg));
+                }
+
+                self.analyse_class(class, statment.span);
+            }
+            StatementKind::Function(function) => {
+                if let Err(msg) = NameType::could_be(&function.signature.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(statment.span), msg));
+                }
+
+                self.analyse_block(&mut function.block);
+            },
             StatementKind::Expression(spanned) => self.analyse_expression(spanned),
             StatementKind::UseBlock(use_block) => self.analyse_block(&mut use_block.block),
         }

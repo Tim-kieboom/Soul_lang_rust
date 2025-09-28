@@ -67,7 +67,7 @@ impl NameType {
         }
         
         if passed == 0 {
-            Err(format!("name: '{}' could be [{}] but is {}", name, name_type.iter().map(|el| el.to_str()).join(","), this.to_str()))
+            Err(format!("name: '{}' could be ['{}'] but is {}", name, name_type.iter().map(|el| el.to_str()).join("' or '"), this.to_str()))
         }
         else {
             Ok(())
