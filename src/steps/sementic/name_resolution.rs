@@ -1,4 +1,4 @@
-use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::EnumVariantKind, expression::{AccessField, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, If, IfCaseKind, StaticField, UnwrapVariable, VariableName}, function::LambdaBody, object::{Class, ClassChild, Field}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, statement::{Block, Statement, StatementKind}}, scope_builder::ScopeKind}, i_sementic::{ast_visitor::{AstAnalyser, NameResolutionAnalyser}, soul_fault::SoulFault}}};
+use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::AbstractSyntacTree, enum_like::EnumVariantKind, expression::{AccessField, CaseDoKind, ElseKind, Expression, ExpressionGroup, ExpressionKind, If, IfCaseKind, StaticField, UnwrapVariable, VariableName}, function::LambdaBody, object::{Class, ClassChild, Field}, soul_type::{soul_type::SoulType, type_kind::TypeKind}, spanned::Spanned, statement::{Block, Statement, StatementKind}}, scope_builder::ScopeKind}, i_sementic::{ast_visitor::{AstAnalyser, NameResolutionAnalyser}, soul_fault::SoulFault}}, utils::name_type::NameType};
 
 impl AstAnalyser for NameResolutionAnalyser {
     
@@ -21,13 +21,36 @@ impl NameResolutionAnalyser {
         }
 
         match &mut statment.node {
-            StatementKind::Trait(_) => (),
-            StatementKind::Union(_) => (),
+            StatementKind::Trait(trait_) => {
+                
+                if let Err(msg) = NameType::could_be(&trait_.signature.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(statment.span), msg));
+                }
+            },
+            StatementKind::Union(union_) => {
+                
+                if let Err(msg) = NameType::could_be(&union_.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(statment.span), msg));
+                }
+            },
             StatementKind::CloseBlock => (),
-            StatementKind::TypeEnum(_) => (),
-            StatementKind::Variable(_) => (),
+            StatementKind::TypeEnum(enum_) => {
+                
+                if let Err(msg) = NameType::could_be(&enum_.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(statment.span), msg));
+                }
+            },
+            StatementKind::Variable(var_) => {
+                
+                if let Err(msg) = NameType::could_be(&var_.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(var_.span), msg));
+                }
+            },
             
             StatementKind::Enum(enum_) => {
+                if let Err(msg) = NameType::could_be(&enum_.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(statment.span), msg));
+                }
 
                 match &mut enum_.variants {
                     EnumVariantKind::Int(_) => (),
@@ -40,9 +63,12 @@ impl NameResolutionAnalyser {
                 }
             },
             StatementKind::Struct(struct_) => {
+                if let Err(msg) = NameType::could_be(&struct_.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+                    self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(statment.span), msg));
+                }
 
                 for field in &mut struct_.fields {
-                    self.analyse_field(&mut field.node)
+                    self.analyse_field(&mut field.node, field.span)
                 }
             },
             StatementKind::Assignment(assignment) => {
@@ -251,7 +277,11 @@ impl NameResolutionAnalyser {
     }
 
     fn analyse_class(&mut self, class: &mut Class, span: SoulSpan) {
-        
+          
+        if let Err(msg) = NameType::could_be(&class.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+            self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(span), msg));
+        }
+
         for child in &mut class.children {
 
             let parent_id = self.get_scope().current_id();
@@ -262,7 +292,7 @@ impl NameResolutionAnalyser {
             }
 
             match child {
-                ClassChild::Field(field) => self.analyse_field(&mut field.node),
+                ClassChild::Field(field) => self.analyse_field(&mut field.node, field.span),
                 ClassChild::Methode(methode) => self.analyse_block(&mut methode.node.block),
                 ClassChild::ImplBlock(impl_block) => self.analyse_block(&mut impl_block.node.block),
             }
@@ -289,6 +319,7 @@ impl NameResolutionAnalyser {
     }
 
     fn check_variable(&mut self, variable_name: &VariableName, span: SoulSpan) -> Result<(), SoulFault> {
+        
         if !self.get_scope_mut()
             .lookup(&variable_name.name.0)
             .is_some_and(|kinds| kinds.iter().any(|el| matches!(el.node, ScopeKind::Variable(_))))
@@ -302,7 +333,12 @@ impl NameResolutionAnalyser {
         }
     }
 
-    fn analyse_field(&mut self, field: &mut Field) {
+    fn analyse_field(&mut self, field: &mut Field, span: SoulSpan) {
+               
+        if let Err(msg) = NameType::could_be(&field.name.0, &[NameType::CamelCase, NameType::PascalCase]) {
+            self.add_warning(new_soul_error(SoulErrorKind::InvalidName, Some(span), msg));
+        }
+
         if let Some(expression) = &mut field.default_value {
             self.analyse_expression(expression);
         }

@@ -59,8 +59,8 @@ fn char_lit(c: char) -> ExpressionKind {
     ExpressionKind::Literal(Literal::Char(c))
 }
 
-fn var(name: &str) -> ExpressionKind {
-    ExpressionKind::Variable(VariableName::new(name))
+fn var(name: &str, span: SoulSpan) -> ExpressionKind {
+    ExpressionKind::Variable(VariableName::new(name, span))
 }
 
 fn const_ref(kind: ExpressionKind, span: SoulSpan) -> ExpressionKind {
@@ -378,8 +378,8 @@ fn test_multiple_binary() {
         ExpressionKind::Binary(Binary::new(
             Expression::new(
                 ExpressionKind::AccessField(AccessField{
-                    object: Box::new(Expression::new(ExpressionKind::Variable(VariableName::new("obj")), SoulSpan::new(0,0,3))), 
-                    field: VariableName::new("field"),
+                    object: Box::new(Expression::new(ExpressionKind::Variable(VariableName::new("obj", SoulSpan::new(0,0,3))), SoulSpan::new(0,0,3))), 
+                    field: VariableName::new("field", SoulSpan::new(0,4,5)),
                 }), 
                 SoulSpan::new(0, 0, 9),
             ), 
@@ -458,7 +458,7 @@ fn test_simple_unary() {
     let should_be =  Expression::new(
         ExpressionKind::Unary(Unary{
             operator: UnaryOperator::new(UnaryOperatorKind::Increment{before_var: true}, SoulSpan::new(0,0,2)), 
-            expression: Box::new(Expression::new(var("var"), SoulSpan::new(0,2,3))),
+            expression: Box::new(Expression::new(var("var", SoulSpan::new(0,2,3)), SoulSpan::new(0,2,3))),
         }),
         SoulSpan::new(0,0,5)
     );
@@ -476,7 +476,7 @@ fn test_simple_unary() {
     let should_be =  Expression::new(
         ExpressionKind::Unary(Unary{
             operator: UnaryOperator::new(UnaryOperatorKind::Increment{before_var: false}, SoulSpan::new(0,3,2)), 
-            expression: Box::new(Expression::new(var("var"), SoulSpan::new(0,0,3))),
+            expression: Box::new(Expression::new(var("var", SoulSpan::new(0,0,3)), SoulSpan::new(0,0,3))),
         }),
         SoulSpan::new(0,0,5)
     );
@@ -551,7 +551,7 @@ fn test_simple_variable() {
 
     assert_eq_show_diff!(
         result.as_ref().unwrap().node, 
-        var(var_name)
+        var(var_name, SoulSpan::new(0,0,3))
     );
 
     stream = stream_from_strs(&["!", var_name, "\n"]);
@@ -563,7 +563,7 @@ fn test_simple_variable() {
         result.as_ref().unwrap().node, 
         ExpressionKind::Unary(Unary{
             operator: UnaryOperator::new(UnaryOperatorKind::Not, SoulSpan::new(0,0,1)),
-            expression: Box::new(Expression::new(var(var_name), SoulSpan::new(0,1,var_name.len()))),
+            expression: Box::new(Expression::new(var(var_name, SoulSpan::new(0,1,3)), SoulSpan::new(0,1,var_name.len()))),
         })
     );
 }
@@ -585,7 +585,7 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = vec![
-        Expression::new(var("var"), SoulSpan::new(0,1,3)),
+        Expression::new(var("var", SoulSpan::new(0,1,3)), SoulSpan::new(0,1,3)),
         Expression::new(int_lit(2), SoulSpan::new(0,5,1)),
         Expression::new(int_lit(3), SoulSpan::new(0,7,1)),
     ];
@@ -609,7 +609,7 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = vec![
-        Expression::new(var("var"), SoulSpan::new(0,5,3)),
+        Expression::new(var("var", SoulSpan::new(0,5,3)), SoulSpan::new(0,5,3)),
         Expression::new(int_lit(2), SoulSpan::new(0,9,1)),
         Expression::new(int_lit(3), SoulSpan::new(0,11,1)),
     ];
@@ -660,7 +660,7 @@ fn test_group_expressions() {
         Expression::new(
             ExpressionKind::ExpressionGroup(ExpressionGroup::Array(Array{
                 values: vec![
-                    Expression::new(var("var"), SoulSpan::new(0,2,3)),
+                    Expression::new(var("var", SoulSpan::new(0,2,3)), SoulSpan::new(0,2,3)),
                     Expression::new(int_lit(1), SoulSpan::new(0,6,1)),
                 ], 
                 collection_type: None, 
@@ -698,7 +698,7 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = vec![
-        Expression::new(var("var"), SoulSpan::new(0,1,3)),
+        Expression::new(var("var", SoulSpan::new(0,1,3)), SoulSpan::new(0,1,3)),
         Expression::new(int_lit(2), SoulSpan::new(0,5,1)),
         Expression::new(int_lit(3), SoulSpan::new(0,7,1)),
     ];
@@ -721,7 +721,7 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = vec![
-        Expression::new(var("var"), SoulSpan::new(0,1,3)),
+        Expression::new(var("var", SoulSpan::new(0,1,3)), SoulSpan::new(0,1,3)),
         Expression::new(int_lit(2), SoulSpan::new(0,5,1)),
         Expression::new(
             ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::Tuple(vec![LiteralType::Int, LiteralType::Bool]))),
@@ -748,7 +748,7 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = HashMap::from([
-        (Ident("field".into()), Expression::new(var("var"), SoulSpan::new(0,7,3))),
+        (Ident("field".into()), Expression::new(var("var", SoulSpan::new(0,7,3)), SoulSpan::new(0,7,3))),
         (Ident("field2".into()), Expression::new(int_lit(2), SoulSpan::new(0,18,1))),
         (Ident("field3".into()), Expression::new(int_lit(3), SoulSpan::new(0,27,1))),
     ]);
@@ -771,7 +771,7 @@ fn test_group_expressions() {
     let result = get_expression(&mut stream, &mut scope, &["\n"]);
     
     let values = HashMap::from([
-        (Ident("field".into()), Expression::new(var("var"), SoulSpan::new(0,7,3))),
+        (Ident("field".into()), Expression::new(var("var", SoulSpan::new(0,7,3)), SoulSpan::new(0,7,3))),
         (Ident("field2".into()), Expression::new(int_lit(2), SoulSpan::new(0,18,1))),
         (Ident("field3".into()), Expression::new(ExpressionKind::Literal(Literal::ProgramMemmory(soul_mem_name(0), LiteralType::NamedTuple(BTreeMap::from([(Ident("field".into()), LiteralType::Int)])))), SoulSpan::new(0,27,9))),
     ]);
@@ -812,7 +812,7 @@ fn test_array_filler_expressions() {
                 element_type: None,
                 amount: Box::new(Expression::new(int_lit(2), SoulSpan::new(0,4,1))),
                 index: None,
-                fill_expr: Box::new(Expression::new(var("var"), SoulSpan::new(0,7,3))),
+                fill_expr: Box::new(Expression::new(var("var", SoulSpan::new(0,7,3)), SoulSpan::new(0,7,3))),
                 scope_id: ScopeId(1),
             }
         ))
@@ -970,8 +970,8 @@ fn test_field_access_and_methods() {
     assert_eq_show_diff!(
         result.clone().unwrap().node,
         ExpressionKind::AccessField(AccessField{ 
-            object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3))),
-            field: VariableName::new("field"),
+            object: Box::new(Expression::new(var("obj", SoulSpan::new(0,0,3)), SoulSpan::new(0,0,3))),
+            field: VariableName::new("field", SoulSpan::new(0,4,5)),
         })
     );
 
@@ -984,7 +984,7 @@ fn test_field_access_and_methods() {
         result.clone().unwrap().node,
         ExpressionKind::FunctionCall(FunctionCall{ 
             name: "methode".into(), 
-            callee: Some(Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3)))), 
+            callee: Some(Box::new(Expression::new(var("obj", SoulSpan::new(0,0,3)), SoulSpan::new(0,0,3)))), 
             generics: vec![], 
             arguments: soul_tuple![
                 Expression::new(int_lit(1), SoulSpan::new(0,12,1)),
@@ -1004,8 +1004,8 @@ fn test_field_access_and_methods() {
             name: "methode".into(), 
             callee: Some(Box::new(Expression::new(
                 ExpressionKind::AccessField(AccessField{
-                    object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3))), 
-                    field: VariableName::new("field"),
+                    object: Box::new(Expression::new(var("obj", SoulSpan::new(0,0,3)), SoulSpan::new(0,0,3))), 
+                    field: VariableName::new("field", SoulSpan::new(0,4,5)),
                 }),
                 SoulSpan::new(0,0,9)
             ))), 
@@ -1031,7 +1031,7 @@ fn test_index_expressions() {
         ExpressionKind::Index(Index {
             collection: Box::new(Expression::new(
                 ExpressionKind::Index(Index{
-                    collection: Box::new(Expression::new(ExpressionKind::Variable(VariableName::new("arr")), SoulSpan::new(0,0,3))), 
+                    collection: Box::new(Expression::new(ExpressionKind::Variable(VariableName::new("arr", SoulSpan::new(0,0,3))), SoulSpan::new(0,0,3))), 
                     index: Box::new(Expression::new(int_lit(1), SoulSpan::new(0,4,1))),
                 }),
                 SoulSpan::new(0,5,1)
@@ -1047,8 +1047,8 @@ fn test_index_expressions() {
         result.clone().unwrap().node,
         ExpressionKind::Index(Index {
             collection: Box::new(Expression::new(ExpressionKind::AccessField(AccessField{
-                    object: Box::new(Expression::new(var("obj"), SoulSpan::new(0,0,3))), 
-                    field: VariableName::new("field"),
+                    object: Box::new(Expression::new(var("obj", SoulSpan::new(0,0,3)), SoulSpan::new(0,0,3))), 
+                    field: VariableName::new("field", SoulSpan::new(0,4,5)),
                 }),
                 SoulSpan::new(0,0,9),
             )),
@@ -1085,7 +1085,7 @@ fn test_ref_and_deref_expression() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.clone().unwrap().node,
-        mut_ref(var("var"), SoulSpan::new(0,1,3))
+        mut_ref(var("var", SoulSpan::new(0,1,3)), SoulSpan::new(0,1,3))
     );
 
 
@@ -1096,7 +1096,7 @@ fn test_ref_and_deref_expression() {
         result.clone().unwrap().node,
         const_ref(
             const_ref(
-                mut_ref(var("var"), SoulSpan::new(0,3,3)),
+                mut_ref(var("var", SoulSpan::new(0,0,3)), SoulSpan::new(0,3,3)),
                 SoulSpan::new(0,2,4)
             ),
             SoulSpan::new(0,1,5)
@@ -1109,7 +1109,7 @@ fn test_ref_and_deref_expression() {
     assert!(result.is_ok(), "error: {}", result.unwrap_err().to_err_message().join("\n"));
     assert_eq_show_diff!(
         result.clone().unwrap().node,
-        deref(var("ref"), SoulSpan::new(0,1,3))
+        deref(var("ref", SoulSpan::new(0,1,3)), SoulSpan::new(0,1,3))
     );
 }
 

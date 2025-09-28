@@ -34,7 +34,7 @@ pub enum SoulErrorKind {
     UnexpectedEnd,
 }
 
-#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Default, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct SoulSpan {
     pub line_number: usize,
     ///for multiline span

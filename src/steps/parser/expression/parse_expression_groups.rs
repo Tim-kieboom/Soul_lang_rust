@@ -341,20 +341,20 @@ fn try_add_array_filler(collection_type: Option<SoulType>, element_type: Option<
 
     scopes.push_scope();
     let index = if stream.peek_is("in") {
-        let name = Ident(stream.current_text().clone());
+        let name = VariableName::new(stream.current_text().clone(), stream.current_span());
         let variable = Variable{
             name: name.clone(), 
             ty: SoulType::none(), 
             initialize_value: Some(Expression::new(ExpressionKind::Empty, SoulSpan::new(0,0,0))),
         };
-        scopes.insert(name.0.clone(), ScopeKind::Variable(variable), stream.current_span())?;
+        scopes.insert(name.name.0.clone(), ScopeKind::Variable(variable), stream.current_span())?;
 
 
         if stream.next_multiple(2).is_none() {
             return Err(err_out_of_bounds(group_i, stream));
         }
 
-        Some(VariableName::new(name))
+        Some(name)
     }
     else {
         None

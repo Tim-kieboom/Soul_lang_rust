@@ -395,8 +395,9 @@ fn add_else(
 }
 
 fn variable_name_to_scope(variable_name: &VariableName, scopes: &mut ScopeBuilder, span: SoulSpan) -> Result<()> {
+
     let variable = ScopeKind::Variable(Variable{
-        name: variable_name.name.clone(), 
+        name: variable_name.clone(), 
         ty: SoulType::none(), 
         initialize_value: Some(Expression::new(ExpressionKind::Empty, span)),
     });

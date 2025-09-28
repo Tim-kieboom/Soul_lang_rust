@@ -266,7 +266,7 @@ impl ToString for ScopeKind {
             ScopeKind::Trait(value) => format!("trait >> {}{}", value.signature.name, value.signature.generics.to_string()),
             ScopeKind::Struct(value) => format!("struct >> {}{}", value.name, value.generics.to_string()),
 
-            ScopeKind::Variable(value) => format!("Variable >> {} {}{}", value.ty.to_string(), value.name, value.initialize_value.as_ref().map(|el| format!(" = {}", el.node.to_string())).unwrap_or(String::new())),
+            ScopeKind::Variable(value) => format!("Variable >> {} {}{}", value.ty.to_string(), value.name.name, value.initialize_value.as_ref().map(|el| format!(" = {}", el.node.to_string())).unwrap_or(String::new())),
             ScopeKind::Functions(values) => format!("Functions >> [{}]", values.iter().map(|func| func.node.signature.to_string()).join(", ")),
 
             ScopeKind::Enum(value) => format!("enum >> {}", value.name),

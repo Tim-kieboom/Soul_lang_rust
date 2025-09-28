@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
-use crate::{soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{function::{FunctionCall, Lambda, StaticMethod, StructConstructor}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::Spanned, statement::Block}, scope_builder::ScopeId}};
+use crate::{errors::soul_error::SoulSpan, soul_names::{NamesOperator, NamesOtherKeyWords, SOUL_NAMES}, steps::step_interfaces::i_parser::{abstract_syntax_tree::{function::{FunctionCall, Lambda, StaticMethod, StructConstructor}, literal::Literal, soul_type::{soul_type::SoulType, type_kind::SoulPagePath}, spanned::Spanned, statement::Block}, scope_builder::ScopeId}};
 
 pub type Expression = Spanned<ExpressionKind>;
 
@@ -217,7 +217,8 @@ pub struct Index {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode)]
 pub struct VariableName {
-    pub name: Ident
+    pub name: Ident,
+    pub span: SoulSpan,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
@@ -262,8 +263,8 @@ pub enum BinaryOperatorKind {
 pub struct Ident(pub String);
 
 impl VariableName {
-    pub fn new<T: Into<Ident>>(ident: T) -> Self {
-        Self{name: ident.into()}
+    pub fn new<T: Into<Ident>>(ident: T, span: SoulSpan) -> Self {
+        Self{name: ident.into(), span}
     }
 }
 

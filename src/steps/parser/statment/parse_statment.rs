@@ -15,7 +15,7 @@ use crate::steps::parser::statment::statment_type::{get_statement_type, Statemen
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::enum_like::TypeEnum;
 use crate::steps::parser::expression::parse_expression::{get_expression, get_expression_statment};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{SoulType};
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, Ident, VariableName};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, Ident};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Assignment, Block, StatementKind, STATMENT_END_TOKENS};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::type_kind::{ExternalPath, ExternalType, SoulPagePath, TypeKind};
 use crate::steps::step_interfaces::{i_parser::{abstract_syntax_tree::{abstract_syntax_tree::BlockBuilder, statement::Statement}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream};
@@ -57,7 +57,7 @@ pub fn get_statment(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
         StatementType::Variable => {
             let variable = get_variable(stream, scopes)?;
-            let variable_name = VariableName::new(&variable.node.name);
+            let variable_name = variable.node.name.clone();
             scopes.insert(variable_name.name.0.clone(), ScopeKind::Variable(variable.node), variable.span)?;
 
             Statement::new(StatementKind::Variable(variable_name), variable.span)

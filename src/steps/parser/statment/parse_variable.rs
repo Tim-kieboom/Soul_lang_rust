@@ -1,7 +1,7 @@
 use crate::soul_names::{NamesOtherKeyWords, SOUL_NAMES};
 use crate::steps::parser::expression::parse_expression::get_expression;
 use crate::steps::step_interfaces::i_parser::parser_response::FromTokenStream;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Ident};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{VariableName};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::STATMENT_END_TOKENS;
 use crate::errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulError, SoulErrorKind};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::{Modifier, SoulType};
@@ -51,7 +51,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             .clone()
     };
 
-    let name: Ident = stream.current_text().into();
+    let name = VariableName::new(stream.current_text(), stream.current_span());
 
     if stream.next().is_none() {
         return Err(err_out_of_bounds(stream))
@@ -64,7 +64,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
             return Err(new_soul_error(
                 SoulErrorKind::InvalidEscapeSequence, 
                 stream.current_span_some(), 
-                format!("global variables HAVE TO BE assigned at init, variable '{}' is not assigned", name),
+                format!("global variables HAVE TO BE assigned at init, variable '{}' is not assigned", name.name),
             ))
         }
 
@@ -109,7 +109,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
 
         let begin_i = stream.current_index();
         let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)
-            .map_err(|err| pass_soul_error(err.get_last_kind(), Some(stream[begin_i].span), format!("while trying to get assignment of variable: '{}'", name).as_str(), err))?;
+            .map_err(|err| pass_soul_error(err.get_last_kind(), Some(stream[begin_i].span), format!("while trying to get assignment of variable: '{}'", name.name).as_str(), err))?;
 
         let mut ty = SoulType::none();
         ty.modifier = modifier;
@@ -120,7 +120,7 @@ pub fn get_variable(stream: &mut TokenStream, scopes: &mut ScopeBuilder) -> Resu
     else {
         let begin_i = stream.current_index();
         let expression = get_expression(stream, scopes, STATMENT_END_TOKENS)
-            .map_err(|err| pass_soul_error(err.get_last_kind(), Some(stream[begin_i].span), format!("while trying to get assignment of variable: '{}'", name).as_str(), err))?;
+            .map_err(|err| pass_soul_error(err.get_last_kind(), Some(stream[begin_i].span), format!("while trying to get assignment of variable: '{}'", name.name).as_str(), err))?;
 
         let mut ty = possible_type.unwrap();
         ty.modifier = modifier;

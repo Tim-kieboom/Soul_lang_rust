@@ -180,7 +180,7 @@ fn convert_expression(
     }
     else if could_be_variable(stream) {
         
-        let variable = VariableName::new(stream.current_text());
+        let variable = VariableName::new(stream.current_text(), stream.current_span());
         stacks.expressions.push(
             Expression::new(
                 ExpressionKind::Variable(variable), 
@@ -444,7 +444,7 @@ fn add_field(stream: &mut TokenStream, stacks: &mut ExpressionStacks) -> Result<
         .ok_or(new_soul_error(SoulErrorKind::InvalidInContext, stream.current_span_some(), "trying to get object of field but no there is no object"))?;
 
     let span = object.span;
-    let field = VariableName::new(stream.current_text());
+    let field = VariableName::new(stream.current_text(), stream.current_span());
     let field_expr = Expression::new(
         ExpressionKind::AccessField(
             AccessField{object: Box::new(object), field}

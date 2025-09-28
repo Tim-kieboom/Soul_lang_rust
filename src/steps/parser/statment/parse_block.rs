@@ -5,7 +5,7 @@ use crate::steps::step_interfaces::i_parser::scope_builder::{ScopeKind, Variable
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::statement::{Statement, StatementKind, UseBlock};
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::soul_type::soul_type::SoulType;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::abstract_syntax_tree::BlockBuilder;
-use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind};
+use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::expression::{Expression, ExpressionKind, VariableName};
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind}, steps::step_interfaces::{i_parser::{abstract_syntax_tree::{function::{FunctionCallee, Parameter}, spanned::Spanned, statement::Block}, scope_builder::ScopeBuilder}, i_tokenizer::TokenStream}};
 
 pub fn get_block(
@@ -127,7 +127,7 @@ fn get_inner_block(
     }
 
     for Spanned{node: parameter, span} in parameters {
-        let name = parameter.name.clone();
+        let name = VariableName::new(parameter.name.clone(), span);
         let name_string = parameter.name.0.clone();
         let var = ScopeKind::Variable(Variable{
             name, 
@@ -166,7 +166,7 @@ fn push_this(this: SoulType, scopes: &mut ScopeBuilder, span: SoulSpan) -> Resul
     
     let kind = ScopeKind::Variable(Variable{
         ty: this, 
-        name: "this".into(), 
+        name: VariableName::new("this", span), 
         initialize_value: Some(Expression::new(ExpressionKind::Empty, SoulSpan::new(0,0,0)))
     });
 

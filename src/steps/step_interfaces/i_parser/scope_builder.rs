@@ -1,6 +1,6 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use crate::errors::soul_error::Result;
+use crate::{errors::soul_error::Result, steps::step_interfaces::i_parser::abstract_syntax_tree::expression::VariableName};
 use std::{collections::{BTreeMap, HashMap}};
 use crate::{errors::soul_error::{new_soul_error, SoulError, SoulErrorKind, SoulSpan}, steps::step_interfaces::i_parser::abstract_syntax_tree::{enum_like::{Enum, TypeEnum, Union}, expression::{Expression, Ident}, function::Function, literal::Literal, object::{Class, Struct, Trait}, soul_type::{soul_type::SoulType}, spanned::Spanned}};
 
@@ -47,7 +47,7 @@ pub enum ScopeKind {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct Variable {
-    pub name: Ident,
+    pub name: VariableName,
     pub ty: SoulType,
     pub initialize_value: Option<Expression>,
 }
