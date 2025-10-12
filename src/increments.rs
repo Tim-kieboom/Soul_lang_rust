@@ -3,7 +3,7 @@ use threadpool::ThreadPool;
 use std::{cmp::min, fs::{self, write, File}, path::PathBuf, result, time::SystemTime};
 use std::{io::{BufReader, Read}, path::Path, sync::{mpsc::channel, Arc, Mutex}, time::Instant};
 use crate::{errors::soul_error::SoulError, file_cache::FileCache, run_options::run_options::RunOptions, steps::step_interfaces::i_parser::header::Header, utils::{logger::{default_log_options, Logger}, time_logs::{format_duration, TimeLogs}}};
-use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
+use crate::{errors::soul_error::{new_soul_error, pass_soul_error, Result, SoulErrorKind}, run_options::{show_output::ShowOutputs, show_times::ShowTimes}, steps::{parser::parser::{parse_ast}, source_reader::source_reader::read_source_file, step_interfaces::{i_parser::{abstract_syntax_tree::pretty_format::PrettyFormat, parser_response::ParserResponse}, i_source_reader::SourceFileResponse, i_tokenizer::tokenizer::TokenizeResonse}, tokenizer::tokenizer::tokenize}};
 
 /// Runs the compiler up to the parsing stage for all source files and caches results on disk.
 ///

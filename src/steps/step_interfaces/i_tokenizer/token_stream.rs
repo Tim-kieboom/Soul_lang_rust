@@ -1,34 +1,6 @@
-//! # Soul Language Tokenizer
-//!
-//! This module defines the `Token`, `TokenStream`, and `TokenizeResponse` types,
-//! which form the **tokenization step** of the Soul language compiler pipeline.
-//!
-//! Each compilation step in the Soul compiler implements a structural interface
-//! to provide consistent data passing between phases (see `step_interfaces`).
-//! 
-
 use std::{ops::Index, slice::Iter};
 use crate::{errors::soul_error::SoulSpan};
-
-/// Represents the output of the tokenization phase.
-///
-/// Contains a [`TokenStream`] which holds all tokens
-/// produced by the tokenizer for a given source input.
-#[derive(Debug, Clone)]
-pub struct TokenizeResonse {
-    pub stream: TokenStream,
-}
-
-/// A single lexical token in the Soul language.
-///
-/// Each token holds its textual value and source span information.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Token {
-    /// The raw text representation of the token.
-    pub text: String,
-    /// Source location data for this token.
-    pub span: SoulSpan,
-}
+use crate::steps::step_interfaces::i_tokenizer::tokenizer::Token;
 
 /// A sequence of [`Token`]s with utilities for traversal,
 /// lookahead, and state management.
@@ -49,32 +21,6 @@ pub struct TokenStream {
 
     tokens: Vec<Token>,
     index: i64,
-}
-
-
-impl Token {
-
-    /// Creates a new [`Token`] from text and span data.
-    ///
-    /// # Arguments
-    /// * `text` - The textual content of the token.
-    /// * `span` - The span indicating where this token appears in the source.
-    ///
-    /// # Example
-    /// ```
-    /// use soul_lang_rust::steps::step_interfaces::i_tokenizer::Token;
-    /// use soul_lang_rust::errors::soul_error::SoulSpan;
-    /// 
-    /// let current_line_number = 0;
-    /// let current_line_offset = 0;
-    /// let raw_token = "if";
-    /// let span = SoulSpan::new(current_line_number, current_line_offset, raw_token.len());
-    /// 
-    /// let token = Token::new(raw_token.to_string(), span);
-    /// ```
-    pub fn new(text: String, span: SoulSpan) -> Self {
-        Self{span, text}
-    }
 }
 
 impl TokenStream {
@@ -618,21 +564,3 @@ impl Index<usize> for TokenStream {
         &self.tokens[index]
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

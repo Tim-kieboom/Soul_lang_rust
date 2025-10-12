@@ -4,7 +4,7 @@ use std::collections::{BTreeMap};
 use crate::soul_names::SOUL_NAMES;
 use crate::errors::soul_error::{new_soul_error, Result, SoulErrorKind, SoulSpan};
 use crate::steps::step_interfaces::i_source_reader::{FileLine, SourceFileResponse};
-use crate::steps::step_interfaces::i_tokenizer::{Token, TokenStream, TokenizeResonse};
+use crate::steps::step_interfaces::i_tokenizer::{tokenizer::{Token, TokenizeResonse}, token_stream::TokenStream};
 
 static TOKEN_SPLIT_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(&SOUL_NAMES

@@ -1,7 +1,7 @@
 use crate::errors::soul_error::Result;
 use crate::steps::parser::expression::symbool::Bracket;
 use crate::steps::step_interfaces::i_parser::abstract_syntax_tree::pretty_format::ToString;
-use crate::steps::step_interfaces::i_tokenizer::TokenStream;
+use crate::steps::step_interfaces::i_tokenizer::token_stream::TokenStream;
 use crate::{errors::soul_error::{new_soul_error, SoulErrorKind, SoulSpan}, steps::{parser::expression::{parse_expression::ExpressionStacks, symbool::SymboolKind}, step_interfaces::i_parser::abstract_syntax_tree::expression::{Binary, BinaryOperator, BinaryOperatorKind, Expression, ExpressionKind, Unary, UnaryOperator, UnaryOperatorKind}}};
 
 const BRACKET_OPEN: SymboolKind = SymboolKind::Bracket(Bracket::RoundOpen);
