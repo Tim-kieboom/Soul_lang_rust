@@ -1,3 +1,33 @@
+/// Asserts that two expressions are equal, printing a side-by-side diff if they are not.
+///
+/// The macro compares `$left` and `$right` using `==`.  
+/// If they differ, the output from [`show_str_diff`] is displayed, formatting
+/// the left and right values in a table and highlighting differences.
+///
+/// # Arguments
+/// * `$left` - The left-hand expression to compare.
+/// * `$right` - The right-hand expression to compare.
+/// * `$msg` (optional) - A custom message to append to the diff output.
+///
+/// # Examples
+/// ```
+/// use soul_lang_rust::assert_eq_show_diff;
+/// 
+/// #[test]
+/// fn same_values() {
+///     let a = [1, 2, 3];
+///     let b = [1, 2, 3];
+///     assert_eq_show_diff(a, b)
+/// }
+/// 
+/// #[test]
+/// #[should_panic]
+/// fn diffrent_values() {
+///     let a = [1, 2, 3];
+///     let b = [67, 68, 69];
+///     assert_eq_show_diff(a, b)
+/// }
+/// ```
 #[macro_export]
 macro_rules! assert_eq_show_diff {
 	($left:expr, $right:expr) => {
@@ -9,6 +39,23 @@ macro_rules! assert_eq_show_diff {
 	};
 }
 
+/// Produces a formatted side-by-side string comparison of two multiline strings.
+///
+/// This function splits `expected` and `got` into lines, prints them alongside each other,
+/// and highlights character-level differences with a caret (`^`).
+///
+/// # Arguments
+/// * `expected` - The expected string (left column).
+/// * `got` - The actual string (right column).
+///
+/// # Returns
+/// A string containing a table of compared lines, with differences marked beneath each differing line.
+///
+/// # Example
+/// ```
+/// use soul_lang_rust::utils::show_diff::show_str_diff;
+/// println!("{}", show_str_diff("hello world", "helo word"));
+/// ```
 pub fn show_str_diff(expected: &str, got: &str) -> String {
     let exp_lines: Vec<&str> = expected.lines().collect();
     let got_lines: Vec<&str> = got.lines().collect();
@@ -62,29 +109,29 @@ pub fn show_str_diff(expected: &str, got: &str) -> String {
     result
 }
 
-fn generate_diff_marker(a: &str, b: &str) -> String {
-    let max_len = a.chars().count().max(b.chars().count());
-    let mut marker = String::new();
-
-    let a_chars: Vec<char> = a.chars().collect();
-    let b_chars: Vec<char> = b.chars().collect();
-
-    for i in 0..max_len {
-        let a_ch = a_chars.get(i);
-        let b_ch = b_chars.get(i);
-
-        if a_ch != b_ch {
-            marker.push('^');
-        } else if a_ch.is_some() {
-            marker.push(' ');
-        } else {
-            marker.push('^');
-        }
-    }
-
-    marker
-}
-
+/// Produces a highlighted multiline string with line numbers and marked spans.
+///
+/// This is useful for pointing out specific ranges (spans) in source code or logs.
+/// It prints the original lines along with underneath caret (`^`) markers to show
+/// the highlighted ranges.
+///
+/// # Arguments
+/// * `start_line` - The starting line number.
+/// * `lines` - A slice of strings representing each line of text.
+/// * `spans` - A list of tuples `(line_number, start, end)` specifying highlighted ranges.
+///              - `line_number` is the absolute line number.
+///              - `start` and `end` are character indices.
+///
+/// # Returns
+/// A string with numbered lines and highlighted caret markers.
+///
+/// # Example
+/// ```
+/// use soul_lang_rust::utils::show_diff::generate_highlighted_string;
+/// let lines = vec!["hello world".to_string(), "foo bar".to_string()];
+/// let spans = vec![(1, 6, 11)]; // highlight "world"
+/// println!("{}", generate_highlighted_string(1, &lines, &spans));
+/// ```
 pub fn generate_highlighted_string(
     start_line: usize,
     lines: &[String],
@@ -153,6 +200,29 @@ pub fn generate_highlighted_string(
     }
 
     result
+}
+
+fn generate_diff_marker(a: &str, b: &str) -> String {
+    let max_len = a.chars().count().max(b.chars().count());
+    let mut marker = String::new();
+
+    let a_chars: Vec<char> = a.chars().collect();
+    let b_chars: Vec<char> = b.chars().collect();
+
+    for i in 0..max_len {
+        let a_ch = a_chars.get(i);
+        let b_ch = b_chars.get(i);
+
+        if a_ch != b_ch {
+            marker.push('^');
+        } else if a_ch.is_some() {
+            marker.push(' ');
+        } else {
+            marker.push('^');
+        }
+    }
+
+    marker
 }
 
 

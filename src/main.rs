@@ -62,7 +62,7 @@ fn log_faults(errors: Vec<(PathBuf, Vec<SoulFault>)>, logger: &Logger) -> usize 
                 SoulFaultKind::Warning => LogLevel::Warning,
             };
 
-            logger._log_soul_error(level, &error.msg, &mut reader, &options);
+            logger.log_soul_error(level, &error.msg, &mut reader, &options);
         }
     }
 

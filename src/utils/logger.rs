@@ -5,12 +5,22 @@ use colored::Colorize;
 
 use crate::errors::soul_error::SoulError;
 
+/// Global default logging options
 pub static DEFAULT_LOG_OPTIONS: RwLock<LogOptions> = RwLock::new(LogOptions::const_default());
 
+/// Returns a read guard to the global default logging options.
 pub fn default_log_options<'a>() -> RwLockReadGuard<'a, LogOptions> {
     DEFAULT_LOG_OPTIONS.read().unwrap()
 }
 
+/// Logger that writes messages with level and formatting options to a configurable output.
+pub struct Logger {
+    level: LogLevel,
+    mode: LogMode,
+    output: Arc<Mutex<Box<dyn Write + Send>>>,
+}
+
+/// The severity level for log messages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
     Error,
@@ -21,15 +31,28 @@ pub enum LogLevel {
 }
 
 bitflags! {
+    /// Controls the output formatting options for the logger.
     #[derive(Debug, Clone, Copy)]
     pub struct LogMode: u8 {
+        /// Show the date and time with each log message.
         const ShowDate = 0b00000001;
+        /// Show the log level with each log message.
         const ShowLevel = 0b00000010;
+        /// Show all available formatting options.
         const ShowAll = 0b11111111;
     }
 }
 
 impl LogMode {
+    /// Parses a `LogMode` from a string with tokens separated by `+`.
+    ///
+    /// Valid tokens are:
+    /// - `"SHOW_DATE"`
+    /// - `"SHOW_LEVEL"`
+    /// - `"SHOW_ALL"`
+    /// - `"SHOW_NONE"`
+    ///
+    /// Returns an error if the string contains unknown tokens.
     pub fn from_str(text: &str) -> Result<Self, String> {
         let tokens = text.split("+");
         let mut this = Self::empty();
@@ -48,7 +71,9 @@ impl LogMode {
 }
 
 impl LogLevel {
-
+    /// Converts a string into a corresponding `LogLevel`.
+    ///
+    /// Unrecognized levels return `LogLevel::Any`.
     pub fn from_str(text: &str) -> Self {
         match text {
             "ERROR" => LogLevel::Error,
@@ -59,7 +84,8 @@ impl LogLevel {
         }
     }
 
-    fn as_str(&self) -> &'static str {
+    /// Returns a string representation of the `LogLevel`.
+    pub fn as_str(&self) -> &'static str {
         match self {
             LogLevel::Error => "ERROR",
             LogLevel::Warning  => "WARNING",
@@ -70,37 +96,48 @@ impl LogLevel {
     }
 }
 
-pub struct Logger {
-    level: LogLevel,
-    mode: LogMode,
-    output: Arc<Mutex<Box<dyn Write + Send>>>,
-}
-
+/// Configuration options for the logger.
 #[derive(Debug, Clone)]
 pub struct LogOptions {
+    /// Whether to use colored output.
     pub colored: bool,
+    /// Whether to highlight specific Soul errors.
     pub highlight_soul: bool,
+    /// Optional log file path to include in error reporting (example `in file 'main.soul': error...`).
     pub log_file_path: Option<PathBuf>,
 }
+
 impl LogOptions {
+    /// Creates new log options.
     pub fn new(colored: bool, highlight_soul: bool, log_file_path: Option<PathBuf>) -> Self {
         Self{colored, highlight_soul, log_file_path}
     }
-    pub const fn const_default() -> Self {Self{colored: true, highlight_soul: false, log_file_path: None}}
 
+    /// Returns the default log options in compile time: colored output enabled, no highlight, no file.
+    pub const fn const_default() -> Self {
+        Self{
+            colored: true, 
+            highlight_soul: false, 
+            log_file_path: None,
+        }
+    }
+
+    /// Allows applying a closure to modify logging options, returning the new options.
     pub fn apply<F: FnOnce(Self) -> Self>(self, apply: F) -> Self {
         apply(self)
     }
 }
 impl Default for LogOptions {
-    fn default() -> Self {Self{colored: true, highlight_soul: false, log_file_path: None}}
+    fn default() -> Self {Self::const_default()}
 }
 
 impl Logger {
-    pub fn new<T: Write + Send + 'static>(output: T, mode: LogMode, level: LogLevel) -> Self {
-        Self{ level, mode, output: Arc::new(Mutex::new(Box::new(output))) }
+    /// Constructs a new logger writing to the provided output with given mode and minimum log level.
+    pub fn new<T: Write + Send + 'static>(output: T, mode: LogMode, minimum_log_level: LogLevel) -> Self {
+        Self{ level: minimum_log_level, mode, output: Arc::new(Mutex::new(Box::new(output))) }
     }
 
+    /// Constructs a logger that appends to (or creates) a file at the given path.
     pub fn with_file_path(path: &PathBuf, mode: LogMode, level: LogLevel) -> io::Result<Self> {
         let file = OpenOptions::new()
             .append(true)
@@ -114,12 +151,12 @@ impl Logger {
         })
     }
 
-    fn current_time_string() -> String {
-        let now = Local::now();
-        now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
-    }
-
-    pub fn _log<S: Display>(&self, level: LogLevel, message: S, options: &LogOptions) {
+    /// method to log a message if its `level` is enabled by the logger.
+    ///
+    /// Applies formatting options from `options`.
+    /// 
+    /// (use methodes like 'error' or 'warn' instead if able)
+    pub fn log<S: Display>(&self, level: LogLevel, message: S, options: &LogOptions) {
         if level <= self.level {
             let mut log_msg = String::new();
 
@@ -159,34 +196,65 @@ impl Logger {
         }
     }
 
-    pub fn _log_soul_error<R: Read + Seek>(&self, level: LogLevel, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
-        self._log(level, "---------------------------------------------", options);
+    /// Logs detailed soul errors with context from a reader, including file path if set.
+    /// 
+    /// (use methodes like 'soul_error' or 'soul_warn' instead if able)
+    pub fn log_soul_error<R: Read + Seek>(&self, level: LogLevel, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
+        self.log(level, "---------------------------------------------", options);
         if let Some(path) = &options.log_file_path {
-            self._log(level, format!("in file: {}", path.to_string_lossy()), options);
+            self.log(level, format!("in file: {}", path.to_string_lossy()), options);
         }
 
         for line in soul_error.to_err_message() {
-            self._log(level, line, options);
+            self.log(level, line, options);
         }
-        self._log(level, format!("\n{}", soul_error.to_highlighed_message(reader)), options);
+        self.log(level, format!("\n{}", soul_error.to_highlighed_message(reader)), options);
     }
 
-    pub fn error<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Error, &msg, options); }
-    pub fn warn<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Warning, &msg, options); }
-    pub fn info<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Info, &msg, options); }
-    pub fn debug<S: Display>(&self, msg: S, options: &LogOptions) { self._log(LogLevel::Debug, &msg, options); }
-    
-    pub fn soul_error<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Error, soul_error, reader, options); }
-    pub fn soul_warn<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Warning, soul_error, reader, options); }
-    pub fn soul_info<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Info, soul_error, reader, options); }
-    pub fn soul_debug<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) { self._log_soul_error(LogLevel::Debug, soul_error, reader, options); }
+    /// Logs an error message.
+    pub fn error<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Error, &msg, options); }
 
+    /// Logs a warning message.
+    pub fn warn<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Warning, &msg, options); }
+
+    /// Logs an information message.
+    pub fn info<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Info, &msg, options); }
+
+    /// Logs a debug message.
+    pub fn debug<S: Display>(&self, msg: S, options: &LogOptions) { self.log(LogLevel::Debug, &msg, options); }
+
+    /// Logs a soul error as an error level message.
+    pub fn soul_error<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
+        self.log_soul_error(LogLevel::Error, soul_error, reader, options);
+    }
+
+    /// Logs a soul error as a warning level message.
+    pub fn soul_warn<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
+        self.log_soul_error(LogLevel::Warning, soul_error, reader, options);
+    }
+
+    /// Logs a soul error as an info level message.
+    pub fn soul_info<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
+        self.log_soul_error(LogLevel::Info, soul_error, reader, options);
+    }
+
+    /// Logs a soul error as a debug level message.
+    pub fn soul_debug<R: Read + Seek>(&self, soul_error: &SoulError, reader: &mut BufReader<R>, options: &LogOptions) {
+        self.log_soul_error(LogLevel::Debug, soul_error, reader, options);
+    }
+
+    /// Logs the soul error messages then terminates the process with exit code 1.
     pub fn panic_error(&self, err: &SoulError, options: &LogOptions) {
         for line in err.to_err_message() {
             self.error(line, options);
         } 
         self.error("build interrupted because of 1 error", options);
         exit(1);
+    }
+
+    fn current_time_string() -> String {
+        let now = Local::now();
+        now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()
     }
 }
 

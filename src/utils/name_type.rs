@@ -1,5 +1,14 @@
 use itertools::Itertools;
 
+/// Represents different naming conventions for identifiers.
+///
+/// Variants include:
+/// - `SingleLetterLowercase`: A single lowercase letter (e.g., "a").
+/// - `SingleLetterCapital`: A single uppercase letter (e.g., "A").
+/// - `CamelCase`: camelCase style (e.g., "camelCase").
+/// - `PascalCase`: PascalCase style (e.g., "PascalCase").
+/// - `SnakeCase`: snake_case style (e.g., "snake_case").
+/// - `ScreamingSnakeCase`: SCREAMING_SNAKE_CASE style (e.g., "SCREAMING_SNAKE_CASE").
 #[derive(Debug, Clone)]
 pub enum NameType {
     /// only 1 char lowercase
@@ -17,6 +26,10 @@ pub enum NameType {
     ScreamingSnakeCase, 
 }
 impl NameType {
+    /// Creates a new `NameType` from a `name` string by inspecting its characteristics.
+    ///
+    /// Returns `Ok(NameType)` if it matches one of the naming conventions,
+    /// or `Err` if the name violates rules like starting with a capital in snake_case.
     fn new(name: &str) -> Result<Self, String> {
         let propertys = NamingPropertys::from_name(name);
 
@@ -55,6 +68,9 @@ impl NameType {
         }
     }
 
+    /// Checks if a given `name` matches any of the `name_type` possibilities.
+    ///
+    /// Returns `Ok(())` if any matches, otherwise an `Err` with a description of mismatch.
     pub fn could_be(name: &str, name_type: &[NameType]) -> Result<(), String> {
         let this = Self::new(name)?;
 
@@ -74,9 +90,26 @@ impl NameType {
         }
     }
 
+    /// Checks if a given `name` exactly matches the specified `name_type`.
+    ///
+    /// Returns `Ok(())` if it matches, otherwise an `Err` describing the mismatch.
     pub fn should_be(name: &str, name_type: &NameType) -> Result<(), String> {
         let this = Self::new(name)?;
         this.inner_should_be(name, name_type)
+    }
+    
+    /// Returns the string representation of the naming style.
+    ///
+    /// Examples: "camelCase", "PascalCase", "snake_case", etc.
+    pub const fn to_str(&self) -> &str {
+        match self {
+            NameType::CamelCase => "camelCase",
+            NameType::PascalCase => "PascalCase",
+            NameType::SnakeCase => "snake_case",
+            NameType::ScreamingSnakeCase => "SCREAMING_SNAKE_CASE",
+            NameType::SingleLetterLowercase => "singleLetterLowercase",
+            NameType::SingleLetterCapital => "singleLetterCapital",
+        }
     }
 
     fn inner_should_be(&self, name: &str, name_type: &NameType) -> Result<(), String> {
@@ -100,17 +133,6 @@ impl NameType {
         }
 
         Err(format!("name: '{}' should be {} but is {}", name, name_type.to_str(), self.to_str()))
-    }
-
-    pub const fn to_str(&self) -> &str {
-        match self {
-            NameType::CamelCase => "camelCase",
-            NameType::PascalCase => "PascalCase",
-            NameType::SnakeCase => "snake_case",
-            NameType::ScreamingSnakeCase => "SCREAMING_SNAKE_CASE",
-            NameType::SingleLetterLowercase => "singleLetterLowercase",
-            NameType::SingleLetterCapital => "singleLetterCapital",
-        }
     }
 
     ///made this fn to avoid impl Eq Trait to force use of should_be() and could_be()

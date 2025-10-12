@@ -58,7 +58,7 @@ Soul functions and variables follow specific **Rulesets**:
 Variables initialized with literals retain their **literal status** for optimization, even if declared as `var` or `const`.
 
 ```soul
-let a = 1  // optimized at compile time
+mut a = 1  // optimized at compile time
 const b = 5    // retains literal status
 Literal c = 10 // retains literal status
 
@@ -90,12 +90,10 @@ parent() {
 func(int a) {}                  // parameter is const int
 func(str a) {}                  // function overloading is allowed  
 func(mut int[] a) {}            // mutable array parameter
-func(int a, str name = "tim")   // there are also default parameters
 
 func(1)                         // calls func(int)
 func("foo")                     // calls func(str)
 func([1,2,3])                   // calls func(int[])
-func(1, name="jim")             // calls func(int, str)
 
 //!!function overloading by return type is not allowed!!
 // func(str a) int {} 
@@ -119,7 +117,7 @@ max := u8.maxValue()
 ### 🔹 Consume Method
 a methode that takes ownership of the variable when called
 ```soul
-int[] consumeToEl(this, int a) int[] {
+int[] consumeToEl(mut this, int a) int[] {
     this = [0]
     this[0] = a
     return this
@@ -140,7 +138,7 @@ int constRefSum(this@, int a) int {
 }
 
 a := 1
-res := a.constRefSum(1)
+mut res := a.constRefSum(1)
 
 int& aMutRef = &a
 res = aMutRef.constRefSum(1)
@@ -148,7 +146,7 @@ res = aMutRef.constRefSum(1)
 int@ aConstRef = @a
 res = aConstRef.constRefSum(1)
 
-const b = 1
+b := 1
 res = b.constRefSum(1)
 ```
 ### 🔹 Mutable Reference Method
@@ -159,7 +157,7 @@ int mutRefSum(this&, int a) int {
 }
 
 a := 1
-res := a.mutRefSum(1)
+mut res := a.mutRefSum(1)
 
 int& aMutRef = &a
 res = aMutRef.mutRefSum(1)
@@ -191,15 +189,14 @@ f = 1
 ### 🔹 Type Inference
 #### Strict Inference
 ```soul
-a := 1               // becomes int
-let x = 1            // becomes int
+mut x = 1            // becomes int
 const b = 1          // becomes int
 Literal c = 1        // becomes int
 
 // type casting is done with contructors
-e := uint(1)
-const f = i32(1)
-Literal g = f32(1)
+mut f := i32(1)     // becomes i32
+e := uint(1)        // becomes uint
+Literal g := f32(1) // becomes f32
 ```
 #### Lazy Inference
 ```soul
@@ -215,7 +212,7 @@ b = "hello"         // becomes str
 // Literal c
 // c = 1
 
-list := List[]
+mut list := List[]
 //...
 list = list.Push(1)  // becomes List<int>
 ```

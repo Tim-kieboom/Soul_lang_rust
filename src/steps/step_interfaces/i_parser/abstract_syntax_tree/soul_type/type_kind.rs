@@ -199,6 +199,27 @@ impl TypeKind {
         }
     }
     
+    pub fn try_get_name(&self) -> Option<&str> {
+
+        Some(match self {
+            TypeKind::TypeEnum(ident, _) => &ident.0,
+            TypeKind::UnionVariant(union_type) => &union_type.variant.0,
+            TypeKind::ExternalPath(spanned) => &spanned.node.name.0,
+            TypeKind::ExternalType(spanned) => &spanned.node.name.0,
+            TypeKind::LifeTime(ident) => &ident.0,
+            TypeKind::Unknown(ident) => &ident.0,
+            TypeKind::Generic(ident) => &ident.0,
+            TypeKind::Custom(ident) => &ident.0,
+            TypeKind::Struct(ident) => &ident.0,
+            TypeKind::Class(ident) => &ident.0,
+            TypeKind::Trait(ident) => &ident.0,
+            TypeKind::Union(ident) => &ident.0,
+            TypeKind::Enum(ident) => &ident.0,
+
+            _ => return None,
+        })
+    } 
+
     pub fn to_name_string(&self) -> String {
         match self {
             TypeKind::None => SOUL_NAMES.get_name(NamesInternalType::None).to_string(),

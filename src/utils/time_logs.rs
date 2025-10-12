@@ -1,6 +1,12 @@
 use std::{collections::{BTreeMap, BTreeSet, HashMap}, fmt::Write, time::{Duration}};
 use serde::{Deserialize, Serialize};
 
+/// A structure for collecting and formatting timing data across multiple categories and descriptions.
+///
+/// Each *key* in [`times`] represents a group (e.g., a component or operation).
+/// Each group holds multiple labeled durations identified by a *description* string.
+///
+/// This type supports printing organized timing summaries in tabular form.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeLogs {
     pub times: HashMap<String, BTreeMap<String, Duration>>,
@@ -8,10 +14,24 @@ pub struct TimeLogs {
 }
 
 impl TimeLogs {
+
+    /// Creates a new empty [`TimeLogs`] instance.
+    ///
+    /// # Returns
+    /// A new [`TimeLogs`] with no entries and a maximum key length of zero.
     pub fn new() -> Self {
         Self { times: HashMap::new(), max_key_len: 0}
     }
 
+    /// Records a duration for a given key and description.
+    ///
+    /// If the key or description doesn't exist, it will be inserted automatically.
+    /// The method also updates the internal `max_key_len` to ensure aligned output
+    /// when generating table views.
+    ///
+    /// # Arguments
+    /// * `key` - The primary identifier for the timing group.
+    /// * `description` - A textual label for a specific measurement in that group.
     pub fn push<S: Into<String>>(&mut self, key: &String, description: S, time: Duration) {
         let time_store = match self.times.get_mut(key) {
             Some(val) => val,
@@ -29,6 +49,16 @@ impl TimeLogs {
         time_store.insert(string, time);
     }
 
+    /// Produces a formatted table string summarizing all timing data, grouped per key and description.
+    ///
+    /// The output table includes both individual durations and total durations per row.
+    /// If there are more keys than can fit in the given `max_len`, columns are chunked accordingly.
+    ///
+    /// # Arguments
+    /// * `max_len` - The maximum allowed line width for the table display.
+    ///
+    /// # Returns
+    /// A human-readable table string suitable for printing or logging.
     pub fn to_table_string(&self, max_len: usize) -> String {
         let mut keys: Vec<&String> = self.times.keys().collect();
         keys.sort();
@@ -99,6 +129,12 @@ impl TimeLogs {
         table
     }
 
+    /// Generates a simplified table showing only total duration per description.
+    ///
+    /// This summary omits per-key columns and aggregates all entries across keys.
+    ///
+    /// # Returns
+    /// A string representing the formatted totals table.
     pub fn to_total_only_table_string(&self) -> String {
         let descriptions: BTreeSet<String> = self.times
             .values()
@@ -152,6 +188,18 @@ impl TimeLogs {
 
 }
 
+/// Formats a [`Duration`] into a compact human-readable string.
+///
+/// The output uses seconds, with millisecond precision when applicable.
+/// For example:
+/// - 2.530s  
+/// - 4s
+///
+/// # Arguments
+/// * `dur` - A [`Duration`] value to format.
+///
+/// # Returns
+/// A string representing the formatted duration.
 pub fn format_duration(dur: Duration) -> String {
     let secs = dur.as_secs();
     let millis = dur.subsec_millis();

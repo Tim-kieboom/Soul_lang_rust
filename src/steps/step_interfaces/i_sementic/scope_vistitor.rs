@@ -1,6 +1,6 @@
 use crate::steps::step_interfaces::i_parser::{abstract_syntax_tree::{spanned::Spanned}, header::{ExternalHeaders}, scope_builder::{InnerScope, ProgramMemmory, ScopeBuilder, ScopeId, ScopeKind}};
 
-type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
+pub type Scope = InnerScope<Vec<Spanned<ScopeKind>>>;
 
 pub struct ScopeVisitor {
     scopes: Vec<Scope>,
@@ -12,7 +12,7 @@ pub struct ScopeVisitor {
 
 impl ScopeVisitor {
 
-    const GLOBAL_SCOPE_INDEX: ScopeId = ScopeId(0);
+    pub const GLOBAL_SCOPE_INDEX: ScopeId = ScopeId(0);
 
     pub fn new(scope: ScopeBuilder, external_headers: ExternalHeaders) -> Self {
         let (scopes, current, global_literals, project_name) = scope.__consume_to_tuple();
@@ -108,4 +108,9 @@ impl ScopeVisitor {
     pub fn get_scopes(&self) -> &Vec<Scope> {
         &self.scopes
     }
+
+    pub fn get_scopes_mut(&mut self) -> &mut Vec<Scope> {
+        &mut self.scopes
+    }
+
 }
